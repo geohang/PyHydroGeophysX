@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Complete Workflow: From Hydrological Models to Geophysical Inversion &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+  <title>Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion &mdash; PyHydroGeophysX 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -30,7 +30,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="Seismic Refraction Tomography (SRT) Forward Modeling" href="Ex5_SRT.html" /> 
+    <link rel="prev" title="Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling" href="Ex5_SRT.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -65,19 +65,13 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html#travel-time-inversion">travel time inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#non-parallel-computing-version">non parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#parallel-computing-version">parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#plot-the-apparent-resitivity">plot the apparent resitivity</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#Showing-the-water-content-model-for-the-differnent-timesteps">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#id1">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Using-Pygimili-default-to-the-inversion">Using Pygimili default to the inversion</a></li>
 </ul>
 </li>
@@ -98,7 +92,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
-      <li class="breadcrumb-item active">Complete Workflow: From Hydrological Models to Geophysical Inversion</li>
+      <li class="breadcrumb-item active">Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex2_workflow.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -108,8 +102,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="Complete-Workflow:-From-Hydrological-Models-to-Geophysical-Inversion">
-<h1>Complete Workflow: From Hydrological Models to Geophysical Inversion<a class="headerlink" href="#Complete-Workflow:-From-Hydrological-Models-to-Geophysical-Inversion" title="Link to this heading"></a></h1>
+  <section id="Ex2.-Complete-Workflow:-From-Hydrological-Models-to-Geophysical-Inversion">
+<h1>Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion<a class="headerlink" href="#Ex2.-Complete-Workflow:-From-Hydrological-Models-to-Geophysical-Inversion" title="Link to this heading"></a></h1>
 <p>This example demonstrates the complete workflow for integrating hydrological model outputs with geophysical forward modeling and inversion using PyHydroGeophysX.</p>
 <p>The workflow includes:</p>
 <ol class="arabic simple">
@@ -163,7 +157,7 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;results/workflow_example&quot;</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example&quot;</span>
 <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -175,7 +169,7 @@
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 1: Loading domain information...&quot;</span><span class="p">)</span>
 
 <span class="c1"># These would be your actual data files</span>
-<span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;data/&quot;</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/&quot;</span>
 <span class="n">modflow_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;modflow&quot;</span><span class="p">)</span>
 
 <span class="c1"># Load domain information from files</span>
@@ -186,62 +180,12 @@
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Step 1: Loading domain information...
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[3], line 9</span>
-<span class="ansi-green-fg">      5</span> modflow_dir <span style="color: rgb(98,98,98)">=</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(data_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">modflow</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">      7</span> <span style="color: rgb(95,135,135)"># Load domain information from files</span>
-<span class="ansi-green-fg">      8</span> <span style="color: rgb(95,135,135)"># (Replace with your actual file paths)</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 9</span> idomain <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">loadtxt</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">id.txt</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     10</span> top <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>loadtxt(os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(data_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">top.txt</span><span style="color: rgb(175,0,0)">&#34;</span>))
-<span class="ansi-green-fg">     11</span> porosity <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>load(os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(data_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Porosity.npy</span><span style="color: rgb(175,0,0)">&#34;</span>))
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:1373</span>, in <span class="ansi-cyan-fg">loadtxt</span><span class="ansi-blue-intense-fg ansi-bold">(fname, dtype, comments, delimiter, converters, skiprows, usecols, unpack, ndmin, encoding, max_rows, quotechar, like)</span>
-<span class="ansi-green-fg">   1370</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(delimiter, <span style="color: rgb(0,135,0)">bytes</span>):
-<span class="ansi-green-fg">   1371</span>     delimiter <span style="color: rgb(98,98,98)">=</span> delimiter<span style="color: rgb(98,98,98)">.</span>decode(<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">latin1</span><span style="color: rgb(175,0,0)">&#39;</span>)
-<span class="ansi-green-intense-fg ansi-bold">-&gt; 1373</span> arr <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">_read</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fname</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">dtype</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">dtype</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">comment</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">comment</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">delimiter</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">delimiter</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">   1374</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">converters</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">converters</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">skiplines</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">skiprows</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">usecols</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">usecols</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">   1375</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">unpack</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">unpack</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">ndmin</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">ndmin</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">   1376</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">max_rows</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">max_rows</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">quote</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">quotechar</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">   1378</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> arr
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:992</span>, in <span class="ansi-cyan-fg">_read</span><span class="ansi-blue-intense-fg ansi-bold">(fname, delimiter, comment, quote, imaginary_unit, usecols, skiplines, max_rows, converters, ndmin, unpack, dtype, encoding)</span>
-<span class="ansi-green-fg">    990</span>     fname <span style="color: rgb(98,98,98)">=</span> os<span style="color: rgb(98,98,98)">.</span>fspath(fname)
-<span class="ansi-green-fg">    991</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(fname, <span style="color: rgb(0,135,0)">str</span>):
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 992</span>     fh <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">lib</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_datasource</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fname</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#39;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">rt</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#39;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">    993</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> encoding <span class="ansi-bold" style="color: rgb(175,0,255)">is</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>:
-<span class="ansi-green-fg">    994</span>         encoding <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">getattr</span>(fh, <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">encoding</span><span style="color: rgb(175,0,0)">&#39;</span>, <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">latin1</span><span style="color: rgb(175,0,0)">&#39;</span>)
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\_datasource.py:193</span>, in <span class="ansi-cyan-fg">open</span><span class="ansi-blue-intense-fg ansi-bold">(path, mode, destpath, encoding, newline)</span>
-<span class="ansi-green-fg">    156</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">    157</span> <span style="color: rgb(175,0,0)">Open `path` with `mode` and return the file object.</span>
-<span class="ansi-green-fg">    158</span>
-<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
-<span class="ansi-green-fg">    189</span>
-<span class="ansi-green-fg">    190</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">    192</span> ds <span style="color: rgb(98,98,98)">=</span> DataSource(destpath)
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 193</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg">ds</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">mode</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">newline</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">newline</span><span class="ansi-yellow-bg">)</span>
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\_datasource.py:533</span>, in <span class="ansi-cyan-fg">DataSource.open</span><span class="ansi-blue-intense-fg ansi-bold">(self, path, mode, encoding, newline)</span>
-<span class="ansi-green-fg">    530</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> _file_openers[ext](found, mode<span style="color: rgb(98,98,98)">=</span>mode,
-<span class="ansi-green-fg">    531</span>                               encoding<span style="color: rgb(98,98,98)">=</span>encoding, newline<span style="color: rgb(98,98,98)">=</span>newline)
-<span class="ansi-green-fg">    532</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 533</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">FileNotFoundError</span>(<span style="color: rgb(175,0,0)">f</span><span style="color: rgb(175,0,0)">&#34;</span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>path<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span style="color: rgb(175,0,0)"> not found.</span><span style="color: rgb(175,0,0)">&#34;</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: data/id.txt not found.
+Step 1: Loading domain information...
 </pre></div></div>
 </div>
 <p>Step 2: Exmaple of loading MODFLOW water content data</p>
@@ -332,36 +276,12 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[4], line 5</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Step 3: Setting up profile...
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[5], line 11</span>
-<span class="ansi-green-fg">      5</span> point2 <span style="color: rgb(98,98,98)">=</span> [<span style="color: rgb(98,98,98)">95</span>, <span style="color: rgb(98,98,98)">180</span>]  <span style="color: rgb(95,135,135)"># [col, row]</span>
-<span class="ansi-green-fg">      7</span> <span style="color: rgb(95,135,135)"># Initialize profile interpolator</span>
-<span class="ansi-green-fg">      8</span> interpolator <span style="color: rgb(98,98,98)">=</span> ProfileInterpolator(
-<span class="ansi-green-fg">      9</span>     point1<span style="color: rgb(98,98,98)">=</span>point1,
-<span class="ansi-green-fg">     10</span>     point2<span style="color: rgb(98,98,98)">=</span>point2,
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 11</span>     surface_data<span style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">top</span>,
-<span class="ansi-green-fg">     12</span>     origin_x<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">569156.0</span>,
-<span class="ansi-green-fg">     13</span>     origin_y<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">4842444.0</span>,
-<span class="ansi-green-fg">     14</span>     pixel_width<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">1.0</span>,
-<span class="ansi-green-fg">     15</span>     pixel_height<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">1.0</span>,
-<span class="ansi-green-fg">     16</span>     num_points <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">400</span>
-<span class="ansi-green-fg">     17</span> )
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;top&#39; is not defined
+Step 3: Setting up profile...
 </pre></div></div>
 </div>
 <p>Step 4: Interpolate data to profile</p>
@@ -397,11 +317,11 @@ Step 4: Interpolating data to profile...
 Cell <span class="ansi-green-intense-fg ansi-bold">In[6], line 4</span>
 <span class="ansi-green-fg">      1</span> <span style="color: rgb(0,135,0)">print</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Step 4: Interpolating data to profile...</span><span style="color: rgb(175,0,0)">&#34;</span>)
 <span class="ansi-green-fg">      3</span> <span style="color: rgb(95,135,135)"># Interpolate water content to profile</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 4</span> water_content_profile <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">interpolator</span><span style="color: rgb(98,98,98)">.</span>interpolate_3d_data(water_content)
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 4</span> water_content_profile <span style="color: rgb(98,98,98)">=</span> interpolator<span style="color: rgb(98,98,98)">.</span>interpolate_3d_data(<span class="ansi-yellow-bg">water_content</span>)
 <span class="ansi-green-fg">      6</span> <span style="color: rgb(95,135,135)"># Interpolate porosity to profile</span>
 <span class="ansi-green-fg">      7</span> porosity_profile <span style="color: rgb(98,98,98)">=</span> interpolator<span style="color: rgb(98,98,98)">.</span>interpolate_3d_data(porosity)
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;interpolator&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;water_content&#39; is not defined
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -451,27 +371,12 @@ Step 5: Creating mesh...
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[7], line 4</span>
-<span class="ansi-green-fg">      1</span> <span style="color: rgb(0,135,0)">print</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Step 5: Creating mesh...</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">      3</span> <span style="color: rgb(95,135,135)"># Load structure layers</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 4</span> bot <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">bot.npy</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">      6</span> <span style="color: rgb(95,135,135)"># Process layers to get structure</span>
-<span class="ansi-green-fg">      7</span> structure <span style="color: rgb(98,98,98)">=</span> interpolator<span style="color: rgb(98,98,98)">.</span>interpolate_layer_data([top] <span style="color: rgb(98,98,98)">+</span> bot<span style="color: rgb(98,98,98)">.</span>tolist())
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:427</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(file, mmap_mode, allow_pickle, fix_imports, encoding, max_header_size)</span>
-<span class="ansi-green-fg">    425</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">False</span>
-<span class="ansi-green-fg">    426</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 427</span>     fid <span style="color: rgb(98,98,98)">=</span> stack<span style="color: rgb(98,98,98)">.</span>enter_context(<span class="ansi-yellow-bg" style="color: rgb(0,135,0)">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os_fspath</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">file</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">rb</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span>)
-<span class="ansi-green-fg">    428</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>
-<span class="ansi-green-fg">    430</span> <span style="color: rgb(95,135,135)"># Code to distinguish from NumPy binary files and pickles.</span>
-
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: [Errno 2] No such file or directory: &#39;data/bot.npy&#39;
+1
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -505,30 +410,12 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[8], line 5</span>
-<span class="ansi-green-fg">      2</span> <span class="ansi-bold" style="color: rgb(0,135,0)">import</span> <span class="ansi-bold" style="color: rgb(0,0,255)">matplotlib</span><span class="ansi-bold" style="color: rgb(0,0,255)">.</span><span class="ansi-bold" style="color: rgb(0,0,255)">pyplot</span> <span class="ansi-bold" style="color: rgb(0,135,0)">as</span> <span class="ansi-bold" style="color: rgb(0,0,255)">plt</span>
-<span class="ansi-green-fg">      4</span> plt<span style="color: rgb(98,98,98)">.</span>figure(figsize<span style="color: rgb(98,98,98)">=</span>(<span style="color: rgb(98,98,98)">15</span>, <span style="color: rgb(98,98,98)">5</span>))
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 5</span> <span class="ansi-yellow-bg">top</span>[idomain<span style="color: rgb(98,98,98)">==</span><span style="color: rgb(98,98,98)">0</span>] <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>nan  <span style="color: rgb(95,135,135)"># Mask out the inactive cells in the top layer</span>
-<span class="ansi-green-fg">      6</span> <span style="color: rgb(95,135,135)"># Plot the surface and profile line</span>
-<span class="ansi-green-fg">      7</span> plt<span style="color: rgb(98,98,98)">.</span>subplot(<span style="color: rgb(98,98,98)">121</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;top&#39; is not defined
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-&lt;Figure size 1500x500 with 0 Axes&gt;
-</pre></div></div>
+<img alt="../_images/auto_examples_Ex2_workflow_11_0.png" src="../_images/auto_examples_Ex2_workflow_11_0.png" />
+</div>
 </div>
 <p>Step 6: Interpolate data to mesh</p>
 <div class="nbinput docutils container">
@@ -697,14 +584,14 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[9], line 3</span>
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[11], line 18</span>
-<span class="ansi-green-fg">     15</span> mpl<span style="color: rgb(98,98,98)">.</span>rcParams[<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">figure.dpi</span><span style="color: rgb(175,0,0)">&#39;</span>] <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">150</span>
-<span class="ansi-green-fg">     17</span> <span style="color: rgb(95,135,135)"># Preprocessing</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 18</span> top_masked <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>copy(<span class="ansi-yellow-bg">top</span>)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[11], line 20</span>
+<span class="ansi-green-fg">     18</span> top_masked <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>copy(top)
 <span class="ansi-green-fg">     19</span> top_masked[idomain <span style="color: rgb(98,98,98)">==</span> <span style="color: rgb(98,98,98)">0</span>] <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>nan
-<span class="ansi-green-fg">     20</span> saturation <span style="color: rgb(98,98,98)">=</span> wc_mesh <span style="color: rgb(98,98,98)">/</span> porosity_mesh
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 20</span> saturation <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">wc_mesh</span> <span style="color: rgb(98,98,98)">/</span> porosity_mesh
+<span class="ansi-green-fg">     21</span> ctcolor <span style="color: rgb(98,98,98)">=</span> Earth_7<span style="color: rgb(98,98,98)">.</span>mpl_colormap
+<span class="ansi-green-fg">     23</span> <span style="color: rgb(95,135,135)"># Create 2x2 figure</span>
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;top&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;wc_mesh&#39; is not defined
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -738,18 +625,21 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[12], line 1</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&lt;Axes: &gt;, &lt;matplotlib.colorbar.Colorbar at 0x1a0a270d890&gt;)
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[13], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh</span>,markers<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh&#39; is not defined
-</pre></div></div>
+<img alt="../_images/auto_examples_Ex2_workflow_17_1.png" src="../_images/auto_examples_Ex2_workflow_17_1.png" />
+</div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
@@ -1083,7 +973,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[19], line 1</span>
 Cell <span class="ansi-green-intense-fg ansi-bold">In[20], line 10</span>
 <span class="ansi-green-fg">      7</span> fig, axs <span style="color: rgb(98,98,98)">=</span> plt<span style="color: rgb(98,98,98)">.</span>subplots(<span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">2</span>, figsize<span style="color: rgb(98,98,98)">=</span>(<span style="color: rgb(98,98,98)">14</span>, <span style="color: rgb(98,98,98)">6</span>))
 <span class="ansi-green-fg">      9</span> <span style="color: rgb(95,135,135)"># --- Left: Resistivity with log scale ---</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 10</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh</span>, res_models, ax<span style="color: rgb(98,98,98)">=</span>axs[<span style="color: rgb(98,98,98)">0</span>], orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 10</span> pg<span style="color: rgb(98,98,98)">.</span>show(mesh, <span class="ansi-yellow-bg">res_models</span>, ax<span style="color: rgb(98,98,98)">=</span>axs[<span style="color: rgb(98,98,98)">0</span>], orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,
 <span class="ansi-green-fg">     11</span>         cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap, logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>, showColorBar<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>,
 <span class="ansi-green-fg">     12</span>         xlabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Distance (m)</span><span style="color: rgb(175,0,0)">&#34;</span>, ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Elevation (m)</span><span style="color: rgb(175,0,0)">&#34;</span>,
 <span class="ansi-green-fg">     13</span>         label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Resistivity (Ω·m)</span><span style="color: rgb(175,0,0)">&#39;</span>, cMin<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">500</span>, cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">3000</span>)
@@ -1093,7 +983,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[20], line 10</span>
 <span class="ansi-green-fg">     19</span>         xlabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Distance (m)</span><span style="color: rgb(175,0,0)">&#34;</span>, ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Elevation (m)</span><span style="color: rgb(175,0,0)">&#34;</span>,
 <span class="ansi-green-fg">     20</span>         label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Velocity (m/s)</span><span style="color: rgb(175,0,0)">&#39;</span>)
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;res_models&#39; is not defined
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1137,6 +1027,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[20], line 10</span>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Step 9: Creating ERT survey design...
+Step 10: Performing forward modeling...
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1145,15 +1036,20 @@ Step 9: Creating ERT survey design...
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[21], line 3</span>
-<span class="ansi-green-fg">      1</span> <span style="color: rgb(0,135,0)">print</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Step 9: Creating ERT survey design...</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">      2</span> xpos <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>linspace(<span style="color: rgb(98,98,98)">15</span>, <span style="color: rgb(98,98,98)">15</span><span style="color: rgb(98,98,98)">+</span><span style="color: rgb(98,98,98)">72</span> <span style="color: rgb(98,98,98)">-</span> <span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">72</span>)
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 3</span> ypos <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>interp(xpos, <span class="ansi-yellow-bg">interpolator</span><span style="color: rgb(98,98,98)">.</span>L_profile, interpolator<span style="color: rgb(98,98,98)">.</span>surface_profile)
+<span class="ansi-red-intense-fg ansi-bold">ModuleNotFoundError</span>                       Traceback (most recent call last)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[21], line 7</span>
+<span class="ansi-green-fg">      3</span> ypos <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>interp(xpos, interpolator<span style="color: rgb(98,98,98)">.</span>L_profile, interpolator<span style="color: rgb(98,98,98)">.</span>surface_profile)
 <span class="ansi-green-fg">      6</span> <span style="color: rgb(0,135,0)">print</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Step 10: Performing forward modeling...</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">      7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">from</span> <span class="ansi-bold" style="color: rgb(0,0,255)">watershed_geophysics</span><span class="ansi-bold" style="color: rgb(0,0,255)">.</span><span class="ansi-bold" style="color: rgb(0,0,255)">forward</span><span class="ansi-bold" style="color: rgb(0,0,255)">.</span><span class="ansi-bold" style="color: rgb(0,0,255)">ert_forward</span> <span class="ansi-bold" style="color: rgb(0,135,0)">import</span> ERTForwardModeling
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">from</span> <span class="ansi-bold" style="color: rgb(0,0,255)">watershed_geophysics</span><span class="ansi-bold" style="color: rgb(0,0,255)">.</span><span class="ansi-bold" style="color: rgb(0,0,255)">forward</span><span class="ansi-bold" style="color: rgb(0,0,255)">.</span><span class="ansi-bold" style="color: rgb(0,0,255)">ert_forward</span> <span class="ansi-bold" style="color: rgb(0,135,0)">import</span> ERTForwardModeling
+<span class="ansi-green-fg">      9</span> <span style="color: rgb(95,135,135)"># Method 1: Using class method (one-step creation)</span>
+<span class="ansi-green-fg">     10</span> synth_data, grid <span style="color: rgb(98,98,98)">=</span> ERTForwardModeling<span style="color: rgb(98,98,98)">.</span>create_synthetic_data(
+<span class="ansi-green-fg">     11</span>     xpos<span style="color: rgb(98,98,98)">=</span>xpos,
+<span class="ansi-green-fg">     12</span>     ypos<span style="color: rgb(98,98,98)">=</span>ypos,
+<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
+<span class="ansi-green-fg">     19</span>     show_data<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>
+<span class="ansi-green-fg">     20</span> )
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;interpolator&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">ModuleNotFoundError</span>: No module named &#39;watershed_geophysics&#39;
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -1231,6 +1127,39 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[23], line 1</span>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Step 9: Creating ERT survey design...
+Step 10: Performing forward modeling...
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:46 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:46 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:47 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:47 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1240,14 +1169,14 @@ Step 9: Creating ERT survey design...
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[24], line 6</span>
-<span class="ansi-green-fg">      2</span> <span style="color: rgb(0,135,0)">print</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Step 9: Creating ERT survey design...</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">      5</span> xpos <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>linspace(<span style="color: rgb(98,98,98)">15</span>,<span style="color: rgb(98,98,98)">15</span><span style="color: rgb(98,98,98)">+</span><span style="color: rgb(98,98,98)">72</span> <span style="color: rgb(98,98,98)">-</span> <span style="color: rgb(98,98,98)">1</span>,<span style="color: rgb(98,98,98)">72</span>)
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 6</span> ypos <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>interp(xpos,<span class="ansi-yellow-bg">interpolator</span><span style="color: rgb(98,98,98)">.</span>L_profile,interpolator<span style="color: rgb(98,98,98)">.</span>surface_profile)
-<span class="ansi-green-fg">      7</span> pos <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>hstack((xpos<span style="color: rgb(98,98,98)">.</span>reshape(<span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">1</span>,<span style="color: rgb(98,98,98)">1</span>),ypos<span style="color: rgb(98,98,98)">.</span>reshape(<span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">1</span>,<span style="color: rgb(98,98,98)">1</span>)))
-<span class="ansi-green-fg">      9</span> schemeert <span style="color: rgb(98,98,98)">=</span> ert<span style="color: rgb(98,98,98)">.</span>createData(elecs<span style="color: rgb(98,98,98)">=</span>pos,schemeName<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">wa</span><span style="color: rgb(175,0,0)">&#39;</span>)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[24], line 24</span>
+<span class="ansi-green-fg">     22</span> fob<span style="color: rgb(98,98,98)">.</span>setData(schemeert)
+<span class="ansi-green-fg">     23</span> fob<span style="color: rgb(98,98,98)">.</span>setMesh(grid)
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 24</span> dr <span style="color: rgb(98,98,98)">=</span> fob<span style="color: rgb(98,98,98)">.</span>response(<span class="ansi-yellow-bg">res_models</span>)
+<span class="ansi-green-fg">     26</span> dr <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">1.</span> <span style="color: rgb(98,98,98)">+</span> pg<span style="color: rgb(98,98,98)">.</span>randn(dr<span style="color: rgb(98,98,98)">.</span>size()) <span style="color: rgb(98,98,98)">*</span> <span style="color: rgb(98,98,98)">0.05</span>
+<span class="ansi-green-fg">     27</span> ert_manager <span style="color: rgb(98,98,98)">=</span> ert<span style="color: rgb(98,98,98)">.</span>ERTManager(synth_data)
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;interpolator&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;res_models&#39; is not defined
 </pre></div></div>
 </div>
 <p>Seismic data</p>
@@ -1354,6 +1283,17 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[25], line 5</span>
 Step 11: Creating seismic survey design...
 </pre></div></div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+C:\Users\HChen8\AppData\Local\Temp\ipykernel_12484\2781296669.py:15: DeprecationWarning: Conversion of an array with ndim &gt; 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  pos[i, 0] = new_x
+C:\Users\HChen8\AppData\Local\Temp\ipykernel_12484\2781296669.py:16: DeprecationWarning: Conversion of an array with ndim &gt; 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  pos[i, 1] = new_y
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
@@ -1361,14 +1301,15 @@ Step 11: Creating seismic survey design...
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[26], line 11</span>
-<span class="ansi-green-fg">      6</span> scheme <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>physics<span style="color: rgb(98,98,98)">.</span>traveltime<span style="color: rgb(98,98,98)">.</span>createRAData(sensors,shotDistance<span style="color: rgb(98,98,98)">=</span>shotDistance)
-<span class="ansi-green-fg">     10</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> i <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">range</span>(numberGeophones):
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 11</span>     minusx <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>abs(<span class="ansi-yellow-bg">surface</span>[:,<span style="color: rgb(98,98,98)">0</span>]<span style="color: rgb(98,98,98)">-</span>sensors[i])
-<span class="ansi-green-fg">     12</span>     index <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>where(minusx<span style="color: rgb(98,98,98)">==</span> np<span style="color: rgb(98,98,98)">.</span>amin(minusx))
-<span class="ansi-green-fg">     13</span>     new_x <span style="color: rgb(98,98,98)">=</span> surface[index,<span style="color: rgb(98,98,98)">0</span>]
+Cell <span class="ansi-green-intense-fg ansi-bold">In[26], line 23</span>
+<span class="ansi-green-fg">     19</span> scheme<span style="color: rgb(98,98,98)">.</span>setSensors(pos)
+<span class="ansi-green-fg">     22</span> mgr <span style="color: rgb(98,98,98)">=</span> TravelTimeManager()
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 23</span> datasrt <span style="color: rgb(98,98,98)">=</span> mgr<span style="color: rgb(98,98,98)">.</span>simulate(slowness<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">1.0</span> <span style="color: rgb(98,98,98)">/</span> <span class="ansi-yellow-bg">velocity_mesh</span>, scheme<span style="color: rgb(98,98,98)">=</span>scheme, mesh<span style="color: rgb(98,98,98)">=</span>mesh,
+<span class="ansi-green-fg">     24</span>                     noiseLevel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.05</span>, noiseAbs<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.00001</span>, seed<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">1334</span>
+<span class="ansi-green-fg">     25</span>                     ,verbose<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
+<span class="ansi-green-fg">     26</span> datasrt<span style="color: rgb(98,98,98)">.</span>save(os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(output_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">synthetic_seismic_data.dat</span><span style="color: rgb(175,0,0)">&#34;</span>))
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;surface&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;velocity_mesh&#39; is not defined
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1544,7 +1485,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[27], line 75</span>
 Cell <span class="ansi-green-intense-fg ansi-bold">In[28], line 15</span>
 <span class="ansi-green-fg">     12</span> ax1, ax2, ax3, ax4 <span style="color: rgb(98,98,98)">=</span> axs<span style="color: rgb(98,98,98)">.</span>flatten()
 <span class="ansi-green-fg">     14</span> <span style="color: rgb(95,135,135)"># --- Top left: Resistivity (log scale) ---</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 15</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh</span>, res_models, ax<span style="color: rgb(98,98,98)">=</span>ax1, orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 15</span> pg<span style="color: rgb(98,98,98)">.</span>show(mesh, <span class="ansi-yellow-bg">res_models</span>, ax<span style="color: rgb(98,98,98)">=</span>ax1, orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,
 <span class="ansi-green-fg">     16</span>         cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap, logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>, showColorBar<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>,
 <span class="ansi-green-fg">     17</span>         xlabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Distance (m)</span><span style="color: rgb(175,0,0)">&#34;</span>, ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Elevation (m)</span><span style="color: rgb(175,0,0)">&#34;</span>,
 <span class="ansi-green-fg">     18</span>         label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Resistivity (Ω·m)</span><span style="color: rgb(175,0,0)">&#39;</span>, cMin<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">100</span>, cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">3000</span>)
@@ -1552,7 +1493,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[28], line 15</span>
 <span class="ansi-green-fg">     20</span> pg<span style="color: rgb(98,98,98)">.</span>viewer<span style="color: rgb(98,98,98)">.</span>mpl<span style="color: rgb(98,98,98)">.</span>drawSensors(ax1, schemeert<span style="color: rgb(98,98,98)">.</span>sensors(), diam<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.8</span>,
 <span class="ansi-green-fg">     21</span>                          facecolor<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">black</span><span style="color: rgb(175,0,0)">&#39;</span>, edgecolor<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">black</span><span style="color: rgb(175,0,0)">&#39;</span>)
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;res_models&#39; is not defined
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1571,16 +1512,12 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[28], line 15</span>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[29], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> np<span style="color: rgb(98,98,98)">.</span>mean(np<span style="color: rgb(98,98,98)">.</span>array(<span class="ansi-yellow-bg">synth_data</span>[<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">rhoa</span><span style="color: rgb(175,0,0)">&#39;</span>][:<span style="color: rgb(98,98,98)">600</span>]))
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;synth_data&#39; is not defined
+0.0
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1592,16 +1529,12 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[29], line 1</span>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[30], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> <span class="ansi-yellow-bg">synth_data</span>
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;synth_data&#39; is not defined
+Data: Sensors: 72 data: 828, nonzero entries: [&#39;a&#39;, &#39;b&#39;, &#39;k&#39;, &#39;m&#39;, &#39;n&#39;, &#39;valid&#39;]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1649,9 +1582,116 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[31], line 1</span>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:47 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:47 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:47 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:47 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:47 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:47 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:18:47 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 4193 Cells: 7984 Boundaries: 6188
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Step 11: Running ERT inversion...
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+chi2: [[31.75657354]]
+dPhi: 1.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+chi2: [[3.03771603]]
+dPhi: [[0.90434371]]
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+chi2: [[1.11162972]]
+dPhi: [[0.63405739]]
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1659,53 +1699,7 @@ Step 11: Running ERT inversion...
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">Exception</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[32], line 5</span>
-<span class="ansi-green-fg">      2</span> <span style="color: rgb(0,135,0)">print</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Step 11: Running ERT inversion...</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">      4</span> <span style="color: rgb(95,135,135)"># Create ERT inversion object</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 5</span> inversion <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">ERTInversion</span><span class="ansi-yellow-bg">(</span>
-<span class="ansi-green-fg">      6</span> <span class="ansi-yellow-bg">    </span><span class="ansi-yellow-bg">data_file</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">output_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">synthetic_data.dat</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">      7</span> <span class="ansi-yellow-bg">    </span><span class="ansi-yellow-bg">lambda_val</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">10.0</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">      8</span> <span class="ansi-yellow-bg">    </span><span class="ansi-yellow-bg">method</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">cgls</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">      9</span> <span class="ansi-yellow-bg">    </span><span class="ansi-yellow-bg">use_gpu</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(0,135,0)">True</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">     10</span> <span class="ansi-yellow-bg">    </span><span class="ansi-yellow-bg">max_iterations</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">10</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">     11</span> <span class="ansi-yellow-bg">    </span><span class="ansi-yellow-bg">lambda_rate</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">1.0</span>
-<span class="ansi-green-fg">     12</span> <span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     13</span> inversion_result <span style="color: rgb(98,98,98)">=</span> inversion<span style="color: rgb(98,98,98)">.</span>run()
-
-File <span class="ansi-green-intense-fg ansi-bold">c:\users\hchen8\documents\github\pyhydrogeophysx\PyHydroGeophysX\inversion\ert_inversion.py:40</span>, in <span class="ansi-cyan-fg">ERTInversion.__init__</span><span class="ansi-blue-intense-fg ansi-bold">(self, data_file, mesh, **kwargs)</span>
-<span class="ansi-green-fg">     20</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">     21</span> <span style="color: rgb(175,0,0)">Initialize ERT inversion.</span>
-<span class="ansi-green-fg">     22</span>
-<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
-<span class="ansi-green-fg">     37</span> <span style="color: rgb(175,0,0)">        - n_jobs: Number of parallel jobs (-1 for all cores)</span>
-<span class="ansi-green-fg">     38</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">     39</span> <span style="color: rgb(95,135,135)"># Load ERT data</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 40</span> data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">ert</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_file</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     42</span> <span style="color: rgb(95,135,135)"># Call parent initializer</span>
-<span class="ansi-green-fg">     43</span> <span style="color: rgb(0,135,0)">super</span>()<span style="color: rgb(98,98,98)">.</span><span style="color: rgb(0,0,255)">__init__</span>(data, mesh, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs)
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\physics\ert\importData.py:26</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fileName, verbose, **kwargs)</span>
-<span class="ansi-green-fg">      7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">load</span>(fileName, verbose<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs):
-<span class="ansi-green-fg">      8</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">&#34;&#34;&#34;Shortcut to load ERT data.</span>
-<span class="ansi-green-fg">      9</span>
-<span class="ansi-green-fg">     10</span> <span style="color: rgb(175,0,0)">    Import Data and try to assume the file format.</span>
-<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
-<span class="ansi-green-fg">     24</span>
-<span class="ansi-green-fg">     25</span> <span style="color: rgb(175,0,0)">    &#34;&#34;&#34;</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 26</span>     data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">pg</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fileName</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     27</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(data, pg<span style="color: rgb(98,98,98)">.</span>DataContainerERT):
-<span class="ansi-green-fg">     28</span>         <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> data
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\core\load.py:166</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fname, verbose, testAll, realName)</span>
-<span class="ansi-green-fg">    163</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> getExampleData(fname)
-<span class="ansi-green-fg">    165</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>exists(fname):
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 166</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">Exception</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">File or directory named </span><span class="ansi-bold" style="color: rgb(175,95,135)">%s</span><span style="color: rgb(175,0,0)"> does not exist.</span><span style="color: rgb(175,0,0)">&#34;</span> <span style="color: rgb(98,98,98)">%</span> (fname))
-<span class="ansi-green-fg">    168</span> <span style="color: rgb(95,135,135)"># recursive function call if fname is a folder of files</span>
-<span class="ansi-green-fg">    169</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>isdir(fname):
-
-<span class="ansi-red-intense-fg ansi-bold">Exception</span>: File or directory named results/workflow_example\synthetic_data.dat does not exist.
+End of inversion
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1717,16 +1711,12 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[33], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> <span class="ansi-yellow-bg">inversion_result</span><span style="color: rgb(98,98,98)">.</span>mesh
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;inversion_result&#39; is not defined
+Mesh: Nodes: 812 Cells: 1438 Boundaries: 184
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1738,16 +1728,12 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[33], line 1</span>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[34], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> <span class="ansi-yellow-bg">inversion_result</span><span style="color: rgb(98,98,98)">.</span>final_model<span style="color: rgb(98,98,98)">.</span>shape
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;inversion_result&#39; is not defined
+(1438,)
 </pre></div></div>
 </div>
 </section>
@@ -1762,73 +1748,125 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[34], line 1</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:19:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:19:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:19:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:19:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:19:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:19:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:19:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 4193 Cells: 7984 Boundaries: 6188
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:19:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Use median(data values)=1096.4619731083849
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:19:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Created startmodel from forward operator: 1438, min/max=1096.461973/1096.461973
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:19:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Starting inversion.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+fop: &lt;pygimli.physics.ert.ertModelling.ERTModelling object at 0x000001A0A32F60C0&gt;
+Data transformation: &lt;pgcore._pygimli_.RTransLogLU object at 0x000001A0A32F6A20&gt;
+Model transformation: &lt;pgcore._pygimli_.RTransLog object at 0x000001A0A32F6840&gt;
+min/max (data): 474/2080
+min/max (error): 5%/5%
+min/max (start model): 1096/1096
+--------------------------------------------------------------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+inv.iter 0 ... chi² =   30.24
+--------------------------------------------------------------------------------
+inv.iter 1 ... chi² =    2.87 (dPhi = 89.65%) lam: 10.0
+--------------------------------------------------------------------------------
+inv.iter 2 ...
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">Exception</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[35], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> mgr <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">ert</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">ERTManager</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">output_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">synthetic_data.dat</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">      2</span> inv <span style="color: rgb(98,98,98)">=</span> mgr<span style="color: rgb(98,98,98)">.</span>invert(lam<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">10</span>, verbose<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>,quality<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">34</span>)
+chi² =    1.04 (dPhi = 57.62%) lam: 10.0
+--------------------------------------------------------------------------------
+inv.iter 3 ... chi² =    0.97 (dPhi = 4.72%) lam: 10.0
 
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\physics\ert\ertManager.py:56</span>, in <span class="ansi-cyan-fg">ERTManager.__init__</span><span class="ansi-blue-intense-fg ansi-bold">(self, data, **kwargs)</span>
-<span class="ansi-green-fg">     53</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>useBert <span style="color: rgb(98,98,98)">=</span> kwargs<span style="color: rgb(98,98,98)">.</span>pop(<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">useBert</span><span style="color: rgb(175,0,0)">&#39;</span>, <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
-<span class="ansi-green-fg">     54</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>sr <span style="color: rgb(98,98,98)">=</span> kwargs<span style="color: rgb(98,98,98)">.</span>pop(<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">sr</span><span style="color: rgb(175,0,0)">&#39;</span>, <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 56</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">super</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg" style="color: rgb(0,0,255)">__init__</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">data</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     57</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>inv<span style="color: rgb(98,98,98)">.</span>dataTrans <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>trans<span style="color: rgb(98,98,98)">.</span>TransLogLU()
 
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\methodManager.py:709</span>, in <span class="ansi-cyan-fg">MeshMethodManager.__init__</span><span class="ansi-blue-intense-fg ansi-bold">(self, **kwargs)</span>
-<span class="ansi-green-fg">    700</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">__init__</span>(<span style="color: rgb(0,135,0)">self</span>, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs):
-<span class="ansi-green-fg">    701</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">&#34;&#34;&#34;Initialize by calling super methods.</span>
-<span class="ansi-green-fg">    702</span>
-<span class="ansi-green-fg">    703</span> <span style="color: rgb(175,0,0)">    Attribute</span>
-<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
-<span class="ansi-green-fg">    707</span> <span style="color: rgb(175,0,0)">        You can overwrite it with invert(mesh=mesh).</span>
-<span class="ansi-green-fg">    708</span> <span style="color: rgb(175,0,0)">    &#34;&#34;&#34;</span>
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 709</span>     <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">super</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg" style="color: rgb(0,0,255)">__init__</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">    710</span>     <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>mesh <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\methodManager.py:134</span>, in <span class="ansi-cyan-fg">MethodManager.__init__</span><span class="ansi-blue-intense-fg ansi-bold">(self, fop, fw, data, **kwargs)</span>
-<span class="ansi-green-fg">    132</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> data <span class="ansi-bold" style="color: rgb(175,0,255)">is</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>:
-<span class="ansi-green-fg">    133</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(data, <span style="color: rgb(0,135,0)">str</span>):
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 134</span>         <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">    135</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-fg">    136</span>         <span style="color: rgb(95,135,135)">#self.data = data</span>
-<span class="ansi-green-fg">    137</span>         <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>setData(data)
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\physics\ert\ertManager.py:91</span>, in <span class="ansi-cyan-fg">ERTManager.load</span><span class="ansi-blue-intense-fg ansi-bold">(self, fileName)</span>
-<span class="ansi-green-fg">     77</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">load</span>(<span style="color: rgb(0,135,0)">self</span>, fileName):
-<span class="ansi-green-fg">     78</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">&#34;&#34;&#34;Load ERT data.</span>
-<span class="ansi-green-fg">     79</span>
-<span class="ansi-green-fg">     80</span> <span style="color: rgb(175,0,0)">    Forwarded to :py:mod:`pygimli.physics.ert.load`</span>
-<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
-<span class="ansi-green-fg">     89</span> <span style="color: rgb(175,0,0)">    data: :gimliapi:`GIMLI::DataContainerERT`</span>
-<span class="ansi-green-fg">     90</span> <span style="color: rgb(175,0,0)">    &#34;&#34;&#34;</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 91</span>     <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">pg</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">physics</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">ert</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fileName</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     92</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>data
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\physics\ert\importData.py:26</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fileName, verbose, **kwargs)</span>
-<span class="ansi-green-fg">      7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">load</span>(fileName, verbose<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs):
-<span class="ansi-green-fg">      8</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">&#34;&#34;&#34;Shortcut to load ERT data.</span>
-<span class="ansi-green-fg">      9</span>
-<span class="ansi-green-fg">     10</span> <span style="color: rgb(175,0,0)">    Import Data and try to assume the file format.</span>
-<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
-<span class="ansi-green-fg">     24</span>
-<span class="ansi-green-fg">     25</span> <span style="color: rgb(175,0,0)">    &#34;&#34;&#34;</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 26</span>     data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">pg</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fileName</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     27</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(data, pg<span style="color: rgb(98,98,98)">.</span>DataContainerERT):
-<span class="ansi-green-fg">     28</span>         <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> data
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\core\load.py:166</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fname, verbose, testAll, realName)</span>
-<span class="ansi-green-fg">    163</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> getExampleData(fname)
-<span class="ansi-green-fg">    165</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>exists(fname):
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 166</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">Exception</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">File or directory named </span><span class="ansi-bold" style="color: rgb(175,95,135)">%s</span><span style="color: rgb(175,0,0)"> does not exist.</span><span style="color: rgb(175,0,0)">&#34;</span> <span style="color: rgb(98,98,98)">%</span> (fname))
-<span class="ansi-green-fg">    168</span> <span style="color: rgb(95,135,135)"># recursive function call if fname is a folder of files</span>
-<span class="ansi-green-fg">    169</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>isdir(fname):
-
-<span class="ansi-red-intense-fg ansi-bold">Exception</span>: File or directory named results/workflow_example\synthetic_data.dat does not exist.
+################################################################################
+#                  Abort criterion reached: chi² &lt;= 1 (0.97)                   #
+################################################################################
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1873,12 +1911,12 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 Cell <span class="ansi-green-intense-fg ansi-bold">In[36], line 5</span>
 <span class="ansi-green-fg">      3</span> <span style="color: rgb(95,135,135)"># True resistivity model</span>
 <span class="ansi-green-fg">      4</span> ax1 <span style="color: rgb(98,98,98)">=</span> axes[<span style="color: rgb(98,98,98)">0</span>]
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 5</span> cbar1 <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh</span>, res_models, ax<span style="color: rgb(98,98,98)">=</span>ax1, cMap<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">jet</span><span style="color: rgb(175,0,0)">&#39;</span>, logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>,
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 5</span> cbar1 <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(mesh, <span class="ansi-yellow-bg">res_models</span>, ax<span style="color: rgb(98,98,98)">=</span>ax1, cMap<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">jet</span><span style="color: rgb(175,0,0)">&#39;</span>, logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>,
 <span class="ansi-green-fg">      6</span>               cMin<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">100</span>, cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">3000</span>, label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Resistivity [Ohm-m]</span><span style="color: rgb(175,0,0)">&#39;</span>)
 <span class="ansi-green-fg">      7</span> ax1<span style="color: rgb(98,98,98)">.</span>set_title(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">True Resistivity Model</span><span style="color: rgb(175,0,0)">&#34;</span>)
 <span class="ansi-green-fg">      9</span> <span style="color: rgb(95,135,135)"># Inverted model</span>
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;res_models&#39; is not defined
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1911,7 +1949,7 @@ Step 12: Running SRT inversion...
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex5_SRT.html" class="btn btn-neutral float-left" title="Seismic Refraction Tomography (SRT) Forward Modeling" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex5_SRT.html" class="btn btn-neutral float-left" title="Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

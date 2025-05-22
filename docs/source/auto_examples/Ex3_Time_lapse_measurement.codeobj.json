@@ -35,15 +35,6 @@
    "name": "MeshCreator"
   }
  ],
- "Parallel": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "joblib",
-   "module_short": "joblib",
-   "name": "Parallel"
-  }
- ],
  "ProfileInterpolator": [
   {
    "is_class": false,
@@ -60,42 +51,6 @@
    "module": "PyHydroGeophysX.core.interpolation",
    "module_short": "PyHydroGeophysX.core.interpolation",
    "name": "create_surface_lines"
-  }
- ],
- "delayed": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "joblib",
-   "module_short": "joblib",
-   "name": "delayed"
-  }
- ],
- "ert.ERTManager": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "pygimli.physics.ert",
-   "module_short": "pygimli.physics.ert",
-   "name": "ERTManager"
-  }
- ],
- "ert.ERTModelling": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "pygimli.physics.ert",
-   "module_short": "pygimli.physics.ert",
-   "name": "ERTModelling"
-  }
- ],
- "ert.createData": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "pygimli.physics.ert",
-   "module_short": "pygimli.physics.ert",
-   "name": "createData"
   }
  ],
  "ert.show": [
@@ -134,33 +89,6 @@
    "name": "array"
   }
  ],
- "np.hstack": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "hstack"
-  }
- ],
- "np.interp": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "interp"
-  }
- ],
- "np.linspace": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "linspace"
-  }
- ],
  "np.load": [
   {
    "is_class": false,
@@ -186,15 +114,6 @@
    "module": "numpy",
    "module_short": "numpy",
    "name": "min"
-  }
- ],
- "np.ones": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "ones"
   }
  ],
  "np.save": [
@@ -276,24 +195,6 @@
    "module": "pygimli",
    "module_short": "pygimli",
    "name": "load"
-  }
- ],
- "pg.meshtools.appendTriangleBoundary": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "pygimli.meshtools",
-   "module_short": "pygimli.meshtools",
-   "name": "appendTriangleBoundary"
-  }
- ],
- "pg.randn": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "pygimli",
-   "module_short": "pygimli",
-   "name": "randn"
   }
  ],
  "pg.show": [

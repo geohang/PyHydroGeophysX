@@ -18,7 +18,7 @@
 .. _sphx_glr_auto_examples_Ex8_MC_WC.py:
 
 
-Monte Carlo Uncertainty Quantification for Water Content Estimation
+Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation
 ====================================================================
 
 This example demonstrates Monte Carlo uncertainty quantification for 
@@ -64,12 +64,12 @@ water content estimates and identifying regions of high/low certainty.
     from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_saturation
 
     # Extract the inverted resistivity values
-    resistivity_values = np.load("results/Structure_WC/resmodel.npy")
-    coverage = np.load("results/Structure_WC/all_coverage.npy")
+    resistivity_values = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy")
+    coverage = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy")
     # Extract cell markers from the mesh (to identify different geological layers)
-    cell_markers = np.load("results/Structure_WC/index_marker.npy")
+    cell_markers = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy")
 
-    mesh = pg.load("results/Structure_WC/mesh_res.bms")
+    mesh = pg.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms")
 
     # Number of Monte Carlo realizations
     n_realizations = 100
@@ -454,7 +454,7 @@ Plot time series with uncertainty bands
 
 .. GENERATED FROM PYTHON SOURCE LINES 395-396
 
-## Fractured bedrock layer
+Fractured bedrock layer
 
 .. GENERATED FROM PYTHON SOURCE LINES 396-408
 

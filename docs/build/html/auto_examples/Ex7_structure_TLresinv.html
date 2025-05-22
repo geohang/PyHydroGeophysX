@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Structure-Constrained Time-Lapse Resistivity Inversion &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+  <title>Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion &mdash; PyHydroGeophysX 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -30,8 +30,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Monte Carlo Uncertainty Quantification for Water Content Estimation" href="Ex8_MC_WC.html" />
-    <link rel="prev" title="Time-Lapse ERT Inversion Techniques" href="EX4_TL_inversion.html" /> 
+    <link rel="next" title="Ex 6. Structure-Constrained Resistivity Inversion" href="Ex6_Structure_resinv.html" />
+    <link rel="prev" title="Ex 4. Time-Lapse ERT Inversion Techniques" href="EX4_TL_inversion.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -66,19 +66,13 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html#travel-time-inversion">travel time inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#non-parallel-computing-version">non parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#parallel-computing-version">parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#plot-the-apparent-resitivity">plot the apparent resitivity</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#Showing-the-water-content-model-for-the-differnent-timesteps">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#id1">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html#Using-Pygimili-default-to-the-inversion">Using Pygimili default to the inversion</a></li>
 </ul>
 </li>
@@ -99,7 +93,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
-      <li class="breadcrumb-item active">Structure-Constrained Time-Lapse Resistivity Inversion</li>
+      <li class="breadcrumb-item active">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex7_structure_TLresinv.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -109,8 +103,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="Structure-Constrained-Time-Lapse-Resistivity-Inversion">
-<h1>Structure-Constrained Time-Lapse Resistivity Inversion<a class="headerlink" href="#Structure-Constrained-Time-Lapse-Resistivity-Inversion" title="Link to this heading"></a></h1>
+  <section id="Ex-7.-Structure-Constrained-Time-Lapse-Resistivity-Inversion">
+<h1>Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion<a class="headerlink" href="#Ex-7.-Structure-Constrained-Time-Lapse-Resistivity-Inversion" title="Link to this heading"></a></h1>
 <p>This example combines structural constraints with time-lapse ERT inversion to monitor water content changes in layered geological media.</p>
 <p>The workflow demonstrates:</p>
 <ol class="arabic simple">
@@ -185,7 +179,7 @@
 <span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
 <span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">ert_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
 <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-<span class="n">mesh_with_interface</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/mesh_with_interface.bms&quot;</span><span class="p">)</span>
+<span class="n">mesh_with_interface</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -201,7 +195,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[2], line 28</span>
 <span class="ansi-green-fg">     27</span> <span style="color: rgb(95,135,135)"># Create a mesh for the inversion (or load an existing one)</span>
 <span class="ansi-green-intense-fg ansi-bold">---&gt; 28</span> data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">ert</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">ert_files</span><span class="ansi-yellow-bg">[</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">0</span><span class="ansi-yellow-bg">]</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
 <span class="ansi-green-fg">     29</span> ert_manager <span style="color: rgb(98,98,98)">=</span> ert<span style="color: rgb(98,98,98)">.</span>ERTManager(data)
-<span class="ansi-green-fg">     30</span> mesh_with_interface <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>load(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results/Structure_WC/mesh_with_interface.bms</span><span style="color: rgb(175,0,0)">&#34;</span>)
+<span class="ansi-green-fg">     30</span> mesh_with_interface <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>load(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms</span><span style="color: rgb(175,0,0)">&#34;</span>)
 
 File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\physics\ert\importData.py:26</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fileName, verbose, **kwargs)</span>
 <span class="ansi-green-fg">      7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">load</span>(fileName, verbose<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs):
@@ -318,9 +312,9 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[4], line 1</span>
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/resmodel.npy&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">(),:])</span>
-<span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/all_coverage.npy&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[:,</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()])</span>
-<span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/mesh_res.bms&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">(),:])</span>
+<span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[:,</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()])</span>
+<span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -332,9 +326,9 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[4], line 1</span>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
 Cell <span class="ansi-green-intense-fg ansi-bold">In[5], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> np<span style="color: rgb(98,98,98)">.</span>save(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results/Structure_WC/resmodel.npy</span><span style="color: rgb(175,0,0)">&#34;</span>, <span class="ansi-yellow-bg">result</span><span style="color: rgb(98,98,98)">.</span>final_models[result<span style="color: rgb(98,98,98)">.</span>mesh<span style="color: rgb(98,98,98)">.</span>cellMarkers(),:])
-<span class="ansi-green-fg">      2</span> np<span style="color: rgb(98,98,98)">.</span>save(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results/Structure_WC/all_coverage.npy</span><span style="color: rgb(175,0,0)">&#34;</span>, result<span style="color: rgb(98,98,98)">.</span>all_coverage[:,result<span style="color: rgb(98,98,98)">.</span>mesh<span style="color: rgb(98,98,98)">.</span>cellMarkers()])
-<span class="ansi-green-fg">      3</span> result<span style="color: rgb(98,98,98)">.</span>mesh<span style="color: rgb(98,98,98)">.</span>save(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results/Structure_WC/mesh_res.bms</span><span style="color: rgb(175,0,0)">&#34;</span>)
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> np<span style="color: rgb(98,98,98)">.</span>save(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy</span><span style="color: rgb(175,0,0)">&#34;</span>, <span class="ansi-yellow-bg">result</span><span style="color: rgb(98,98,98)">.</span>final_models[result<span style="color: rgb(98,98,98)">.</span>mesh<span style="color: rgb(98,98,98)">.</span>cellMarkers(),:])
+<span class="ansi-green-fg">      2</span> np<span style="color: rgb(98,98,98)">.</span>save(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy</span><span style="color: rgb(175,0,0)">&#34;</span>, result<span style="color: rgb(98,98,98)">.</span>all_coverage[:,result<span style="color: rgb(98,98,98)">.</span>mesh<span style="color: rgb(98,98,98)">.</span>cellMarkers()])
+<span class="ansi-green-fg">      3</span> result<span style="color: rgb(98,98,98)">.</span>mesh<span style="color: rgb(98,98,98)">.</span>save(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms</span><span style="color: rgb(175,0,0)">&#34;</span>)
 
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;result&#39; is not defined
 </pre></div></div>
@@ -410,7 +404,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[5], line 1</span>
         <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/timelapse_ert_with structure.tiff&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/timelapse_ert_with structure.tiff&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -455,7 +449,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[6], line 43</span>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">temp_marker</span> <span class="o">=</span> <span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()</span>
 <span class="n">index_marker</span> <span class="o">=</span> <span class="n">temp_marker</span><span class="p">[</span><span class="n">temp_marker</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">]</span>
-<span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/index_marker.npy&quot;</span><span class="p">,</span> <span class="n">index_marker</span><span class="p">)</span>
+<span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy&quot;</span><span class="p">,</span> <span class="n">index_marker</span><span class="p">)</span>
 <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">index_marker</span><span class="p">,</span><span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span><span class="n">clim</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mf">1e4</span><span class="p">),</span><span class="n">showMesh</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -470,7 +464,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[6], line 43</span>
 Cell <span class="ansi-green-intense-fg ansi-bold">In[7], line 1</span>
 <span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> temp_marker <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">mesh_with_interface</span><span style="color: rgb(98,98,98)">.</span>cellMarkers()
 <span class="ansi-green-fg">      2</span> index_marker <span style="color: rgb(98,98,98)">=</span> temp_marker[temp_marker <span style="color: rgb(98,98,98)">!=</span> <span style="color: rgb(98,98,98)">1</span>]
-<span class="ansi-green-fg">      3</span> np<span style="color: rgb(98,98,98)">.</span>save(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results/Structure_WC/index_marker.npy</span><span style="color: rgb(175,0,0)">&#34;</span>, index_marker)
+<span class="ansi-green-fg">      3</span> np<span style="color: rgb(98,98,98)">.</span>save(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy</span><span style="color: rgb(175,0,0)">&#34;</span>, index_marker)
 
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_with_interface&#39; is not defined
 </pre></div></div>
@@ -735,7 +729,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[13], line 1</span>
         <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;results/TL_measurements/appres/timelapse_sat.tiff&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres/timelapse_sat.tiff&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -829,8 +823,8 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[15], line 13</span>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="EX4_TL_inversion.html" class="btn btn-neutral float-left" title="Time-Lapse ERT Inversion Techniques" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex8_MC_WC.html" class="btn btn-neutral float-right" title="Monte Carlo Uncertainty Quantification for Water Content Estimation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="EX4_TL_inversion.html" class="btn btn-neutral float-left" title="Ex 4. Time-Lapse ERT Inversion Techniques" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex6_Structure_resinv.html" class="btn btn-neutral float-right" title="Ex 6. Structure-Constrained Resistivity Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

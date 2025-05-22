@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Structure-Constrained Resistivity Inversion &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+  <title>Ex 6. Structure-Constrained Resistivity Inversion &mdash; PyHydroGeophysX 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -30,8 +30,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Creating Synthetic Time-Lapse ERT Measurements" href="Ex3_Time_lapse_measurement.html" />
-    <link rel="prev" title="Monte Carlo Uncertainty Quantification for Water Content Estimation" href="Ex8_MC_WC.html" /> 
+    <link rel="next" title="Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation" href="Ex8_MC_WC.html" />
+    <link rel="prev" title="Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion" href="Ex7_structure_TLresinv.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -66,22 +66,18 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Structure-Constrained Resistivity Inversion</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#1.-load-data">1. load data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 6. Structure-Constrained Resistivity Inversion</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#load-data">load data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Using-ERT-data-to-create-a-mesh-to-take-care-of-the-boundary">Using ERT data to create a mesh to take care of the boundary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#travel-time-inversion">travel time inversion</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#travel-time-inversion">travel time inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#non-parallel-computing-version">non parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#parallel-computing-version">parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#plot-the-apparent-resitivity">plot the apparent resitivity</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#Showing-the-water-content-model-for-the-differnent-timesteps">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#id1">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html#Using-Pygimili-default-to-the-inversion">Using Pygimili default to the inversion</a></li>
 </ul>
 </li>
@@ -102,7 +98,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
-      <li class="breadcrumb-item active">Structure-Constrained Resistivity Inversion</li>
+      <li class="breadcrumb-item active">Ex 6. Structure-Constrained Resistivity Inversion</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex6_Structure_resinv.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -112,8 +108,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="Structure-Constrained-Resistivity-Inversion">
-<h1>Structure-Constrained Resistivity Inversion<a class="headerlink" href="#Structure-Constrained-Resistivity-Inversion" title="Link to this heading"></a></h1>
+  <section id="Ex-6.-Structure-Constrained-Resistivity-Inversion">
+<h1>Ex 6. Structure-Constrained Resistivity Inversion<a class="headerlink" href="#Ex-6.-Structure-Constrained-Resistivity-Inversion" title="Link to this heading"></a></h1>
 <p>This example demonstrates how to incorporate structural information from seismic velocity models into ERT inversion for improved subsurface imaging.</p>
 <p>The workflow includes:</p>
 <ol class="arabic simple">
@@ -168,13 +164,13 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;results/Structure_WC&quot;</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC&quot;</span>
 <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<section id="1.-load-data">
-<h2>1. load data<a class="headerlink" href="#1.-load-data" title="Link to this heading"></a></h2>
+<section id="load-data">
+<h2>load data<a class="headerlink" href="#load-data" title="Link to this heading"></a></h2>
 <p>load seismic data</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
@@ -213,7 +209,9 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 <span class="ansi-red-intense-fg ansi-bold">RuntimeError</span>: ./core/src/gimli.cpp:148               int GIMLI::openFile(const std::string&amp;, std::fstream*, std::ios_base::openmode, bool)  &#39;./results/workflow_example/synthetic_seismic_data.dat&#39;: No such file or directory2
 </pre></div></div>
 </div>
-<p>using ERT data to create a mesh to take care of the boundary</p>
+</section>
+<section id="Using-ERT-data-to-create-a-mesh-to-take-care-of-the-boundary">
+<h2>Using ERT data to create a mesh to take care of the boundary<a class="headerlink" href="#Using-ERT-data-to-create-a-mesh-to-take-care-of-the-boundary" title="Link to this heading"></a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
@@ -248,9 +246,8 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[4], line 3</span>
 </pre></div></div>
 </div>
 </section>
-</section>
 <section id="travel-time-inversion">
-<h1>travel time inversion<a class="headerlink" href="#travel-time-inversion" title="Link to this heading"></a></h1>
+<h2>travel time inversion<a class="headerlink" href="#travel-time-inversion" title="Link to this heading"></a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
@@ -293,7 +290,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[5], line 2</span>
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-21/05/25 - 19:40:07 - pyGIMLi - <span class="ansi-red-intense-fg ansi-bold">CRITICAL</span> - &lt;class &#39;pygimli.frameworks.inversion.Inversion&#39;&gt;.model(C:\Users\HChen8\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\inversion.py:240)
+21/05/25 - 22:55:25 - pyGIMLi - <span class="ansi-red-intense-fg ansi-bold">CRITICAL</span> - &lt;class &#39;pygimli.frameworks.inversion.Inversion&#39;&gt;.model(C:\Users\HChen8\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\inversion.py:240)
 There was no inversion run so there is no last model
 </pre></div></div>
 </div>
@@ -353,7 +350,7 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-21/05/25 - 19:40:08 - pyGIMLi - <span class="ansi-red-intense-fg ansi-bold">CRITICAL</span> - &lt;class &#39;pygimli.frameworks.inversion.Inversion&#39;&gt;.model(C:\Users\HChen8\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\inversion.py:240)
+21/05/25 - 22:55:25 - pyGIMLi - <span class="ansi-red-intense-fg ansi-bold">CRITICAL</span> - &lt;class &#39;pygimli.frameworks.inversion.Inversion&#39;&gt;.model(C:\Users\HChen8\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\inversion.py:240)
 There was no inversion run so there is no last model
 </pre></div></div>
 </div>
@@ -415,7 +412,7 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-21/05/25 - 19:40:08 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+21/05/25 - 22:55:25 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -522,7 +519,7 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-21/05/25 - 19:40:08 - pyGIMLi - <span class="ansi-red-intense-fg ansi-bold">CRITICAL</span> - &lt;class &#39;pygimli.frameworks.inversion.Inversion&#39;&gt;.model(C:\Users\HChen8\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\inversion.py:240)
+21/05/25 - 22:55:25 - pyGIMLi - <span class="ansi-red-intense-fg ansi-bold">CRITICAL</span> - &lt;class &#39;pygimli.frameworks.inversion.Inversion&#39;&gt;.model(C:\Users\HChen8\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\inversion.py:240)
 There was no inversion run so there is no last model
 </pre></div></div>
 </div>
@@ -1021,7 +1018,7 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/mesh_with_interface.bms&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1033,266 +1030,20 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
 Cell <span class="ansi-green-intense-fg ansi-bold">In[21], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> <span class="ansi-yellow-bg">mesh_with_interface</span><span style="color: rgb(98,98,98)">.</span>save(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results/Structure_WC/mesh_with_interface.bms</span><span style="color: rgb(175,0,0)">&#34;</span>)
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> <span class="ansi-yellow-bg">mesh_with_interface</span><span style="color: rgb(98,98,98)">.</span>save(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms</span><span style="color: rgb(175,0,0)">&#34;</span>)
 
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_with_interface&#39; is not defined
 </pre></div></div>
 </div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mgrConstrained</span><span class="o">.</span><span class="n">paraDomain</span><span class="p">,</span> <span class="n">mgrConstrained</span><span class="o">.</span><span class="n">coverage</span><span class="p">()[</span><span class="n">mgrConstrained</span><span class="o">.</span><span class="n">paraDomain</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()])</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-21/05/25 - 19:40:08 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">RuntimeError</span>                              Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[22], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mgrConstrained</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">paraDomain</span>, mgrConstrained<span style="color: rgb(98,98,98)">.</span>coverage()[mgrConstrained<span style="color: rgb(98,98,98)">.</span>paraDomain<span style="color: rgb(98,98,98)">.</span>cellMarkers()])
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\methodManager.py:720</span>, in <span class="ansi-cyan-fg">MeshMethodManager.paraDomain</span><span class="ansi-blue-intense-fg ansi-bold">(self)</span>
-<span class="ansi-green-fg">    717</span> <span style="color: rgb(175,0,255)">@property</span>
-<span class="ansi-green-fg">    718</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">paraDomain</span>(<span style="color: rgb(0,135,0)">self</span>):
-<span class="ansi-green-fg">    719</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">&#34;&#34;&#34;Parameter (inversion) domain mesh.&#34;&#34;&#34;</span>
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 720</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">fop</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">paraDomain</span>
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\modelling.py:585</span>, in <span class="ansi-cyan-fg">MeshModelling.paraDomain</span><span class="ansi-blue-intense-fg ansi-bold">(self)</span>
-<span class="ansi-green-fg">    582</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;Return parameter (inverse) mesh.&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">    583</span> <span style="color: rgb(95,135,135)"># We need our own copy here because its possible that we want to use</span>
-<span class="ansi-green-fg">    584</span> <span style="color: rgb(95,135,135)"># the mesh after the fop was deleted</span>
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 585</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">mesh</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span>:
-<span class="ansi-green-fg">    586</span>     pg<span style="color: rgb(98,98,98)">.</span>critical(<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">paraDomain needs a mesh</span><span style="color: rgb(175,0,0)">&#39;</span>)
-<span class="ansi-green-fg">    588</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_pd <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>Mesh(<span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>regionManager()<span style="color: rgb(98,98,98)">.</span>paraDomain())
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\modelling.py:709</span>, in <span class="ansi-cyan-fg">MeshModelling.mesh</span><span class="ansi-blue-intense-fg ansi-bold">(self)</span>
-<span class="ansi-green-fg">    706</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_applyRegionProperties()
-<span class="ansi-green-fg">    708</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_regionManagerInUse <span class="ansi-bold" style="color: rgb(175,0,255)">and</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_regionChanged <span class="ansi-bold" style="color: rgb(175,0,255)">is</span> <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 709</span>     <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">createFwdMesh_</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">    711</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span style="color: rgb(0,135,0)">super</span>()<span style="color: rgb(98,98,98)">.</span>mesh()
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\modelling.py:681</span>, in <span class="ansi-cyan-fg">MeshModelling.createFwdMesh_</span><span class="ansi-blue-intense-fg ansi-bold">(self)</span>
-<span class="ansi-green-fg">    679</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;Create forward mesh.&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">    680</span> pg<span style="color: rgb(98,98,98)">.</span>info(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Creating forward mesh from region infos.</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 681</span> m <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>Mesh(<span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">regionManager</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">mesh</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span>)
-<span class="ansi-green-fg">    683</span> regionIds <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>regionManager()<span style="color: rgb(98,98,98)">.</span>regionIdxs()
-<span class="ansi-green-fg">    684</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> iId <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> regionIds:
-
-<span class="ansi-red-intense-fg ansi-bold">RuntimeError</span>: RegionManager knows no mesh.
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mgrConstrained</span><span class="o">.</span><span class="n">paraDomain</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-21/05/25 - 19:40:08 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">RuntimeError</span>                              Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[23], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> <span class="ansi-yellow-bg">mgrConstrained</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">paraDomain</span>
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\methodManager.py:720</span>, in <span class="ansi-cyan-fg">MeshMethodManager.paraDomain</span><span class="ansi-blue-intense-fg ansi-bold">(self)</span>
-<span class="ansi-green-fg">    717</span> <span style="color: rgb(175,0,255)">@property</span>
-<span class="ansi-green-fg">    718</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">paraDomain</span>(<span style="color: rgb(0,135,0)">self</span>):
-<span class="ansi-green-fg">    719</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">&#34;&#34;&#34;Parameter (inversion) domain mesh.&#34;&#34;&#34;</span>
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 720</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">fop</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">paraDomain</span>
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\modelling.py:585</span>, in <span class="ansi-cyan-fg">MeshModelling.paraDomain</span><span class="ansi-blue-intense-fg ansi-bold">(self)</span>
-<span class="ansi-green-fg">    582</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;Return parameter (inverse) mesh.&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">    583</span> <span style="color: rgb(95,135,135)"># We need our own copy here because its possible that we want to use</span>
-<span class="ansi-green-fg">    584</span> <span style="color: rgb(95,135,135)"># the mesh after the fop was deleted</span>
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 585</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">mesh</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span>:
-<span class="ansi-green-fg">    586</span>     pg<span style="color: rgb(98,98,98)">.</span>critical(<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">paraDomain needs a mesh</span><span style="color: rgb(175,0,0)">&#39;</span>)
-<span class="ansi-green-fg">    588</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_pd <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>Mesh(<span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>regionManager()<span style="color: rgb(98,98,98)">.</span>paraDomain())
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\modelling.py:709</span>, in <span class="ansi-cyan-fg">MeshModelling.mesh</span><span class="ansi-blue-intense-fg ansi-bold">(self)</span>
-<span class="ansi-green-fg">    706</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_applyRegionProperties()
-<span class="ansi-green-fg">    708</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_regionManagerInUse <span class="ansi-bold" style="color: rgb(175,0,255)">and</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>_regionChanged <span class="ansi-bold" style="color: rgb(175,0,255)">is</span> <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 709</span>     <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">createFwdMesh_</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">    711</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span style="color: rgb(0,135,0)">super</span>()<span style="color: rgb(98,98,98)">.</span>mesh()
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\frameworks\modelling.py:681</span>, in <span class="ansi-cyan-fg">MeshModelling.createFwdMesh_</span><span class="ansi-blue-intense-fg ansi-bold">(self)</span>
-<span class="ansi-green-fg">    679</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;Create forward mesh.&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">    680</span> pg<span style="color: rgb(98,98,98)">.</span>info(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Creating forward mesh from region infos.</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 681</span> m <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>Mesh(<span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">regionManager</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">mesh</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span>)
-<span class="ansi-green-fg">    683</span> regionIds <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>regionManager()<span style="color: rgb(98,98,98)">.</span>regionIdxs()
-<span class="ansi-green-fg">    684</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> iId <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> regionIds:
-
-<span class="ansi-red-intense-fg ansi-bold">RuntimeError</span>: RegionManager knows no mesh.
-</pre></div></div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;results/TL_measurements/appres&quot;</span>
-
-<span class="c1"># List of ERT data files testing monthly time-lapse inversion</span>
-<span class="n">ert_files</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;synthetic_data30.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data60.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data90.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data120.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data150.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data180.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data210.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data240.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data270.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data300.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data330.dat&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;synthetic_data360.dat&quot;</span><span class="p">,</span>
-<span class="p">]</span>
-
-<span class="c1"># ert_files = [</span>
-<span class="c1">#     &quot;synthetic_data30.dat&quot;,</span>
-<span class="c1">#     &quot;synthetic_data90.dat&quot;,</span>
-<span class="c1">#     &quot;synthetic_data150.dat&quot;,</span>
-<span class="c1">#     &quot;synthetic_data210.dat&quot;,</span>
-<span class="c1">#     &quot;synthetic_data270.dat&quot;,</span>
-<span class="c1">#     &quot;synthetic_data330.dat&quot;,</span>
-<span class="c1"># ]</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_with_interface</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[25], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh_with_interface</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_with_interface&#39; is not defined
-</pre></div></div>
-</div>
-<p>Full paths to data files</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">ert_files</span><span class="p">]</span>
-
-<span class="c1"># Measurement times (can be timestamps or any sequential numbers representing time)</span>
-<span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">,</span><span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
-
-<span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
-
-<span class="c1"># Set up inversion parameters</span>
-<span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
-    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
-    <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
-    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
-    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
-    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>            <span class="c1"># Maximum iterations</span>
-    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>           <span class="c1"># Absolute data error (V)</span>
-    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>           <span class="c1"># Relative data error (5%)</span>
-    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># Lambda reduction rate</span>
-    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>               <span class="c1"># Minimum lambda value</span>
-    <span class="s2">&quot;inversion_type&quot;</span><span class="p">:</span> <span class="s2">&quot;L2&quot;</span>           <span class="c1"># &#39;L1&#39;, &#39;L2&#39;, or &#39;L1L2&#39;</span>
-<span class="p">}</span>
-
-<span class="c1"># Create the time-lapse inversion object</span>
-<span class="n">inversion</span> <span class="o">=</span> <span class="n">TimeLapseERTInversion</span><span class="p">(</span>
-    <span class="n">data_files</span><span class="o">=</span><span class="n">data_files</span><span class="p">,</span>
-    <span class="n">measurement_times</span><span class="o">=</span><span class="n">measurement_times</span><span class="p">,</span>
-    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh_with_interface</span><span class="p">,</span>
-    <span class="o">**</span><span class="n">inversion_params</span>
-<span class="p">)</span>
-
-<span class="c1"># Run the inversion</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting time-lapse inversion...&quot;</span><span class="p">)</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion complete!&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">Exception</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[26], line 7</span>
-<span class="ansi-green-fg">      4</span> measurement_times <span style="color: rgb(98,98,98)">=</span> [<span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">2</span>, <span style="color: rgb(98,98,98)">3</span>, <span style="color: rgb(98,98,98)">4</span>, <span style="color: rgb(98,98,98)">5</span>, <span style="color: rgb(98,98,98)">6</span>, <span style="color: rgb(98,98,98)">7</span> ,<span style="color: rgb(98,98,98)">8</span>, <span style="color: rgb(98,98,98)">9</span>, <span style="color: rgb(98,98,98)">10</span>, <span style="color: rgb(98,98,98)">11</span>, <span style="color: rgb(98,98,98)">12</span>]  <span style="color: rgb(95,135,135)"># Adjust based on your actual acquisition times</span>
-<span class="ansi-green-fg">      6</span> <span style="color: rgb(95,135,135)"># Create a mesh for the inversion (or load an existing one)</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 7</span> data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">ert</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_files</span><span class="ansi-yellow-bg">[</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">0</span><span class="ansi-yellow-bg">]</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">      8</span> ert_manager <span style="color: rgb(98,98,98)">=</span> ert<span style="color: rgb(98,98,98)">.</span>ERTManager(data)
-<span class="ansi-green-fg">      9</span> mesh <span style="color: rgb(98,98,98)">=</span> ert_manager<span style="color: rgb(98,98,98)">.</span>createMesh(data<span style="color: rgb(98,98,98)">=</span>data, quality<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">34</span>)
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\physics\ert\importData.py:26</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fileName, verbose, **kwargs)</span>
-<span class="ansi-green-fg">      7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">load</span>(fileName, verbose<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs):
-<span class="ansi-green-fg">      8</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">&#34;&#34;&#34;Shortcut to load ERT data.</span>
-<span class="ansi-green-fg">      9</span>
-<span class="ansi-green-fg">     10</span> <span style="color: rgb(175,0,0)">    Import Data and try to assume the file format.</span>
-<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
-<span class="ansi-green-fg">     24</span>
-<span class="ansi-green-fg">     25</span> <span style="color: rgb(175,0,0)">    &#34;&#34;&#34;</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 26</span>     data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">pg</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fileName</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     27</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(data, pg<span style="color: rgb(98,98,98)">.</span>DataContainerERT):
-<span class="ansi-green-fg">     28</span>         <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> data
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\core\load.py:166</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fname, verbose, testAll, realName)</span>
-<span class="ansi-green-fg">    163</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> getExampleData(fname)
-<span class="ansi-green-fg">    165</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>exists(fname):
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 166</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">Exception</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">File or directory named </span><span class="ansi-bold" style="color: rgb(175,95,135)">%s</span><span style="color: rgb(175,0,0)"> does not exist.</span><span style="color: rgb(175,0,0)">&#34;</span> <span style="color: rgb(98,98,98)">%</span> (fname))
-<span class="ansi-green-fg">    168</span> <span style="color: rgb(95,135,135)"># recursive function call if fname is a folder of files</span>
-<span class="ansi-green-fg">    169</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>isdir(fname):
-
-<span class="ansi-red-intense-fg ansi-bold">Exception</span>: File or directory named results/TL_measurements/appres\synthetic_data30.dat does not exist.
-</pre></div></div>
-</div>
+</section>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex8_MC_WC.html" class="btn btn-neutral float-left" title="Monte Carlo Uncertainty Quantification for Water Content Estimation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex3_Time_lapse_measurement.html" class="btn btn-neutral float-right" title="Creating Synthetic Time-Lapse ERT Measurements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="Ex7_structure_TLresinv.html" class="btn btn-neutral float-left" title="Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex8_MC_WC.html" class="btn btn-neutral float-right" title="Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

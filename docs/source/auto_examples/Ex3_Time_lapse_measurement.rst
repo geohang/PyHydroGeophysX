@@ -18,7 +18,7 @@
 .. _sphx_glr_auto_examples_Ex3_Time_lapse_measurement.py:
 
 
-Creating Synthetic Time-Lapse ERT Measurements
+Ex3. Creating Synthetic Time-Lapse ERT Measurements
 ==============================================
 
 This example demonstrates how to create synthetic time-lapse electrical 
@@ -72,7 +72,7 @@ and understanding the sensitivity of ERT measurements to hydrological changes.
 
 .. code-block:: Python
 
-    output_dir = "results/TL_measurements"
+    output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements"
     os.makedirs(output_dir, exist_ok=True)
 
 
@@ -82,7 +82,7 @@ and understanding the sensitivity of ERT measurements to hydrological changes.
 
     print("Step 1: Set up the ERT profiles like in the workflow example.")
 
-    data_dir = "data/"
+    data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
     modflow_dir = os.path.join(data_dir, "modflow")
 
     # Load domain information from files
@@ -239,8 +239,8 @@ and understanding the sensitivity of ERT measurements to hydrological changes.
 
 .. GENERATED FROM PYTHON SOURCE LINES 207-209
 
-# non parallel computing version 
- os.makedirs("results/TL_measurements/appres", exist_ok=True)
+## non parallel computing version 
+os.makedirs("results/TL_measurements/appres", exist_ok=True)
 
 .. GENERATED FROM PYTHON SOURCE LINES 209-240
 
@@ -280,64 +280,64 @@ and understanding the sensitivity of ERT measurements to hydrological changes.
 
 .. GENERATED FROM PYTHON SOURCE LINES 241-242
 
-# parallel computing version 
+## parallel computing version 
 
 .. GENERATED FROM PYTHON SOURCE LINES 242-298
 
 .. code-block:: Python
 
 
-    import os
-    import numpy as np
-    import pygimli as pg
-    from pygimli.physics import ert
+    # import os
+    # import numpy as np
+    # import pygimli as pg
+    # from pygimli.physics import ert
 
-    from joblib import Parallel, delayed
+    # from joblib import Parallel, delayed
 
-    def process_timestep(i, output_dir, mesh_array, interpolator_L_profile, interpolator_surface_profile):
-        """Process a single timestep for synthetic data generation"""
-        try:
-            # Load the resistivity model for this timestep
-            res_model = np.load(os.path.join(output_dir, "synresmodel/synresmodel" + str(i) + ".npy"))
+    # def process_timestep(i, output_dir, mesh_array, interpolator_L_profile, interpolator_surface_profile):
+    #     """Process a single timestep for synthetic data generation"""
+    #     try:
+    #         # Load the resistivity model for this timestep
+    #         res_model = np.load(os.path.join(output_dir, "synresmodel/synresmodel" + str(i) + ".npy"))
         
-            # Create electrode positions
-            xpos = np.linspace(15, 15+72-1, 72)
-            ypos = np.interp(xpos, interpolator_L_profile, interpolator_surface_profile)
-            pos = np.hstack((xpos.reshape(-1,1), ypos.reshape(-1,1)))
+    #         # Create electrode positions
+    #         xpos = np.linspace(15, 15+72-1, 72)
+    #         ypos = np.interp(xpos, interpolator_L_profile, interpolator_surface_profile)
+    #         pos = np.hstack((xpos.reshape(-1,1), ypos.reshape(-1,1)))
         
-            # Create ERT data scheme
-            schemeert = ert.createData(elecs=pos, schemeName='wa')
+    #         # Create ERT data scheme
+    #         schemeert = ert.createData(elecs=pos, schemeName='wa')
         
-            mesh = pg.load(os.path.join(output_dir, "mesh.bms"))
-            # Set cell markers
-            mesh.setCellMarkers(np.ones(mesh.cellCount())*2)
+    #         mesh = pg.load(os.path.join(output_dir, "mesh.bms"))
+    #         # Set cell markers
+    #         mesh.setCellMarkers(np.ones(mesh.cellCount())*2)
         
-            # Create boundary mesh
-            grid = pg.meshtools.appendTriangleBoundary(mesh, marker=1, xbound=100, ybound=100)
+    #         # Create boundary mesh
+    #         grid = pg.meshtools.appendTriangleBoundary(mesh, marker=1, xbound=100, ybound=100)
         
-            # Set up forward operator
-            fwd_operator = ert.ERTModelling()
-            fwd_operator.setData(schemeert)
-            fwd_operator.setMesh(grid)
+    #         # Set up forward operator
+    #         fwd_operator = ert.ERTModelling()
+    #         fwd_operator.setData(schemeert)
+    #         fwd_operator.setMesh(grid)
         
-            # Forward modeling
-            synth_data = schemeert.copy()
-            dr = fwd_operator.response(res_model)
+    #         # Forward modeling
+    #         synth_data = schemeert.copy()
+    #         dr = fwd_operator.response(res_model)
         
-            # Add 5% random noise
-            dr *= 1. + pg.randn(dr.size()) * 0.05
+    #         # Add 5% random noise
+    #         dr *= 1. + pg.randn(dr.size()) * 0.05
         
-            # Set up ERT manager and save data
-            ert_manager = ert.ERTManager(synth_data)
-            synth_data['rhoa'] = dr
-            synth_data['err'] = ert_manager.estimateError(synth_data, absoluteUError=0.0, relativeError=0.05)
+    #         # Set up ERT manager and save data
+    #         ert_manager = ert.ERTManager(synth_data)
+    #         synth_data['rhoa'] = dr
+    #         synth_data['err'] = ert_manager.estimateError(synth_data, absoluteUError=0.0, relativeError=0.05)
         
-            # Save synthetic data
-            synth_data.save(os.path.join(output_dir, "appres/synthetic_data"+str(i)+".dat"))
+    #         # Save synthetic data
+    #         synth_data.save(os.path.join(output_dir, "appres/synthetic_data"+str(i)+".dat"))
         
-            return i, True, None  # Success
-        except Exception as e:
-            return i, False, str(e)  # Return error information
+    #         return i, True, None  # Success
+    #     except Exception as e:
+    #         return i, False, str(e)  # Return error information
 
 
 
@@ -411,7 +411,7 @@ load all synthetic data and plot them
 
 .. GENERATED FROM PYTHON SOURCE LINES 344-345
 
-# plot the apparent resitivity
+## plot the apparent resitivity
 
 .. GENERATED FROM PYTHON SOURCE LINES 345-378
 
@@ -463,7 +463,7 @@ load all synthetic data and plot them
 
 .. GENERATED FROM PYTHON SOURCE LINES 388-389
 
-# Showing the water content model for the differnent timesteps
+## Showing the water content model for the differnent timesteps
 
 .. GENERATED FROM PYTHON SOURCE LINES 389-423
 
@@ -506,7 +506,7 @@ load all synthetic data and plot them
 
 .. GENERATED FROM PYTHON SOURCE LINES 424-425
 
-# Showing the water content model for the differnent timesteps
+## Showing the water content model for the differnent timesteps
 
 .. GENERATED FROM PYTHON SOURCE LINES 425-463
 

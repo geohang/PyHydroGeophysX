@@ -1,5 +1,5 @@
 """
-Creating Synthetic Time-Lapse ERT Measurements
+Ex3. Creating Synthetic Time-Lapse ERT Measurements
 ==============================================
 
 This example demonstrates how to create synthetic time-lapse electrical 
@@ -47,13 +47,13 @@ from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_res
 from PyHydroGeophysX.forward.ert_forward import ERTForwardModeling
 
 # %%
-output_dir = "results/TL_measurements"
+output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements"
 os.makedirs(output_dir, exist_ok=True)
 
 # %%
 print("Step 1: Set up the ERT profiles like in the workflow example.")
 
-data_dir = "data/"
+data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 modflow_dir = os.path.join(data_dir, "modflow")
 
 # Load domain information from files
@@ -204,7 +204,7 @@ for i in range(len(Water_Content)):
 
 
 # %%
-## non parallel computing version 
+# ## non parallel computing version 
 # os.makedirs("results/TL_measurements/appres", exist_ok=True)
 
 # for i in range(2): 
@@ -238,95 +238,95 @@ for i in range(len(Water_Content)):
 #     synth_data.save(os.path.join(output_dir, "appres/synthetic_data"+str(i)+".dat"))
 
 # %%
-## parallel computing version 
+# ## parallel computing version 
 
-import os
-import numpy as np
-import pygimli as pg
-from pygimli.physics import ert
+# import os
+# import numpy as np
+# import pygimli as pg
+# from pygimli.physics import ert
 
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 
-def process_timestep(i, output_dir, mesh_array, interpolator_L_profile, interpolator_surface_profile):
-    """Process a single timestep for synthetic data generation"""
-    try:
-        # Load the resistivity model for this timestep
-        res_model = np.load(os.path.join(output_dir, "synresmodel/synresmodel" + str(i) + ".npy"))
+# def process_timestep(i, output_dir, mesh_array, interpolator_L_profile, interpolator_surface_profile):
+#     """Process a single timestep for synthetic data generation"""
+#     try:
+#         # Load the resistivity model for this timestep
+#         res_model = np.load(os.path.join(output_dir, "synresmodel/synresmodel" + str(i) + ".npy"))
         
-        # Create electrode positions
-        xpos = np.linspace(15, 15+72-1, 72)
-        ypos = np.interp(xpos, interpolator_L_profile, interpolator_surface_profile)
-        pos = np.hstack((xpos.reshape(-1,1), ypos.reshape(-1,1)))
+#         # Create electrode positions
+#         xpos = np.linspace(15, 15+72-1, 72)
+#         ypos = np.interp(xpos, interpolator_L_profile, interpolator_surface_profile)
+#         pos = np.hstack((xpos.reshape(-1,1), ypos.reshape(-1,1)))
         
-        # Create ERT data scheme
-        schemeert = ert.createData(elecs=pos, schemeName='wa')
+#         # Create ERT data scheme
+#         schemeert = ert.createData(elecs=pos, schemeName='wa')
         
-        mesh = pg.load(os.path.join(output_dir, "mesh.bms"))
-        # Set cell markers
-        mesh.setCellMarkers(np.ones(mesh.cellCount())*2)
+#         mesh = pg.load(os.path.join(output_dir, "mesh.bms"))
+#         # Set cell markers
+#         mesh.setCellMarkers(np.ones(mesh.cellCount())*2)
         
-        # Create boundary mesh
-        grid = pg.meshtools.appendTriangleBoundary(mesh, marker=1, xbound=100, ybound=100)
+#         # Create boundary mesh
+#         grid = pg.meshtools.appendTriangleBoundary(mesh, marker=1, xbound=100, ybound=100)
         
-        # Set up forward operator
-        fwd_operator = ert.ERTModelling()
-        fwd_operator.setData(schemeert)
-        fwd_operator.setMesh(grid)
+#         # Set up forward operator
+#         fwd_operator = ert.ERTModelling()
+#         fwd_operator.setData(schemeert)
+#         fwd_operator.setMesh(grid)
         
-        # Forward modeling
-        synth_data = schemeert.copy()
-        dr = fwd_operator.response(res_model)
+#         # Forward modeling
+#         synth_data = schemeert.copy()
+#         dr = fwd_operator.response(res_model)
         
-        # Add 5% random noise
-        dr *= 1. + pg.randn(dr.size()) * 0.05
+#         # Add 5% random noise
+#         dr *= 1. + pg.randn(dr.size()) * 0.05
         
-        # Set up ERT manager and save data
-        ert_manager = ert.ERTManager(synth_data)
-        synth_data['rhoa'] = dr
-        synth_data['err'] = ert_manager.estimateError(synth_data, absoluteUError=0.0, relativeError=0.05)
+#         # Set up ERT manager and save data
+#         ert_manager = ert.ERTManager(synth_data)
+#         synth_data['rhoa'] = dr
+#         synth_data['err'] = ert_manager.estimateError(synth_data, absoluteUError=0.0, relativeError=0.05)
         
-        # Save synthetic data
-        synth_data.save(os.path.join(output_dir, "appres/synthetic_data"+str(i)+".dat"))
+#         # Save synthetic data
+#         synth_data.save(os.path.join(output_dir, "appres/synthetic_data"+str(i)+".dat"))
         
-        return i, True, None  # Success
-    except Exception as e:
-        return i, False, str(e)  # Return error information
+#         return i, True, None  # Success
+#     except Exception as e:
+#         return i, False, str(e)  # Return error information
 
 
 
 
 # %%
 # Create output directories if they don't exist
-os.makedirs(os.path.join(output_dir, "appres"), exist_ok=True)
+# os.makedirs(os.path.join(output_dir, "appres"), exist_ok=True)
 
 
-# Extract necessary data from interpolator to pass to workers
-interpolator_L_profile = interpolator.L_profile.copy()
-interpolator_surface_profile = interpolator.surface_profile.copy()
+# # Extract necessary data from interpolator to pass to workers
+# interpolator_L_profile = interpolator.L_profile.copy()
+# interpolator_surface_profile = interpolator.surface_profile.copy()
 
-# Process in parallel
-results = Parallel(n_jobs=2, verbose=10)(
-    delayed(process_timestep)(
-        i, 
-        output_dir, 
-        None,  # We'll reload the mesh from file instead of passing it
-        interpolator_L_profile,
-        interpolator_surface_profile
-    ) for i in range(Water_Content.shape[0])
-)
+# # Process in parallel
+# results = Parallel(n_jobs=2, verbose=10)(
+#     delayed(process_timestep)(
+#         i, 
+#         output_dir, 
+#         None,  # We'll reload the mesh from file instead of passing it
+#         interpolator_L_profile,
+#         interpolator_surface_profile
+#     ) for i in range(Water_Content.shape[0])
+# )
 
-# Check results
-success_count = sum(1 for _, success, _ in results if success)
-print(f"Successfully processed {success_count} out of {len(results)} timesteps")
+# # Check results
+# success_count = sum(1 for _, success, _ in results if success)
+# print(f"Successfully processed {success_count} out of {len(results)} timesteps")
 
-# Print any errors
-for i, success, error in results:
-    if not success:
-        print(f"Error in timestep {i}: {error}")
+# # Print any errors
+# for i, success, error in results:
+#     if not success:
+#         print(f"Error in timestep {i}: {error}")
 
 
 # %%
-### example to load and show the synthetic data
+# example to load and show the synthetic data
 syn_data = pg.load(os.path.join(output_dir, "appres/synthetic_data"+str(1)+".dat"))
 ert.show(syn_data)
 
@@ -341,7 +341,7 @@ for i in range(Water_Content.shape[0]):
         print(f"Error loading synthetic data for timestep {i}: {e}")
 
 # %%
-## plot the apparent resitivity
+# ## plot the apparent resitivity
 import pandas as pd
 import matplotlib.pylab as pylab
 params = {'legend.fontsize': 13,
@@ -385,7 +385,7 @@ plt.colorbar(label='Apparent Resistivity (Ω·m)')
 
 
 # %%
-## Showing the water content model for the differnent timesteps
+# ## Showing the water content model for the differnent timesteps
 fig, axes = plt.subplots(1, 4, figsize=(16, 14))
 
 from palettable.lightbartlein.diverging import BlueDarkRed18_18_r
@@ -421,7 +421,7 @@ fig.tight_layout()
 plt.savefig(os.path.join(output_dir, "water_content_model.tiff"), dpi=300)
 
 # %%
-## Showing the water content model for the differnent timesteps
+# ## Showing the water content model for the differnent timesteps
 fig, axes = plt.subplots(1, 4, figsize=(16, 14))
 
 from palettable.lightbartlein.diverging import BlueDarkRed18_18

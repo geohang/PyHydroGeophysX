@@ -1,5 +1,5 @@
 """
-Time-Lapse ERT Inversion Techniques
+Ex 4. Time-Lapse ERT Inversion Techniques
 ===================================
 
 This example demonstrates different approaches for time-lapse electrical 
@@ -43,7 +43,7 @@ from PyHydroGeophysX.inversion.time_lapse import TimeLapseERTInversion
 from PyHydroGeophysX.inversion.windowed import WindowedTimeLapseERTInversion
 
 # %%
-data_dir = "results/TL_measurements/appres"
+data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres"
 
 # List of ERT data files testing monthly time-lapse inversion
 ert_files = [

@@ -1,5 +1,5 @@
 """
-Complete Workflow: From Hydrological Models to Geophysical Inversion
+Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion
 ====================================================================
 
 This example demonstrates the complete workflow for integrating hydrological 
@@ -51,14 +51,14 @@ from PyHydroGeophysX.inversion.ert_inversion import ERTInversion
 
 
 # %%
-output_dir = "results/workflow_example"
+output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example"
 os.makedirs(output_dir, exist_ok=True)
 
 # %%
 print("Step 1: Loading domain information...")
 
 # These would be your actual data files
-data_dir = "data/"
+data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 modflow_dir = os.path.join(data_dir, "modflow")
 
 # Load domain information from files
@@ -70,19 +70,6 @@ porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
 # %%
 # Step 2: Exmaple of loading MODFLOW water content data
 print("Step 2: Loading MODFLOW water content data...")
-
-
-# Initialize MODFLOW water content processor
-water_content_processor = MODFLOWWaterContent(
-    model_directory=modflow_dir,  # Changed from sim_ws
-    idomain=idomain
-)
-
-# Load water content for a specific timestep
-timestep = 10
-water_content = water_content_processor.load_timestep(timestep)
-
-print(water_content.shape)
 
 
 
@@ -741,8 +728,6 @@ np.mean(np.array(synth_data['rhoa'][:600]))
 # %%
 synth_data
 
-# %%
-np.mean(inversion_result.final_model[inversion_result.coverage>-1.2])
 
 # %%
 
@@ -750,7 +735,7 @@ np.mean(inversion_result.final_model[inversion_result.coverage>-1.2])
 # %%
 # Step 11: Run ERT inversion on synthetic data
 
-## using my code to the inversion
+# using my code to the inversion
 print("Step 11: Running ERT inversion...")
 
 # Create ERT inversion object

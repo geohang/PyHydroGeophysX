@@ -40,7 +40,7 @@
       },
       "outputs": [],
       "source": [
-        "saturation_processor = ParflowSaturation(\n    model_directory=\"./data/parflow/test2\",\n    run_name=\"test2\"\n)\nsaturation = saturation_processor.load_timestep(200)  # Load first timestep\n\n# Load porosity data\nporosity_processor = ParflowPorosity(\n    model_directory=\"./data/parflow/test2\",\n    run_name=\"test2\"\n)\nporosity = porosity_processor.load_porosity()\n\nmask = porosity_processor.load_mask()\nmask.shape\nporosity[mask==0] = np.nan\nsaturation[mask==0] = np.nan"
+        "saturation_processor = ParflowSaturation(\n    model_directory=\"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/parflow/test2\",\n    run_name=\"test2\"\n)\nsaturation = saturation_processor.load_timestep(200)  # Load first timestep\n\n# Load porosity data\nporosity_processor = ParflowPorosity(\n    model_directory=\"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/parflow/test2\",\n    run_name=\"test2\"\n)\nporosity = porosity_processor.load_porosity()\n\nmask = porosity_processor.load_mask()\nmask.shape\nporosity[mask==0] = np.nan\nsaturation[mask==0] = np.nan"
       ]
     },
     {
@@ -76,7 +76,7 @@
       },
       "outputs": [],
       "source": [
-        "data_dir = \"data/\"\nmodflow_dir = os.path.join(data_dir, \"modflow\")\nidomain = np.loadtxt(os.path.join(modflow_dir, \"id.txt\"))\n\n# Initialize MODFLOW water content processor\nwater_content_processor = MODFLOWWaterContent(\n    model_directory=modflow_dir,  # Changed from sim_ws\n    idomain=idomain\n)\n\n# Load water content for a specific timestep\ntimestep = 1\nwater_content = water_content_processor.load_timestep(timestep)\n\nprint(water_content.shape)\n\n\n# Path to your MODFLOW model directory\n\nmodel_name = \"TLnewtest2sfb2\"  # Your model name\n\n# 1. Create an instance of the MODFLOWPorosity class\nporosity_loader = MODFLOWPorosity(\n    model_directory=modflow_dir,\n    model_name=model_name\n)\n# 2. Load the porosity data\nporosity_data = porosity_loader.load_porosity()"
+        "data_dir = \"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/\"\nmodflow_dir = os.path.join(data_dir, \"modflow\")\nidomain = np.loadtxt(os.path.join(modflow_dir, \"id.txt\"))\n\n# Initialize MODFLOW water content processor\nwater_content_processor = MODFLOWWaterContent(\n    model_directory=modflow_dir,  # Changed from sim_ws\n    idomain=idomain\n)\n\n# Load water content for a specific timestep\ntimestep = 1\nwater_content = water_content_processor.load_timestep(timestep)\n\nprint(water_content.shape)\n\n\n# Path to your MODFLOW model directory\n\nmodel_name = \"TLnewtest2sfb2\"  # Your model name\n\n# 1. Create an instance of the MODFLOWPorosity class\nporosity_loader = MODFLOWPorosity(\n    model_directory=modflow_dir,\n    model_name=model_name\n)\n# 2. Load the porosity data\nporosity_data = porosity_loader.load_porosity()"
       ]
     },
     {

@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Creating Synthetic Time-Lapse ERT Measurements &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+  <title>Ex3. Creating Synthetic Time-Lapse ERT Measurements &mdash; PyHydroGeophysX 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -30,8 +30,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Seismic Refraction Tomography (SRT) Forward Modeling" href="Ex5_SRT.html" />
-    <link rel="prev" title="Structure-Constrained Resistivity Inversion" href="Ex6_Structure_resinv.html" /> 
+    <link rel="next" title="Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling" href="Ex5_SRT.html" />
+    <link rel="prev" title="Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation" href="Ex8_MC_WC.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -66,22 +66,21 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html#travel-time-inversion">travel time inversion</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#non-parallel-computing-version">non parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#parallel-computing-version">parallel computing version</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#non-parallel-computing-version">non parallel computing version</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parallel-computing-version">parallel computing version</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#example-to-load-and-show-the-synthetic-data">example to load and show the synthetic data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#plot-the-apparent-resitivity">plot the apparent resitivity</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Showing-the-water-content-model-for-the-differnent-timesteps">Showing the water content model for the differnent timesteps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Showing the water content model for the differnent timesteps</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#plot-the-apparent-resitivity">plot the apparent resitivity</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Showing-the-water-content-model-for-the-differnent-timesteps">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id1">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html#Using-Pygimili-default-to-the-inversion">Using Pygimili default to the inversion</a></li>
 </ul>
 </li>
@@ -102,7 +101,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
-      <li class="breadcrumb-item active">Creating Synthetic Time-Lapse ERT Measurements</li>
+      <li class="breadcrumb-item active">Ex3. Creating Synthetic Time-Lapse ERT Measurements</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex3_Time_lapse_measurement.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -112,8 +111,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="Creating-Synthetic-Time-Lapse-ERT-Measurements">
-<h1>Creating Synthetic Time-Lapse ERT Measurements<a class="headerlink" href="#Creating-Synthetic-Time-Lapse-ERT-Measurements" title="Link to this heading"></a></h1>
+  <section id="Ex3.-Creating-Synthetic-Time-Lapse-ERT-Measurements">
+<h1>Ex3. Creating Synthetic Time-Lapse ERT Measurements<a class="headerlink" href="#Ex3.-Creating-Synthetic-Time-Lapse-ERT-Measurements" title="Link to this heading"></a></h1>
 <p>This example demonstrates how to create synthetic time-lapse electrical resistivity tomography (ERT) measurements for watershed monitoring applications.</p>
 <p>The example covers:</p>
 <ol class="arabic simple">
@@ -163,7 +162,7 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;results/TL_measurements&quot;</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements&quot;</span>
 <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -174,7 +173,7 @@
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 1: Set up the ERT profiles like in the workflow example.&quot;</span><span class="p">)</span>
 
-<span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;data/&quot;</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/&quot;</span>
 <span class="n">modflow_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;modflow&quot;</span><span class="p">)</span>
 
 <span class="c1"># Load domain information from files</span>
@@ -260,7 +259,7 @@
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
+<div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
@@ -268,57 +267,7 @@
 Step 1: Set up the ERT profiles like in the workflow example.
 </pre></div></div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[3], line 8</span>
-<span class="ansi-green-fg">      4</span> modflow_dir <span style="color: rgb(98,98,98)">=</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(data_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">modflow</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">      6</span> <span style="color: rgb(95,135,135)"># Load domain information from files</span>
-<span class="ansi-green-fg">      7</span> <span style="color: rgb(95,135,135)"># (Replace with your actual file paths)</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 8</span> idomain <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">loadtxt</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">id.txt</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">      9</span> top <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>loadtxt(os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(data_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">top.txt</span><span style="color: rgb(175,0,0)">&#34;</span>))
-<span class="ansi-green-fg">     10</span> porosity <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>load(os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(data_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Porosity.npy</span><span style="color: rgb(175,0,0)">&#34;</span>))
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:1373</span>, in <span class="ansi-cyan-fg">loadtxt</span><span class="ansi-blue-intense-fg ansi-bold">(fname, dtype, comments, delimiter, converters, skiprows, usecols, unpack, ndmin, encoding, max_rows, quotechar, like)</span>
-<span class="ansi-green-fg">   1370</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(delimiter, <span style="color: rgb(0,135,0)">bytes</span>):
-<span class="ansi-green-fg">   1371</span>     delimiter <span style="color: rgb(98,98,98)">=</span> delimiter<span style="color: rgb(98,98,98)">.</span>decode(<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">latin1</span><span style="color: rgb(175,0,0)">&#39;</span>)
-<span class="ansi-green-intense-fg ansi-bold">-&gt; 1373</span> arr <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">_read</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fname</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">dtype</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">dtype</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">comment</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">comment</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">delimiter</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">delimiter</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">   1374</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">converters</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">converters</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">skiplines</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">skiprows</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">usecols</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">usecols</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">   1375</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">unpack</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">unpack</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">ndmin</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">ndmin</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">   1376</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">max_rows</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">max_rows</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">quote</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">quotechar</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">   1378</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> arr
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:992</span>, in <span class="ansi-cyan-fg">_read</span><span class="ansi-blue-intense-fg ansi-bold">(fname, delimiter, comment, quote, imaginary_unit, usecols, skiplines, max_rows, converters, ndmin, unpack, dtype, encoding)</span>
-<span class="ansi-green-fg">    990</span>     fname <span style="color: rgb(98,98,98)">=</span> os<span style="color: rgb(98,98,98)">.</span>fspath(fname)
-<span class="ansi-green-fg">    991</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(fname, <span style="color: rgb(0,135,0)">str</span>):
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 992</span>     fh <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">lib</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_datasource</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fname</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#39;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">rt</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#39;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">    993</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> encoding <span class="ansi-bold" style="color: rgb(175,0,255)">is</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>:
-<span class="ansi-green-fg">    994</span>         encoding <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">getattr</span>(fh, <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">encoding</span><span style="color: rgb(175,0,0)">&#39;</span>, <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">latin1</span><span style="color: rgb(175,0,0)">&#39;</span>)
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\_datasource.py:193</span>, in <span class="ansi-cyan-fg">open</span><span class="ansi-blue-intense-fg ansi-bold">(path, mode, destpath, encoding, newline)</span>
-<span class="ansi-green-fg">    156</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">    157</span> <span style="color: rgb(175,0,0)">Open `path` with `mode` and return the file object.</span>
-<span class="ansi-green-fg">    158</span>
-<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
-<span class="ansi-green-fg">    189</span>
-<span class="ansi-green-fg">    190</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">    192</span> ds <span style="color: rgb(98,98,98)">=</span> DataSource(destpath)
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 193</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg">ds</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">mode</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">newline</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">newline</span><span class="ansi-yellow-bg">)</span>
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\_datasource.py:533</span>, in <span class="ansi-cyan-fg">DataSource.open</span><span class="ansi-blue-intense-fg ansi-bold">(self, path, mode, encoding, newline)</span>
-<span class="ansi-green-fg">    530</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> _file_openers[ext](found, mode<span style="color: rgb(98,98,98)">=</span>mode,
-<span class="ansi-green-fg">    531</span>                               encoding<span style="color: rgb(98,98,98)">=</span>encoding, newline<span style="color: rgb(98,98,98)">=</span>newline)
-<span class="ansi-green-fg">    532</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 533</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">FileNotFoundError</span>(<span style="color: rgb(175,0,0)">f</span><span style="color: rgb(175,0,0)">&#34;</span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>path<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span style="color: rgb(175,0,0)"> not found.</span><span style="color: rgb(175,0,0)">&#34;</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: data/id.txt not found.
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
@@ -386,26 +335,8 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[4], line 5</span>
-<span class="ansi-green-fg">      1</span> os<span style="color: rgb(98,98,98)">.</span>makedirs(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results/TL_measurements/synwcmodel</span><span style="color: rgb(175,0,0)">&#34;</span>, exist_ok<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
-<span class="ansi-green-fg">      2</span> os<span style="color: rgb(98,98,98)">.</span>makedirs(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results/TL_measurements/synresmodel</span><span style="color: rgb(175,0,0)">&#34;</span>, exist_ok<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 5</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> i <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">range</span>(<span style="color: rgb(0,135,0)">len</span>(<span class="ansi-yellow-bg">Water_Content</span>)):
-<span class="ansi-green-fg">      6</span>     water_content <span style="color: rgb(98,98,98)">=</span> Water_Content[i]
-<span class="ansi-green-fg">      7</span>     <span style="color: rgb(95,135,135)"># Interpolate water content to profile</span>
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;Water_Content&#39; is not defined
-</pre></div></div>
-</div>
-</section>
 <section id="non-parallel-computing-version">
-<h1>non parallel computing version<a class="headerlink" href="#non-parallel-computing-version" title="Link to this heading"></a></h1>
+<h2>non parallel computing version<a class="headerlink" href="#non-parallel-computing-version" title="Link to this heading"></a></h2>
 <p>os.makedirs(“results/TL_measurements/appres”, exist_ok=True)</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
@@ -445,62 +376,62 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[4], line 5</span>
 </div>
 </section>
 <section id="parallel-computing-version">
-<h1>parallel computing version<a class="headerlink" href="#parallel-computing-version" title="Link to this heading"></a></h1>
+<h2>parallel computing version<a class="headerlink" href="#parallel-computing-version" title="Link to this heading"></a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
-<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># import os</span>
+<span class="c1"># import numpy as np</span>
+<span class="c1"># import pygimli as pg</span>
+<span class="c1"># from pygimli.physics import ert</span>
 
-<span class="kn">from</span> <span class="nn">joblib</span> <span class="kn">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+<span class="c1"># from joblib import Parallel, delayed</span>
 
-<span class="k">def</span> <span class="nf">process_timestep</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">mesh_array</span><span class="p">,</span> <span class="n">interpolator_L_profile</span><span class="p">,</span> <span class="n">interpolator_surface_profile</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Process a single timestep for synthetic data generation&quot;&quot;&quot;</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="c1"># Load the resistivity model for this timestep</span>
-        <span class="n">res_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synresmodel/synresmodel&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.npy&quot;</span><span class="p">))</span>
+<span class="c1"># def process_timestep(i, output_dir, mesh_array, interpolator_L_profile, interpolator_surface_profile):</span>
+<span class="c1">#     &quot;&quot;&quot;Process a single timestep for synthetic data generation&quot;&quot;&quot;</span>
+<span class="c1">#     try:</span>
+<span class="c1">#         # Load the resistivity model for this timestep</span>
+<span class="c1">#         res_model = np.load(os.path.join(output_dir, &quot;synresmodel/synresmodel&quot; + str(i) + &quot;.npy&quot;))</span>
 
-        <span class="c1"># Create electrode positions</span>
-        <span class="n">xpos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="o">+</span><span class="mi">72</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">72</span><span class="p">)</span>
-        <span class="n">ypos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">xpos</span><span class="p">,</span> <span class="n">interpolator_L_profile</span><span class="p">,</span> <span class="n">interpolator_surface_profile</span><span class="p">)</span>
-        <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">xpos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">ypos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+<span class="c1">#         # Create electrode positions</span>
+<span class="c1">#         xpos = np.linspace(15, 15+72-1, 72)</span>
+<span class="c1">#         ypos = np.interp(xpos, interpolator_L_profile, interpolator_surface_profile)</span>
+<span class="c1">#         pos = np.hstack((xpos.reshape(-1,1), ypos.reshape(-1,1)))</span>
 
-        <span class="c1"># Create ERT data scheme</span>
-        <span class="n">schemeert</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">createData</span><span class="p">(</span><span class="n">elecs</span><span class="o">=</span><span class="n">pos</span><span class="p">,</span> <span class="n">schemeName</span><span class="o">=</span><span class="s1">&#39;wa&#39;</span><span class="p">)</span>
+<span class="c1">#         # Create ERT data scheme</span>
+<span class="c1">#         schemeert = ert.createData(elecs=pos, schemeName=&#39;wa&#39;)</span>
 
-        <span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;mesh.bms&quot;</span><span class="p">))</span>
-        <span class="c1"># Set cell markers</span>
-        <span class="n">mesh</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span>
+<span class="c1">#         mesh = pg.load(os.path.join(output_dir, &quot;mesh.bms&quot;))</span>
+<span class="c1">#         # Set cell markers</span>
+<span class="c1">#         mesh.setCellMarkers(np.ones(mesh.cellCount())*2)</span>
 
-        <span class="c1"># Create boundary mesh</span>
-        <span class="n">grid</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">xbound</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="c1">#         # Create boundary mesh</span>
+<span class="c1">#         grid = pg.meshtools.appendTriangleBoundary(mesh, marker=1, xbound=100, ybound=100)</span>
 
-        <span class="c1"># Set up forward operator</span>
-        <span class="n">fwd_operator</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
-        <span class="n">fwd_operator</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">schemeert</span><span class="p">)</span>
-        <span class="n">fwd_operator</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+<span class="c1">#         # Set up forward operator</span>
+<span class="c1">#         fwd_operator = ert.ERTModelling()</span>
+<span class="c1">#         fwd_operator.setData(schemeert)</span>
+<span class="c1">#         fwd_operator.setMesh(grid)</span>
 
-        <span class="c1"># Forward modeling</span>
-        <span class="n">synth_data</span> <span class="o">=</span> <span class="n">schemeert</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">dr</span> <span class="o">=</span> <span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">res_model</span><span class="p">)</span>
+<span class="c1">#         # Forward modeling</span>
+<span class="c1">#         synth_data = schemeert.copy()</span>
+<span class="c1">#         dr = fwd_operator.response(res_model)</span>
 
-        <span class="c1"># Add 5% random noise</span>
-        <span class="n">dr</span> <span class="o">*=</span> <span class="mf">1.</span> <span class="o">+</span> <span class="n">pg</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">size</span><span class="p">())</span> <span class="o">*</span> <span class="mf">0.05</span>
+<span class="c1">#         # Add 5% random noise</span>
+<span class="c1">#         dr *= 1. + pg.randn(dr.size()) * 0.05</span>
 
-        <span class="c1"># Set up ERT manager and save data</span>
-        <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">synth_data</span><span class="p">)</span>
-        <span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;rhoa&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dr</span>
-        <span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">estimateError</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span> <span class="n">absoluteUError</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">relativeError</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="c1">#         # Set up ERT manager and save data</span>
+<span class="c1">#         ert_manager = ert.ERTManager(synth_data)</span>
+<span class="c1">#         synth_data[&#39;rhoa&#39;] = dr</span>
+<span class="c1">#         synth_data[&#39;err&#39;] = ert_manager.estimateError(synth_data, absoluteUError=0.0, relativeError=0.05)</span>
 
-        <span class="c1"># Save synthetic data</span>
-        <span class="n">synth_data</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;appres/synthetic_data&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;.dat&quot;</span><span class="p">))</span>
+<span class="c1">#         # Save synthetic data</span>
+<span class="c1">#         synth_data.save(os.path.join(output_dir, &quot;appres/synthetic_data&quot;+str(i)+&quot;.dat&quot;))</span>
 
-        <span class="k">return</span> <span class="n">i</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">None</span>  <span class="c1"># Success</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">i</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>  <span class="c1"># Return error information</span>
+<span class="c1">#         return i, True, None  # Success</span>
+<span class="c1">#     except Exception as e:</span>
+<span class="c1">#         return i, False, str(e)  # Return error information</span>
 </pre></div>
 </div>
 </div>
@@ -545,16 +476,25 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[4], line 5</span>
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[7], line 5</span>
-<span class="ansi-green-fg">      1</span> os<span style="color: rgb(98,98,98)">.</span>makedirs(os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(output_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">appres</span><span style="color: rgb(175,0,0)">&#34;</span>), exist_ok<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
-<span class="ansi-green-fg">      4</span> <span style="color: rgb(95,135,135)"># Extract necessary data from interpolator to pass to workers</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 5</span> interpolator_L_profile <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">interpolator</span><span style="color: rgb(98,98,98)">.</span>L_profile<span style="color: rgb(98,98,98)">.</span>copy()
+Cell <span class="ansi-green-intense-fg ansi-bold">In[7], line 9</span>
 <span class="ansi-green-fg">      6</span> interpolator_surface_profile <span style="color: rgb(98,98,98)">=</span> interpolator<span style="color: rgb(98,98,98)">.</span>surface_profile<span style="color: rgb(98,98,98)">.</span>copy()
 <span class="ansi-green-fg">      8</span> <span style="color: rgb(95,135,135)"># Process in parallel</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 9</span> results <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">Parallel</span>(n_jobs<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">2</span>, verbose<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">10</span>)(
+<span class="ansi-green-fg">     10</span>     delayed(process_timestep)(
+<span class="ansi-green-fg">     11</span>         i,
+<span class="ansi-green-fg">     12</span>         output_dir,
+<span class="ansi-green-fg">     13</span>         <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>,  <span style="color: rgb(95,135,135)"># We&#39;ll reload the mesh from file instead of passing it</span>
+<span class="ansi-green-fg">     14</span>         interpolator_L_profile,
+<span class="ansi-green-fg">     15</span>         interpolator_surface_profile
+<span class="ansi-green-fg">     16</span>     ) <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> i <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">range</span>(Water_Content<span style="color: rgb(98,98,98)">.</span>shape[<span style="color: rgb(98,98,98)">0</span>])
+<span class="ansi-green-fg">     17</span> )
+<span class="ansi-green-fg">     19</span> <span style="color: rgb(95,135,135)"># Check results</span>
+<span class="ansi-green-fg">     20</span> success_count <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">sum</span>(<span style="color: rgb(98,98,98)">1</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> _, success, _ <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> results <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> success)
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;interpolator&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;Parallel&#39; is not defined
 </pre></div></div>
 </div>
+</section>
 <section id="example-to-load-and-show-the-synthetic-data">
 <h2>example to load and show the synthetic data<a class="headerlink" href="#example-to-load-and-show-the-synthetic-data" title="Link to this heading"></a></h2>
 <div class="nbinput docutils container">
@@ -566,29 +506,24 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[7], line 5</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&lt;Axes: &gt;, &lt;matplotlib.colorbar.Colorbar at 0x1ba14032050&gt;)
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">Exception</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[8], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> syn_data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">pg</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">output_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">appres/synthetic_data</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">+</span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">str</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">1</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">+</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">.dat</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">      2</span> ert<span style="color: rgb(98,98,98)">.</span>show(syn_data)
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\core\load.py:166</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fname, verbose, testAll, realName)</span>
-<span class="ansi-green-fg">    163</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> getExampleData(fname)
-<span class="ansi-green-fg">    165</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>exists(fname):
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 166</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">Exception</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">File or directory named </span><span class="ansi-bold" style="color: rgb(175,95,135)">%s</span><span style="color: rgb(175,0,0)"> does not exist.</span><span style="color: rgb(175,0,0)">&#34;</span> <span style="color: rgb(98,98,98)">%</span> (fname))
-<span class="ansi-green-fg">    168</span> <span style="color: rgb(95,135,135)"># recursive function call if fname is a folder of files</span>
-<span class="ansi-green-fg">    169</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>isdir(fname):
-
-<span class="ansi-red-intense-fg ansi-bold">Exception</span>: File or directory named results/TL_measurements\appres/synthetic_data1.dat does not exist.
-</pre></div></div>
+<img alt="../_images/auto_examples_Ex3_Time_lapse_measurement_12_1.png" src="../_images/auto_examples_Ex3_Time_lapse_measurement_12_1.png" />
+</div>
 </div>
 <p>load all synthetic data and plot them</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
@@ -602,26 +537,9 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[9], line 2</span>
-<span class="ansi-green-fg">      1</span> all_syn_data <span style="color: rgb(98,98,98)">=</span> []
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 2</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> i <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">range</span>(<span class="ansi-yellow-bg">Water_Content</span><span style="color: rgb(98,98,98)">.</span>shape[<span style="color: rgb(98,98,98)">0</span>]):
-<span class="ansi-green-fg">      3</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">try</span>:
-<span class="ansi-green-fg">      4</span>         syn_data <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>load(os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(output_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">appres/synthetic_data</span><span style="color: rgb(175,0,0)">&#34;</span> <span style="color: rgb(98,98,98)">+</span> <span style="color: rgb(0,135,0)">str</span>(i) <span style="color: rgb(98,98,98)">+</span> <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">.dat</span><span style="color: rgb(175,0,0)">&#34;</span>))
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;Water_Content&#39; is not defined
-</pre></div></div>
-</div>
-</section>
 </section>
 <section id="plot-the-apparent-resitivity">
-<h1>plot the apparent resitivity<a class="headerlink" href="#plot-the-apparent-resitivity" title="Link to this heading"></a></h1>
+<h2>plot the apparent resitivity<a class="headerlink" href="#plot-the-apparent-resitivity" title="Link to this heading"></a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
@@ -665,25 +583,8 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[9], line 2</span>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[10], line 15</span>
-<span class="ansi-green-fg">     11</span> plt<span style="color: rgb(98,98,98)">.</span>rcParams[<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">font.family</span><span style="color: rgb(175,0,0)">&#34;</span>] <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Arial</span><span style="color: rgb(175,0,0)">&#34;</span>
-<span class="ansi-green-fg">     14</span> rng <span style="color: rgb(98,98,98)">=</span> pd<span style="color: rgb(98,98,98)">.</span>date_range(start<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">09/01/2011</span><span style="color: rgb(175,0,0)">&#34;</span>, end<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">08/30/2012</span><span style="color: rgb(175,0,0)">&#34;</span>, freq<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">D</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 15</span> precip <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">precip.npy</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     16</span> syn_data_array <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>array(all_syn_data)
-<span class="ansi-green-fg">     17</span> syn_data_array<span style="color: rgb(98,98,98)">.</span>shape
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:427</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(file, mmap_mode, allow_pickle, fix_imports, encoding, max_header_size)</span>
-<span class="ansi-green-fg">    425</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">False</span>
-<span class="ansi-green-fg">    426</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 427</span>     fid <span style="color: rgb(98,98,98)">=</span> stack<span style="color: rgb(98,98,98)">.</span>enter_context(<span class="ansi-yellow-bg" style="color: rgb(0,135,0)">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os_fspath</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">file</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">rb</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span>)
-<span class="ansi-green-fg">    428</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>
-<span class="ansi-green-fg">    430</span> <span style="color: rgb(95,135,135)"># Code to distinguish from NumPy binary files and pickles.</span>
-
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: [Errno 2] No such file or directory: &#39;data/precip.npy&#39;
-</pre></div></div>
+<img alt="../_images/auto_examples_Ex3_Time_lapse_measurement_16_0.png" src="../_images/auto_examples_Ex3_Time_lapse_measurement_16_0.png" />
+</div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
@@ -697,19 +598,12 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </div>
 </div>
 <div class="nboutput docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[11], line 3</span>
-<span class="ansi-green-fg">      1</span> plt<span style="color: rgb(98,98,98)">.</span>figure(figsize<span style="color: rgb(98,98,98)">=</span>(<span style="color: rgb(98,98,98)">12</span>, <span style="color: rgb(98,98,98)">6</span>))
-<span class="ansi-green-fg">      2</span> plt<span style="color: rgb(98,98,98)">.</span>subplot(<span style="color: rgb(98,98,98)">211</span>)
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 3</span> plt<span style="color: rgb(98,98,98)">.</span>imshow(<span class="ansi-yellow-bg">syn_data_array</span><span style="color: rgb(98,98,98)">.</span>T, aspect<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">auto</span><span style="color: rgb(175,0,0)">&#39;</span>, cmap<span style="color: rgb(98,98,98)">=</span>pg<span style="color: rgb(98,98,98)">.</span>utils<span style="color: rgb(98,98,98)">.</span>cMap(<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">rhoa</span><span style="color: rgb(175,0,0)">&#39;</span>), vmin<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">200</span>, vmax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">2000</span>)
-<span class="ansi-green-fg">      4</span> plt<span style="color: rgb(98,98,98)">.</span>colorbar(label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Apparent Resistivity (Ω·m)</span><span style="color: rgb(175,0,0)">&#39;</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;syn_data_array&#39; is not defined
+&lt;matplotlib.colorbar.Colorbar at 0x1ba6a384750&gt;
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -721,7 +615,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[11], line 3</span>
 </div>
 </section>
 <section id="Showing-the-water-content-model-for-the-differnent-timesteps">
-<h1>Showing the water content model for the differnent timesteps<a class="headerlink" href="#Showing-the-water-content-model-for-the-differnent-timesteps" title="Link to this heading"></a></h1>
+<h2>Showing the water content model for the differnent timesteps<a class="headerlink" href="#Showing-the-water-content-model-for-the-differnent-timesteps" title="Link to this heading"></a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
@@ -762,41 +656,16 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[11], line 3</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[12], line 6</span>
-<span class="ansi-green-fg">      4</span> fixed_cmap <span style="color: rgb(98,98,98)">=</span> BlueDarkRed18_18_r<span style="color: rgb(98,98,98)">.</span>mpl_colormap
-<span class="ansi-green-fg">      5</span> ax1 <span style="color: rgb(98,98,98)">=</span> axes[<span style="color: rgb(98,98,98)">0</span>]
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 6</span> wc25 <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">output_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">synwcmodel/synwcmodel30.npy</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">  </span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">      7</span> cbar1 <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(mesh, wc25, ax<span style="color: rgb(98,98,98)">=</span>ax1, cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap, logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>,
-<span class="ansi-green-fg">      8</span>               cMin<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.0</span>, cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.32</span>, label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Water Content (-)</span><span style="color: rgb(175,0,0)">&#39;</span>,xlabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Distance (m)</span><span style="color: rgb(175,0,0)">&#39;</span>, ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Elevation (m)</span><span style="color: rgb(175,0,0)">&#39;</span>)
-<span class="ansi-green-fg">      9</span> ax1<span style="color: rgb(98,98,98)">.</span>set_title(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Day 30</span><span style="color: rgb(175,0,0)">&#34;</span>)
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:427</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(file, mmap_mode, allow_pickle, fix_imports, encoding, max_header_size)</span>
-<span class="ansi-green-fg">    425</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">False</span>
-<span class="ansi-green-fg">    426</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 427</span>     fid <span style="color: rgb(98,98,98)">=</span> stack<span style="color: rgb(98,98,98)">.</span>enter_context(<span class="ansi-yellow-bg" style="color: rgb(0,135,0)">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os_fspath</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">file</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">rb</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span>)
-<span class="ansi-green-fg">    428</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>
-<span class="ansi-green-fg">    430</span> <span style="color: rgb(95,135,135)"># Code to distinguish from NumPy binary files and pickles.</span>
-
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: [Errno 2] No such file or directory: &#39;results/TL_measurements\\synwcmodel/synwcmodel30.npy&#39;
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/auto_examples_Ex3_Time_lapse_measurement_19_1.png" src="../_images/auto_examples_Ex3_Time_lapse_measurement_19_1.png" />
+<img alt="../_images/auto_examples_Ex3_Time_lapse_measurement_19_0.png" src="../_images/auto_examples_Ex3_Time_lapse_measurement_19_0.png" />
 </div>
 </div>
 </section>
 <section id="id1">
-<h1>Showing the water content model for the differnent timesteps<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
+<h2>Showing the water content model for the differnent timesteps<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
@@ -841,37 +710,11 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[13], line 6</span>
-<span class="ansi-green-fg">      4</span> fixed_cmap <span style="color: rgb(98,98,98)">=</span> BlueDarkRed18_18<span style="color: rgb(98,98,98)">.</span>mpl_colormap
-<span class="ansi-green-fg">      5</span> ax1 <span style="color: rgb(98,98,98)">=</span> axes[<span style="color: rgb(98,98,98)">0</span>]
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 6</span> wc30 <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">output_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">synresmodel/synresmodel30.npy</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">  </span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">      7</span> cbar1 <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(mesh, wc30, ax<span style="color: rgb(98,98,98)">=</span>ax1, cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap, logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>, showColorBar<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>,
-<span class="ansi-green-fg">      8</span>         xlabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Distance (m)</span><span style="color: rgb(175,0,0)">&#34;</span>, ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Elevation (m)</span><span style="color: rgb(175,0,0)">&#34;</span>,
-<span class="ansi-green-fg">      9</span>         label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Resistivity (Ω·m)</span><span style="color: rgb(175,0,0)">&#39;</span>, cMin<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">100</span>, cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">3000</span>)
-<span class="ansi-green-fg">     13</span> ax1 <span style="color: rgb(98,98,98)">=</span> axes[<span style="color: rgb(98,98,98)">1</span>]
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:427</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(file, mmap_mode, allow_pickle, fix_imports, encoding, max_header_size)</span>
-<span class="ansi-green-fg">    425</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">False</span>
-<span class="ansi-green-fg">    426</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 427</span>     fid <span style="color: rgb(98,98,98)">=</span> stack<span style="color: rgb(98,98,98)">.</span>enter_context(<span class="ansi-yellow-bg" style="color: rgb(0,135,0)">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os_fspath</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">file</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">rb</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span>)
-<span class="ansi-green-fg">    428</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>
-<span class="ansi-green-fg">    430</span> <span style="color: rgb(95,135,135)"># Code to distinguish from NumPy binary files and pickles.</span>
-
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: [Errno 2] No such file or directory: &#39;results/TL_measurements\\synresmodel/synresmodel30.npy&#39;
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/auto_examples_Ex3_Time_lapse_measurement_21_1.png" src="../_images/auto_examples_Ex3_Time_lapse_measurement_21_1.png" />
+<img alt="../_images/auto_examples_Ex3_Time_lapse_measurement_21_0.png" src="../_images/auto_examples_Ex3_Time_lapse_measurement_21_0.png" />
 </div>
 </div>
 <div class="nbinput docutils container">
@@ -983,43 +826,314 @@ Processing frame 0 of 365
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[14], line 32</span>
-<span class="ansi-green-fg">     29</span> ax <span style="color: rgb(98,98,98)">=</span> fig<span style="color: rgb(98,98,98)">.</span>add_subplot(<span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">1</span>)
-<span class="ansi-green-fg">     31</span> <span style="color: rgb(95,135,135)"># Load data</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 32</span> moi <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">output_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">f</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">synwcmodel/synwcmodel</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,95,135)">{</span><span class="ansi-yellow-bg">i</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,95,135)">}</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">.npy</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     34</span> <span style="color: rgb(95,135,135)"># Plot the data</span>
-<span class="ansi-green-fg">     35</span> ax, cbar <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(mesh, moi, pad<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.3</span>, orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,
-<span class="ansi-green-fg">     36</span>                  cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap, cMin<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.00</span>, cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.32</span>,
-<span class="ansi-green-fg">     37</span>                  xlabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">&#34;</span>, ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">&#34;</span>,  <span style="color: rgb(95,135,135)"># Remove labels to save space</span>
-<span class="ansi-green-fg">     38</span>                  label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Water content</span><span style="color: rgb(175,0,0)">&#39;</span>, ax<span style="color: rgb(98,98,98)">=</span>ax)
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:427</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(file, mmap_mode, allow_pickle, fix_imports, encoding, max_header_size)</span>
-<span class="ansi-green-fg">    425</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">False</span>
-<span class="ansi-green-fg">    426</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 427</span>     fid <span style="color: rgb(98,98,98)">=</span> stack<span style="color: rgb(98,98,98)">.</span>enter_context(<span class="ansi-yellow-bg" style="color: rgb(0,135,0)">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os_fspath</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">file</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">rb</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span>)
-<span class="ansi-green-fg">    428</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>
-<span class="ansi-green-fg">    430</span> <span style="color: rgb(95,135,135)"># Code to distinguish from NumPy binary files and pickles.</span>
-
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: [Errno 2] No such file or directory: &#39;results/TL_measurements\\synwcmodel/synwcmodel0.npy&#39;
+Processing frame 10 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 20 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 30 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 40 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 50 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 60 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 70 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 80 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 90 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 100 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 110 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 120 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 130 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 140 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 150 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 160 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 170 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 180 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 190 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 200 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 210 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 220 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 230 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 240 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 250 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 260 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 270 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 280 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 290 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 300 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 310 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 320 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 330 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 340 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 350 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Processing frame 360 of 365
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+All frames processed!
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/auto_examples_Ex3_Time_lapse_measurement_22_2.png" src="../_images/auto_examples_Ex3_Time_lapse_measurement_22_2.png" />
+<div class="highlight"><pre>
+GIF saved successfully to C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements\WCanimation.gif
+</pre></div></div>
 </div>
-</div>
+</section>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex6_Structure_resinv.html" class="btn btn-neutral float-left" title="Structure-Constrained Resistivity Inversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex5_SRT.html" class="btn btn-neutral float-right" title="Seismic Refraction Tomography (SRT) Forward Modeling" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="Ex8_MC_WC.html" class="btn btn-neutral float-left" title="Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex5_SRT.html" class="btn btn-neutral float-right" title="Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

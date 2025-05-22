@@ -18,7 +18,7 @@
 .. _sphx_glr_auto_examples_Ex6_Structure_resinv.py:
 
 
-Structure-Constrained Resistivity Inversion
+Ex 6. Structure-Constrained Resistivity Inversion
 ===========================================
 
 This example demonstrates how to incorporate structural information from 
@@ -78,13 +78,13 @@ leading to more reliable hydrological interpretations.
 
 .. code-block:: Python
 
-    output_dir = "results/Structure_WC"
+    output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC"
     os.makedirs(output_dir, exist_ok=True)
 
 
 .. GENERATED FROM PYTHON SOURCE LINES 59-60
 
-## 1. load data
+##  load data
 
 .. GENERATED FROM PYTHON SOURCE LINES 62-63
 
@@ -101,7 +101,7 @@ load seismic data
 
 .. GENERATED FROM PYTHON SOURCE LINES 68-69
 
-using ERT data to create a mesh to take care of the boundary
+##  Using ERT data to create a mesh to take care of the boundary
 
 .. GENERATED FROM PYTHON SOURCE LINES 69-79
 
@@ -120,7 +120,7 @@ using ERT data to create a mesh to take care of the boundary
 
 .. GENERATED FROM PYTHON SOURCE LINES 80-81
 
-# travel time inversion
+##  travel time inversion
 
 .. GENERATED FROM PYTHON SOURCE LINES 81-90
 
@@ -500,112 +500,11 @@ using ERT data to create a mesh to take care of the boundary
     mgrConstrained.showResult(xlabel="Distance (m)", ylabel="Elevation (m)",coverage = res_cov,cMap=fixed_cmap)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 401-403
+.. GENERATED FROM PYTHON SOURCE LINES 401-407
 
 .. code-block:: Python
 
-    mesh_with_interface.save("results/Structure_WC/mesh_with_interface.bms")
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 404-406
-
-.. code-block:: Python
-
-    pg.show(mgrConstrained.paraDomain, mgrConstrained.coverage()[mgrConstrained.paraDomain.cellMarkers()])
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 407-409
-
-.. code-block:: Python
-
-    mgrConstrained.paraDomain
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 410-438
-
-.. code-block:: Python
-
-    data_dir = "results/TL_measurements/appres"
-
-    # List of ERT data files testing monthly time-lapse inversion
-    ert_files = [
-        "synthetic_data30.dat",
-        "synthetic_data60.dat",
-        "synthetic_data90.dat",
-        "synthetic_data120.dat",
-        "synthetic_data150.dat",
-        "synthetic_data180.dat",
-        "synthetic_data210.dat",
-        "synthetic_data240.dat",
-        "synthetic_data270.dat",
-        "synthetic_data300.dat",
-        "synthetic_data330.dat",
-        "synthetic_data360.dat",
-    ]
-
-    # ert_files = [
-    #     "synthetic_data30.dat",
-    #     "synthetic_data90.dat",
-    #     "synthetic_data150.dat",
-    #     "synthetic_data210.dat",
-    #     "synthetic_data270.dat",
-    #     "synthetic_data330.dat",
-    # ]
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 439-441
-
-.. code-block:: Python
-
-    pg.show(mesh_with_interface)
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 442-443
-
-Full paths to data files
-
-.. GENERATED FROM PYTHON SOURCE LINES 443-485
-
-.. code-block:: Python
-
-    data_files = [os.path.join(data_dir, f) for f in ert_files]
-
-    # Measurement times (can be timestamps or any sequential numbers representing time)
-    measurement_times = [1, 2, 3, 4, 5, 6, 7 ,8, 9, 10, 11, 12]  # Adjust based on your actual acquisition times
-
-    # Create a mesh for the inversion (or load an existing one)
-    data = ert.load(data_files[0])
-    ert_manager = ert.ERTManager(data)
-    mesh = ert_manager.createMesh(data=data, quality=34)
-
-    # Set up inversion parameters
-    inversion_params = {
-        "lambda_val": 50.0,              # Regularization parameter
-        "alpha": 10.0,                   # Temporal regularization parameter
-        "decay_rate": 0.0,               # Temporal decay rate
-        "method": "cgls",                # Solver method ('cgls', 'lsqr', etc.)
-        "model_constraints": (0.001, 1e4), # Min/max resistivity values (ohm-m)
-        "max_iterations": 15,            # Maximum iterations
-        "absoluteUError": 0.0,           # Absolute data error (V)
-        "relativeError": 0.05,           # Relative data error (5%)
-        "lambda_rate": 1.0,              # Lambda reduction rate
-        "lambda_min": 1.0,               # Minimum lambda value
-        "inversion_type": "L2"           # 'L1', 'L2', or 'L1L2'
-    }
-
-    # Create the time-lapse inversion object
-    inversion = TimeLapseERTInversion(
-        data_files=data_files,
-        measurement_times=measurement_times,
-        mesh=mesh_with_interface,
-        **inversion_params
-    )
-
-    # Run the inversion
-    print("Starting time-lapse inversion...")
-    result = inversion.run()
-    print("Inversion complete!")
+    mesh_with_interface.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms")
 
 
 

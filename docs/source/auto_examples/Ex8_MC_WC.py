@@ -1,5 +1,5 @@
 """
-Monte Carlo Uncertainty Quantification for Water Content Estimation
+Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation
 ====================================================================
 
 This example demonstrates Monte Carlo uncertainty quantification for 
@@ -41,12 +41,12 @@ if parent_dir not in sys.path:
 from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_saturation
 
 # Extract the inverted resistivity values
-resistivity_values = np.load("results/Structure_WC/resmodel.npy")
-coverage = np.load("results/Structure_WC/all_coverage.npy")
+resistivity_values = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy")
+coverage = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy")
 # Extract cell markers from the mesh (to identify different geological layers)
-cell_markers = np.load("results/Structure_WC/index_marker.npy")
+cell_markers = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy")
 
-mesh = pg.load("results/Structure_WC/mesh_res.bms")
+mesh = pg.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms")
 
 # Number of Monte Carlo realizations
 n_realizations = 100
@@ -392,7 +392,7 @@ plt.tight_layout()
 plt.savefig("results/Structure_WC/regolith_WC.tiff", dpi=300, bbox_inches='tight')
 
 # %%
-### Fractured bedrock layer
+# Fractured bedrock layer
 
 # Define positions to sample (x,y coordinates)
 positions = [

@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monte Carlo Uncertainty Quantification for Water Content Estimation &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+  <title>Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation &mdash; PyHydroGeophysX 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -30,8 +30,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Structure-Constrained Resistivity Inversion" href="Ex6_Structure_resinv.html" />
-    <link rel="prev" title="Structure-Constrained Time-Lapse Resistivity Inversion" href="Ex7_structure_TLresinv.html" /> 
+    <link rel="next" title="Ex3. Creating Synthetic Time-Lapse ERT Measurements" href="Ex3_Time_lapse_measurement.html" />
+    <link rel="prev" title="Ex 6. Structure-Constrained Resistivity Inversion" href="Ex6_Structure_resinv.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -66,22 +66,13 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Monte Carlo Uncertainty Quantification for Water Content Estimation</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#Fractured-bedrock-layer">Fractured bedrock layer</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html#travel-time-inversion">travel time inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#non-parallel-computing-version">non parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#parallel-computing-version">parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#plot-the-apparent-resitivity">plot the apparent resitivity</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#Showing-the-water-content-model-for-the-differnent-timesteps">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#id1">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html#Using-Pygimili-default-to-the-inversion">Using Pygimili default to the inversion</a></li>
 </ul>
 </li>
@@ -102,7 +93,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
-      <li class="breadcrumb-item active">Monte Carlo Uncertainty Quantification for Water Content Estimation</li>
+      <li class="breadcrumb-item active">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex8_MC_WC.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -112,8 +103,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="Monte-Carlo-Uncertainty-Quantification-for-Water-Content-Estimation">
-<h1>Monte Carlo Uncertainty Quantification for Water Content Estimation<a class="headerlink" href="#Monte-Carlo-Uncertainty-Quantification-for-Water-Content-Estimation" title="Link to this heading"></a></h1>
+  <section id="Ex-8.-Monte-Carlo-Uncertainty-Quantification-for-Water-Content-Estimation">
+<h1>Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation<a class="headerlink" href="#Ex-8.-Monte-Carlo-Uncertainty-Quantification-for-Water-Content-Estimation" title="Link to this heading"></a></h1>
 <p>This example demonstrates Monte Carlo uncertainty quantification for converting ERT resistivity models to water content estimates.</p>
 <p>The analysis includes:</p>
 <ol class="arabic simple">
@@ -153,12 +144,12 @@
 <span class="kn">from</span> <span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span> <span class="kn">import</span> <span class="n">resistivity_to_saturation</span>
 
 <span class="c1"># Extract the inverted resistivity values</span>
-<span class="n">resistivity_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/resmodel.npy&quot;</span><span class="p">)</span>
-<span class="n">coverage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/all_coverage.npy&quot;</span><span class="p">)</span>
+<span class="n">resistivity_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy&quot;</span><span class="p">)</span>
+<span class="n">coverage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy&quot;</span><span class="p">)</span>
 <span class="c1"># Extract cell markers from the mesh (to identify different geological layers)</span>
-<span class="n">cell_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/index_marker.npy&quot;</span><span class="p">)</span>
+<span class="n">cell_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy&quot;</span><span class="p">)</span>
 
-<span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/mesh_res.bms&quot;</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms&quot;</span><span class="p">)</span>
 
 <span class="c1"># Number of Monte Carlo realizations</span>
 <span class="n">n_realizations</span> <span class="o">=</span> <span class="mi">100</span>
@@ -276,32 +267,1750 @@
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:   0%|                                                                                 | 0/100 [00:00&amp;lt;?, ?it/s]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:   0%|                                                                                 | 0/100 [00:00&lt;?, ?it/s]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:   0%|                                                                                 | 0/100 [00:00&lt;?, ?it/s]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:   1%|▋                                                                        | 1/100 [00:03&amp;lt;05:49,  3.53s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:   1%|▋                                                                        | 1/100 [00:03&lt;05:49,  3.53s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:   1%|▋                                                                        | 1/100 [00:03&lt;05:49,  3.53s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:   2%|█▍                                                                       | 2/100 [00:07&amp;lt;05:52,  3.59s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:   2%|█▍                                                                       | 2/100 [00:07&lt;05:52,  3.59s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:   2%|█▍                                                                       | 2/100 [00:07&lt;05:52,  3.59s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:   3%|██▏                                                                      | 3/100 [00:10&amp;lt;05:50,  3.61s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:   3%|██▏                                                                      | 3/100 [00:10&lt;05:50,  3.61s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:   3%|██▏                                                                      | 3/100 [00:10&lt;05:50,  3.61s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:   4%|██▉                                                                      | 4/100 [00:14&amp;lt;05:43,  3.58s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:   4%|██▉                                                                      | 4/100 [00:14&lt;05:43,  3.58s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:   4%|██▉                                                                      | 4/100 [00:14&lt;05:43,  3.58s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:   5%|███▋                                                                     | 5/100 [00:18&amp;lt;05:43,  3.61s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:   5%|███▋                                                                     | 5/100 [00:18&lt;05:43,  3.61s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:   5%|███▋                                                                     | 5/100 [00:18&lt;05:43,  3.61s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:   6%|████▍                                                                    | 6/100 [00:21&amp;lt;05:37,  3.59s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:   6%|████▍                                                                    | 6/100 [00:21&lt;05:37,  3.59s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:   6%|████▍                                                                    | 6/100 [00:21&lt;05:37,  3.59s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:   7%|█████                                                                    | 7/100 [00:25&amp;lt;05:31,  3.57s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:   7%|█████                                                                    | 7/100 [00:25&lt;05:31,  3.57s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:   7%|█████                                                                    | 7/100 [00:25&lt;05:31,  3.57s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:   8%|█████▊                                                                   | 8/100 [00:28&amp;lt;05:24,  3.52s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:   8%|█████▊                                                                   | 8/100 [00:28&lt;05:24,  3.52s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:   8%|█████▊                                                                   | 8/100 [00:28&lt;05:24,  3.52s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:   9%|██████▌                                                                  | 9/100 [00:32&amp;lt;05:24,  3.56s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:   9%|██████▌                                                                  | 9/100 [00:32&lt;05:24,  3.56s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:   9%|██████▌                                                                  | 9/100 [00:32&lt;05:24,  3.56s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  10%|███████▏                                                                | 10/100 [00:35&amp;lt;05:22,  3.58s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  10%|███████▏                                                                | 10/100 [00:35&lt;05:22,  3.58s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  10%|███████▏                                                                | 10/100 [00:35&lt;05:22,  3.58s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  11%|███████▉                                                                | 11/100 [00:37&amp;lt;04:33,  3.08s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  11%|███████▉                                                                | 11/100 [00:37&lt;04:33,  3.08s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  11%|███████▉                                                                | 11/100 [00:37&lt;04:33,  3.08s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  12%|████████▋                                                               | 12/100 [00:39&amp;lt;04:00,  2.74s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  12%|████████▋                                                               | 12/100 [00:39&lt;04:00,  2.74s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  12%|████████▋                                                               | 12/100 [00:39&lt;04:00,  2.74s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  13%|█████████▎                                                              | 13/100 [00:43&amp;lt;04:19,  2.98s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  13%|█████████▎                                                              | 13/100 [00:43&lt;04:19,  2.98s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  13%|█████████▎                                                              | 13/100 [00:43&lt;04:19,  2.98s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  14%|██████████                                                              | 14/100 [00:46&amp;lt;04:32,  3.17s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  14%|██████████                                                              | 14/100 [00:46&lt;04:32,  3.17s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  14%|██████████                                                              | 14/100 [00:46&lt;04:32,  3.17s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  15%|██████████▊                                                             | 15/100 [00:48&amp;lt;04:00,  2.83s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  15%|██████████▊                                                             | 15/100 [00:48&lt;04:00,  2.83s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  15%|██████████▊                                                             | 15/100 [00:48&lt;04:00,  2.83s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  16%|███████████▌                                                            | 16/100 [00:50&amp;lt;03:38,  2.60s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  16%|███████████▌                                                            | 16/100 [00:50&lt;03:38,  2.60s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  16%|███████████▌                                                            | 16/100 [00:50&lt;03:38,  2.60s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  17%|████████████▏                                                           | 17/100 [00:54&amp;lt;04:01,  2.91s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  17%|████████████▏                                                           | 17/100 [00:54&lt;04:01,  2.91s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  17%|████████████▏                                                           | 17/100 [00:54&lt;04:01,  2.91s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  18%|████████████▉                                                           | 18/100 [00:58&amp;lt;04:17,  3.14s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  18%|████████████▉                                                           | 18/100 [00:58&lt;04:17,  3.14s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  18%|████████████▉                                                           | 18/100 [00:58&lt;04:17,  3.14s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  19%|█████████████▋                                                          | 19/100 [01:01&amp;lt;04:25,  3.28s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  19%|█████████████▋                                                          | 19/100 [01:01&lt;04:25,  3.28s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  19%|█████████████▋                                                          | 19/100 [01:01&lt;04:25,  3.28s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  20%|██████████████▍                                                         | 20/100 [01:03&amp;lt;03:49,  2.87s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  20%|██████████████▍                                                         | 20/100 [01:03&lt;03:49,  2.87s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  20%|██████████████▍                                                         | 20/100 [01:03&lt;03:49,  2.87s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  21%|███████████████                                                         | 21/100 [01:05&amp;lt;03:25,  2.60s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  21%|███████████████                                                         | 21/100 [01:05&lt;03:25,  2.60s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  21%|███████████████                                                         | 21/100 [01:05&lt;03:25,  2.60s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  22%|███████████████▊                                                        | 22/100 [01:07&amp;lt;03:10,  2.45s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  22%|███████████████▊                                                        | 22/100 [01:07&lt;03:10,  2.45s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  22%|███████████████▊                                                        | 22/100 [01:07&lt;03:10,  2.45s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  23%|████████████████▌                                                       | 23/100 [01:09&amp;lt;02:58,  2.32s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  23%|████████████████▌                                                       | 23/100 [01:09&lt;02:58,  2.32s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  23%|████████████████▌                                                       | 23/100 [01:09&lt;02:58,  2.32s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  24%|█████████████████▎                                                      | 24/100 [01:11&amp;lt;02:50,  2.24s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  24%|█████████████████▎                                                      | 24/100 [01:11&lt;02:50,  2.24s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  24%|█████████████████▎                                                      | 24/100 [01:11&lt;02:50,  2.24s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  25%|██████████████████                                                      | 25/100 [01:13&amp;lt;02:43,  2.18s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  25%|██████████████████                                                      | 25/100 [01:13&lt;02:43,  2.18s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  25%|██████████████████                                                      | 25/100 [01:13&lt;02:43,  2.18s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  26%|██████████████████▋                                                     | 26/100 [01:15&amp;lt;02:37,  2.13s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  26%|██████████████████▋                                                     | 26/100 [01:15&lt;02:37,  2.13s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  26%|██████████████████▋                                                     | 26/100 [01:15&lt;02:37,  2.13s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  27%|███████████████████▍                                                    | 27/100 [01:19&amp;lt;03:08,  2.58s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  27%|███████████████████▍                                                    | 27/100 [01:19&lt;03:08,  2.58s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  27%|███████████████████▍                                                    | 27/100 [01:19&lt;03:08,  2.58s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  28%|████████████████████▏                                                   | 28/100 [01:23&amp;lt;03:28,  2.90s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  28%|████████████████████▏                                                   | 28/100 [01:23&lt;03:28,  2.90s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  28%|████████████████████▏                                                   | 28/100 [01:23&lt;03:28,  2.90s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  29%|████████████████████▉                                                   | 29/100 [01:26&amp;lt;03:40,  3.10s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  29%|████████████████████▉                                                   | 29/100 [01:26&lt;03:40,  3.10s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  29%|████████████████████▉                                                   | 29/100 [01:26&lt;03:40,  3.10s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  30%|█████████████████████▌                                                  | 30/100 [01:28&amp;lt;03:11,  2.74s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  30%|█████████████████████▌                                                  | 30/100 [01:28&lt;03:11,  2.74s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  30%|█████████████████████▌                                                  | 30/100 [01:28&lt;03:11,  2.74s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  31%|██████████████████████▎                                                 | 31/100 [01:30&amp;lt;02:54,  2.52s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  31%|██████████████████████▎                                                 | 31/100 [01:30&lt;02:54,  2.52s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  31%|██████████████████████▎                                                 | 31/100 [01:30&lt;02:54,  2.52s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  32%|███████████████████████                                                 | 32/100 [01:32&amp;lt;02:41,  2.38s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  32%|███████████████████████                                                 | 32/100 [01:32&lt;02:41,  2.38s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  32%|███████████████████████                                                 | 32/100 [01:32&lt;02:41,  2.38s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  33%|███████████████████████▊                                                | 33/100 [01:36&amp;lt;03:03,  2.74s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  33%|███████████████████████▊                                                | 33/100 [01:36&lt;03:03,  2.74s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  33%|███████████████████████▊                                                | 33/100 [01:36&lt;03:03,  2.74s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  34%|████████████████████████▍                                               | 34/100 [01:38&amp;lt;02:46,  2.52s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  34%|████████████████████████▍                                               | 34/100 [01:38&lt;02:46,  2.52s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  34%|████████████████████████▍                                               | 34/100 [01:38&lt;02:46,  2.52s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  35%|█████████████████████████▏                                              | 35/100 [01:41&amp;lt;03:02,  2.81s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  35%|█████████████████████████▏                                              | 35/100 [01:41&lt;03:02,  2.81s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  35%|█████████████████████████▏                                              | 35/100 [01:41&lt;03:02,  2.81s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  36%|█████████████████████████▉                                              | 36/100 [01:45&amp;lt;03:10,  2.97s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  36%|█████████████████████████▉                                              | 36/100 [01:45&lt;03:10,  2.97s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  36%|█████████████████████████▉                                              | 36/100 [01:45&lt;03:10,  2.97s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  37%|██████████████████████████▋                                             | 37/100 [01:47&amp;lt;02:48,  2.67s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  37%|██████████████████████████▋                                             | 37/100 [01:47&lt;02:48,  2.67s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  37%|██████████████████████████▋                                             | 37/100 [01:47&lt;02:48,  2.67s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  38%|███████████████████████████▎                                            | 38/100 [01:49&amp;lt;02:33,  2.47s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  38%|███████████████████████████▎                                            | 38/100 [01:49&lt;02:33,  2.47s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  38%|███████████████████████████▎                                            | 38/100 [01:49&lt;02:33,  2.47s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  39%|████████████████████████████                                            | 39/100 [01:51&amp;lt;02:22,  2.33s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  39%|████████████████████████████                                            | 39/100 [01:51&lt;02:22,  2.33s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  39%|████████████████████████████                                            | 39/100 [01:51&lt;02:22,  2.33s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  40%|████████████████████████████▊                                           | 40/100 [01:54&amp;lt;02:44,  2.74s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  40%|████████████████████████████▊                                           | 40/100 [01:54&lt;02:44,  2.74s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  40%|████████████████████████████▊                                           | 40/100 [01:54&lt;02:44,  2.74s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  41%|█████████████████████████████▌                                          | 41/100 [01:58&amp;lt;02:53,  2.95s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  41%|█████████████████████████████▌                                          | 41/100 [01:58&lt;02:53,  2.95s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  41%|█████████████████████████████▌                                          | 41/100 [01:58&lt;02:53,  2.95s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  42%|██████████████████████████████▏                                         | 42/100 [02:01&amp;lt;03:03,  3.16s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  42%|██████████████████████████████▏                                         | 42/100 [02:01&lt;03:03,  3.16s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  42%|██████████████████████████████▏                                         | 42/100 [02:01&lt;03:03,  3.16s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  43%|██████████████████████████████▉                                         | 43/100 [02:03&amp;lt;02:40,  2.82s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  43%|██████████████████████████████▉                                         | 43/100 [02:03&lt;02:40,  2.82s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  43%|██████████████████████████████▉                                         | 43/100 [02:03&lt;02:40,  2.82s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  44%|███████████████████████████████▋                                        | 44/100 [02:05&amp;lt;02:24,  2.58s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  44%|███████████████████████████████▋                                        | 44/100 [02:05&lt;02:24,  2.58s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  44%|███████████████████████████████▋                                        | 44/100 [02:05&lt;02:24,  2.58s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  45%|████████████████████████████████▍                                       | 45/100 [02:07&amp;lt;02:10,  2.37s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  45%|████████████████████████████████▍                                       | 45/100 [02:07&lt;02:10,  2.37s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  45%|████████████████████████████████▍                                       | 45/100 [02:07&lt;02:10,  2.37s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  46%|█████████████████████████████████                                       | 46/100 [02:11&amp;lt;02:28,  2.75s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  46%|█████████████████████████████████                                       | 46/100 [02:11&lt;02:28,  2.75s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  46%|█████████████████████████████████                                       | 46/100 [02:11&lt;02:28,  2.75s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  47%|█████████████████████████████████▊                                      | 47/100 [02:15&amp;lt;02:38,  2.99s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  47%|█████████████████████████████████▊                                      | 47/100 [02:15&lt;02:38,  2.99s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  47%|█████████████████████████████████▊                                      | 47/100 [02:15&lt;02:38,  2.99s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  48%|██████████████████████████████████▌                                     | 48/100 [02:17&amp;lt;02:20,  2.70s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  48%|██████████████████████████████████▌                                     | 48/100 [02:17&lt;02:20,  2.70s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  48%|██████████████████████████████████▌                                     | 48/100 [02:17&lt;02:20,  2.70s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  49%|███████████████████████████████████▎                                    | 49/100 [02:18&amp;lt;02:05,  2.46s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  49%|███████████████████████████████████▎                                    | 49/100 [02:18&lt;02:05,  2.46s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  49%|███████████████████████████████████▎                                    | 49/100 [02:18&lt;02:05,  2.46s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  50%|████████████████████████████████████                                    | 50/100 [02:20&amp;lt;01:56,  2.32s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  50%|████████████████████████████████████                                    | 50/100 [02:20&lt;01:56,  2.32s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  50%|████████████████████████████████████                                    | 50/100 [02:20&lt;01:56,  2.32s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  51%|████████████████████████████████████▋                                   | 51/100 [02:22&amp;lt;01:49,  2.24s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  51%|████████████████████████████████████▋                                   | 51/100 [02:22&lt;01:49,  2.24s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  51%|████████████████████████████████████▋                                   | 51/100 [02:22&lt;01:49,  2.24s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  52%|█████████████████████████████████████▍                                  | 52/100 [02:25&amp;lt;01:44,  2.18s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  52%|█████████████████████████████████████▍                                  | 52/100 [02:25&lt;01:44,  2.18s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  52%|█████████████████████████████████████▍                                  | 52/100 [02:25&lt;01:44,  2.18s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  53%|██████████████████████████████████████▏                                 | 53/100 [02:27&amp;lt;01:40,  2.14s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  53%|██████████████████████████████████████▏                                 | 53/100 [02:27&lt;01:40,  2.14s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  53%|██████████████████████████████████████▏                                 | 53/100 [02:27&lt;01:40,  2.14s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  54%|██████████████████████████████████████▉                                 | 54/100 [02:29&amp;lt;01:37,  2.12s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  54%|██████████████████████████████████████▉                                 | 54/100 [02:29&lt;01:37,  2.12s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  54%|██████████████████████████████████████▉                                 | 54/100 [02:29&lt;01:37,  2.12s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  55%|███████████████████████████████████████▌                                | 55/100 [02:31&amp;lt;01:34,  2.09s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  55%|███████████████████████████████████████▌                                | 55/100 [02:31&lt;01:34,  2.09s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  55%|███████████████████████████████████████▌                                | 55/100 [02:31&lt;01:34,  2.09s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  56%|████████████████████████████████████████▎                               | 56/100 [02:34&amp;lt;01:52,  2.56s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  56%|████████████████████████████████████████▎                               | 56/100 [02:34&lt;01:52,  2.56s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  56%|████████████████████████████████████████▎                               | 56/100 [02:34&lt;01:52,  2.56s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  57%|█████████████████████████████████████████                               | 57/100 [02:36&amp;lt;01:43,  2.41s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  57%|█████████████████████████████████████████                               | 57/100 [02:36&lt;01:43,  2.41s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  57%|█████████████████████████████████████████                               | 57/100 [02:36&lt;01:43,  2.41s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  58%|█████████████████████████████████████████▊                              | 58/100 [02:38&amp;lt;01:36,  2.30s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  58%|█████████████████████████████████████████▊                              | 58/100 [02:38&lt;01:36,  2.30s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  58%|█████████████████████████████████████████▊                              | 58/100 [02:38&lt;01:36,  2.30s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  59%|██████████████████████████████████████████▍                             | 59/100 [02:42&amp;lt;01:50,  2.70s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  59%|██████████████████████████████████████████▍                             | 59/100 [02:42&lt;01:50,  2.70s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  59%|██████████████████████████████████████████▍                             | 59/100 [02:42&lt;01:50,  2.70s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  60%|███████████████████████████████████████████▏                            | 60/100 [02:46&amp;lt;01:59,  2.99s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  60%|███████████████████████████████████████████▏                            | 60/100 [02:46&lt;01:59,  2.99s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  60%|███████████████████████████████████████████▏                            | 60/100 [02:46&lt;01:59,  2.99s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  61%|███████████████████████████████████████████▉                            | 61/100 [02:48&amp;lt;01:44,  2.69s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  61%|███████████████████████████████████████████▉                            | 61/100 [02:48&lt;01:44,  2.69s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  61%|███████████████████████████████████████████▉                            | 61/100 [02:48&lt;01:44,  2.69s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  62%|████████████████████████████████████████████▋                           | 62/100 [02:50&amp;lt;01:33,  2.47s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  62%|████████████████████████████████████████████▋                           | 62/100 [02:50&lt;01:33,  2.47s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  62%|████████████████████████████████████████████▋                           | 62/100 [02:50&lt;01:33,  2.47s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  63%|█████████████████████████████████████████████▎                          | 63/100 [02:52&amp;lt;01:26,  2.34s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  63%|█████████████████████████████████████████████▎                          | 63/100 [02:52&lt;01:26,  2.34s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  63%|█████████████████████████████████████████████▎                          | 63/100 [02:52&lt;01:26,  2.34s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  64%|██████████████████████████████████████████████                          | 64/100 [02:55&amp;lt;01:36,  2.68s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  64%|██████████████████████████████████████████████                          | 64/100 [02:55&lt;01:36,  2.68s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  64%|██████████████████████████████████████████████                          | 64/100 [02:55&lt;01:36,  2.68s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  65%|██████████████████████████████████████████████▊                         | 65/100 [02:57&amp;lt;01:26,  2.48s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  65%|██████████████████████████████████████████████▊                         | 65/100 [02:57&lt;01:26,  2.48s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  65%|██████████████████████████████████████████████▊                         | 65/100 [02:57&lt;01:26,  2.48s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  66%|███████████████████████████████████████████████▌                        | 66/100 [02:59&amp;lt;01:19,  2.34s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  66%|███████████████████████████████████████████████▌                        | 66/100 [02:59&lt;01:19,  2.34s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  66%|███████████████████████████████████████████████▌                        | 66/100 [02:59&lt;01:19,  2.34s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  67%|████████████████████████████████████████████████▏                       | 67/100 [03:01&amp;lt;01:13,  2.24s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  67%|████████████████████████████████████████████████▏                       | 67/100 [03:01&lt;01:13,  2.24s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  67%|████████████████████████████████████████████████▏                       | 67/100 [03:01&lt;01:13,  2.24s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  68%|████████████████████████████████████████████████▉                       | 68/100 [03:05&amp;lt;01:23,  2.60s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  68%|████████████████████████████████████████████████▉                       | 68/100 [03:05&lt;01:23,  2.60s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  68%|████████████████████████████████████████████████▉                       | 68/100 [03:05&lt;01:23,  2.60s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  69%|█████████████████████████████████████████████████▋                      | 69/100 [03:08&amp;lt;01:28,  2.87s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  69%|█████████████████████████████████████████████████▋                      | 69/100 [03:08&lt;01:28,  2.87s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  69%|█████████████████████████████████████████████████▋                      | 69/100 [03:08&lt;01:28,  2.87s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  70%|██████████████████████████████████████████████████▍                     | 70/100 [03:12&amp;lt;01:31,  3.06s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  70%|██████████████████████████████████████████████████▍                     | 70/100 [03:12&lt;01:31,  3.06s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  70%|██████████████████████████████████████████████████▍                     | 70/100 [03:12&lt;01:31,  3.06s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  71%|███████████████████████████████████████████████████                     | 71/100 [03:15&amp;lt;01:33,  3.22s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  71%|███████████████████████████████████████████████████                     | 71/100 [03:15&lt;01:33,  3.22s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  71%|███████████████████████████████████████████████████                     | 71/100 [03:15&lt;01:33,  3.22s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  72%|███████████████████████████████████████████████████▊                    | 72/100 [03:17&amp;lt;01:19,  2.84s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  72%|███████████████████████████████████████████████████▊                    | 72/100 [03:17&lt;01:19,  2.84s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  72%|███████████████████████████████████████████████████▊                    | 72/100 [03:17&lt;01:19,  2.84s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  73%|████████████████████████████████████████████████████▌                   | 73/100 [03:19&amp;lt;01:09,  2.57s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  73%|████████████████████████████████████████████████████▌                   | 73/100 [03:19&lt;01:09,  2.57s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  73%|████████████████████████████████████████████████████▌                   | 73/100 [03:19&lt;01:09,  2.57s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  74%|█████████████████████████████████████████████████████▎                  | 74/100 [03:21&amp;lt;01:02,  2.41s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  74%|█████████████████████████████████████████████████████▎                  | 74/100 [03:21&lt;01:02,  2.41s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  74%|█████████████████████████████████████████████████████▎                  | 74/100 [03:21&lt;01:02,  2.41s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  75%|██████████████████████████████████████████████████████                  | 75/100 [03:23&amp;lt;00:57,  2.31s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  75%|██████████████████████████████████████████████████████                  | 75/100 [03:23&lt;00:57,  2.31s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  75%|██████████████████████████████████████████████████████                  | 75/100 [03:23&lt;00:57,  2.31s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  76%|██████████████████████████████████████████████████████▋                 | 76/100 [03:27&amp;lt;01:05,  2.72s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  76%|██████████████████████████████████████████████████████▋                 | 76/100 [03:27&lt;01:05,  2.72s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  76%|██████████████████████████████████████████████████████▋                 | 76/100 [03:27&lt;01:05,  2.72s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  77%|███████████████████████████████████████████████████████▍                | 77/100 [03:30&amp;lt;01:07,  2.95s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  77%|███████████████████████████████████████████████████████▍                | 77/100 [03:30&lt;01:07,  2.95s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  77%|███████████████████████████████████████████████████████▍                | 77/100 [03:30&lt;01:07,  2.95s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  78%|████████████████████████████████████████████████████████▏               | 78/100 [03:32&amp;lt;00:58,  2.67s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  78%|████████████████████████████████████████████████████████▏               | 78/100 [03:32&lt;00:58,  2.67s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  78%|████████████████████████████████████████████████████████▏               | 78/100 [03:32&lt;00:58,  2.67s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  79%|████████████████████████████████████████████████████████▉               | 79/100 [03:36&amp;lt;01:01,  2.91s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  79%|████████████████████████████████████████████████████████▉               | 79/100 [03:36&lt;01:01,  2.91s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  79%|████████████████████████████████████████████████████████▉               | 79/100 [03:36&lt;01:01,  2.91s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  80%|█████████████████████████████████████████████████████████▌              | 80/100 [03:40&amp;lt;01:02,  3.13s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  80%|█████████████████████████████████████████████████████████▌              | 80/100 [03:40&lt;01:02,  3.13s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  80%|█████████████████████████████████████████████████████████▌              | 80/100 [03:40&lt;01:02,  3.13s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  81%|██████████████████████████████████████████████████████████▎             | 81/100 [03:41&amp;lt;00:52,  2.76s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  81%|██████████████████████████████████████████████████████████▎             | 81/100 [03:41&lt;00:52,  2.76s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  81%|██████████████████████████████████████████████████████████▎             | 81/100 [03:41&lt;00:52,  2.76s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  82%|███████████████████████████████████████████████████████████             | 82/100 [03:43&amp;lt;00:45,  2.54s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  82%|███████████████████████████████████████████████████████████             | 82/100 [03:43&lt;00:45,  2.54s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  82%|███████████████████████████████████████████████████████████             | 82/100 [03:43&lt;00:45,  2.54s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  83%|███████████████████████████████████████████████████████████▊            | 83/100 [03:47&amp;lt;00:48,  2.85s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  83%|███████████████████████████████████████████████████████████▊            | 83/100 [03:47&lt;00:48,  2.85s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  83%|███████████████████████████████████████████████████████████▊            | 83/100 [03:47&lt;00:48,  2.85s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  84%|████████████████████████████████████████████████████████████▍           | 84/100 [03:49&amp;lt;00:41,  2.61s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  84%|████████████████████████████████████████████████████████████▍           | 84/100 [03:49&lt;00:41,  2.61s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  84%|████████████████████████████████████████████████████████████▍           | 84/100 [03:49&lt;00:41,  2.61s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  85%|█████████████████████████████████████████████████████████████▏          | 85/100 [03:51&amp;lt;00:36,  2.42s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  85%|█████████████████████████████████████████████████████████████▏          | 85/100 [03:51&lt;00:36,  2.42s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  85%|█████████████████████████████████████████████████████████████▏          | 85/100 [03:51&lt;00:36,  2.42s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  86%|█████████████████████████████████████████████████████████████▉          | 86/100 [03:55&amp;lt;00:38,  2.75s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  86%|█████████████████████████████████████████████████████████████▉          | 86/100 [03:55&lt;00:38,  2.75s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  86%|█████████████████████████████████████████████████████████████▉          | 86/100 [03:55&lt;00:38,  2.75s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  87%|██████████████████████████████████████████████████████████████▋         | 87/100 [03:58&amp;lt;00:38,  2.97s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  87%|██████████████████████████████████████████████████████████████▋         | 87/100 [03:58&lt;00:38,  2.97s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  87%|██████████████████████████████████████████████████████████████▋         | 87/100 [03:58&lt;00:38,  2.97s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  88%|███████████████████████████████████████████████████████████████▎        | 88/100 [04:01&amp;lt;00:36,  3.07s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  88%|███████████████████████████████████████████████████████████████▎        | 88/100 [04:01&lt;00:36,  3.07s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  88%|███████████████████████████████████████████████████████████████▎        | 88/100 [04:01&lt;00:36,  3.07s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  89%|████████████████████████████████████████████████████████████████        | 89/100 [04:05&amp;lt;00:35,  3.26s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  89%|████████████████████████████████████████████████████████████████        | 89/100 [04:05&lt;00:35,  3.26s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  89%|████████████████████████████████████████████████████████████████        | 89/100 [04:05&lt;00:35,  3.26s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  90%|████████████████████████████████████████████████████████████████▊       | 90/100 [04:09&amp;lt;00:33,  3.35s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  90%|████████████████████████████████████████████████████████████████▊       | 90/100 [04:09&lt;00:33,  3.35s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  90%|████████████████████████████████████████████████████████████████▊       | 90/100 [04:09&lt;00:33,  3.35s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  91%|█████████████████████████████████████████████████████████████████▌      | 91/100 [04:12&amp;lt;00:30,  3.42s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  91%|█████████████████████████████████████████████████████████████████▌      | 91/100 [04:12&lt;00:30,  3.42s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  91%|█████████████████████████████████████████████████████████████████▌      | 91/100 [04:12&lt;00:30,  3.42s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  92%|██████████████████████████████████████████████████████████████████▏     | 92/100 [04:16&amp;lt;00:27,  3.39s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  92%|██████████████████████████████████████████████████████████████████▏     | 92/100 [04:16&lt;00:27,  3.39s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  92%|██████████████████████████████████████████████████████████████████▏     | 92/100 [04:16&lt;00:27,  3.39s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  93%|██████████████████████████████████████████████████████████████████▉     | 93/100 [04:18&amp;lt;00:20,  2.98s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  93%|██████████████████████████████████████████████████████████████████▉     | 93/100 [04:18&lt;00:20,  2.98s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  93%|██████████████████████████████████████████████████████████████████▉     | 93/100 [04:18&lt;00:20,  2.98s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  94%|███████████████████████████████████████████████████████████████████▋    | 94/100 [04:20&amp;lt;00:16,  2.67s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  94%|███████████████████████████████████████████████████████████████████▋    | 94/100 [04:20&lt;00:16,  2.67s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  94%|███████████████████████████████████████████████████████████████████▋    | 94/100 [04:20&lt;00:16,  2.67s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  95%|████████████████████████████████████████████████████████████████████▍   | 95/100 [04:21&amp;lt;00:12,  2.43s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  95%|████████████████████████████████████████████████████████████████████▍   | 95/100 [04:21&lt;00:12,  2.43s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  95%|████████████████████████████████████████████████████████████████████▍   | 95/100 [04:21&lt;00:12,  2.43s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  96%|█████████████████████████████████████████████████████████████████████   | 96/100 [04:23&amp;lt;00:09,  2.31s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  96%|█████████████████████████████████████████████████████████████████████   | 96/100 [04:23&lt;00:09,  2.31s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  96%|█████████████████████████████████████████████████████████████████████   | 96/100 [04:23&lt;00:09,  2.31s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  97%|█████████████████████████████████████████████████████████████████████▊  | 97/100 [04:26&amp;lt;00:06,  2.24s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  97%|█████████████████████████████████████████████████████████████████████▊  | 97/100 [04:26&lt;00:06,  2.24s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  97%|█████████████████████████████████████████████████████████████████████▊  | 97/100 [04:26&lt;00:06,  2.24s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  98%|██████████████████████████████████████████████████████████████████████▌ | 98/100 [04:28&amp;lt;00:04,  2.20s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  98%|██████████████████████████████████████████████████████████████████████▌ | 98/100 [04:28&lt;00:04,  2.20s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  98%|██████████████████████████████████████████████████████████████████████▌ | 98/100 [04:28&lt;00:04,  2.20s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations:  99%|███████████████████████████████████████████████████████████████████████▎| 99/100 [04:30&amp;lt;00:02,  2.12s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations:  99%|███████████████████████████████████████████████████████████████████████▎| 99/100 [04:30&lt;00:02,  2.12s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations:  99%|███████████████████████████████████████████████████████████████████████▎| 99/100 [04:30&lt;00:02,  2.12s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations: 100%|███████████████████████████████████████████████████████████████████████| 100/100 [04:31&amp;lt;00:00,  2.07s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations: 100%|███████████████████████████████████████████████████████████████████████| 100/100 [04:31&lt;00:00,  2.07s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations: 100%|███████████████████████████████████████████████████████████████████████| 100/100 [04:31&lt;00:00,  2.07s/it]</p>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre></div></div>
+</div>
+<dl>
+<dt>Monte Carlo Simulations: 100%|███████████████████████████████████████████████████████████████████████| 100/100 [04:31&amp;lt;00:00,  2.72s/it]</dt><dd><blockquote>
+<div><p>&lt;/pre&gt;</p>
+</div></blockquote>
+</dd>
+<dt>Monte Carlo Simulations: 100%|███████████████████████████████████████████████████████████████████████| 100/100 [04:31&lt;00:00,  2.72s/it]</dt><dd><blockquote>
+<div><p>end{sphinxVerbatim}</p>
+</div></blockquote>
+</dd>
+</dl>
+<p>Monte Carlo Simulations: 100%|███████████████████████████████████████████████████████████████████████| 100/100 [04:31&lt;00:00,  2.72s/it]</p>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
+<div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[1], line 25</span>
-<span class="ansi-green-fg">     22</span> <span class="ansi-bold" style="color: rgb(0,135,0)">from</span> <span class="ansi-bold" style="color: rgb(0,0,255)">PyHydroGeophysX</span><span class="ansi-bold" style="color: rgb(0,0,255)">.</span><span class="ansi-bold" style="color: rgb(0,0,255)">petrophysics</span><span class="ansi-bold" style="color: rgb(0,0,255)">.</span><span class="ansi-bold" style="color: rgb(0,0,255)">resistivity_models</span> <span class="ansi-bold" style="color: rgb(0,135,0)">import</span> resistivity_to_saturation
-<span class="ansi-green-fg">     24</span> <span style="color: rgb(95,135,135)"># Extract the inverted resistivity values</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 25</span> resistivity_values <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">results/Structure_WC/resmodel.npy</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     26</span> coverage <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>load(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results/Structure_WC/all_coverage.npy</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">     27</span> <span style="color: rgb(95,135,135)"># Extract cell markers from the mesh (to identify different geological layers)</span>
 
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:427</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(file, mmap_mode, allow_pickle, fix_imports, encoding, max_header_size)</span>
-<span class="ansi-green-fg">    425</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">False</span>
-<span class="ansi-green-fg">    426</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 427</span>     fid <span style="color: rgb(98,98,98)">=</span> stack<span style="color: rgb(98,98,98)">.</span>enter_context(<span class="ansi-yellow-bg" style="color: rgb(0,135,0)">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os_fspath</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">file</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">rb</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span>)
-<span class="ansi-green-fg">    428</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>
-<span class="ansi-green-fg">    430</span> <span style="color: rgb(95,135,135)"># Code to distinguish from NumPy binary files and pickles.</span>
-
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: [Errno 2] No such file or directory: &#39;results/Structure_WC/resmodel.npy&#39;
 </pre></div></div>
 </div>
 <p>Calculate statistics across all realizations</p>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
@@ -312,21 +2021,6 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 <span class="n">water_content_p90</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># 90th percentile</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[2], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> water_content_mean <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>mean(<span class="ansi-yellow-bg">water_content_all</span>, axis<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0</span>)
-<span class="ansi-green-fg">      2</span> water_content_std <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>std(water_content_all, axis<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0</span>)
-<span class="ansi-green-fg">      3</span> water_content_p10 <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>percentile(water_content_all, <span style="color: rgb(98,98,98)">10</span>, axis<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0</span>)  <span style="color: rgb(95,135,135)"># 10th percentile</span>
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;water_content_all&#39; is not defined
-</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
@@ -401,37 +2095,95 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[2], line 1</span>
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
+<img alt="../_images/auto_examples_Ex8_MC_WC_4_0.png" src="../_images/auto_examples_Ex8_MC_WC_4_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[3], line 43</span>
-<span class="ansi-green-fg">     40</span>     ax<span style="color: rgb(98,98,98)">.</span>set_xlabel(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Distance (m)</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">     42</span> <span style="color: rgb(95,135,135)"># Create the plot</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 43</span> ax, cbar <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh</span>,
-<span class="ansi-green-fg">     44</span>                   water_content_mean[:, i],
-<span class="ansi-green-fg">     45</span>                   pad<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.3</span>,
-<span class="ansi-green-fg">     46</span>                   orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,
-<span class="ansi-green-fg">     47</span>                   cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap,
-<span class="ansi-green-fg">     48</span>                   cMin<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0</span>,
-<span class="ansi-green-fg">     49</span>                   cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.32</span>,
-<span class="ansi-green-fg">     50</span>                   ylabel<span style="color: rgb(98,98,98)">=</span>ylabel,
-<span class="ansi-green-fg">     51</span>                   label<span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Water Content (-)</span><span style="color: rgb(175,0,0)">&#39;</span>,
-<span class="ansi-green-fg">     52</span>                   ax<span style="color: rgb(98,98,98)">=</span>ax,
-<span class="ansi-green-fg">     53</span>                   logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>,
-<span class="ansi-green-fg">     54</span>                   coverage<span style="color: rgb(98,98,98)">=</span>coverage[i,:]<span style="color: rgb(98,98,98)">&gt;</span><span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">1.2</span>)
-<span class="ansi-green-fg">     56</span> <span style="color: rgb(95,135,135)"># Only keep colorbar for the middle-right panel (row 1, col 3)</span>
-<span class="ansi-green-fg">     57</span> <span style="color: rgb(95,135,135)"># This corresponds to panel index 7 in a 0-based indexing system</span>
-<span class="ansi-green-fg">     58</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> i <span style="color: rgb(98,98,98)">!=</span> <span style="color: rgb(98,98,98)">7</span>:  <span style="color: rgb(95,135,135)"># Keep only the colorbar for panel 7</span>
+<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[3], line 62</span>
+<span class="ansi-green-fg">     59</span>         cbar<span style="color: rgb(98,98,98)">.</span>remove()
+<span class="ansi-green-fg">     61</span> plt<span style="color: rgb(98,98,98)">.</span>tight_layout()
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 62</span> <span class="ansi-yellow-bg">plt</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">savefig</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">results/Structure_WC/timelapse_sat.tiff</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">dpi</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">300</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">bbox_inches</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#39;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">tight</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#39;</span><span class="ansi-yellow-bg">)</span>
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh&#39; is not defined
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\matplotlib\pyplot.py:1134</span>, in <span class="ansi-cyan-fg">savefig</span><span class="ansi-blue-intense-fg ansi-bold">(*args, **kwargs)</span>
+<span class="ansi-green-fg">   1131</span> fig <span style="color: rgb(98,98,98)">=</span> gcf()
+<span class="ansi-green-fg">   1132</span> <span style="color: rgb(95,135,135)"># savefig default implementation has no return, so mypy is unhappy</span>
+<span class="ansi-green-fg">   1133</span> <span style="color: rgb(95,135,135)"># presumably this is here because subclasses can return?</span>
+<span class="ansi-green-intense-fg ansi-bold">-&gt; 1134</span> res <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">fig</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">savefig</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>  <span style="color: rgb(95,135,135)"># type: ignore[func-returns-value]</span>
+<span class="ansi-green-fg">   1135</span> fig<span style="color: rgb(98,98,98)">.</span>canvas<span style="color: rgb(98,98,98)">.</span>draw_idle()  <span style="color: rgb(95,135,135)"># Need this if &#39;transparent=True&#39;, to reset colors.</span>
+<span class="ansi-green-fg">   1136</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> res
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\matplotlib\figure.py:3390</span>, in <span class="ansi-cyan-fg">Figure.savefig</span><span class="ansi-blue-intense-fg ansi-bold">(self, fname, transparent, **kwargs)</span>
+<span class="ansi-green-fg">   3388</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> ax <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>axes:
+<span class="ansi-green-fg">   3389</span>         _recursively_make_axes_transparent(stack, ax)
+<span class="ansi-green-intense-fg ansi-bold">-&gt; 3390</span> <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">canvas</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">print_figure</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fname</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\matplotlib\backend_bases.py:2193</span>, in <span class="ansi-cyan-fg">FigureCanvasBase.print_figure</span><span class="ansi-blue-intense-fg ansi-bold">(self, filename, dpi, facecolor, edgecolor, orientation, format, bbox_inches, pad_inches, bbox_extra_artists, backend, **kwargs)</span>
+<span class="ansi-green-fg">   2189</span> <span class="ansi-bold" style="color: rgb(0,135,0)">try</span>:
+<span class="ansi-green-fg">   2190</span>     <span style="color: rgb(95,135,135)"># _get_renderer may change the figure dpi (as vector formats</span>
+<span class="ansi-green-fg">   2191</span>     <span style="color: rgb(95,135,135)"># force the figure dpi to 72), so we need to set it again here.</span>
+<span class="ansi-green-fg">   2192</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">with</span> cbook<span style="color: rgb(98,98,98)">.</span>_setattr_cm(<span style="color: rgb(0,135,0)">self</span><span style="color: rgb(98,98,98)">.</span>figure, dpi<span style="color: rgb(98,98,98)">=</span>dpi):
+<span class="ansi-green-intense-fg ansi-bold">-&gt; 2193</span>         result <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">print_method</span><span class="ansi-yellow-bg">(</span>
+<span class="ansi-green-fg">   2194</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">filename</span><span class="ansi-yellow-bg">,</span>
+<span class="ansi-green-fg">   2195</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">facecolor</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">facecolor</span><span class="ansi-yellow-bg">,</span>
+<span class="ansi-green-fg">   2196</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">edgecolor</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">edgecolor</span><span class="ansi-yellow-bg">,</span>
+<span class="ansi-green-fg">   2197</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">orientation</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">orientation</span><span class="ansi-yellow-bg">,</span>
+<span class="ansi-green-fg">   2198</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">bbox_inches_restore</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">_bbox_inches_restore</span><span class="ansi-yellow-bg">,</span>
+<span class="ansi-green-fg">   2199</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   2200</span> <span class="ansi-bold" style="color: rgb(0,135,0)">finally</span>:
+<span class="ansi-green-fg">   2201</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> bbox_inches <span class="ansi-bold" style="color: rgb(175,0,255)">and</span> restore_bbox:
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\matplotlib\backend_bases.py:2043</span>, in <span class="ansi-cyan-fg">FigureCanvasBase._switch_canvas_and_return_print_method.&lt;locals&gt;.&lt;lambda&gt;</span><span class="ansi-blue-intense-fg ansi-bold">(*args, **kwargs)</span>
+<span class="ansi-green-fg">   2039</span>     optional_kws <span style="color: rgb(98,98,98)">=</span> {  <span style="color: rgb(95,135,135)"># Passed by print_figure for other renderers.</span>
+<span class="ansi-green-fg">   2040</span>         <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">dpi</span><span style="color: rgb(175,0,0)">&#34;</span>, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">facecolor</span><span style="color: rgb(175,0,0)">&#34;</span>, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">edgecolor</span><span style="color: rgb(175,0,0)">&#34;</span>, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">orientation</span><span style="color: rgb(175,0,0)">&#34;</span>,
+<span class="ansi-green-fg">   2041</span>         <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">bbox_inches_restore</span><span style="color: rgb(175,0,0)">&#34;</span>}
+<span class="ansi-green-fg">   2042</span>     skip <span style="color: rgb(98,98,98)">=</span> optional_kws <span style="color: rgb(98,98,98)">-</span> {<span style="color: rgb(98,98,98)">*</span>inspect<span style="color: rgb(98,98,98)">.</span>signature(meth)<span style="color: rgb(98,98,98)">.</span>parameters}
+<span class="ansi-green-intense-fg ansi-bold">-&gt; 2043</span>     print_method <span style="color: rgb(98,98,98)">=</span> functools<span style="color: rgb(98,98,98)">.</span>wraps(meth)(<span class="ansi-bold" style="color: rgb(0,135,0)">lambda</span> <span style="color: rgb(98,98,98)">*</span>args, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs: <span class="ansi-yellow-bg">meth</span><span class="ansi-yellow-bg">(</span>
+<span class="ansi-green-fg">   2044</span> <span class="ansi-yellow-bg">        </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">{</span><span class="ansi-yellow-bg">k</span><span class="ansi-yellow-bg">:</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">v</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(0,135,0)">for</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">k</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">v</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,0,255)">in</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">items</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(0,135,0)">if</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">k</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,0,255)">not</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,0,255)">in</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">skip</span><span class="ansi-yellow-bg">}</span><span class="ansi-yellow-bg">)</span>)
+<span class="ansi-green-fg">   2045</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:  <span style="color: rgb(95,135,135)"># Let third-parties do as they see fit.</span>
+<span class="ansi-green-fg">   2046</span>     print_method <span style="color: rgb(98,98,98)">=</span> meth
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\matplotlib\backends\backend_agg.py:519</span>, in <span class="ansi-cyan-fg">FigureCanvasAgg.print_tif</span><span class="ansi-blue-intense-fg ansi-bold">(self, filename_or_obj, metadata, pil_kwargs)</span>
+<span class="ansi-green-fg">    518</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">print_tif</span>(<span style="color: rgb(0,135,0)">self</span>, filename_or_obj, <span style="color: rgb(98,98,98)">*</span>, metadata<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">None</span>, pil_kwargs<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">None</span>):
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 519</span>     <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_print_pil</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">filename_or_obj</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">tiff</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">pil_kwargs</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">metadata</span><span class="ansi-yellow-bg">)</span>
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\matplotlib\backends\backend_agg.py:446</span>, in <span class="ansi-cyan-fg">FigureCanvasAgg._print_pil</span><span class="ansi-blue-intense-fg ansi-bold">(self, filename_or_obj, fmt, pil_kwargs, metadata)</span>
+<span class="ansi-green-fg">    441</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;</span>
+<span class="ansi-green-fg">    442</span> <span style="color: rgb(175,0,0)">Draw the canvas, then save it using `.image.imsave` (to which</span>
+<span class="ansi-green-fg">    443</span> <span style="color: rgb(175,0,0)">*pil_kwargs* and *metadata* are forwarded).</span>
+<span class="ansi-green-fg">    444</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;</span>
+<span class="ansi-green-fg">    445</span> FigureCanvasAgg<span style="color: rgb(98,98,98)">.</span>draw(<span style="color: rgb(0,135,0)">self</span>)
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 446</span> <span class="ansi-yellow-bg">mpl</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">image</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">imsave</span><span class="ansi-yellow-bg">(</span>
+<span class="ansi-green-fg">    447</span> <span class="ansi-yellow-bg">    </span><span class="ansi-yellow-bg">filename_or_obj</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">buffer_rgba</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">format</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">fmt</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">origin</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">upper</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">,</span>
+<span class="ansi-green-fg">    448</span> <span class="ansi-yellow-bg">    </span><span class="ansi-yellow-bg">dpi</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">figure</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">dpi</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">metadata</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">metadata</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">pil_kwargs</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">pil_kwargs</span><span class="ansi-yellow-bg">)</span>
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\matplotlib\image.py:1656</span>, in <span class="ansi-cyan-fg">imsave</span><span class="ansi-blue-intense-fg ansi-bold">(fname, arr, vmin, vmax, cmap, format, origin, dpi, metadata, pil_kwargs)</span>
+<span class="ansi-green-fg">   1654</span> pil_kwargs<span style="color: rgb(98,98,98)">.</span>setdefault(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">format</span><span style="color: rgb(175,0,0)">&#34;</span>, <span style="color: rgb(0,135,0)">format</span>)
+<span class="ansi-green-fg">   1655</span> pil_kwargs<span style="color: rgb(98,98,98)">.</span>setdefault(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">dpi</span><span style="color: rgb(175,0,0)">&#34;</span>, (dpi, dpi))
+<span class="ansi-green-intense-fg ansi-bold">-&gt; 1656</span> <span class="ansi-yellow-bg">image</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">save</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fname</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">*</span><span class="ansi-yellow-bg">pil_kwargs</span><span class="ansi-yellow-bg">)</span>
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\PIL\Image.py:2456</span>, in <span class="ansi-cyan-fg">Image.save</span><span class="ansi-blue-intense-fg ansi-bold">(self, fp, format, **params)</span>
+<span class="ansi-green-fg">   2454</span>         fp <span style="color: rgb(98,98,98)">=</span> builtins<span style="color: rgb(98,98,98)">.</span>open(filename, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">r+b</span><span style="color: rgb(175,0,0)">&#34;</span>)
+<span class="ansi-green-fg">   2455</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
+<span class="ansi-green-intense-fg ansi-bold">-&gt; 2456</span>         fp <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">builtins</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">filename</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">w+b</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   2458</span> <span class="ansi-bold" style="color: rgb(0,135,0)">try</span>:
+<span class="ansi-green-fg">   2459</span>     save_handler(<span style="color: rgb(0,135,0)">self</span>, fp, filename)
+
+<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: [Errno 2] No such file or directory: &#39;C:\\Users\\HChen8\\Documents\\GitHub\\PyHydroGeophysX\\docs\\source\\auto_examples\\results\\Structure_WC\\timelapse_sat.tiff&#39;
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/auto_examples_Ex8_MC_WC_4_1.png" src="../_images/auto_examples_Ex8_MC_WC_4_1.png" />
-</div>
+<div class="highlight"><pre>
+&lt;Figure size 640x480 with 0 Axes&gt;
+</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
@@ -504,31 +2256,12 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </div>
 </div>
 <div class="nboutput docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[5], line 3</span>
-<span class="ansi-green-fg">      1</span> fig <span style="color: rgb(98,98,98)">=</span> plt<span style="color: rgb(98,98,98)">.</span>figure(figsize<span style="color: rgb(98,98,98)">=</span>[<span style="color: rgb(98,98,98)">6</span>, <span style="color: rgb(98,98,98)">3</span>])
-<span class="ansi-green-fg">      2</span> ax <span style="color: rgb(98,98,98)">=</span> fig<span style="color: rgb(98,98,98)">.</span>add_subplot(<span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">1</span>)
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 3</span> ax, cbar <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh</span>,
-<span class="ansi-green-fg">      4</span>                 water_content_mean[:, <span style="color: rgb(98,98,98)">6</span>],
-<span class="ansi-green-fg">      5</span>                 pad<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.3</span>,
-<span class="ansi-green-fg">      6</span>                 orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,
-<span class="ansi-green-fg">      7</span>                 cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap,
-<span class="ansi-green-fg">      8</span>                 cMin<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0</span>,
-<span class="ansi-green-fg">      9</span>                 cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.32</span>,
-<span class="ansi-green-fg">     10</span>                 ylabel<span style="color: rgb(98,98,98)">=</span>ylabel,
-<span class="ansi-green-fg">     11</span>                 label<span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Water Content (-)</span><span style="color: rgb(175,0,0)">&#39;</span>,
-<span class="ansi-green-fg">     12</span>                 ax<span style="color: rgb(98,98,98)">=</span>ax,
-<span class="ansi-green-fg">     13</span>                 logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>,
-<span class="ansi-green-fg">     14</span>                 coverage<span style="color: rgb(98,98,98)">=</span>coverage[<span style="color: rgb(98,98,98)">6</span>,:]<span style="color: rgb(98,98,98)">&gt;</span><span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">1.2</span>)
-<span class="ansi-green-fg">     16</span> ax<span style="color: rgb(98,98,98)">.</span>plot([<span style="color: rgb(98,98,98)">40</span>],[<span style="color: rgb(98,98,98)">1607</span>],<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">*</span><span style="color: rgb(175,0,0)">&#39;</span>)
-<span class="ansi-green-fg">     17</span> ax<span style="color: rgb(98,98,98)">.</span>plot([<span style="color: rgb(98,98,98)">80</span>],[<span style="color: rgb(98,98,98)">1621</span>],<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">*</span><span style="color: rgb(175,0,0)">&#39;</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh&#39; is not defined
+[&lt;matplotlib.lines.Line2D at 0x28f24e21390&gt;]
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -636,17 +2369,13 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[5], line 3</span>
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[7], line 8</span>
-<span class="ansi-green-fg">      2</span> positions <span style="color: rgb(98,98,98)">=</span> [
-<span class="ansi-green-fg">      3</span>     (<span style="color: rgb(98,98,98)">80</span>, <span style="color: rgb(98,98,98)">1621</span>),  <span style="color: rgb(95,135,135)"># Example coordinates, adjust based on your model</span>
-<span class="ansi-green-fg">      4</span>     (<span style="color: rgb(98,98,98)">40</span>, <span style="color: rgb(98,98,98)">1607</span>),
-<span class="ansi-green-fg">      5</span> ]
+Cell <span class="ansi-green-intense-fg ansi-bold">In[7], line 9</span>
 <span class="ansi-green-fg">      7</span> <span style="color: rgb(95,135,135)"># Extract time series data for these positions</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 8</span> time_series_data, cell_indices <span style="color: rgb(98,98,98)">=</span> extract_mc_time_series(<span class="ansi-yellow-bg">mesh</span>, water_content_all, positions)
-<span class="ansi-green-fg">      9</span> Pos1_true, _ <span style="color: rgb(98,98,98)">=</span> extract_true_values_at_positions(mesh_true, WC_true<span style="color: rgb(98,98,98)">.</span>T, positions)
+<span class="ansi-green-fg">      8</span> time_series_data, cell_indices <span style="color: rgb(98,98,98)">=</span> extract_mc_time_series(mesh, water_content_all, positions)
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 9</span> Pos1_true, _ <span style="color: rgb(98,98,98)">=</span> extract_true_values_at_positions(<span class="ansi-yellow-bg">mesh_true</span>, WC_true<span style="color: rgb(98,98,98)">.</span>T, positions)
 <span class="ansi-green-fg">     10</span> Pos1_true
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_true&#39; is not defined
 </pre></div></div>
 </div>
 <p>Plot time series with uncertainty bands</p>
@@ -695,26 +2424,24 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[7], line 8</span>
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[8], line 7</span>
-<span class="ansi-green-fg">      3</span> measurement_times <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>arange(<span style="color: rgb(98,98,98)">30</span>,<span style="color: rgb(98,98,98)">361</span>,<span style="color: rgb(98,98,98)">30</span>)  <span style="color: rgb(95,135,135)"># Assuming sequential timesteps</span>
-<span class="ansi-green-fg">      6</span> <span style="color: rgb(95,135,135)"># Calculate statistics</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 7</span> mean_ts <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>mean(<span class="ansi-yellow-bg">time_series_data</span>[<span style="color: rgb(98,98,98)">0</span>], axis<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0</span>)
-<span class="ansi-green-fg">      8</span> std_ts <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>std(time_series_data[<span style="color: rgb(98,98,98)">0</span>], axis<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0</span>)
-<span class="ansi-green-fg">     10</span> plt<span style="color: rgb(98,98,98)">.</span>subplot(<span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">2</span>, <span style="color: rgb(98,98,98)">1</span>)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[8], line 13</span>
+<span class="ansi-green-fg">     11</span> plt<span style="color: rgb(98,98,98)">.</span>plot(measurement_times, mean_ts, <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">o-</span><span style="color: rgb(175,0,0)">&#39;</span>, color<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">tab:blue</span><span style="color: rgb(175,0,0)">&#39;</span>, label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Estimated</span><span style="color: rgb(175,0,0)">&#39;</span>)
+<span class="ansi-green-fg">     12</span> plt<span style="color: rgb(98,98,98)">.</span>fill_between(measurement_times, mean_ts<span style="color: rgb(98,98,98)">-</span>std_ts, mean_ts<span style="color: rgb(98,98,98)">+</span>std_ts, color<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">tab:blue</span><span style="color: rgb(175,0,0)">&#39;</span>, alpha<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.2</span>)
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 13</span> plt<span style="color: rgb(98,98,98)">.</span>plot(measurement_times,<span class="ansi-yellow-bg">Pos1_true</span>[<span style="color: rgb(98,98,98)">0</span>, :], <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">tab:blue</span><span style="color: rgb(175,0,0)">&#39;</span>,ls<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">--</span><span style="color: rgb(175,0,0)">&#39;</span>, label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">True</span><span style="color: rgb(175,0,0)">&#39;</span>)
+<span class="ansi-green-fg">     14</span> plt<span style="color: rgb(98,98,98)">.</span>grid(<span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
+<span class="ansi-green-fg">     15</span> plt<span style="color: rgb(98,98,98)">.</span>legend(frameon<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>)
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;time_series_data&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;Pos1_true&#39; is not defined
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-&lt;Figure size 1200x300 with 0 Axes&gt;
-</pre></div></div>
+<img alt="../_images/auto_examples_Ex8_MC_WC_11_1.png" src="../_images/auto_examples_Ex8_MC_WC_11_1.png" />
 </div>
-<section id="Fractured-bedrock-layer">
-<h2>Fractured bedrock layer<a class="headerlink" href="#Fractured-bedrock-layer" title="Link to this heading"></a></h2>
+</div>
+<p>Fractured bedrock layer</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
@@ -739,17 +2466,13 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[8], line 7</span>
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[9], line 8</span>
-<span class="ansi-green-fg">      2</span> positions <span style="color: rgb(98,98,98)">=</span> [
-<span class="ansi-green-fg">      3</span>     (<span style="color: rgb(98,98,98)">30</span>, <span style="color: rgb(98,98,98)">1604</span>),  <span style="color: rgb(95,135,135)"># Example coordinates, adjust based on your model</span>
-<span class="ansi-green-fg">      4</span>     (<span style="color: rgb(98,98,98)">65</span>, <span style="color: rgb(98,98,98)">1608</span>),
-<span class="ansi-green-fg">      5</span> ]
+Cell <span class="ansi-green-intense-fg ansi-bold">In[9], line 9</span>
 <span class="ansi-green-fg">      7</span> <span style="color: rgb(95,135,135)"># Extract time series data for these positions</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 8</span> time_series_data2, cell_indices <span style="color: rgb(98,98,98)">=</span> extract_mc_time_series(<span class="ansi-yellow-bg">mesh</span>, water_content_all, positions)
-<span class="ansi-green-fg">      9</span> Pos2_true, _ <span style="color: rgb(98,98,98)">=</span> extract_true_values_at_positions(mesh_true, WC_true<span style="color: rgb(98,98,98)">.</span>T, positions)
+<span class="ansi-green-fg">      8</span> time_series_data2, cell_indices <span style="color: rgb(98,98,98)">=</span> extract_mc_time_series(mesh, water_content_all, positions)
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 9</span> Pos2_true, _ <span style="color: rgb(98,98,98)">=</span> extract_true_values_at_positions(<span class="ansi-yellow-bg">mesh_true</span>, WC_true<span style="color: rgb(98,98,98)">.</span>T, positions)
 <span class="ansi-green-fg">     10</span> Pos2_true
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_true&#39; is not defined
 </pre></div></div>
 </div>
 <p>Plot time series with uncertainty bands</p>
@@ -799,33 +2522,31 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[9], line 8</span>
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[10], line 7</span>
-<span class="ansi-green-fg">      3</span> measurement_times <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>arange(<span style="color: rgb(98,98,98)">30</span>,<span style="color: rgb(98,98,98)">361</span>,<span style="color: rgb(98,98,98)">30</span>)  <span style="color: rgb(95,135,135)"># Assuming sequential timesteps</span>
-<span class="ansi-green-fg">      6</span> <span style="color: rgb(95,135,135)"># Calculate statistics</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 7</span> mean_ts <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>mean(<span class="ansi-yellow-bg">time_series_data2</span>[<span style="color: rgb(98,98,98)">0</span>], axis<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0</span>)
-<span class="ansi-green-fg">      8</span> std_ts <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>std(time_series_data2[<span style="color: rgb(98,98,98)">0</span>], axis<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0</span>)
-<span class="ansi-green-fg">     10</span> plt<span style="color: rgb(98,98,98)">.</span>subplot(<span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">2</span>, <span style="color: rgb(98,98,98)">1</span>)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[10], line 13</span>
+<span class="ansi-green-fg">     11</span> plt<span style="color: rgb(98,98,98)">.</span>plot(measurement_times, mean_ts, <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">o-</span><span style="color: rgb(175,0,0)">&#39;</span>, color<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">tab:brown</span><span style="color: rgb(175,0,0)">&#39;</span>, label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Estimated</span><span style="color: rgb(175,0,0)">&#39;</span>)
+<span class="ansi-green-fg">     12</span> plt<span style="color: rgb(98,98,98)">.</span>fill_between(measurement_times, mean_ts<span style="color: rgb(98,98,98)">-</span>std_ts, mean_ts<span style="color: rgb(98,98,98)">+</span>std_ts, color<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">tab:brown</span><span style="color: rgb(175,0,0)">&#39;</span>, alpha<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.2</span>)
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 13</span> plt<span style="color: rgb(98,98,98)">.</span>plot(measurement_times,<span class="ansi-yellow-bg">Pos2_true</span>[<span style="color: rgb(98,98,98)">0</span>, :], <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">tab:brown</span><span style="color: rgb(175,0,0)">&#39;</span>,ls<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">--</span><span style="color: rgb(175,0,0)">&#39;</span>, label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">True</span><span style="color: rgb(175,0,0)">&#39;</span>)
+<span class="ansi-green-fg">     14</span> plt<span style="color: rgb(98,98,98)">.</span>grid(<span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
+<span class="ansi-green-fg">     15</span> <span style="color: rgb(95,135,135)">#plt.legend(frameon=False)</span>
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;time_series_data2&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;Pos2_true&#39; is not defined
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-&lt;Figure size 1200x300 with 0 Axes&gt;
-</pre></div></div>
+<img alt="../_images/auto_examples_Ex8_MC_WC_15_1.png" src="../_images/auto_examples_Ex8_MC_WC_15_1.png" />
 </div>
-</section>
+</div>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex7_structure_TLresinv.html" class="btn btn-neutral float-left" title="Structure-Constrained Time-Lapse Resistivity Inversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex6_Structure_resinv.html" class="btn btn-neutral float-right" title="Structure-Constrained Resistivity Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="Ex6_Structure_resinv.html" class="btn btn-neutral float-left" title="Ex 6. Structure-Constrained Resistivity Inversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex3_Time_lapse_measurement.html" class="btn btn-neutral float-right" title="Ex3. Creating Synthetic Time-Lapse ERT Measurements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

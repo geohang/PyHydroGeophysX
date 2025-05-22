@@ -8,15 +8,6 @@
    "name": "mpl_colormap"
   }
  ],
- "TimeLapseERTInversion": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "PyHydroGeophysX.inversion.time_lapse",
-   "module_short": "PyHydroGeophysX.inversion.time_lapse",
-   "name": "TimeLapseERTInversion"
-  }
- ],
  "ert.ERTManager": [
   {
    "is_class": false,
@@ -186,15 +177,6 @@
    "module": "os.path",
    "module_short": "os.path",
    "name": "dirname"
-  }
- ],
- "os.path.join": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "os.path",
-   "module_short": "os.path",
-   "name": "join"
   }
  ],
  "pg.meshtools.createMesh": [

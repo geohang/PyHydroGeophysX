@@ -1,5 +1,5 @@
 """
-Loading and Processing Hydrological Model Outputs
+Ex 1. Loading and Processing Hydrological Model Outputs
 ==================================================
 
 This example demonstrates how to load and process outputs from different 
@@ -44,14 +44,14 @@ from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent, MOD
 # %%
 # Load saturation data
 saturation_processor = ParflowSaturation(
-    model_directory="./data/parflow/test2",
+    model_directory="C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/parflow/test2",
     run_name="test2"
 )
 saturation = saturation_processor.load_timestep(200)  # Load first timestep
 
 # Load porosity data
 porosity_processor = ParflowPorosity(
-    model_directory="./data/parflow/test2",
+    model_directory="C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/parflow/test2",
     run_name="test2"
 )
 porosity = porosity_processor.load_porosity()
@@ -82,7 +82,7 @@ plt.gca().invert_yaxis()
 
 # %%
 # These would be your actual data files
-data_dir = "data/"
+data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 modflow_dir = os.path.join(data_dir, "modflow")
 idomain = np.loadtxt(os.path.join(modflow_dir, "id.txt"))
 

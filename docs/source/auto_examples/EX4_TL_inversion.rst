@@ -18,7 +18,7 @@
 .. _sphx_glr_auto_examples_EX4_TL_inversion.py:
 
 
-Time-Lapse ERT Inversion Techniques
+Ex 4. Time-Lapse ERT Inversion Techniques
 ===================================
 
 This example demonstrates different approaches for time-lapse electrical 
@@ -70,7 +70,7 @@ time steps while allowing for realistic changes.
 
 .. code-block:: Python
 
-    data_dir = "results/TL_measurements/appres"
+    data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres"
 
     # List of ERT data files testing monthly time-lapse inversion
     ert_files = [

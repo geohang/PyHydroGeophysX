@@ -1,5 +1,5 @@
 """
-Seismic Refraction Tomography (SRT) Forward Modeling
+Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling
 ====================================================
 
 This example demonstrates seismic refraction tomography forward modeling
@@ -46,18 +46,18 @@ from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surfa
 from PyHydroGeophysX.core.mesh_utils import MeshCreator
 from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
 
-
-
-
 # %%
-output_dir = "results/seismic_example"
+output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/seismic_example"
 os.makedirs(output_dir, exist_ok=True)
+
+# %% [markdown]
+# ## Long seismic profile
 
 # %%
 print("Step 1: Follow the workflow to create the mesh and model...")
 
 # These would be your actual data files
-data_dir = "data/"
+data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 modflow_dir = os.path.join(data_dir, "modflow")
 
 # Load domain information from files
@@ -153,12 +153,6 @@ for i in range(numberGeophones):
 
 
 scheme.setSensors(pos)
-
-# %%
-sensors
-
-# %%
-surface
 
 # %%
 fig = plt.figure(figsize=[8,6])
@@ -376,23 +370,9 @@ TT.invert(datasrt, mesh = mesh_inv,lam=50,
           verbose=1, limits=[300., 8000.])
 
 # %%
-
-pg.show(mesh_inv,TT.model.array(),coverage=TT.standardizedCoverage())
-
-# %%
-pg.show(mesh_inv,TT.standardizedCoverage())
-
-# %%
 cov = TT.standardizedCoverage()
-
-cov.shape
-
-# %%
 pos = np.array(mesh_inv.cellCenters())
-pos.shape
 
-# %%
-pos
 
 # %%
 import numpy as np
@@ -458,23 +438,6 @@ filled_cov = fill_holes_2d(pos, cov)
 
 
 # %%
-import meshop
-
-geo = pg.meshtools.createParaMeshPLC(datasrt, quality=34, paraMaxCellSize=0.1,
-                                         paraBoundary=0.0,
-                                         boundary=0, paraDepth = 50)
-
-meshall = pg.meshtools.createMesh(geo,quality=34,area=0.1)
-
-out = meshop.linear_interpolation(TT.paraDomain, TT.model.array(), meshall)
-out = out.array()
-# out = meshop.nearest_neighbor_interpolation(TT.paraDomain, TT.model.array(), meshall)
-# out = np.array(out)
-Cvout= meshop.nearest_neighbor_interpolation(TT.paraDomain, filled_cov, meshall)
-
-pg.show(meshall,out,cMap='jet',coverage=Cvout,label='velocity')
-
-# %%
 def createTriangles(mesh):
     """Generate triangle objects for later drawing.
 
@@ -534,11 +497,6 @@ def createTriangles(mesh):
     return x, y, triangles, z, dataIdx
 
 # %%
-meshall.save(os.path.join(output_dir, 'velmesh'))
-np.save(os.path.join(output_dir, 'Vinvmodel.npy'), out)
-np.save(os.path.join(output_dir, 'Vsensmodel.npy'), Cvout)
-
-# %%
 x, y, triangles, _, dataIndex = createTriangles(mesh_inv)
 z = pg.meshtools.cellDataToNodeData(mesh_inv,TT.model.array())
 
@@ -570,47 +528,13 @@ ax1.tricontour(x, y, triangles, z, levels=[4300], linewidths=1.0, colors='k', li
 
 pg.viewer.mpl.drawSensors(ax1, datasrt.sensors(), diam=0.9,
                          facecolor='black', edgecolor='black')
-fig.savefig(os.path.join(output_dir, 'seismic_velocity_long.tiff'), dpi=300, bbox_inches='tight')
+
+
+# %% [markdown]
+# ## Short seismic profiles
 
 # %%
-
-
-# %%
-x, y, triangles, _, dataIndex = createTriangles(meshall)
-z = pg.meshtools.cellDataToNodeData(meshall,out)
-
-# %%
-params = {'legend.fontsize': 15,
-          #'figure.figsize': (15, 5),
-         'axes.labelsize': 15,
-         'axes.titlesize':16,
-         'xtick.labelsize':15,
-         'ytick.labelsize':15}
-import matplotlib.pylab as pylab
-pylab.rcParams.update(params)
-
-plt.rcParams["font.family"] = "Arial"
-
-from palettable.lightbartlein.diverging import BlueDarkRed18_18
-fixed_cmap = BlueDarkRed18_18.mpl_colormap
-
-fig = plt.figure(figsize=[8,9])
-ax1 = fig.add_subplot(1,1,1)
-pg.show(meshall,out,cMap=fixed_cmap,coverage = Cvout,ax = ax1,label='Velocity (m s$^{-1}$)',
-        xlabel="Distance (m)", ylabel="Elevation (m)",pad=0.3,cMin =500, cMax=5000
-       ,orientation="vertical")
-
-
-ax1.tricontour(x, y, triangles, z, levels=[1200], linewidths=1.0, colors='k', linestyles='dashed')
-ax1.tricontour(x, y, triangles, z, levels=[4200], linewidths=1.0, colors='k')
-
-
-pg.viewer.mpl.drawSensors(ax1, datasrt.sensors(), diam=0.9,
-                         facecolor='black', edgecolor='black')
-
-
-# %%
-ttData = tt.load("./results/workflow_example/synthetic_seismic_data.dat")
+ttData = tt.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example/synthetic_seismic_data.dat")
 TT_short = pg.physics.traveltime.TravelTimeManager()
 mesh_inv1 = TT_short.createMesh(ttData , paraMaxCellSize=2, quality=32, paraDepth = 30.0)
 TT_short.invert(ttData , mesh = mesh_inv,lam=50,
@@ -618,16 +542,8 @@ TT_short.invert(ttData , mesh = mesh_inv,lam=50,
           verbose=1, limits=[300., 8000.])
 
 # %%
-
-
-# %%
 x1, y1, triangles1, _, dataIndex1 = createTriangles(mesh_inv1)
 z1 = pg.meshtools.cellDataToNodeData(mesh_inv1,np.array(TT_short.model))
-
-
-
-
-# %%
 pos = np.array(mesh_inv.cellCenters())
 filled_cov1 = fill_holes_2d(pos, TT_short.standardizedCoverage())
 
@@ -659,6 +575,3 @@ ax1.tricontour(x1, y1, triangles1, z1, levels=[1200], linewidths=1.0, colors='k'
 
 pg.viewer.mpl.drawSensors(ax1, ttData.sensors(), diam=0.8,
                          facecolor='black', edgecolor='black')
-fig.savefig(os.path.join(output_dir, 'seismic_velocity_short.tiff'), dpi=300, bbox_inches='tight')
-
-

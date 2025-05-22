@@ -18,7 +18,7 @@
 .. _sphx_glr_auto_examples_Ex7_structure_TLresinv.py:
 
 
-Structure-Constrained Time-Lapse Resistivity Inversion
+Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion
 ======================================================
 
 This example combines structural constraints with time-lapse ERT inversion
@@ -101,7 +101,7 @@ constraints in the inversion process.
     # Create a mesh for the inversion (or load an existing one)
     data = ert.load(os.path.join(data_dir, ert_files[0]))
     ert_manager = ert.ERTManager(data)
-    mesh_with_interface = pg.load("results/Structure_WC/mesh_with_interface.bms")
+    mesh_with_interface = pg.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms")
 
 
 
@@ -159,9 +159,9 @@ constraints in the inversion process.
 
 .. code-block:: Python
 
-    np.save("results/Structure_WC/resmodel.npy", result.final_models[result.mesh.cellMarkers(),:])
-    np.save("results/Structure_WC/all_coverage.npy", result.all_coverage[:,result.mesh.cellMarkers()])
-    result.mesh.save("results/Structure_WC/mesh_res.bms")
+    np.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy", result.final_models[result.mesh.cellMarkers(),:])
+    np.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy", result.all_coverage[:,result.mesh.cellMarkers()])
+    result.mesh.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms")
 
 
 .. GENERATED FROM PYTHON SOURCE LINES 128-197
@@ -235,7 +235,7 @@ constraints in the inversion process.
             cbar.remove()
 
     plt.tight_layout()
-    plt.savefig("results/Structure_WC/timelapse_ert_with structure.tiff", dpi=300, bbox_inches='tight')
+    plt.savefig("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/timelapse_ert_with structure.tiff", dpi=300, bbox_inches='tight')
 
 
 .. GENERATED FROM PYTHON SOURCE LINES 201-206
@@ -244,7 +244,7 @@ constraints in the inversion process.
 
     temp_marker = mesh_with_interface.cellMarkers()
     index_marker = temp_marker[temp_marker != 1]
-    np.save("results/Structure_WC/index_marker.npy", index_marker)
+    np.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy", index_marker)
     pg.show(result.mesh,index_marker,cmap="viridis",clim=(0,1e4),showMesh=True)
 
 
@@ -422,7 +422,7 @@ constraints in the inversion process.
             cbar.remove()
 
     plt.tight_layout()
-    plt.savefig("results/TL_measurements/appres/timelapse_sat.tiff", dpi=300, bbox_inches='tight')
+    plt.savefig("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres/timelapse_sat.tiff", dpi=300, bbox_inches='tight')
 
 
 .. GENERATED FROM PYTHON SOURCE LINES 356-384

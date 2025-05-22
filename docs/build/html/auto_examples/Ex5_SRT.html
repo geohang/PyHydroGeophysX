@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Seismic Refraction Tomography (SRT) Forward Modeling &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+  <title>Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling &mdash; PyHydroGeophysX 0.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -30,8 +30,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Complete Workflow: From Hydrological Models to Geophysical Inversion" href="Ex2_workflow.html" />
-    <link rel="prev" title="Creating Synthetic Time-Lapse ERT Measurements" href="Ex3_Time_lapse_measurement.html" /> 
+    <link rel="next" title="Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion" href="Ex2_workflow.html" />
+    <link rel="prev" title="Ex3. Creating Synthetic Time-Lapse ERT Measurements" href="Ex3_Time_lapse_measurement.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -66,19 +66,13 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html#travel-time-inversion">travel time inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#non-parallel-computing-version">non parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#parallel-computing-version">parallel computing version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#plot-the-apparent-resitivity">plot the apparent resitivity</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#Showing-the-water-content-model-for-the-differnent-timesteps">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#id1">Showing the water content model for the differnent timesteps</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html#Using-Pygimili-default-to-the-inversion">Using Pygimili default to the inversion</a></li>
 </ul>
 </li>
@@ -99,7 +93,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
-      <li class="breadcrumb-item active">Seismic Refraction Tomography (SRT) Forward Modeling</li>
+      <li class="breadcrumb-item active">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex5_SRT.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -109,8 +103,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="Seismic-Refraction-Tomography-(SRT)-Forward-Modeling">
-<h1>Seismic Refraction Tomography (SRT) Forward Modeling<a class="headerlink" href="#Seismic-Refraction-Tomography-(SRT)-Forward-Modeling" title="Link to this heading"></a></h1>
+  <section id="Ex-5.-Seismic-Refraction-Tomography-(SRT)-Forward-Modeling">
+<h1>Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling<a class="headerlink" href="#Ex-5.-Seismic-Refraction-Tomography-(SRT)-Forward-Modeling" title="Link to this heading"></a></h1>
 <p>This example demonstrates seismic refraction tomography forward modeling for watershed structure characterization using PyHydroGeophysX.</p>
 <p>The workflow includes:</p>
 <ol class="arabic simple">
@@ -161,7 +155,7 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;results/seismic_example&quot;</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/seismic_example&quot;</span>
 <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -173,7 +167,7 @@
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 1: Follow the workflow to create the mesh and model...&quot;</span><span class="p">)</span>
 
 <span class="c1"># These would be your actual data files</span>
-<span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;data/&quot;</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/&quot;</span>
 <span class="n">modflow_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;modflow&quot;</span><span class="p">)</span>
 
 <span class="c1"># Load domain information from files</span>
@@ -229,49 +223,7 @@ Step 1: Follow the workflow to create the mesh and model...
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[3], line 9</span>
-<span class="ansi-green-fg">      5</span> modflow_dir <span style="color: rgb(98,98,98)">=</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(data_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">modflow</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">      7</span> <span style="color: rgb(95,135,135)"># Load domain information from files</span>
-<span class="ansi-green-fg">      8</span> <span style="color: rgb(95,135,135)"># (Replace with your actual file paths)</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 9</span> idomain <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">loadtxt</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">id.txt</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     10</span> top <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>loadtxt(os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(data_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">top.txt</span><span style="color: rgb(175,0,0)">&#34;</span>))
-<span class="ansi-green-fg">     11</span> porosity <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>load(os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(data_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Porosity.npy</span><span style="color: rgb(175,0,0)">&#34;</span>))
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:1373</span>, in <span class="ansi-cyan-fg">loadtxt</span><span class="ansi-blue-intense-fg ansi-bold">(fname, dtype, comments, delimiter, converters, skiprows, usecols, unpack, ndmin, encoding, max_rows, quotechar, like)</span>
-<span class="ansi-green-fg">   1370</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(delimiter, <span style="color: rgb(0,135,0)">bytes</span>):
-<span class="ansi-green-fg">   1371</span>     delimiter <span style="color: rgb(98,98,98)">=</span> delimiter<span style="color: rgb(98,98,98)">.</span>decode(<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">latin1</span><span style="color: rgb(175,0,0)">&#39;</span>)
-<span class="ansi-green-intense-fg ansi-bold">-&gt; 1373</span> arr <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">_read</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fname</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">dtype</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">dtype</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">comment</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">comment</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">delimiter</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">delimiter</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">   1374</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">converters</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">converters</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">skiplines</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">skiprows</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">usecols</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">usecols</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">   1375</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">unpack</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">unpack</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">ndmin</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">ndmin</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">   1376</span> <span class="ansi-yellow-bg">            </span><span class="ansi-yellow-bg">max_rows</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">max_rows</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">quote</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">quotechar</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">   1378</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> arr
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:992</span>, in <span class="ansi-cyan-fg">_read</span><span class="ansi-blue-intense-fg ansi-bold">(fname, delimiter, comment, quote, imaginary_unit, usecols, skiplines, max_rows, converters, ndmin, unpack, dtype, encoding)</span>
-<span class="ansi-green-fg">    990</span>     fname <span style="color: rgb(98,98,98)">=</span> os<span style="color: rgb(98,98,98)">.</span>fspath(fname)
-<span class="ansi-green-fg">    991</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(fname, <span style="color: rgb(0,135,0)">str</span>):
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 992</span>     fh <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">lib</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">_datasource</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fname</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#39;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">rt</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#39;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">    993</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> encoding <span class="ansi-bold" style="color: rgb(175,0,255)">is</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>:
-<span class="ansi-green-fg">    994</span>         encoding <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">getattr</span>(fh, <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">encoding</span><span style="color: rgb(175,0,0)">&#39;</span>, <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">latin1</span><span style="color: rgb(175,0,0)">&#39;</span>)
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\_datasource.py:193</span>, in <span class="ansi-cyan-fg">open</span><span class="ansi-blue-intense-fg ansi-bold">(path, mode, destpath, encoding, newline)</span>
-<span class="ansi-green-fg">    156</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">    157</span> <span style="color: rgb(175,0,0)">Open `path` with `mode` and return the file object.</span>
-<span class="ansi-green-fg">    158</span>
-<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
-<span class="ansi-green-fg">    189</span>
-<span class="ansi-green-fg">    190</span> <span style="color: rgb(175,0,0)">&#34;&#34;&#34;</span>
-<span class="ansi-green-fg">    192</span> ds <span style="color: rgb(98,98,98)">=</span> DataSource(destpath)
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 193</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> <span class="ansi-yellow-bg">ds</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">mode</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">encoding</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">newline</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">newline</span><span class="ansi-yellow-bg">)</span>
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\_datasource.py:533</span>, in <span class="ansi-cyan-fg">DataSource.open</span><span class="ansi-blue-intense-fg ansi-bold">(self, path, mode, encoding, newline)</span>
-<span class="ansi-green-fg">    530</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> _file_openers[ext](found, mode<span style="color: rgb(98,98,98)">=</span>mode,
-<span class="ansi-green-fg">    531</span>                               encoding<span style="color: rgb(98,98,98)">=</span>encoding, newline<span style="color: rgb(98,98,98)">=</span>newline)
-<span class="ansi-green-fg">    532</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 533</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">FileNotFoundError</span>(<span style="color: rgb(175,0,0)">f</span><span style="color: rgb(175,0,0)">&#34;</span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>path<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span style="color: rgb(175,0,0)"> not found.</span><span style="color: rgb(175,0,0)">&#34;</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: data/id.txt not found.
+(14, 194, 157)
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -309,36 +261,12 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Step 2: Creating geometry for the seismic refraction survey...
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>                         Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[4], line 4</span>
-<span class="ansi-green-fg">      1</span> <span style="color: rgb(0,135,0)">print</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Step 2: Creating geometry for the seismic refraction survey...</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">      3</span> <span style="color: rgb(95,135,135)"># Load structure layers</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 4</span> bot <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">np</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">bot.npy</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">      6</span> <span style="color: rgb(95,135,135)"># Process layers to get structure</span>
-<span class="ansi-green-fg">      7</span> structure <span style="color: rgb(98,98,98)">=</span> interpolator<span style="color: rgb(98,98,98)">.</span>interpolate_layer_data([top] <span style="color: rgb(98,98,98)">+</span> bot<span style="color: rgb(98,98,98)">.</span>tolist())
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\numpy\lib\npyio.py:427</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(file, mmap_mode, allow_pickle, fix_imports, encoding, max_header_size)</span>
-<span class="ansi-green-fg">    425</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">False</span>
-<span class="ansi-green-fg">    426</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 427</span>     fid <span style="color: rgb(98,98,98)">=</span> stack<span style="color: rgb(98,98,98)">.</span>enter_context(<span class="ansi-yellow-bg" style="color: rgb(0,135,0)">open</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os_fspath</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">file</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">rb</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#34;</span><span class="ansi-yellow-bg">)</span>)
-<span class="ansi-green-fg">    428</span>     own_fid <span style="color: rgb(98,98,98)">=</span> <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>
-<span class="ansi-green-fg">    430</span> <span style="color: rgb(95,135,135)"># Code to distinguish from NumPy binary files and pickles.</span>
-
-<span class="ansi-red-intense-fg ansi-bold">FileNotFoundError</span>: [Errno 2] No such file or directory: &#39;data/bot.npy&#39;
+Step 2: Creating geometry for the seismic refraction survey...
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -349,18 +277,21 @@ File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&lt;Axes: &gt;, None)
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[5], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">geom</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;geom&#39; is not defined
-</pre></div></div>
+<img alt="../_images/auto_examples_Ex5_SRT_5_1.png" src="../_images/auto_examples_Ex5_SRT_5_1.png" />
+</div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
@@ -393,18 +324,12 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[5], line 1</span>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
+<div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[6], line 13</span>
-<span class="ansi-green-fg">      9</span> pos <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>zeros((numberGeophones,<span style="color: rgb(98,98,98)">2</span>))
-<span class="ansi-green-fg">     12</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> i <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">range</span>(numberGeophones):
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 13</span>     minusx <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>abs(<span class="ansi-yellow-bg">surface</span>[:,<span style="color: rgb(98,98,98)">0</span>]<span style="color: rgb(98,98,98)">-</span>sensors[i])
-<span class="ansi-green-fg">     14</span>     index <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>where(minusx<span style="color: rgb(98,98,98)">==</span> np<span style="color: rgb(98,98,98)">.</span>amin(minusx))
-<span class="ansi-green-fg">     15</span>     new_x <span style="color: rgb(98,98,98)">=</span> surface[index,<span style="color: rgb(98,98,98)">0</span>]
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;surface&#39; is not defined
+C:\Users\HChen8\AppData\Local\Temp\ipykernel_58796\2399746456.py:17: DeprecationWarning: Conversion of an array with ndim &gt; 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  pos[i, 0] = new_x
+C:\Users\HChen8\AppData\Local\Temp\ipykernel_58796\2399746456.py:18: DeprecationWarning: Conversion of an array with ndim &gt; 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  pos[i, 1] = new_y
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -455,16 +380,410 @@ array([  1.        ,   2.2247191 ,   3.4494382 ,   4.6741573 ,
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[8], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> <span class="ansi-yellow-bg">surface</span>
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;surface&#39; is not defined
+array([[0.00000000e+00, 1.61710999e+03],
+       [2.80209020e-01, 1.61707541e+03],
+       [5.60418039e-01, 1.61704084e+03],
+       [8.40627060e-01, 1.61700626e+03],
+       [1.12083608e+00, 1.61697142e+03],
+       [1.40104510e+00, 1.61693614e+03],
+       [1.68125412e+00, 1.61690086e+03],
+       [1.96146314e+00, 1.61686017e+03],
+       [2.24167216e+00, 1.61681384e+03],
+       [2.52188118e+00, 1.61676857e+03],
+       [2.80209020e+00, 1.61674079e+03],
+       [3.08229922e+00, 1.61671009e+03],
+       [3.36250824e+00, 1.61665758e+03],
+       [3.64271726e+00, 1.61664185e+03],
+       [3.92292628e+00, 1.61664021e+03],
+       [4.20313530e+00, 1.61661251e+03],
+       [4.48334432e+00, 1.61655780e+03],
+       [4.76355334e+00, 1.61650308e+03],
+       [5.04376236e+00, 1.61645275e+03],
+       [5.32397137e+00, 1.61638858e+03],
+       [5.60418039e+00, 1.61632010e+03],
+       [5.88438941e+00, 1.61624758e+03],
+       [6.16459843e+00, 1.61620382e+03],
+       [6.44480745e+00, 1.61619412e+03],
+       [6.72501647e+00, 1.61618443e+03],
+       [7.00522549e+00, 1.61613490e+03],
+       [7.28543451e+00, 1.61603435e+03],
+       [7.56564353e+00, 1.61593281e+03],
+       [7.84585255e+00, 1.61584782e+03],
+       [8.12606157e+00, 1.61579019e+03],
+       [8.40627059e+00, 1.61573437e+03],
+       [8.68647961e+00, 1.61568705e+03],
+       [8.96668863e+00, 1.61565875e+03],
+       [9.24689765e+00, 1.61563703e+03],
+       [9.52710667e+00, 1.61561010e+03],
+       [9.80731569e+00, 1.61552819e+03],
+       [1.00875247e+01, 1.61544628e+03],
+       [1.03677337e+01, 1.61538955e+03],
+       [1.06479427e+01, 1.61534227e+03],
+       [1.09281518e+01, 1.61529499e+03],
+       [1.12083608e+01, 1.61524508e+03],
+       [1.14885698e+01, 1.61517143e+03],
+       [1.17687788e+01, 1.61509778e+03],
+       [1.20489878e+01, 1.61502457e+03],
+       [1.23291969e+01, 1.61496227e+03],
+       [1.26094059e+01, 1.61491654e+03],
+       [1.28896149e+01, 1.61488082e+03],
+       [1.31698239e+01, 1.61484509e+03],
+       [1.34500329e+01, 1.61477382e+03],
+       [1.37302420e+01, 1.61469606e+03],
+       [1.40104510e+01, 1.61464460e+03],
+       [1.42906600e+01, 1.61459620e+03],
+       [1.45708690e+01, 1.61454740e+03],
+       [1.48510780e+01, 1.61449861e+03],
+       [1.51312871e+01, 1.61443222e+03],
+       [1.54114961e+01, 1.61436200e+03],
+       [1.56917051e+01, 1.61429218e+03],
+       [1.59719141e+01, 1.61422236e+03],
+       [1.62521231e+01, 1.61416743e+03],
+       [1.65323322e+01, 1.61410317e+03],
+       [1.68125412e+01, 1.61405150e+03],
+       [1.70927502e+01, 1.61400178e+03],
+       [1.73729592e+01, 1.61395739e+03],
+       [1.76531682e+01, 1.61392352e+03],
+       [1.79333773e+01, 1.61388965e+03],
+       [1.82135863e+01, 1.61384518e+03],
+       [1.84937953e+01, 1.61378815e+03],
+       [1.87740043e+01, 1.61372827e+03],
+       [1.90542133e+01, 1.61366706e+03],
+       [1.93344224e+01, 1.61360652e+03],
+       [1.96146314e+01, 1.61355339e+03],
+       [1.98948404e+01, 1.61348907e+03],
+       [2.01750494e+01, 1.61340849e+03],
+       [2.04552584e+01, 1.61333136e+03],
+       [2.07354675e+01, 1.61326250e+03],
+       [2.10156765e+01, 1.61320171e+03],
+       [2.12958855e+01, 1.61314092e+03],
+       [2.15760945e+01, 1.61309839e+03],
+       [2.18563035e+01, 1.61305967e+03],
+       [2.21365126e+01, 1.61302096e+03],
+       [2.24167216e+01, 1.61297056e+03],
+       [2.26969306e+01, 1.61287341e+03],
+       [2.29771396e+01, 1.61277626e+03],
+       [2.32573486e+01, 1.61268210e+03],
+       [2.35375577e+01, 1.61261534e+03],
+       [2.38177667e+01, 1.61254853e+03],
+       [2.40979757e+01, 1.61248000e+03],
+       [2.43781847e+01, 1.61241146e+03],
+       [2.46583937e+01, 1.61236116e+03],
+       [2.49386028e+01, 1.61231191e+03],
+       [2.52188118e+01, 1.61224028e+03],
+       [2.54990208e+01, 1.61217273e+03],
+       [2.57792298e+01, 1.61211429e+03],
+       [2.60594388e+01, 1.61205585e+03],
+       [2.63396479e+01, 1.61197793e+03],
+       [2.66198569e+01, 1.61192373e+03],
+       [2.69000659e+01, 1.61184028e+03],
+       [2.71802749e+01, 1.61174985e+03],
+       [2.74604839e+01, 1.61165780e+03],
+       [2.77406930e+01, 1.61157194e+03],
+       [2.80209020e+01, 1.61149341e+03],
+       [2.83011110e+01, 1.61141213e+03],
+       [2.85813200e+01, 1.61133656e+03],
+       [2.88615290e+01, 1.61126612e+03],
+       [2.91417381e+01, 1.61119567e+03],
+       [2.94219471e+01, 1.61111806e+03],
+       [2.97021561e+01, 1.61103034e+03],
+       [2.99823651e+01, 1.61093870e+03],
+       [3.02625741e+01, 1.61084542e+03],
+       [3.05427832e+01, 1.61075778e+03],
+       [3.08229922e+01, 1.61069553e+03],
+       [3.11032012e+01, 1.61063329e+03],
+       [3.13834102e+01, 1.61057108e+03],
+       [3.16636192e+01, 1.61050502e+03],
+       [3.19438282e+01, 1.61042355e+03],
+       [3.22240373e+01, 1.61032628e+03],
+       [3.25042463e+01, 1.61022902e+03],
+       [3.27844553e+01, 1.61012729e+03],
+       [3.30646643e+01, 1.61002522e+03],
+       [3.33448733e+01, 1.60992314e+03],
+       [3.36250824e+01, 1.60981597e+03],
+       [3.39052914e+01, 1.60969692e+03],
+       [3.41855004e+01, 1.60957788e+03],
+       [3.44657094e+01, 1.60945883e+03],
+       [3.47459184e+01, 1.60935825e+03],
+       [3.50261275e+01, 1.60926667e+03],
+       [3.53063365e+01, 1.60917635e+03],
+       [3.55865455e+01, 1.60909118e+03],
+       [3.58667545e+01, 1.60897626e+03],
+       [3.61469635e+01, 1.60888451e+03],
+       [3.64271726e+01, 1.60882304e+03],
+       [3.67073816e+01, 1.60873414e+03],
+       [3.69875906e+01, 1.60860832e+03],
+       [3.72677996e+01, 1.60853499e+03],
+       [3.75480086e+01, 1.60846167e+03],
+       [3.78282177e+01, 1.60837074e+03],
+       [3.81084267e+01, 1.60827517e+03],
+       [3.83886357e+01, 1.60817960e+03],
+       [3.86688447e+01, 1.60809281e+03],
+       [3.89490537e+01, 1.60798117e+03],
+       [3.92292628e+01, 1.60786912e+03],
+       [3.95094718e+01, 1.60776061e+03],
+       [3.97896808e+01, 1.60766496e+03],
+       [4.00698898e+01, 1.60756387e+03],
+       [4.03500988e+01, 1.60746278e+03],
+       [4.06303079e+01, 1.60736168e+03],
+       [4.09105169e+01, 1.60720271e+03],
+       [4.11907259e+01, 1.60707823e+03],
+       [4.14709349e+01, 1.60697101e+03],
+       [4.17511439e+01, 1.60685358e+03],
+       [4.20313530e+01, 1.60671012e+03],
+       [4.23115620e+01, 1.60660044e+03],
+       [4.25917710e+01, 1.60651258e+03],
+       [4.28719800e+01, 1.60639228e+03],
+       [4.31521890e+01, 1.60625485e+03],
+       [4.34323981e+01, 1.60611741e+03],
+       [4.37126071e+01, 1.60599656e+03],
+       [4.39928161e+01, 1.60589156e+03],
+       [4.42730251e+01, 1.60580021e+03],
+       [4.45532341e+01, 1.60570886e+03],
+       [4.48334432e+01, 1.60561507e+03],
+       [4.51136522e+01, 1.60551761e+03],
+       [4.53938612e+01, 1.60542015e+03],
+       [4.56740702e+01, 1.60531745e+03],
+       [4.59542792e+01, 1.60521113e+03],
+       [4.62344883e+01, 1.60510686e+03],
+       [4.65146973e+01, 1.60503764e+03],
+       [4.67949063e+01, 1.60508343e+03],
+       [4.70751153e+01, 1.60522338e+03],
+       [4.73553243e+01, 1.60532357e+03],
+       [4.76355334e+01, 1.60538897e+03],
+       [4.79157424e+01, 1.60550832e+03],
+       [4.81959514e+01, 1.60568278e+03],
+       [4.84761604e+01, 1.60589261e+03],
+       [4.87563694e+01, 1.60610243e+03],
+       [4.90365785e+01, 1.60625184e+03],
+       [4.93167875e+01, 1.60639386e+03],
+       [4.95969965e+01, 1.60653587e+03],
+       [4.98772055e+01, 1.60669631e+03],
+       [5.01574145e+01, 1.60681679e+03],
+       [5.04376236e+01, 1.60694354e+03],
+       [5.07178326e+01, 1.60707796e+03],
+       [5.09980416e+01, 1.60723842e+03],
+       [5.12782506e+01, 1.60745566e+03],
+       [5.15584596e+01, 1.60767291e+03],
+       [5.18386687e+01, 1.60788946e+03],
+       [5.21188777e+01, 1.60803064e+03],
+       [5.23990867e+01, 1.60817183e+03],
+       [5.26792957e+01, 1.60833959e+03],
+       [5.29595047e+01, 1.60850665e+03],
+       [5.32397137e+01, 1.60866023e+03],
+       [5.35199228e+01, 1.60882989e+03],
+       [5.38001318e+01, 1.60900618e+03],
+       [5.40803408e+01, 1.60914496e+03],
+       [5.43605498e+01, 1.60927155e+03],
+       [5.46407588e+01, 1.60939814e+03],
+       [5.49209679e+01, 1.60955605e+03],
+       [5.52011769e+01, 1.60971067e+03],
+       [5.54813859e+01, 1.60988471e+03],
+       [5.57615949e+01, 1.61005874e+03],
+       [5.60418039e+01, 1.61022113e+03],
+       [5.63220130e+01, 1.61037188e+03],
+       [5.66022220e+01, 1.61052262e+03],
+       [5.68824310e+01, 1.61067337e+03],
+       [5.71626400e+01, 1.61084230e+03],
+       [5.74428490e+01, 1.61101388e+03],
+       [5.77230581e+01, 1.61117678e+03],
+       [5.80032671e+01, 1.61133475e+03],
+       [5.82834761e+01, 1.61152471e+03],
+       [5.85636851e+01, 1.61170665e+03],
+       [5.88438941e+01, 1.61186917e+03],
+       [5.91241032e+01, 1.61203212e+03],
+       [5.94043122e+01, 1.61219535e+03],
+       [5.96845212e+01, 1.61235692e+03],
+       [5.99647302e+01, 1.61251185e+03],
+       [6.02449392e+01, 1.61267347e+03],
+       [6.05251483e+01, 1.61282732e+03],
+       [6.08053573e+01, 1.61298116e+03],
+       [6.10855663e+01, 1.61313407e+03],
+       [6.13657753e+01, 1.61328533e+03],
+       [6.16459843e+01, 1.61343896e+03],
+       [6.19261934e+01, 1.61359429e+03],
+       [6.22064024e+01, 1.61373337e+03],
+       [6.24866114e+01, 1.61387862e+03],
+       [6.27668204e+01, 1.61402387e+03],
+       [6.30470294e+01, 1.61416622e+03],
+       [6.33272385e+01, 1.61428492e+03],
+       [6.36074475e+01, 1.61440362e+03],
+       [6.38876565e+01, 1.61454911e+03],
+       [6.41678655e+01, 1.61470592e+03],
+       [6.44480745e+01, 1.61487088e+03],
+       [6.47282836e+01, 1.61503705e+03],
+       [6.50084926e+01, 1.61520460e+03],
+       [6.52887016e+01, 1.61536441e+03],
+       [6.55689106e+01, 1.61551254e+03],
+       [6.58491196e+01, 1.61565700e+03],
+       [6.61293287e+01, 1.61579797e+03],
+       [6.64095377e+01, 1.61594580e+03],
+       [6.66897467e+01, 1.61610286e+03],
+       [6.69699557e+01, 1.61625993e+03],
+       [6.72501647e+01, 1.61639479e+03],
+       [6.75303738e+01, 1.61651484e+03],
+       [6.78105828e+01, 1.61663489e+03],
+       [6.80907918e+01, 1.61676392e+03],
+       [6.83710008e+01, 1.61690883e+03],
+       [6.86512098e+01, 1.61703735e+03],
+       [6.89314189e+01, 1.61716588e+03],
+       [6.92116279e+01, 1.61729787e+03],
+       [6.94918369e+01, 1.61743646e+03],
+       [6.97720459e+01, 1.61755900e+03],
+       [7.00522549e+01, 1.61765670e+03],
+       [7.03324640e+01, 1.61776148e+03],
+       [7.06126730e+01, 1.61787096e+03],
+       [7.08928820e+01, 1.61798444e+03],
+       [7.11730910e+01, 1.61809795e+03],
+       [7.14533000e+01, 1.61821801e+03],
+       [7.17335091e+01, 1.61835671e+03],
+       [7.20137181e+01, 1.61849541e+03],
+       [7.22939271e+01, 1.61861850e+03],
+       [7.25741361e+01, 1.61872355e+03],
+       [7.28543451e+01, 1.61882661e+03],
+       [7.31345542e+01, 1.61893342e+03],
+       [7.34147632e+01, 1.61906485e+03],
+       [7.36949722e+01, 1.61921476e+03],
+       [7.39751812e+01, 1.61936466e+03],
+       [7.42553902e+01, 1.61950446e+03],
+       [7.45355992e+01, 1.61960604e+03],
+       [7.48158083e+01, 1.61969605e+03],
+       [7.50960173e+01, 1.61978607e+03],
+       [7.53762263e+01, 1.61987461e+03],
+       [7.56564353e+01, 1.61996210e+03],
+       [7.59366443e+01, 1.62009226e+03],
+       [7.62168534e+01, 1.62022676e+03],
+       [7.64970624e+01, 1.62035259e+03],
+       [7.67772714e+01, 1.62045226e+03],
+       [7.70574804e+01, 1.62054697e+03],
+       [7.73376894e+01, 1.62064130e+03],
+       [7.76178985e+01, 1.62073483e+03],
+       [7.78981075e+01, 1.62082836e+03],
+       [7.81783165e+01, 1.62092189e+03],
+       [7.84585255e+01, 1.62100914e+03],
+       [7.87387345e+01, 1.62109370e+03],
+       [7.90189436e+01, 1.62117825e+03],
+       [7.92991526e+01, 1.62126307e+03],
+       [7.95793616e+01, 1.62135130e+03],
+       [7.98595706e+01, 1.62143952e+03],
+       [8.01397796e+01, 1.62154986e+03],
+       [8.04199887e+01, 1.62167551e+03],
+       [8.07001977e+01, 1.62179873e+03],
+       [8.09804067e+01, 1.62190206e+03],
+       [8.12606157e+01, 1.62198488e+03],
+       [8.15408247e+01, 1.62207328e+03],
+       [8.18210338e+01, 1.62216293e+03],
+       [8.21012428e+01, 1.62225385e+03],
+       [8.23814518e+01, 1.62234214e+03],
+       [8.26616608e+01, 1.62243676e+03],
+       [8.29418698e+01, 1.62257820e+03],
+       [8.32220789e+01, 1.62271965e+03],
+       [8.35022879e+01, 1.62282158e+03],
+       [8.37824969e+01, 1.62289293e+03],
+       [8.40627059e+01, 1.62295063e+03],
+       [8.43429149e+01, 1.62301002e+03],
+       [8.46231240e+01, 1.62309488e+03],
+       [8.49033330e+01, 1.62317355e+03],
+       [8.51835420e+01, 1.62325222e+03],
+       [8.54637510e+01, 1.62332722e+03],
+       [8.57439600e+01, 1.62339703e+03],
+       [8.60241691e+01, 1.62349399e+03],
+       [8.63043781e+01, 1.62359096e+03],
+       [8.65845871e+01, 1.62367221e+03],
+       [8.68647961e+01, 1.62374613e+03],
+       [8.71450051e+01, 1.62381571e+03],
+       [8.74252142e+01, 1.62388373e+03],
+       [8.77054232e+01, 1.62396211e+03],
+       [8.79856322e+01, 1.62403543e+03],
+       [8.82658412e+01, 1.62410840e+03],
+       [8.85460502e+01, 1.62417845e+03],
+       [8.88262593e+01, 1.62424456e+03],
+       [8.91064683e+01, 1.62431068e+03],
+       [8.93866773e+01, 1.62437679e+03],
+       [8.96668863e+01, 1.62445924e+03],
+       [8.99470953e+01, 1.62454576e+03],
+       [9.02273044e+01, 1.62463229e+03],
+       [9.05075134e+01, 1.62471520e+03],
+       [9.07877224e+01, 1.62478083e+03],
+       [9.10679314e+01, 1.62484646e+03],
+       [9.13481404e+01, 1.62490172e+03],
+       [9.16283495e+01, 1.62494639e+03],
+       [9.19085585e+01, 1.62498665e+03],
+       [9.21887675e+01, 1.62505182e+03],
+       [9.24689765e+01, 1.62513412e+03],
+       [9.27491855e+01, 1.62522913e+03],
+       [9.30293946e+01, 1.62531318e+03],
+       [9.33096036e+01, 1.62538620e+03],
+       [9.35898126e+01, 1.62545402e+03],
+       [9.38700216e+01, 1.62550915e+03],
+       [9.41502306e+01, 1.62556427e+03],
+       [9.44304397e+01, 1.62561927e+03],
+       [9.47106487e+01, 1.62568682e+03],
+       [9.49908577e+01, 1.62577796e+03],
+       [9.52710667e+01, 1.62586089e+03],
+       [9.55512757e+01, 1.62594186e+03],
+       [9.58314847e+01, 1.62599341e+03],
+       [9.61116938e+01, 1.62603570e+03],
+       [9.63919028e+01, 1.62607800e+03],
+       [9.66721118e+01, 1.62612764e+03],
+       [9.69523208e+01, 1.62618787e+03],
+       [9.72325298e+01, 1.62625121e+03],
+       [9.75127389e+01, 1.62632903e+03],
+       [9.77929479e+01, 1.62638821e+03],
+       [9.80731569e+01, 1.62644220e+03],
+       [9.83533659e+01, 1.62651763e+03],
+       [9.86335749e+01, 1.62659683e+03],
+       [9.89137840e+01, 1.62666085e+03],
+       [9.91939930e+01, 1.62672299e+03],
+       [9.94742020e+01, 1.62678513e+03],
+       [9.97544110e+01, 1.62686218e+03],
+       [1.00034620e+02, 1.62695259e+03],
+       [1.00314829e+02, 1.62704300e+03],
+       [1.00595038e+02, 1.62713341e+03],
+       [1.00875247e+02, 1.62720180e+03],
+       [1.01155456e+02, 1.62726774e+03],
+       [1.01435665e+02, 1.62733367e+03],
+       [1.01715874e+02, 1.62740718e+03],
+       [1.01996083e+02, 1.62750088e+03],
+       [1.02276292e+02, 1.62759458e+03],
+       [1.02556501e+02, 1.62769055e+03],
+       [1.02836710e+02, 1.62779525e+03],
+       [1.03116919e+02, 1.62790435e+03],
+       [1.03397128e+02, 1.62798374e+03],
+       [1.03677337e+02, 1.62805079e+03],
+       [1.03957546e+02, 1.62816412e+03],
+       [1.04237755e+02, 1.62827746e+03],
+       [1.04517964e+02, 1.62837057e+03],
+       [1.04798173e+02, 1.62845283e+03],
+       [1.05078382e+02, 1.62853916e+03],
+       [1.05358591e+02, 1.62862549e+03],
+       [1.05638800e+02, 1.62871267e+03],
+       [1.05919009e+02, 1.62879651e+03],
+       [1.06199218e+02, 1.62887801e+03],
+       [1.06479428e+02, 1.62895156e+03],
+       [1.06759637e+02, 1.62904099e+03],
+       [1.07039846e+02, 1.62913636e+03],
+       [1.07320055e+02, 1.62924547e+03],
+       [1.07600264e+02, 1.62935457e+03],
+       [1.07880473e+02, 1.62945897e+03],
+       [1.08160682e+02, 1.62954850e+03],
+       [1.08440891e+02, 1.62961388e+03],
+       [1.08721100e+02, 1.62967926e+03],
+       [1.09001309e+02, 1.62977325e+03],
+       [1.09281518e+02, 1.62986563e+03],
+       [1.09561727e+02, 1.62993724e+03],
+       [1.09841936e+02, 1.63000756e+03],
+       [1.10122145e+02, 1.63007409e+03],
+       [1.10402354e+02, 1.63014062e+03],
+       [1.10682563e+02, 1.63021449e+03],
+       [1.10962772e+02, 1.63028526e+03],
+       [1.11242981e+02, 1.63033352e+03],
+       [1.11523190e+02, 1.63038179e+03]])
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -480,28 +799,11 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[8], line 1</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[9], line 4</span>
-<span class="ansi-green-fg">      1</span> fig <span style="color: rgb(98,98,98)">=</span> plt<span style="color: rgb(98,98,98)">.</span>figure(figsize<span style="color: rgb(98,98,98)">=</span>[<span style="color: rgb(98,98,98)">8</span>,<span style="color: rgb(98,98,98)">6</span>])
-<span class="ansi-green-fg">      3</span> ax <span style="color: rgb(98,98,98)">=</span> fig<span style="color: rgb(98,98,98)">.</span>add_subplot(<span style="color: rgb(98,98,98)">1</span>,<span style="color: rgb(98,98,98)">1</span>,<span style="color: rgb(98,98,98)">1</span>)
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 4</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">geom</span>,ax <span style="color: rgb(98,98,98)">=</span> ax)
-<span class="ansi-green-fg">      5</span> pg<span style="color: rgb(98,98,98)">.</span>viewer<span style="color: rgb(98,98,98)">.</span>mpl<span style="color: rgb(98,98,98)">.</span>drawSensors(ax, scheme<span style="color: rgb(98,98,98)">.</span>sensors(), diam<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.5</span>,
-<span class="ansi-green-fg">      6</span>                          facecolor<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">black</span><span style="color: rgb(175,0,0)">&#39;</span>, edgecolor<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">black</span><span style="color: rgb(175,0,0)">&#39;</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;geom&#39; is not defined
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/auto_examples_Ex5_SRT_9_1.png" src="../_images/auto_examples_Ex5_SRT_9_1.png" />
+<img alt="../_images/auto_examples_Ex5_SRT_9_0.png" src="../_images/auto_examples_Ex5_SRT_9_0.png" />
 </div>
 </div>
 <p>Step 6: Interpolate data to mesh</p>
@@ -552,28 +854,13 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[9], line 4</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Step 6: Interpolating data to mesh...
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[10], line 3</span>
-<span class="ansi-green-fg">      1</span> <span style="color: rgb(0,135,0)">print</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Step 6: Interpolating data to mesh...</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 3</span> ID1 <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">porosity_profile</span><span style="color: rgb(98,98,98)">.</span>copy()
-<span class="ansi-green-fg">      4</span> ID1[:mid_idx] <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">0</span> <span style="color: rgb(95,135,135)">#regolith</span>
-<span class="ansi-green-fg">      5</span> ID1[mid_idx:bot_idx] <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">3</span> <span style="color: rgb(95,135,135)"># fractured bedrock</span>
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;porosity_profile&#39; is not defined
+Step 6: Interpolating data to mesh...
+Step 7: Calculating saturation...
 </pre></div></div>
 </div>
 <p>Step 9: Convert to P wave velocity using petrophysical model</p>
@@ -654,29 +941,12 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[10], line 3</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Step9: Converting to P wave velocity ..
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[11], line 9</span>
-<span class="ansi-green-fg">      6</span> dem_model <span style="color: rgb(98,98,98)">=</span> DEMModel()
-<span class="ansi-green-fg">      8</span> <span style="color: rgb(95,135,135)"># Initialize velocity model</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 9</span> velocity_mesh <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>zeros_like(<span class="ansi-yellow-bg">wc_mesh</span>)
-<span class="ansi-green-fg">     14</span> top_mask <span style="color: rgb(98,98,98)">=</span> (mesh_markers <span style="color: rgb(98,98,98)">==</span> marker_labels[<span style="color: rgb(98,98,98)">0</span>])
-<span class="ansi-green-fg">     15</span> top_bulk_modulus <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">30.0</span>  <span style="color: rgb(95,135,135)"># GPa</span>
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;wc_mesh&#39; is not defined
+Step9: Converting to P wave velocity ..
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -691,21 +961,29 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[11], line 9</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:53:56 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (secnodes: 2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[12], line 2</span>
-<span class="ansi-green-fg">      1</span> mgr <span style="color: rgb(98,98,98)">=</span> TravelTimeManager()
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 2</span> datasrt <span style="color: rgb(98,98,98)">=</span> mgr<span style="color: rgb(98,98,98)">.</span>simulate(slowness<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">1.0</span> <span style="color: rgb(98,98,98)">/</span> <span class="ansi-yellow-bg">velocity_mesh</span>, scheme<span style="color: rgb(98,98,98)">=</span>scheme, mesh<span style="color: rgb(98,98,98)">=</span>mesh,
-<span class="ansi-green-fg">      3</span>                     noiseLevel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.05</span>, noiseAbs<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.00001</span>, seed<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">1334</span>
-<span class="ansi-green-fg">      4</span>                     ,verbose<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
-<span class="ansi-green-fg">      5</span> datasrt<span style="color: rgb(98,98,98)">.</span>save(os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(output_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">synthetic_seismic_data_long.dat</span><span style="color: rgb(175,0,0)">&#34;</span>))
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;velocity_mesh&#39; is not defined
+min/max t: 0.002002676198374358 0.06435431843645598
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+1
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -791,18 +1069,12 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[12], line 2</span>
 </div>
 </div>
 <div class="nboutput docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[13], line 75</span>
-<span class="ansi-green-fg">     73</span> <span style="color: rgb(95,135,135)"># Usage</span>
-<span class="ansi-green-fg">     74</span> fig, ax <span style="color: rgb(98,98,98)">=</span> plt<span style="color: rgb(98,98,98)">.</span>subplots(figsize<span style="color: rgb(98,98,98)">=</span>(<span style="color: rgb(98,98,98)">3.5</span>, <span style="color: rgb(98,98,98)">2.5</span>), dpi<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">300</span>)
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 75</span> drawFirstPicks(ax, <span class="ansi-yellow-bg">datasrt</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;datasrt&#39; is not defined
+&lt;Axes: xlabel=&#39;Distance (m)&#39;, ylabel=&#39;Traveltime (s)&#39;&gt;
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -824,21 +1096,102 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[13], line 75</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:54:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 1 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:54:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 1 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:54:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:54:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (secnodes: 2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:54:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Create gradient starting model. 500: 5500
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:54:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Created startmodel from forward operator: 5132, min/max=0.000182/0.002000
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+21/05/25 - 22:54:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Starting inversion.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[14], line 2</span>
-<span class="ansi-green-fg">      1</span> TT <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>physics<span style="color: rgb(98,98,98)">.</span>traveltime<span style="color: rgb(98,98,98)">.</span>TravelTimeManager()
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 2</span> mesh_inv <span style="color: rgb(98,98,98)">=</span> TT<span style="color: rgb(98,98,98)">.</span>createMesh(<span class="ansi-yellow-bg">datasrt</span>, paraMaxCellSize<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">2</span>, quality<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">32</span>, paraDepth <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">50.0</span>)
-<span class="ansi-green-fg">      3</span> TT<span style="color: rgb(98,98,98)">.</span>invert(datasrt, mesh <span style="color: rgb(98,98,98)">=</span> mesh_inv,lam<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">50</span>,
-<span class="ansi-green-fg">      4</span>           zWeight<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.2</span>,vTop<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">500</span>, vBottom<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">5500</span>,
-<span class="ansi-green-fg">      5</span>           verbose<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">1</span>, limits<span style="color: rgb(98,98,98)">=</span>[<span style="color: rgb(98,98,98)">300.</span>, <span style="color: rgb(98,98,98)">8000.</span>])
+fop: &lt;pygimli.physics.traveltime.modelling.TravelTimeDijkstraModelling object at 0x000001D073405C10&gt;
+Data transformation: &lt;pgcore._pygimli_.RTrans object at 0x000001D061B31E40&gt;
+Model transformation (cumulative):
+         0 &lt;pgcore._pygimli_.RTransLogLU object at 0x000001D07348C740&gt;
+min/max (data): 0.0019/0.07
+min/max (error): 4.31%/6.13%
+min/max (start model): 1.8e-04/0.002
+--------------------------------------------------------------------------------
+inv.iter 0 ... chi² =   66.64
+--------------------------------------------------------------------------------
+inv.iter 1 ... chi² =    1.57 (dPhi = 97.33%) lam: 50.0
+--------------------------------------------------------------------------------
+inv.iter 2 ...
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+chi² =    0.95 (dPhi = 35.81%) lam: 50.0
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;datasrt&#39; is not defined
+
+################################################################################
+#                  Abort criterion reached: chi² &lt;= 1 (0.95)                   #
+################################################################################
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+5132 [673.3672579699951,...,2874.980476214034]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -849,18 +1202,21 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[14], line 2</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&lt;Axes: &gt;, &lt;matplotlib.colorbar.Colorbar at 0x1d073491190&gt;)
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[15], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh_inv</span>,TT<span style="color: rgb(98,98,98)">.</span>model<span style="color: rgb(98,98,98)">.</span>array(),coverage<span style="color: rgb(98,98,98)">=</span>TT<span style="color: rgb(98,98,98)">.</span>standardizedCoverage())
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_inv&#39; is not defined
-</pre></div></div>
+<img alt="../_images/auto_examples_Ex5_SRT_17_1.png" src="../_images/auto_examples_Ex5_SRT_17_1.png" />
+</div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
@@ -870,18 +1226,21 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[15], line 1</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&lt;Axes: &gt;, &lt;matplotlib.colorbar.Colorbar at 0x1d07343f390&gt;)
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[16], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh_inv</span>,TT<span style="color: rgb(98,98,98)">.</span>standardizedCoverage())
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_inv&#39; is not defined
-</pre></div></div>
+<img alt="../_images/auto_examples_Ex5_SRT_18_1.png" src="../_images/auto_examples_Ex5_SRT_18_1.png" />
+</div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
@@ -899,7 +1258,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[16], line 1</span>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-(0,)
+(5132,)
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -912,17 +1271,12 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[16], line 1</span>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[18], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> pos <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>array(<span class="ansi-yellow-bg">mesh_inv</span><span style="color: rgb(98,98,98)">.</span>cellCenters())
-<span class="ansi-green-fg">      2</span> pos<span style="color: rgb(98,98,98)">.</span>shape
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_inv&#39; is not defined
+(5132, 3)
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -939,99 +1293,16 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[18], line 1</span>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-array([[0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.],
-       [0., 0.]])
+array([[  36.12750231, 1608.75753297,    0.        ],
+       [  38.19073967, 1607.8251757 ,    0.        ],
+       [  23.84872037, 1611.51893545,    0.        ],
+       ...,
+       [  24.54225938, 1592.24720629,    0.        ],
+       [  24.02779913, 1592.48937184,    0.        ],
+       [  23.54598117, 1591.88863013,    0.        ]])
 </pre></div></div>
 </div>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
@@ -1096,53 +1367,6 @@ array([[0., 0.],
 <span class="n">filled_cov</span> <span class="o">=</span> <span class="n">fill_holes_2d</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">cov</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">ValueError</span>                                Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[20], line 59</span>
-<span class="ansi-green-fg">     52</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> filled_cov
-<span class="ansi-green-fg">     54</span> <span style="color: rgb(95,135,135)"># Example usage</span>
-<span class="ansi-green-fg">     55</span> <span style="color: rgb(95,135,135)"># Assuming you have your data loaded as pos and cov</span>
-<span class="ansi-green-fg">     56</span> <span style="color: rgb(95,135,135)"># cov = np.array([0, 1, 0, ...])  # Your original coverage values</span>
-<span class="ansi-green-fg">     57</span>
-<span class="ansi-green-fg">     58</span> <span style="color: rgb(95,135,135)"># Apply the hole filling function</span>
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 59</span> filled_cov <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">fill_holes_2d</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">pos</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">cov</span><span class="ansi-yellow-bg">)</span>
-
-Cell <span class="ansi-green-intense-fg ansi-bold">In[20], line 38</span>, in <span class="ansi-cyan-fg">fill_holes_2d</span><span class="ansi-blue-intense-fg ansi-bold">(pos, cov, grid_resolution)</span>
-<span class="ansi-green-fg">     36</span> <span style="color: rgb(95,135,135)"># Interpolate scattered data to regular grid</span>
-<span class="ansi-green-fg">     37</span> grid_points <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>vstack([X<span style="color: rgb(98,98,98)">.</span>ravel(), Y<span style="color: rgb(98,98,98)">.</span>ravel()])<span style="color: rgb(98,98,98)">.</span>T
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 38</span> grid_cov <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">griddata</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">pos_2d</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">cov</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">grid_points</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">method</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#39;</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">nearest</span><span class="ansi-yellow-bg" style="color: rgb(175,0,0)">&#39;</span><span class="ansi-yellow-bg">)</span><span style="color: rgb(98,98,98)">.</span>reshape(X<span style="color: rgb(98,98,98)">.</span>shape)
-<span class="ansi-green-fg">     40</span> <span style="color: rgb(95,135,135)"># Convert to binary</span>
-<span class="ansi-green-fg">     41</span> binary_grid <span style="color: rgb(98,98,98)">=</span> (grid_cov <span style="color: rgb(98,98,98)">&gt;</span> <span style="color: rgb(98,98,98)">0.5</span>)
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\scipy\interpolate\_ndgriddata.py:320</span>, in <span class="ansi-cyan-fg">griddata</span><span class="ansi-blue-intense-fg ansi-bold">(points, values, xi, method, fill_value, rescale)</span>
-<span class="ansi-green-fg">    318</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> ip(xi)
-<span class="ansi-green-fg">    319</span> <span class="ansi-bold" style="color: rgb(0,135,0)">elif</span> method <span style="color: rgb(98,98,98)">==</span> <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">nearest</span><span style="color: rgb(175,0,0)">&#39;</span>:
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 320</span>     ip <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">NearestNDInterpolator</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">points</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">values</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">rescale</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">rescale</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">    321</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> ip(xi)
-<span class="ansi-green-fg">    322</span> <span class="ansi-bold" style="color: rgb(0,135,0)">elif</span> method <span style="color: rgb(98,98,98)">==</span> <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">linear</span><span style="color: rgb(175,0,0)">&#39;</span>:
-
-File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\scipy\interpolate\_ndgriddata.py:93</span>, in <span class="ansi-cyan-fg">NearestNDInterpolator.__init__</span><span class="ansi-blue-intense-fg ansi-bold">(self, x, y, rescale, tree_options)</span>
-<span class="ansi-green-fg">     92</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">__init__</span>(<span style="color: rgb(0,135,0)">self</span>, x, y, rescale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>, tree_options<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">None</span>):
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 93</span>     <span class="ansi-yellow-bg">NDInterpolatorBase</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg" style="color: rgb(0,0,255)">__init__</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">x</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">y</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">rescale</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg">rescale</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">     94</span> <span class="ansi-yellow-bg">                                </span><span class="ansi-yellow-bg">need_contiguous</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(0,135,0)">False</span><span class="ansi-yellow-bg">,</span>
-<span class="ansi-green-fg">     95</span> <span class="ansi-yellow-bg">                                </span><span class="ansi-yellow-bg">need_values</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">=</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(0,135,0)">False</span><span class="ansi-yellow-bg">)</span>
-<span class="ansi-green-fg">     96</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> tree_options <span class="ansi-bold" style="color: rgb(175,0,255)">is</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>:
-<span class="ansi-green-fg">     97</span>         tree_options <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(0,135,0)">dict</span>()
-
-File <span class="ansi-green-intense-fg ansi-bold">interpnd.pyx:95</span>, in <span class="ansi-cyan-fg">scipy.interpolate.interpnd.NDInterpolatorBase.__init__</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
-
-File <span class="ansi-green-intense-fg ansi-bold">interpnd.pyx:104</span>, in <span class="ansi-cyan-fg">scipy.interpolate.interpnd.NDInterpolatorBase._set_values</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
-
-File <span class="ansi-green-intense-fg ansi-bold">interpnd.pyx:232</span>, in <span class="ansi-cyan-fg">scipy.interpolate.interpnd._check_init_shape</span><span class="ansi-blue-intense-fg ansi-bold">()</span>
-
-<span class="ansi-red-intense-fg ansi-bold">ValueError</span>: different number of values and points
-</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
@@ -1272,7 +1496,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[23], line 1</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;meshall&#39; is not defined
 </pre></div></div>
 </div>
-<div class="nbinput docutils container">
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
@@ -1280,20 +1504,6 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[23], line 1</span>
 <span class="n">z</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">cellDataToNodeData</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span><span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[24], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> x, y, triangles, _, dataIndex <span style="color: rgb(98,98,98)">=</span> createTriangles(<span class="ansi-yellow-bg">mesh_inv</span>)
-<span class="ansi-green-fg">      2</span> z <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>meshtools<span style="color: rgb(98,98,98)">.</span>cellDataToNodeData(mesh_inv,TT<span style="color: rgb(98,98,98)">.</span>model<span style="color: rgb(98,98,98)">.</span>array())
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_inv&#39; is not defined
-</pre></div></div>
 </div>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
@@ -1330,30 +1540,11 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[24], line 1</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[25], line 17</span>
-<span class="ansi-green-fg">     15</span> fig <span style="color: rgb(98,98,98)">=</span> plt<span style="color: rgb(98,98,98)">.</span>figure(figsize<span style="color: rgb(98,98,98)">=</span>[<span style="color: rgb(98,98,98)">8</span>,<span style="color: rgb(98,98,98)">9</span>])
-<span class="ansi-green-fg">     16</span> ax1 <span style="color: rgb(98,98,98)">=</span> fig<span style="color: rgb(98,98,98)">.</span>add_subplot(<span style="color: rgb(98,98,98)">1</span>,<span style="color: rgb(98,98,98)">1</span>,<span style="color: rgb(98,98,98)">1</span>)
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 17</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh_inv</span>,TT<span style="color: rgb(98,98,98)">.</span>model<span style="color: rgb(98,98,98)">.</span>array(),cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap,coverage <span style="color: rgb(98,98,98)">=</span> filled_cov,ax <span style="color: rgb(98,98,98)">=</span> ax1,label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Velocity (m s$^</span><span style="color: rgb(175,0,0)">{</span><span style="color: rgb(175,0,0)">-1}$)</span><span style="color: rgb(175,0,0)">&#39;</span>,
-<span class="ansi-green-fg">     18</span>         xlabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Distance (m)</span><span style="color: rgb(175,0,0)">&#34;</span>, ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Elevation (m)</span><span style="color: rgb(175,0,0)">&#34;</span>,pad<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.3</span>,cMin <span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">500</span>, cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">5000</span>
-<span class="ansi-green-fg">     19</span>        ,orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-fg">     22</span> ax1<span style="color: rgb(98,98,98)">.</span>tricontour(x, y, triangles, z, levels<span style="color: rgb(98,98,98)">=</span>[<span style="color: rgb(98,98,98)">1200</span>], linewidths<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">1.0</span>, colors<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">k</span><span style="color: rgb(175,0,0)">&#39;</span>, linestyles<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">dashed</span><span style="color: rgb(175,0,0)">&#39;</span>)
-<span class="ansi-green-fg">     23</span> ax1<span style="color: rgb(98,98,98)">.</span>tricontour(x, y, triangles, z, levels<span style="color: rgb(98,98,98)">=</span>[<span style="color: rgb(98,98,98)">4300</span>], linewidths<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">1.0</span>, colors<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">k</span><span style="color: rgb(175,0,0)">&#39;</span>, linestyles<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">-</span><span style="color: rgb(175,0,0)">&#39;</span>)
-
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_inv&#39; is not defined
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/auto_examples_Ex5_SRT_27_1.png" src="../_images/auto_examples_Ex5_SRT_27_1.png" />
+<img alt="../_images/auto_examples_Ex5_SRT_27_0.png" src="../_images/auto_examples_Ex5_SRT_27_0.png" />
 </div>
 </div>
 <div class="nbinput docutils container">
@@ -1518,11 +1709,11 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[29], line 1</span>
 <div class="highlight"><pre>
 <span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
 <span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[30], line 1</span>
-<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> pos <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>array(<span class="ansi-yellow-bg">mesh_inv</span><span style="color: rgb(98,98,98)">.</span>cellCenters())
-<span class="ansi-green-fg">      2</span> filled_cov1 <span style="color: rgb(98,98,98)">=</span> fill_holes_2d(pos, TT_short<span style="color: rgb(98,98,98)">.</span>standardizedCoverage())
+Cell <span class="ansi-green-intense-fg ansi-bold">In[30], line 2</span>
+<span class="ansi-green-fg">      1</span> pos <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>array(mesh_inv<span style="color: rgb(98,98,98)">.</span>cellCenters())
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 2</span> filled_cov1 <span style="color: rgb(98,98,98)">=</span> fill_holes_2d(pos, <span class="ansi-yellow-bg">TT_short</span><span style="color: rgb(98,98,98)">.</span>standardizedCoverage())
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_inv&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;TT_short&#39; is not defined
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -1570,14 +1761,14 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[30], line 1</span>
 Cell <span class="ansi-green-intense-fg ansi-bold">In[31], line 17</span>
 <span class="ansi-green-fg">     15</span> fig <span style="color: rgb(98,98,98)">=</span> plt<span style="color: rgb(98,98,98)">.</span>figure(figsize<span style="color: rgb(98,98,98)">=</span>[<span style="color: rgb(98,98,98)">8</span>,<span style="color: rgb(98,98,98)">9</span>])
 <span class="ansi-green-fg">     16</span> ax1 <span style="color: rgb(98,98,98)">=</span> fig<span style="color: rgb(98,98,98)">.</span>add_subplot(<span style="color: rgb(98,98,98)">1</span>,<span style="color: rgb(98,98,98)">1</span>,<span style="color: rgb(98,98,98)">1</span>)
-<span class="ansi-green-intense-fg ansi-bold">---&gt; 17</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">mesh_inv</span>,TT_short<span style="color: rgb(98,98,98)">.</span>model<span style="color: rgb(98,98,98)">.</span>array(),cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap,coverage <span style="color: rgb(98,98,98)">=</span> TT_short<span style="color: rgb(98,98,98)">.</span>standardizedCoverage(),ax <span style="color: rgb(98,98,98)">=</span> ax1,label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Velocity (m s$^</span><span style="color: rgb(175,0,0)">{</span><span style="color: rgb(175,0,0)">-1}$)</span><span style="color: rgb(175,0,0)">&#39;</span>,
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 17</span> pg<span style="color: rgb(98,98,98)">.</span>show(mesh_inv,<span class="ansi-yellow-bg">TT_short</span><span style="color: rgb(98,98,98)">.</span>model<span style="color: rgb(98,98,98)">.</span>array(),cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap,coverage <span style="color: rgb(98,98,98)">=</span> TT_short<span style="color: rgb(98,98,98)">.</span>standardizedCoverage(),ax <span style="color: rgb(98,98,98)">=</span> ax1,label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">Velocity (m s$^</span><span style="color: rgb(175,0,0)">{</span><span style="color: rgb(175,0,0)">-1}$)</span><span style="color: rgb(175,0,0)">&#39;</span>,
 <span class="ansi-green-fg">     18</span>         xlabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Distance (m)</span><span style="color: rgb(175,0,0)">&#34;</span>, ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Elevation (m)</span><span style="color: rgb(175,0,0)">&#34;</span>,pad<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.3</span>,cMin <span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">500</span>, cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">5000</span>
 <span class="ansi-green-fg">     19</span>        ,orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>)
 <span class="ansi-green-fg">     22</span> ax1<span style="color: rgb(98,98,98)">.</span>tricontour(x1, y1, triangles1, z1, levels<span style="color: rgb(98,98,98)">=</span>[<span style="color: rgb(98,98,98)">1200</span>], linewidths<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">1.0</span>, colors<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">k</span><span style="color: rgb(175,0,0)">&#39;</span>, linestyles<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">dashed</span><span style="color: rgb(175,0,0)">&#39;</span>)
 <span class="ansi-green-fg">     26</span> pg<span style="color: rgb(98,98,98)">.</span>viewer<span style="color: rgb(98,98,98)">.</span>mpl<span style="color: rgb(98,98,98)">.</span>drawSensors(ax1, ttData<span style="color: rgb(98,98,98)">.</span>sensors(), diam<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.8</span>,
 <span class="ansi-green-fg">     27</span>                          facecolor<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">black</span><span style="color: rgb(175,0,0)">&#39;</span>, edgecolor<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">black</span><span style="color: rgb(175,0,0)">&#39;</span>)
 
-<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;mesh_inv&#39; is not defined
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;TT_short&#39; is not defined
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1593,8 +1784,8 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[31], line 17</span>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex3_Time_lapse_measurement.html" class="btn btn-neutral float-left" title="Creating Synthetic Time-Lapse ERT Measurements" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex2_workflow.html" class="btn btn-neutral float-right" title="Complete Workflow: From Hydrological Models to Geophysical Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="Ex3_Time_lapse_measurement.html" class="btn btn-neutral float-left" title="Ex3. Creating Synthetic Time-Lapse ERT Measurements" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex2_workflow.html" class="btn btn-neutral float-right" title="Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

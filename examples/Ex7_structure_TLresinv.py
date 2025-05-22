@@ -1,5 +1,5 @@
 """
-Structure-Constrained Time-Lapse Resistivity Inversion
+Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion
 ======================================================
 
 This example combines structural constraints with time-lapse ERT inversion
@@ -45,7 +45,7 @@ from PyHydroGeophysX.inversion.windowed import WindowedTimeLapseERTInversion
 
 
 
-data_dir = "results/TL_measurements/appres"
+data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres"
 
 # List of ERT data files testing monthly time-lapse inversion
 ert_files = [
@@ -74,7 +74,7 @@ measurement_times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]  # Adjust based on y
 # Create a mesh for the inversion (or load an existing one)
 data = ert.load(os.path.join(data_dir, ert_files[0]))
 ert_manager = ert.ERTManager(data)
-mesh_with_interface = pg.load("results/Structure_WC/mesh_with_interface.bms")
+mesh_with_interface = pg.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms")
 
 
 # %%
@@ -120,9 +120,9 @@ result.all_coverage = np.array(result.all_coverage)
 result.all_coverage.shape
 
 # %%
-np.save("results/Structure_WC/resmodel.npy", result.final_models[result.mesh.cellMarkers(),:])
-np.save("results/Structure_WC/all_coverage.npy", result.all_coverage[:,result.mesh.cellMarkers()])
-result.mesh.save("results/Structure_WC/mesh_res.bms")
+np.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy", result.final_models[result.mesh.cellMarkers(),:])
+np.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy", result.all_coverage[:,result.mesh.cellMarkers()])
+result.mesh.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms")
 
 # %%
 from palettable.lightbartlein.diverging import BlueDarkRed18_18
@@ -192,7 +192,7 @@ for i in range(12):
         cbar.remove()
 
 plt.tight_layout()
-plt.savefig("results/Structure_WC/timelapse_ert_with structure.tiff", dpi=300, bbox_inches='tight')
+plt.savefig("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/timelapse_ert_with structure.tiff", dpi=300, bbox_inches='tight')
 
 # %%
 
@@ -200,7 +200,7 @@ plt.savefig("results/Structure_WC/timelapse_ert_with structure.tiff", dpi=300, b
 # %%
 temp_marker = mesh_with_interface.cellMarkers()
 index_marker = temp_marker[temp_marker != 1]
-np.save("results/Structure_WC/index_marker.npy", index_marker)
+np.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy", index_marker)
 pg.show(result.mesh,index_marker,cmap="viridis",clim=(0,1e4),showMesh=True)
 
 # %%
@@ -350,7 +350,7 @@ for i in range(12):
         cbar.remove()
 
 plt.tight_layout()
-plt.savefig("results/TL_measurements/appres/timelapse_sat.tiff", dpi=300, bbox_inches='tight')
+plt.savefig("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres/timelapse_sat.tiff", dpi=300, bbox_inches='tight')
 
 # %%
 

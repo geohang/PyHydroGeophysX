@@ -17,6 +17,7 @@ def hydro_to_ert(
     porosity: np.ndarray,
     mesh: pg.Mesh,
     profile_interpolator: ProfileInterpolator,
+    structure: np.ndarray,
     marker_labels: List[int],
     rho_parameters: Dict[str, Any],
     electrode_spacing: float = 1.0,
@@ -78,7 +79,7 @@ def hydro_to_ert(
     # 1. If water_content is a 3D array (layer data), interpolate to mesh
     if water_content.ndim > 1 and water_content.shape[0] > 1:
         # Get structure from profile interpolator
-        structure = profile_interpolator.interpolate_layer_data([water_content])
+       
         
         # Set up layer IDs based on marker labels
         ID_layers = np.zeros_like(structure[0])

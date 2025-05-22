@@ -1,5 +1,5 @@
 """
-Structure-Constrained Resistivity Inversion
+Ex 6. Structure-Constrained Resistivity Inversion
 ===========================================
 
 This example demonstrates how to incorporate structural information from 
@@ -52,20 +52,20 @@ pylab.rcParams.update(params)
 plt.rcParams["font.family"] = "Arial"
 
 # %%
-output_dir = "results/Structure_WC"
+output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC"
 os.makedirs(output_dir, exist_ok=True)
 
 # %% [markdown]
-# ## 1. load data
+# ##  load data
 
 # %%
 # load seismic data
-ttData = tt.load("./results/workflow_example/synthetic_seismic_data.dat")
+ttData = tt.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/workflow_example/synthetic_seismic_data.dat")
 # load ERT data
-ertData = ert.load("./results/TL_measurements/appres/synthetic_data30.dat")
+ertData = ert.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/TL_measurements/appres/synthetic_data30.dat")
 
 # %%
-# using ERT data to create a mesh to take care of the boundary
+# ##  Using ERT data to create a mesh to take care of the boundary
 paraBoundary = 0.1
 
 ert1 = ert.ERTManager(ertData)
@@ -77,7 +77,7 @@ mesh.setCellMarkers(np.ones((mesh.cellCount()))*2)
 pg.show(mesh)
 
 # %%
-## travel time inversion
+# ##  travel time inversion
 
 TT = pg.physics.traveltime.TravelTimeManager()
 TT.setMesh(mesh)
@@ -398,85 +398,7 @@ res_cov = mgrConstrained.coverage()[mgrConstrained.paraDomain.cellMarkers()]>-1.
 mgrConstrained.showResult(xlabel="Distance (m)", ylabel="Elevation (m)",coverage = res_cov,cMap=fixed_cmap)
 
 # %%
-mesh_with_interface.save("results/Structure_WC/mesh_with_interface.bms")
-
-# %%
-pg.show(mgrConstrained.paraDomain, mgrConstrained.coverage()[mgrConstrained.paraDomain.cellMarkers()])
-
-# %%
-mgrConstrained.paraDomain
-
-# %%
-data_dir = "results/TL_measurements/appres"
-
-# List of ERT data files testing monthly time-lapse inversion
-ert_files = [
-    "synthetic_data30.dat",
-    "synthetic_data60.dat",
-    "synthetic_data90.dat",
-    "synthetic_data120.dat",
-    "synthetic_data150.dat",
-    "synthetic_data180.dat",
-    "synthetic_data210.dat",
-    "synthetic_data240.dat",
-    "synthetic_data270.dat",
-    "synthetic_data300.dat",
-    "synthetic_data330.dat",
-    "synthetic_data360.dat",
-]
-
-# ert_files = [
-#     "synthetic_data30.dat",
-#     "synthetic_data90.dat",
-#     "synthetic_data150.dat",
-#     "synthetic_data210.dat",
-#     "synthetic_data270.dat",
-#     "synthetic_data330.dat",
-# ]
-
-
-# %%
-pg.show(mesh_with_interface)
-
-# %%
-# Full paths to data files
-data_files = [os.path.join(data_dir, f) for f in ert_files]
-
-# Measurement times (can be timestamps or any sequential numbers representing time)
-measurement_times = [1, 2, 3, 4, 5, 6, 7 ,8, 9, 10, 11, 12]  # Adjust based on your actual acquisition times
-
-# Create a mesh for the inversion (or load an existing one)
-data = ert.load(data_files[0])
-ert_manager = ert.ERTManager(data)
-mesh = ert_manager.createMesh(data=data, quality=34)
-
-# Set up inversion parameters
-inversion_params = {
-    "lambda_val": 50.0,              # Regularization parameter
-    "alpha": 10.0,                   # Temporal regularization parameter
-    "decay_rate": 0.0,               # Temporal decay rate
-    "method": "cgls",                # Solver method ('cgls', 'lsqr', etc.)
-    "model_constraints": (0.001, 1e4), # Min/max resistivity values (ohm-m)
-    "max_iterations": 15,            # Maximum iterations
-    "absoluteUError": 0.0,           # Absolute data error (V)
-    "relativeError": 0.05,           # Relative data error (5%)
-    "lambda_rate": 1.0,              # Lambda reduction rate
-    "lambda_min": 1.0,               # Minimum lambda value
-    "inversion_type": "L2"           # 'L1', 'L2', or 'L1L2'
-}
-
-# Create the time-lapse inversion object
-inversion = TimeLapseERTInversion(
-    data_files=data_files,
-    measurement_times=measurement_times,
-    mesh=mesh_with_interface,
-    **inversion_params
-)
-
-# Run the inversion
-print("Starting time-lapse inversion...")
-result = inversion.run()
-print("Inversion complete!")
+mesh_with_interface.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms")
 
 
 

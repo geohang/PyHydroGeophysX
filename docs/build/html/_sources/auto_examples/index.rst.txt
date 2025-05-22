@@ -66,7 +66,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Time-Lapse ERT Inversion Techniques</div>
+      <div class="sphx-glr-thumbnail-title">Ex 4. Time-Lapse ERT Inversion Techniques</div>
     </div>
 
 
@@ -83,24 +83,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Structure-Constrained Time-Lapse Resistivity Inversion</div>
-    </div>
-
-
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates Monte Carlo uncertainty quantification for  converting ERT resistivity models to water content estimates.">
-
-.. only:: html
-
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex8_MC_WC_thumb.png
-    :alt:
-
-  :ref:`sphx_glr_auto_examples_Ex8_MC_WC.py`
-
-.. raw:: html
-
-      <div class="sphx-glr-thumbnail-title">Monte Carlo Uncertainty Quantification for Water Content Estimation</div>
+      <div class="sphx-glr-thumbnail-title">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</div>
     </div>
 
 
@@ -117,7 +100,24 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Structure-Constrained Resistivity Inversion</div>
+      <div class="sphx-glr-thumbnail-title">Ex 6. Structure-Constrained Resistivity Inversion</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates Monte Carlo uncertainty quantification for  converting ERT resistivity models to water content estimates.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex8_MC_WC_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Ex8_MC_WC.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</div>
     </div>
 
 
@@ -134,7 +134,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Creating Synthetic Time-Lapse ERT Measurements</div>
+      <div class="sphx-glr-thumbnail-title">Ex3. Creating Synthetic Time-Lapse ERT Measurements</div>
     </div>
 
 
@@ -151,7 +151,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Seismic Refraction Tomography (SRT) Forward Modeling</div>
+      <div class="sphx-glr-thumbnail-title">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</div>
     </div>
 
 
@@ -168,7 +168,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Complete Workflow: From Hydrological Models to Geophysical Inversion</div>
+      <div class="sphx-glr-thumbnail-title">Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion</div>
     </div>
 
 
@@ -185,8 +185,8 @@ Each example includes detailed comments and demonstrates best practices for wate
    /auto_examples/Ex1_model_output
    /auto_examples/EX4_TL_inversion
    /auto_examples/Ex7_structure_TLresinv
-   /auto_examples/Ex8_MC_WC
    /auto_examples/Ex6_Structure_resinv
+   /auto_examples/Ex8_MC_WC
    /auto_examples/Ex3_Time_lapse_measurement
    /auto_examples/Ex5_SRT
    /auto_examples/Ex2_workflow

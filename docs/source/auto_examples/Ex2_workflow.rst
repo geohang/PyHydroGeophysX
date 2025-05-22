@@ -18,7 +18,7 @@
 .. _sphx_glr_auto_examples_Ex2_workflow.py:
 
 
-Complete Workflow: From Hydrological Models to Geophysical Inversion
+Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion
 ====================================================================
 
 This example demonstrates the complete workflow for integrating hydrological 
@@ -78,7 +78,7 @@ of hydrological and geophysical modeling for watershed monitoring applications.
 
 .. code-block:: Python
 
-    output_dir = "results/workflow_example"
+    output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example"
     os.makedirs(output_dir, exist_ok=True)
 
 
@@ -89,7 +89,7 @@ of hydrological and geophysical modeling for watershed monitoring applications.
     print("Step 1: Loading domain information...")
 
     # These would be your actual data files
-    data_dir = "data/"
+    data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
     modflow_dir = os.path.join(data_dir, "modflow")
 
     # Load domain information from files

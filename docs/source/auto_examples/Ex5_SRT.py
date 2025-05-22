@@ -1,5 +1,5 @@
 """
-Seismic Refraction Tomography (SRT) Forward Modeling
+Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling
 ====================================================
 
 This example demonstrates seismic refraction tomography forward modeling
@@ -50,14 +50,14 @@ from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMM
 
 
 # %%
-output_dir = "results/seismic_example"
+output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/seismic_example"
 os.makedirs(output_dir, exist_ok=True)
 
 # %%
 print("Step 1: Follow the workflow to create the mesh and model...")
 
 # These would be your actual data files
-data_dir = "data/"
+data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 modflow_dir = os.path.join(data_dir, "modflow")
 
 # Load domain information from files
