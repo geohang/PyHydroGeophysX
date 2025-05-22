@@ -3,6 +3,11 @@ echo ========================================
 echo PyHydroGeophysX Documentation Builder
 echo ========================================
 
+REM Set environment variables to avoid frozen module warnings
+set PYDEVD_DISABLE_FILE_VALIDATION=1
+set PYTHONFROZENMODULES=off
+
+
 python --version >nul 2>&1
 if errorlevel 1 (
     echo Error: Python is not installed or not in PATH

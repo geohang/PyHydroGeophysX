@@ -1,21 +1,4 @@
-"""
-Structure-Constrained Resistivity Inversion
-===========================================
-
-This example demonstrates how to incorporate structural information from 
-seismic velocity models into ERT inversion for improved subsurface imaging.
-
-The workflow includes:
-1. Loading seismic travel time data and performing velocity inversion
-2. Extracting velocity interfaces at specified thresholds
-3. Creating ERT meshes with geological layer boundaries
-4. Structure-constrained ERT inversion using velocity-derived interfaces
-5. Comparison with unconstrained inversion results
-
-Structure-constrained inversion significantly improves the accuracy of 
-resistivity models by incorporating a priori geological information,
-leading to more reliable hydrological interpretations.
-"""
+# %%
 import matplotlib.pyplot as plt
 import numpy as np
 import pygimli as pg
@@ -51,27 +34,21 @@ pylab.rcParams.update(params)
 plt.rcParams["font.family"] = "Arial"
 
 # %%
-Geophy_modular = 0
-
-# %%
-Geophy_modular.seismic_processor
-Geophy_modular.structure_integration
-
-# %%
 output_dir = "results/Structure_WC"
 os.makedirs(output_dir, exist_ok=True)
 
+# %% [markdown]
+# ## 1. load data
+
 # %%
-## load seismic data
+# load seismic data
 ttData = tt.load("./results/workflow_example/synthetic_seismic_data.dat")
-## load ERT data
+# load ERT data
 ertData = ert.load("./results/TL_measurements/appres/synthetic_data30.dat")
 
 # %%
+# using ERT data to create a mesh to take care of the boundary
 paraBoundary = 0.1
-
-# %%
-## using ERT data to create a mesh to take care of the boundary
 
 ert1 = ert.ERTManager(ertData)
 grid = ert1.createMesh(data=ertData,quality = 31,paraDX=0.5, paraMaxCellSize=2, boundaryMaxCellSize=3000,smooth=[2, 2],

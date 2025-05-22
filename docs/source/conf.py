@@ -2,9 +2,27 @@
 
 import os
 import sys
+import unittest.mock as mock
+import logging
+logging.getLogger().setLevel(logging.WARNING)
+
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../../PyHydroGeophysX'))
+
+# Mock problematic imports
+mock_modules = [
+    'pygimli', 'pygimli.physics', 'pygimli.physics.ert', 
+    'pygimli.physics.traveltime', 'pygimli.meshtools',
+    'pygimli.viewer', 'pygimli.viewer.mpl', 'pygimli.utils',
+    'pygimli.core', 'pygimli.matrix', 'flopy', 'parflow',
+    'cupy', 'cupyx', 'cupyx.scipy', 'cupyx.scipy.sparse',
+    'joblib', 'meshop'
+]
+
+for mod_name in mock_modules:
+    sys.modules[mod_name] = mock.MagicMock()
 
 # -- Project information -----------------------------------------------------
 project = 'PyHydroGeophysX'
@@ -21,6 +39,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
     'myst_parser',
+    'nbsphinx',
     'sphinx_copybutton',
     'sphinx_gallery.gen_gallery',
 ]
@@ -47,23 +66,25 @@ autodoc_default_options = {
     'exclude-members': '__weakref__'
 }
 
-# Sphinx Gallery configuration - show examples but don't execute them
+# Suppress warnings for missing references
+autodoc_mock_imports = mock_modules
+
+# Allow notebook errors to not break the build
+nbsphinx_allow_errors = True
+
+# Sphinx Gallery configuration with error handling
 sphinx_gallery_conf = {
     'examples_dirs': '../../examples',
     'gallery_dirs': 'auto_examples',
-    'filename_pattern': '/Ex.*\.py$',
-    'ignore_pattern': '__pycache__|\.ipynb$|\.ipynb_checkpoints',
+    'plot_gallery': False,
     'download_all_examples': False,
-    'plot_gallery': False,  # Don't generate plots
-    'run_stale_examples': False,  # Don't run examples
-    'abort_on_example_error': False,  # Continue on errors
-    'capture_repr': (),  # Don't capture output
-    'show_memory': False,  # Don't show memory usage
-    'remove_config_comments': True,  # Clean up the display
+    'filename_pattern': '/Ex.*\.py$',
+    'ignore_pattern': '__pycache__|\.ipynb$',
     'expected_failing_examples': [],
-    'gallery_dirs': 'auto_examples',
-    'mod_example_dir': False,  # Don't modify example directory
-    'subsection_order': 'ExplicitOrder',
+    'capture_repr': (),
+    'abort_on_example_error': False,
+    'run_stale_examples': False,
+    'abort_on_example_error': False,  # Don't abort on error
 }
 
 # Templates path
