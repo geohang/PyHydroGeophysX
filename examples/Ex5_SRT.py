@@ -27,23 +27,24 @@ import pygimli.physics.traveltime as tt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import pygimli.meshtools as mt
 
-# For Jupyter notebooks, use the current working directory
+# Setup package path for development
 try:
     # For regular Python scripts
     current_dir = os.path.dirname(os.path.abspath(__file__))
 except NameError:
     # For Jupyter notebooks
     current_dir = os.getcwd()
-# Add the parent directory (OPEN_ERT) to the path
-parent_dir = os.path.dirname(os.path.dirname(current_dir))
+
+# Add the parent directory to Python path
+parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-# Now you can import using the structure as you originally intended
-from watershed_geophysics.model_output.modflow_output import MODFLOWWaterContent
-from watershed_geophysics.core.interpolation import ProfileInterpolator,create_surface_lines
-from watershed_geophysics.core.mesh_utils import MeshCreator
-from watershed_geophysics.petrophysics.velocity_models import HertzMindlinModel, DEMModel
+# Import PyHydroGeophysX modules
+from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
+from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surface_lines
+from PyHydroGeophysX.core.mesh_utils import MeshCreator
+from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
 
 
 

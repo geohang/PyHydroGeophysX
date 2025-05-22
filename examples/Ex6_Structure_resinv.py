@@ -24,32 +24,31 @@ import pygimli.physics.traveltime as tt
 import os
 import sys
 import matplotlib.pylab as pylab
-params = {'legend.fontsize': 15,
-          #'figure.figsize': (15, 5),
-         'axes.labelsize': 14,
-         'axes.titlesize':14,
-         'xtick.labelsize':14,
-         'ytick.labelsize':14}
 
-pylab.rcParams.update(params)
-plt.rcParams["font.family"] = "Arial"
-
-
-# For Jupyter notebooks, use the current working directory
+# Setup package path for development
 try:
     # For regular Python scripts
     current_dir = os.path.dirname(os.path.abspath(__file__))
 except NameError:
     # For Jupyter notebooks
     current_dir = os.getcwd()
-# Add the parent directory (OPEN_ERT) to the path
-parent_dir = os.path.dirname(os.path.dirname(current_dir))
+
+# Add the parent directory to Python path
+parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
+# Import PyHydroGeophysX modules
+from PyHydroGeophysX.inversion.time_lapse import TimeLapseERTInversion
 
-# Import the time-lapse inversion class
-from watershed_geophysics.inversion.time_lapse import TimeLapseERTInversion
+# Set up matplotlib parameters
+params = {'legend.fontsize': 15,
+         'axes.labelsize': 14,
+         'axes.titlesize':14,
+         'xtick.labelsize':14,
+         'ytick.labelsize':14}
+pylab.rcParams.update(params)
+plt.rcParams["font.family"] = "Arial"
 
 # %%
 Geophy_modular = 0

@@ -17,17 +17,6 @@ The workflow includes:
 This example serves as a comprehensive tutorial showing the integration
 of hydrological and geophysical modeling for watershed monitoring applications.
 """
-
-# %% [markdown]
-# 
-# ### Complete workflow example using WatershedGeo:
-# 1. Load MODFLOW water content data
-# 2. Convert to resistivity model using petrophysical relationships
-# 3. Perform forward ERT simulation
-# 4. Conduct inversion to recover the resistivity model
-# 
-
-# %%
 import os
 import sys
 import numpy as np
@@ -38,27 +27,26 @@ from pygimli.physics import TravelTimeManager
 import pygimli.physics.traveltime as tt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-
-# For Jupyter notebooks, use the current working directory
+# Setup package path for development
 try:
     # For regular Python scripts
     current_dir = os.path.dirname(os.path.abspath(__file__))
 except NameError:
     # For Jupyter notebooks
     current_dir = os.getcwd()
-# Add the parent directory (OPEN_ERT) to the path
-parent_dir = os.path.dirname(os.path.dirname(current_dir))
+
+# Add the parent directory to Python path
+parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-# Now you can import using the structure as you originally intended
-
-from watershed_geophysics.core.interpolation import ProfileInterpolator,create_surface_lines
-from watershed_geophysics.core.mesh_utils import MeshCreator
-from watershed_geophysics.petrophysics.resistivity_models import water_content_to_resistivity
-from watershed_geophysics.petrophysics.velocity_models import HertzMindlinModel, DEMModel
-from watershed_geophysics.forward.ert_forward import ERTForwardModeling
-from watershed_geophysics.inversion.ert_inversion import ERTInversion
+# Import PyHydroGeophysX modules
+from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surface_lines
+from PyHydroGeophysX.core.mesh_utils import MeshCreator
+from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_resistivity
+from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
+from PyHydroGeophysX.forward.ert_forward import ERTForwardModeling
+from PyHydroGeophysX.inversion.ert_inversion import ERTInversion
 
 
 

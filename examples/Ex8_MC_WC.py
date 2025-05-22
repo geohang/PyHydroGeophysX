@@ -22,22 +22,23 @@ import matplotlib.pyplot as plt
 import os
 import pygimli as pg
 import sys
-from tqdm import tqdm  # For progress bars
+from tqdm import tqdm
 
-# For Jupyter notebooks, use the current working directory
+# Setup package path for development
 try:
     # For regular Python scripts
     current_dir = os.path.dirname(os.path.abspath(__file__))
 except NameError:
     # For Jupyter notebooks
     current_dir = os.getcwd()
-# Add the parent directory (OPEN_ERT) to the path
-parent_dir = os.path.dirname(os.path.dirname(current_dir))
+
+# Add the parent directory to Python path
+parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-# Import the resistivity_to_saturation function from your module
-from watershed_geophysics.petrophysics.resistivity_models import resistivity_to_saturation
+# Import PyHydroGeophysX modules
+from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_saturation
 
 # Extract the inverted resistivity values
 resistivity_values = np.load("results/Structure_WC/resmodel.npy")

@@ -25,21 +25,20 @@ import pygimli as pg
 from pygimli.physics import ert
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-
-# For Jupyter notebooks, use the current working directory
+# Setup package path for development
 try:
     # For regular Python scripts
     current_dir = os.path.dirname(os.path.abspath(__file__))
 except NameError:
     # For Jupyter notebooks
     current_dir = os.getcwd()
-# Add the parent directory (OPEN_ERT) to the path
-parent_dir = os.path.dirname(os.path.dirname(current_dir))
+
+# Add the parent directory to Python path
+parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-
-# Import the time-lapse inversion class
+# Import PyHydroGeophysX modules
 from PyHydroGeophysX.inversion.time_lapse import TimeLapseERTInversion
 from PyHydroGeophysX.inversion.windowed import WindowedTimeLapseERTInversion
 
