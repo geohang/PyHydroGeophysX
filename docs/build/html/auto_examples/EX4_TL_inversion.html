@@ -1,0 +1,707 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Time-Lapse ERT Inversion Techniques &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Structure-Constrained Time-Lapse Resistivity Inversion" href="Ex7_structure_TLresinv.html" />
+    <link rel="prev" title="Loading and Processing Hydrological Model Outputs" href="Ex1_model_output.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Loading and Processing Hydrological Model Outputs</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Time-Lapse ERT Inversion Techniques</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1.Full-Time-Lapse-Inversion">1.Full Time-Lapse Inversion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.-Window-time-lapse-inversion">2. Window time-lapse inversion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.-Full-L1-Time-lapse-Inversion">3. Full L1 Time-lapse Inversion</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html#travel-time-inversion">travel time inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#non-parallel-computing-version">non parallel computing version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#parallel-computing-version">parallel computing version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#plot-the-apparent-resitivity">plot the apparent resitivity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#Showing-the-water-content-model-for-the-differnent-timesteps">Showing the water content model for the differnent timesteps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html#id1">Showing the water content model for the differnent timesteps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html#Using-Pygimili-default-to-the-inversion">Using Pygimili default to the inversion</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
+      <li class="breadcrumb-item active">Time-Lapse ERT Inversion Techniques</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/auto_examples/EX4_TL_inversion.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Time-Lapse-ERT-Inversion-Techniques">
+<h1>Time-Lapse ERT Inversion Techniques<a class="headerlink" href="#Time-Lapse-ERT-Inversion-Techniques" title="Link to this heading"></a></h1>
+<p>This example demonstrates different approaches for time-lapse electrical resistivity tomography (ERT) inversion using PyHydroGeophysX.</p>
+<p>The example includes:</p>
+<ol class="arabic simple">
+<li><p>Full time-lapse inversion with temporal regularization</p></li>
+<li><p>Windowed time-lapse inversion for large datasets</p></li>
+<li><p>L1-norm regularized inversion for sharp boundary recovery</p></li>
+<li><p>Comparison of different inversion strategies</p></li>
+<li><p>Visualization of resistivity evolution over time</p></li>
+</ol>
+<p>Time-lapse ERT inversion is crucial for monitoring subsurface water content changes and understanding hydrological processes in watersheds. The temporal regularization helps maintain consistency between consecutive time steps while allowing for realistic changes.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="kn">import</span> <span class="n">make_axes_locatable</span>
+
+<span class="c1"># Setup package path for development</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># For regular Python scripts</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+    <span class="c1"># For Jupyter notebooks</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="c1"># Add the parent directory to Python path</span>
+<span class="n">parent_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">current_dir</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.time_lapse</span> <span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.windowed</span> <span class="kn">import</span> <span class="n">WindowedTimeLapseERTInversion</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;results/TL_measurements/appres&quot;</span>
+
+<span class="c1"># List of ERT data files testing monthly time-lapse inversion</span>
+<span class="n">ert_files</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;synthetic_data30.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data60.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data90.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data120.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data150.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data180.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data210.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data240.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data270.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data300.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data330.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data360.dat&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<section id="1.Full-Time-Lapse-Inversion">
+<h2>1.Full Time-Lapse Inversion<a class="headerlink" href="#1.Full-Time-Lapse-Inversion" title="Link to this heading"></a></h2>
+<p>FUll Time-Lapse Inversion</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Full paths to data files</span>
+<span class="n">data_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">ert_files</span><span class="p">]</span>
+
+<span class="c1"># Measurement times (can be timestamps or any sequential numbers representing time)</span>
+<span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">,</span><span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
+
+<span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
+
+<span class="c1"># Set up inversion parameters</span>
+<span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
+    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
+    <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>            <span class="c1"># Maximum iterations</span>
+    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>           <span class="c1"># Absolute data error (V)</span>
+    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>           <span class="c1"># Relative data error (5%)</span>
+    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># Lambda reduction rate</span>
+    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>               <span class="c1"># Minimum lambda value</span>
+    <span class="s2">&quot;inversion_type&quot;</span><span class="p">:</span> <span class="s2">&quot;L2&quot;</span>           <span class="c1"># &#39;L1&#39;, &#39;L2&#39;, or &#39;L1L2&#39;</span>
+<span class="p">}</span>
+
+<span class="c1"># Create the time-lapse inversion object</span>
+<span class="n">inversion</span> <span class="o">=</span> <span class="n">TimeLapseERTInversion</span><span class="p">(</span>
+    <span class="n">data_files</span><span class="o">=</span><span class="n">data_files</span><span class="p">,</span>
+    <span class="n">measurement_times</span><span class="o">=</span><span class="n">measurement_times</span><span class="p">,</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">inversion_params</span>
+<span class="p">)</span>
+
+<span class="c1"># Run the inversion</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting time-lapse inversion...&quot;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion complete!&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">Exception</span>                                 Traceback (most recent call last)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[3], line 8</span>
+<span class="ansi-green-fg">      5</span> measurement_times <span style="color: rgb(98,98,98)">=</span> [<span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">2</span>, <span style="color: rgb(98,98,98)">3</span>, <span style="color: rgb(98,98,98)">4</span>, <span style="color: rgb(98,98,98)">5</span>, <span style="color: rgb(98,98,98)">6</span>, <span style="color: rgb(98,98,98)">7</span> ,<span style="color: rgb(98,98,98)">8</span>, <span style="color: rgb(98,98,98)">9</span>, <span style="color: rgb(98,98,98)">10</span>, <span style="color: rgb(98,98,98)">11</span>, <span style="color: rgb(98,98,98)">12</span>]  <span style="color: rgb(95,135,135)"># Adjust based on your actual acquisition times</span>
+<span class="ansi-green-fg">      7</span> <span style="color: rgb(95,135,135)"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 8</span> data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">ert</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_files</span><span class="ansi-yellow-bg">[</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">0</span><span class="ansi-yellow-bg">]</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">      9</span> ert_manager <span style="color: rgb(98,98,98)">=</span> ert<span style="color: rgb(98,98,98)">.</span>ERTManager(data)
+<span class="ansi-green-fg">     10</span> mesh <span style="color: rgb(98,98,98)">=</span> ert_manager<span style="color: rgb(98,98,98)">.</span>createMesh(data<span style="color: rgb(98,98,98)">=</span>data, quality<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">34</span>)
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\physics\ert\importData.py:26</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fileName, verbose, **kwargs)</span>
+<span class="ansi-green-fg">      7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">load</span>(fileName, verbose<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs):
+<span class="ansi-green-fg">      8</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">&#34;&#34;&#34;Shortcut to load ERT data.</span>
+<span class="ansi-green-fg">      9</span>
+<span class="ansi-green-fg">     10</span> <span style="color: rgb(175,0,0)">    Import Data and try to assume the file format.</span>
+<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
+<span class="ansi-green-fg">     24</span>
+<span class="ansi-green-fg">     25</span> <span style="color: rgb(175,0,0)">    &#34;&#34;&#34;</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 26</span>     data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">pg</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fileName</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">     27</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(data, pg<span style="color: rgb(98,98,98)">.</span>DataContainerERT):
+<span class="ansi-green-fg">     28</span>         <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> data
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\core\load.py:166</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fname, verbose, testAll, realName)</span>
+<span class="ansi-green-fg">    163</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> getExampleData(fname)
+<span class="ansi-green-fg">    165</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>exists(fname):
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 166</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">Exception</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">File or directory named </span><span class="ansi-bold" style="color: rgb(175,95,135)">%s</span><span style="color: rgb(175,0,0)"> does not exist.</span><span style="color: rgb(175,0,0)">&#34;</span> <span style="color: rgb(98,98,98)">%</span> (fname))
+<span class="ansi-green-fg">    168</span> <span style="color: rgb(95,135,135)"># recursive function call if fname is a folder of files</span>
+<span class="ansi-green-fg">    169</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>isdir(fname):
+
+<span class="ansi-red-intense-fg ansi-bold">Exception</span>: File or directory named results/TL_measurements/appres\synthetic_data30.dat does not exist.
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="n">cMax</span> <span class="o">=</span> <span class="mi">3000</span>
+                    <span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span><span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[4], line 9</span>
+<span class="ansi-green-fg">      7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> i <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">range</span>(<span style="color: rgb(98,98,98)">12</span>):
+<span class="ansi-green-fg">      8</span>     ax <span style="color: rgb(98,98,98)">=</span> fig<span style="color: rgb(98,98,98)">.</span>add_subplot(<span style="color: rgb(98,98,98)">3</span>,<span style="color: rgb(98,98,98)">4</span>,i<span style="color: rgb(98,98,98)">+</span><span style="color: rgb(98,98,98)">1</span>)
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 9</span>     ax, cbar <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">result</span><span style="color: rgb(98,98,98)">.</span>mesh,result<span style="color: rgb(98,98,98)">.</span>final_models[:,i],pad<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.3</span>,orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap,cMin<span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">100</span>,cMax <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">3000</span>
+<span class="ansi-green-fg">     10</span>                     , ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Elevation (m)</span><span style="color: rgb(175,0,0)">&#34;</span>,label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)"> Resistivity ($</span><span style="color: rgb(175,0,0)">\</span><span style="color: rgb(175,0,0)">Omega$ m)</span><span style="color: rgb(175,0,0)">&#39;</span>,ax<span style="color: rgb(98,98,98)">=</span>ax,logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>,coverage<span style="color: rgb(98,98,98)">=</span>result<span style="color: rgb(98,98,98)">.</span>all_coverage[i]<span style="color: rgb(98,98,98)">&gt;</span><span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">1</span>)
+<span class="ansi-green-fg">     11</span>     cbar<span style="color: rgb(98,98,98)">.</span>remove()
+
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;result&#39; is not defined
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_EX4_TL_inversion_6_1.png" src="../_images/auto_examples_EX4_TL_inversion_6_1.png" />
+</div>
+</div>
+</section>
+<section id="2.-Window-time-lapse-inversion">
+<h2>2. Window time-lapse inversion<a class="headerlink" href="#2.-Window-time-lapse-inversion" title="Link to this heading"></a></h2>
+<p>Measurement times (can be timestamps or any sequential numbers representing time)</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
+
+<span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">ert_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
+
+<span class="c1"># Set up inversion parameters</span>
+<span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
+    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
+    <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>            <span class="c1"># Maximum iterations</span>
+    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>           <span class="c1"># Absolute data error (V)</span>
+    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>           <span class="c1"># Relative data error (5%)</span>
+    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># Lambda reduction rate</span>
+    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>               <span class="c1"># Minimum lambda value</span>
+    <span class="s2">&quot;inversion_type&quot;</span><span class="p">:</span> <span class="s2">&quot;L2&quot;</span>           <span class="c1"># &#39;L1&#39;, &#39;L2&#39;, or &#39;L1L2&#39;</span>
+<span class="p">}</span>
+
+<span class="c1"># Define the window size (number of timesteps to process together)</span>
+<span class="n">window_size</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># A window size of 3 means each window includes 3 consecutive measurements</span>
+
+<span class="c1"># Create the windowed time-lapse inversion object</span>
+<span class="n">inversion</span> <span class="o">=</span> <span class="n">WindowedTimeLapseERTInversion</span><span class="p">(</span>
+    <span class="n">data_dir</span><span class="o">=</span><span class="n">data_dir</span><span class="p">,</span>               <span class="c1"># Directory containing ERT data files</span>
+    <span class="n">ert_files</span><span class="o">=</span><span class="n">ert_files</span><span class="p">,</span>             <span class="c1"># List of ERT data filenames</span>
+    <span class="n">measurement_times</span><span class="o">=</span><span class="n">measurement_times</span><span class="p">,</span>  <span class="c1"># List of measurement times</span>
+    <span class="n">window_size</span><span class="o">=</span><span class="n">window_size</span><span class="p">,</span>         <span class="c1"># Size of sliding window</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>                       <span class="c1"># Mesh for inversion</span>
+    <span class="o">**</span><span class="n">inversion_params</span>               <span class="c1"># Pass the same inversion parameters</span>
+<span class="p">)</span>
+
+<span class="c1"># Run the inversion, optionally in parallel</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting windowed time-lapse inversion...&quot;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion complete!&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">Exception</span>                                 Traceback (most recent call last)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[5], line 4</span>
+<span class="ansi-green-fg">      1</span> measurement_times <span style="color: rgb(98,98,98)">=</span> [<span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">2</span>, <span style="color: rgb(98,98,98)">3</span>, <span style="color: rgb(98,98,98)">4</span>, <span style="color: rgb(98,98,98)">5</span>, <span style="color: rgb(98,98,98)">6</span>, <span style="color: rgb(98,98,98)">7</span>, <span style="color: rgb(98,98,98)">8</span>, <span style="color: rgb(98,98,98)">9</span>, <span style="color: rgb(98,98,98)">10</span>, <span style="color: rgb(98,98,98)">11</span>, <span style="color: rgb(98,98,98)">12</span>]  <span style="color: rgb(95,135,135)"># Adjust based on your actual acquisition times</span>
+<span class="ansi-green-fg">      3</span> <span style="color: rgb(95,135,135)"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 4</span> data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">ert</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">os</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">join</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_dir</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">ert_files</span><span class="ansi-yellow-bg">[</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">0</span><span class="ansi-yellow-bg">]</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">      5</span> ert_manager <span style="color: rgb(98,98,98)">=</span> ert<span style="color: rgb(98,98,98)">.</span>ERTManager(data)
+<span class="ansi-green-fg">      6</span> mesh <span style="color: rgb(98,98,98)">=</span> ert_manager<span style="color: rgb(98,98,98)">.</span>createMesh(data<span style="color: rgb(98,98,98)">=</span>data, quality<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">34</span>)
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\physics\ert\importData.py:26</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fileName, verbose, **kwargs)</span>
+<span class="ansi-green-fg">      7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">load</span>(fileName, verbose<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs):
+<span class="ansi-green-fg">      8</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">&#34;&#34;&#34;Shortcut to load ERT data.</span>
+<span class="ansi-green-fg">      9</span>
+<span class="ansi-green-fg">     10</span> <span style="color: rgb(175,0,0)">    Import Data and try to assume the file format.</span>
+<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
+<span class="ansi-green-fg">     24</span>
+<span class="ansi-green-fg">     25</span> <span style="color: rgb(175,0,0)">    &#34;&#34;&#34;</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 26</span>     data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">pg</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fileName</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">     27</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(data, pg<span style="color: rgb(98,98,98)">.</span>DataContainerERT):
+<span class="ansi-green-fg">     28</span>         <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> data
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\core\load.py:166</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fname, verbose, testAll, realName)</span>
+<span class="ansi-green-fg">    163</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> getExampleData(fname)
+<span class="ansi-green-fg">    165</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>exists(fname):
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 166</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">Exception</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">File or directory named </span><span class="ansi-bold" style="color: rgb(175,95,135)">%s</span><span style="color: rgb(175,0,0)"> does not exist.</span><span style="color: rgb(175,0,0)">&#34;</span> <span style="color: rgb(98,98,98)">%</span> (fname))
+<span class="ansi-green-fg">    168</span> <span style="color: rgb(95,135,135)"># recursive function call if fname is a folder of files</span>
+<span class="ansi-green-fg">    169</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>isdir(fname):
+
+<span class="ansi-red-intense-fg ansi-bold">Exception</span>: File or directory named results/TL_measurements/appres\synthetic_data30.dat does not exist.
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[6], line 1</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> result<span style="color: rgb(98,98,98)">.</span>final_models <span style="color: rgb(98,98,98)">=</span> np<span style="color: rgb(98,98,98)">.</span>array(<span class="ansi-yellow-bg">result</span><span style="color: rgb(98,98,98)">.</span>final_models)
+<span class="ansi-green-fg">      2</span> result<span style="color: rgb(98,98,98)">.</span>final_models<span style="color: rgb(98,98,98)">.</span>shape
+
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;result&#39; is not defined
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">pylab</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+          <span class="c1">#&#39;figure.figsize&#39;: (15, 5),</span>
+         <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;axes.titlesize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;xtick.labelsize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;ytick.labelsize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">}</span>
+
+<span class="n">pylab</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">])</span>
+
+<span class="c1"># Use tight_layout with adjusted parameters to reduce space</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">wspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">i</span> <span class="o">//</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">4</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Add common ylabel only to leftmost panels</span>
+    <span class="n">ylabel</span> <span class="o">=</span> <span class="s2">&quot;Elevation (m)&quot;</span> <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Add resistivity label only to the middle-right panel (row 1, col 3)</span>
+    <span class="n">resistivity_label</span> <span class="o">=</span> <span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span> <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">7</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Only show axis ticks on leftmost and bottom panels</span>
+    <span class="k">if</span> <span class="n">col</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+
+    <span class="k">if</span> <span class="n">row</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Not bottom row</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Add &quot;distance (m)&quot; label to bottom row panels</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create the plot</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span>
+                      <span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span>
+                      <span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+                      <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+                      <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span>
+                      <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                      <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span>
+                      <span class="n">ylabel</span><span class="o">=</span><span class="n">ylabel</span><span class="p">,</span>
+                      <span class="n">label</span><span class="o">=</span><span class="n">resistivity_label</span><span class="p">,</span>
+                      <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                      <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                      <span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mf">1.2</span><span class="p">)</span>
+
+    <span class="c1"># Only keep colorbar for the middle-right panel (row 1, col 3)</span>
+    <span class="c1"># This corresponds to panel index 7 in a 0-based indexing system</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">7</span><span class="p">:</span>  <span class="c1"># Keep only the colorbar for panel 7</span>
+        <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;results/TL_measurements/timelapse_ert.tiff&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[7], line 43</span>
+<span class="ansi-green-fg">     40</span>     ax<span style="color: rgb(98,98,98)">.</span>set_xlabel(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Distance (m)</span><span style="color: rgb(175,0,0)">&#34;</span>)
+<span class="ansi-green-fg">     42</span> <span style="color: rgb(95,135,135)"># Create the plot</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 43</span> ax, cbar <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">result</span><span style="color: rgb(98,98,98)">.</span>mesh,
+<span class="ansi-green-fg">     44</span>                   result<span style="color: rgb(98,98,98)">.</span>final_models[:,i],
+<span class="ansi-green-fg">     45</span>                   pad<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.3</span>,
+<span class="ansi-green-fg">     46</span>                   orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,
+<span class="ansi-green-fg">     47</span>                   cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap,
+<span class="ansi-green-fg">     48</span>                   cMin<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">100</span>,
+<span class="ansi-green-fg">     49</span>                   cMax<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">3000</span>,
+<span class="ansi-green-fg">     50</span>                   ylabel<span style="color: rgb(98,98,98)">=</span>ylabel,
+<span class="ansi-green-fg">     51</span>                   label<span style="color: rgb(98,98,98)">=</span>resistivity_label,
+<span class="ansi-green-fg">     52</span>                   ax<span style="color: rgb(98,98,98)">=</span>ax,
+<span class="ansi-green-fg">     53</span>                   logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>,
+<span class="ansi-green-fg">     54</span>                   coverage<span style="color: rgb(98,98,98)">=</span>result<span style="color: rgb(98,98,98)">.</span>all_coverage[i]<span style="color: rgb(98,98,98)">&gt;</span><span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">1.2</span>)
+<span class="ansi-green-fg">     56</span> <span style="color: rgb(95,135,135)"># Only keep colorbar for the middle-right panel (row 1, col 3)</span>
+<span class="ansi-green-fg">     57</span> <span style="color: rgb(95,135,135)"># This corresponds to panel index 7 in a 0-based indexing system</span>
+<span class="ansi-green-fg">     58</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> i <span style="color: rgb(98,98,98)">!=</span> <span style="color: rgb(98,98,98)">7</span>:  <span style="color: rgb(95,135,135)"># Keep only the colorbar for panel 7</span>
+
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;result&#39; is not defined
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_EX4_TL_inversion_11_1.png" src="../_images/auto_examples_EX4_TL_inversion_11_1.png" />
+</div>
+</div>
+</section>
+<section id="3.-Full-L1-Time-lapse-Inversion">
+<h2>3. Full L1 Time-lapse Inversion<a class="headerlink" href="#3.-Full-L1-Time-lapse-Inversion" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="n">cMax</span> <span class="o">=</span> <span class="mi">3000</span>
+                    <span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span><span class="p">,</span><span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[8], line 1</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 1</span> ax, cbar <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">result</span><span style="color: rgb(98,98,98)">.</span>mesh,result<span style="color: rgb(98,98,98)">.</span>final_models[:,i],pad<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.3</span>,orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap,cMin<span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">100</span>,cMax <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">3000</span>
+<span class="ansi-green-fg">      2</span>                     , ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Elevation (m)</span><span style="color: rgb(175,0,0)">&#34;</span>,label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)"> Resistivity ($</span><span style="color: rgb(175,0,0)">\</span><span style="color: rgb(175,0,0)">Omega$ m)</span><span style="color: rgb(175,0,0)">&#39;</span>,logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>,coverage<span style="color: rgb(98,98,98)">=</span>result<span style="color: rgb(98,98,98)">.</span>all_coverage[i]<span style="color: rgb(98,98,98)">&gt;</span><span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">1</span>)
+
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;result&#39; is not defined
+</pre></div></div>
+</div>
+<p>Full paths to data files</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">ert_files</span><span class="p">]</span>
+
+<span class="c1"># Measurement times (can be timestamps or any sequential numbers representing time)</span>
+<span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">,</span><span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
+
+<span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
+
+<span class="c1"># Set up inversion parameters</span>
+<span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
+    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
+    <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>            <span class="c1"># Maximum iterations</span>
+    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>           <span class="c1"># Absolute data error (V)</span>
+    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>           <span class="c1"># Relative data error (5%)</span>
+    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># Lambda reduction rate</span>
+    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>               <span class="c1"># Minimum lambda value</span>
+    <span class="s2">&quot;inversion_type&quot;</span><span class="p">:</span> <span class="s2">&quot;L1&quot;</span>           <span class="c1"># &#39;L1&#39;, &#39;L2&#39;, or &#39;L1L2&#39;</span>
+<span class="p">}</span>
+
+<span class="c1"># Create the time-lapse inversion object</span>
+<span class="n">inversion</span> <span class="o">=</span> <span class="n">TimeLapseERTInversion</span><span class="p">(</span>
+    <span class="n">data_files</span><span class="o">=</span><span class="n">data_files</span><span class="p">,</span>
+    <span class="n">measurement_times</span><span class="o">=</span><span class="n">measurement_times</span><span class="p">,</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">inversion_params</span>
+<span class="p">)</span>
+
+<span class="c1"># Run the inversion</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting time-lapse inversion...&quot;</span><span class="p">)</span>
+<span class="n">result_L1</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion complete!&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">Exception</span>                                 Traceback (most recent call last)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[9], line 7</span>
+<span class="ansi-green-fg">      4</span> measurement_times <span style="color: rgb(98,98,98)">=</span> [<span style="color: rgb(98,98,98)">1</span>, <span style="color: rgb(98,98,98)">2</span>, <span style="color: rgb(98,98,98)">3</span>, <span style="color: rgb(98,98,98)">4</span>, <span style="color: rgb(98,98,98)">5</span>, <span style="color: rgb(98,98,98)">6</span>, <span style="color: rgb(98,98,98)">7</span> ,<span style="color: rgb(98,98,98)">8</span>, <span style="color: rgb(98,98,98)">9</span>, <span style="color: rgb(98,98,98)">10</span>, <span style="color: rgb(98,98,98)">11</span>, <span style="color: rgb(98,98,98)">12</span>]  <span style="color: rgb(95,135,135)"># Adjust based on your actual acquisition times</span>
+<span class="ansi-green-fg">      6</span> <span style="color: rgb(95,135,135)"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 7</span> data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">ert</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">data_files</span><span class="ansi-yellow-bg">[</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">0</span><span class="ansi-yellow-bg">]</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">      8</span> ert_manager <span style="color: rgb(98,98,98)">=</span> ert<span style="color: rgb(98,98,98)">.</span>ERTManager(data)
+<span class="ansi-green-fg">      9</span> mesh <span style="color: rgb(98,98,98)">=</span> ert_manager<span style="color: rgb(98,98,98)">.</span>createMesh(data<span style="color: rgb(98,98,98)">=</span>data, quality<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">34</span>)
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\physics\ert\importData.py:26</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fileName, verbose, **kwargs)</span>
+<span class="ansi-green-fg">      7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">def</span> <span style="color: rgb(0,0,255)">load</span>(fileName, verbose<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>, <span style="color: rgb(98,98,98)">*</span><span style="color: rgb(98,98,98)">*</span>kwargs):
+<span class="ansi-green-fg">      8</span> <span style="color: rgb(188,188,188)">    </span><span style="color: rgb(175,0,0)">&#34;&#34;&#34;Shortcut to load ERT data.</span>
+<span class="ansi-green-fg">      9</span>
+<span class="ansi-green-fg">     10</span> <span style="color: rgb(175,0,0)">    Import Data and try to assume the file format.</span>
+<span class="ansi-green-intense-fg ansi-bold">   (...)</span>
+<span class="ansi-green-fg">     24</span>
+<span class="ansi-green-fg">     25</span> <span style="color: rgb(175,0,0)">    &#34;&#34;&#34;</span>
+<span class="ansi-green-intense-fg ansi-bold">---&gt; 26</span>     data <span style="color: rgb(98,98,98)">=</span> <span class="ansi-yellow-bg">pg</span><span class="ansi-yellow-bg" style="color: rgb(98,98,98)">.</span><span class="ansi-yellow-bg">load</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">fileName</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">     27</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(data, pg<span style="color: rgb(98,98,98)">.</span>DataContainerERT):
+<span class="ansi-green-fg">     28</span>         <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> data
+
+File <span class="ansi-green-intense-fg ansi-bold">~\anaconda3\envs\pg\Lib\site-packages\pygimli\core\load.py:166</span>, in <span class="ansi-cyan-fg">load</span><span class="ansi-blue-intense-fg ansi-bold">(fname, verbose, testAll, realName)</span>
+<span class="ansi-green-fg">    163</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> getExampleData(fname)
+<span class="ansi-green-fg">    165</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>exists(fname):
+<span class="ansi-green-intense-fg ansi-bold">--&gt; 166</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">Exception</span>(<span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">File or directory named </span><span class="ansi-bold" style="color: rgb(175,95,135)">%s</span><span style="color: rgb(175,0,0)"> does not exist.</span><span style="color: rgb(175,0,0)">&#34;</span> <span style="color: rgb(98,98,98)">%</span> (fname))
+<span class="ansi-green-fg">    168</span> <span style="color: rgb(95,135,135)"># recursive function call if fname is a folder of files</span>
+<span class="ansi-green-fg">    169</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>isdir(fname):
+
+<span class="ansi-red-intense-fg ansi-bold">Exception</span>: File or directory named results/TL_measurements/appres\synthetic_data30.dat does not exist.
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result_L1</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">result_L1</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="n">cMax</span> <span class="o">=</span> <span class="mi">3000</span>
+                    <span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span><span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>                                 Traceback (most recent call last)
+Cell <span class="ansi-green-intense-fg ansi-bold">In[10], line 9</span>
+<span class="ansi-green-fg">      7</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> i <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">range</span>(<span style="color: rgb(98,98,98)">12</span>):
+<span class="ansi-green-fg">      8</span>     ax <span style="color: rgb(98,98,98)">=</span> fig<span style="color: rgb(98,98,98)">.</span>add_subplot(<span style="color: rgb(98,98,98)">3</span>,<span style="color: rgb(98,98,98)">4</span>,i<span style="color: rgb(98,98,98)">+</span><span style="color: rgb(98,98,98)">1</span>)
+<span class="ansi-green-intense-fg ansi-bold">----&gt; 9</span>     ax, cbar <span style="color: rgb(98,98,98)">=</span> pg<span style="color: rgb(98,98,98)">.</span>show(<span class="ansi-yellow-bg">result_L1</span><span style="color: rgb(98,98,98)">.</span>mesh,result_L1<span style="color: rgb(98,98,98)">.</span>final_models[:,i],pad<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(98,98,98)">0.3</span>,orientation<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">vertical</span><span style="color: rgb(175,0,0)">&#34;</span>,cMap<span style="color: rgb(98,98,98)">=</span>fixed_cmap,cMin<span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">100</span>,cMax <span style="color: rgb(98,98,98)">=</span> <span style="color: rgb(98,98,98)">3000</span>
+<span class="ansi-green-fg">     10</span>                     , ylabel<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Elevation (m)</span><span style="color: rgb(175,0,0)">&#34;</span>,label<span style="color: rgb(98,98,98)">=</span><span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)"> Resistivity ($</span><span style="color: rgb(175,0,0)">\</span><span style="color: rgb(175,0,0)">Omega$ m)</span><span style="color: rgb(175,0,0)">&#39;</span>,ax<span style="color: rgb(98,98,98)">=</span>ax,logScale<span style="color: rgb(98,98,98)">=</span><span class="ansi-bold" style="color: rgb(0,135,0)">False</span>,coverage<span style="color: rgb(98,98,98)">=</span>result<span style="color: rgb(98,98,98)">.</span>all_coverage[i]<span style="color: rgb(98,98,98)">&gt;</span><span style="color: rgb(98,98,98)">-</span><span style="color: rgb(98,98,98)">1</span>)
+<span class="ansi-green-fg">     11</span>     cbar<span style="color: rgb(98,98,98)">.</span>remove()
+
+<span class="ansi-red-intense-fg ansi-bold">NameError</span>: name &#39;result_L1&#39; is not defined
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_EX4_TL_inversion_16_1.png" src="../_images/auto_examples_EX4_TL_inversion_16_1.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Ex1_model_output.html" class="btn btn-neutral float-left" title="Loading and Processing Hydrological Model Outputs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex7_structure_TLresinv.html" class="btn btn-neutral float-right" title="Structure-Constrained Time-Lapse Resistivity Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

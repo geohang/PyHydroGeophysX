@@ -1,0 +1,517 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>forward.ert_forward &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">forward.ert_forward</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for forward.ert_forward</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Forward modeling utilities for Electrical Resistivity Tomography (ERT).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+
+<div class="viewcode-block" id="ERTForwardModeling">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ERTForwardModeling">[docs]</a>
+<span class="k">class</span> <span class="nc">ERTForwardModeling</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for forward modeling of Electrical Resistivity Tomography (ERT) data.&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="ERTForwardModeling.__init__">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ERTForwardModeling.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize ERT forward modeling.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            mesh: PyGIMLI mesh for forward modeling</span>
+<span class="sd">            data: ERT data container</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="ERTForwardModeling.set_data">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ERTForwardModeling.set_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set ERT data for forward modeling.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            data: ERT data container</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="ERTForwardModeling.set_mesh">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ERTForwardModeling.set_mesh">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set mesh for forward modeling.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            mesh: PyGIMLI mesh</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="ERTForwardModeling.forward">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ERTForwardModeling.forward">[docs]</a>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resistivity_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">log_transform</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute forward response for a given resistivity model.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            resistivity_model: Resistivity model values</span>
+<span class="sd">            log_transform: Whether resistivity_model is log-transformed</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Forward response (apparent resistivity)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Convert to PyGIMLI RVector if needed</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">resistivity_model</span>
+            
+        <span class="c1"># Apply exponentiation if log-transformed input</span>
+        <span class="k">if</span> <span class="n">log_transform</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+            
+        <span class="c1"># Calculate response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        
+        <span class="c1"># Log-transform response if requested</span>
+        <span class="k">if</span> <span class="n">log_transform</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
+        
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">array</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="ERTForwardModeling.forward_and_jacobian">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ERTForwardModeling.forward_and_jacobian">[docs]</a>
+    <span class="k">def</span> <span class="nf">forward_and_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resistivity_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">log_transform</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute forward response and Jacobian matrix.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            resistivity_model: Resistivity model values</span>
+<span class="sd">            log_transform: Whether resistivity_model is log-transformed</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (forward response, Jacobian matrix)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Convert to PyGIMLI RVector if needed</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">resistivity_model</span>
+            
+        <span class="c1"># Apply exponentiation if log-transformed input</span>
+        <span class="k">if</span> <span class="n">log_transform</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+        
+        <span class="c1"># Calculate response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        
+        <span class="c1"># Create Jacobian matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="n">jacobian</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">gmat2numpy</span><span class="p">(</span><span class="n">jacobian</span><span class="p">)</span>
+        
+        <span class="c1"># Process Jacobian according to log transformations</span>
+        <span class="k">if</span> <span class="n">log_transform</span><span class="p">:</span>
+            <span class="c1"># For log-transformed model and response</span>
+            <span class="c1"># J_log = J * exp(m) / d = d(log(d))/d(log(m))</span>
+            <span class="n">J</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span> <span class="o">*</span> <span class="n">J</span>
+            <span class="n">response_array</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+            <span class="n">J</span> <span class="o">=</span> <span class="n">J</span> <span class="o">/</span> <span class="n">response_array</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">response_array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+            
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">array</span><span class="p">()),</span> <span class="n">J</span>
+        
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">array</span><span class="p">(),</span> <span class="n">J</span></div>
+
+    
+<div class="viewcode-block" id="ERTForwardModeling.get_coverage">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ERTForwardModeling.get_coverage">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_coverage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resistivity_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">log_transform</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute coverage (resolution) for a given resistivity model.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            resistivity_model: Resistivity model values</span>
+<span class="sd">            log_transform: Whether resistivity_model is log-transformed</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Coverage values for each cell</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Convert to PyGIMLI RVector if needed</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">resistivity_model</span>
+            
+        <span class="c1"># Apply exponentiation if log-transformed input</span>
+        <span class="k">if</span> <span class="n">log_transform</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+        
+        <span class="c1"># Calculate response and Jacobian</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        
+        <span class="c1"># Calculate coverage</span>
+        <span class="n">covTrans</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">coverageDCtrans</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(),</span> 
+            <span class="mf">1.0</span> <span class="o">/</span> <span class="n">response</span><span class="p">,</span> 
+            <span class="mf">1.0</span> <span class="o">/</span> <span class="n">model</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Weight by cell sizes</span>
+        <span class="n">paramSizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">paraDomain</span>
+        
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">():</span>
+            <span class="n">paramSizes</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">marker</span><span class="p">()]</span> <span class="o">+=</span> <span class="n">c</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            
+        <span class="n">FinalJ</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">covTrans</span> <span class="o">/</span> <span class="n">paramSizes</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">FinalJ</span></div>
+
+    
+<div class="viewcode-block" id="ERTForwardModeling.create_synthetic_data">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ERTForwardModeling.create_synthetic_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">create_synthetic_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">xpos</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+                            <span class="n">ypos</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">res_models</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">schemeName</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;wa&#39;</span><span class="p">,</span> 
+                            <span class="n">noise_level</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span> 
+                            <span class="n">absolute_error</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+                            <span class="n">relative_error</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+                            <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">show_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> 
+                            <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">xbound</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> 
+                            <span class="n">ybound</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create synthetic ERT data using forward modeling.</span>
+<span class="sd">        </span>
+<span class="sd">        This method simulates an ERT survey by placing electrodes, creating a measurement </span>
+<span class="sd">        scheme, performing forward modeling to generate synthetic data, and adding noise.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            xpos: X-coordinates of electrodes</span>
+<span class="sd">            ypos: Y-coordinates of electrodes (if None, uses flat surface)</span>
+<span class="sd">            mesh: Mesh for forward modeling</span>
+<span class="sd">            res_models: Resistivity model values</span>
+<span class="sd">            schemeName: Name of measurement scheme (&#39;wa&#39;, &#39;dd&#39;, etc.)</span>
+<span class="sd">            noise_level: Level of Gaussian noise to add</span>
+<span class="sd">            absolute_error: Absolute error for data estimation</span>
+<span class="sd">            relative_error: Relative error for data estimation</span>
+<span class="sd">            save_path: Path to save synthetic data (if None, does not save)</span>
+<span class="sd">            show_data: Whether to display data after creation</span>
+<span class="sd">            seed: Random seed for noise generation</span>
+<span class="sd">            xbound: X boundary extension for mesh</span>
+<span class="sd">            ybound: Y boundary extension for mesh</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (synthetic ERT data container, simulation mesh)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Set random seed if provided</span>
+        <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">rrng</span><span class="o">.</span><span class="n">randpin</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        
+        <span class="c1"># Create electrode positions</span>
+        <span class="k">if</span> <span class="n">ypos</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Create flat surface if no y-coordinates provided</span>
+            <span class="n">ypos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">xpos</span><span class="p">)</span>
+        
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">xpos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">ypos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+        
+        <span class="c1"># Create ERT survey scheme</span>
+        <span class="n">scheme</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">createData</span><span class="p">(</span><span class="n">elecs</span><span class="o">=</span><span class="n">pos</span><span class="p">,</span> <span class="n">schemeName</span><span class="o">=</span><span class="n">schemeName</span><span class="p">)</span>
+        
+        <span class="c1"># Prepare mesh for forward modeling</span>
+        <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Set all cells to same marker</span>
+            <span class="n">mesh</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+            
+            <span class="c1"># Append triangle boundary for forward modeling</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                                        <span class="n">xbound</span><span class="o">=</span><span class="n">xbound</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="n">ybound</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Create a simple mesh if none provided</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">createGrid</span><span class="p">(</span>
+                <span class="n">x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">xpos</span><span class="p">)</span> <span class="o">-</span> <span class="mi">10</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">xpos</span><span class="p">)</span> <span class="o">+</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span>
+                <span class="n">y</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">ypos</span><span class="p">)</span> <span class="o">-</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                                        <span class="n">xbound</span><span class="o">=</span><span class="n">xbound</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="n">ybound</span><span class="p">)</span>
+            
+            <span class="c1"># Create homogeneous resistivity model if none provided</span>
+            <span class="k">if</span> <span class="n">res_models</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">res_models</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span> <span class="o">*</span> <span class="mi">100</span>
+        
+        <span class="c1"># Create synthetic data</span>
+        <span class="n">synth_data</span> <span class="o">=</span> <span class="n">scheme</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        
+        <span class="c1"># Initialize a forward operator</span>
+        <span class="n">fwd_operator</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">mesh</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">scheme</span><span class="p">)</span>
+        
+        <span class="c1"># Forward response</span>
+        <span class="n">fob</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
+        <span class="n">fob</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">scheme</span><span class="p">)</span>
+        <span class="n">fob</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+        <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">res_models</span><span class="p">)</span>
+        
+        <span class="c1"># Add noise</span>
+        <span class="n">dr</span> <span class="o">*=</span> <span class="mf">1.</span> <span class="o">+</span> <span class="n">pg</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">size</span><span class="p">())</span> <span class="o">*</span> <span class="n">noise_level</span>
+        
+        <span class="c1"># Set data and error values</span>
+        <span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;rhoa&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dr</span>
+        
+        <span class="c1"># Estimate error</span>
+        <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">synth_data</span><span class="p">)</span>
+        <span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">estimateError</span><span class="p">(</span>
+            <span class="n">synth_data</span><span class="p">,</span> <span class="n">absoluteUError</span><span class="o">=</span><span class="n">absolute_error</span><span class="p">,</span> <span class="n">relativeError</span><span class="o">=</span><span class="n">relative_error</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Display data if requested</span>
+        <span class="k">if</span> <span class="n">show_data</span><span class="p">:</span>
+            <span class="n">ert</span><span class="o">.</span><span class="n">showData</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span> <span class="n">logscale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># Save data if a path is provided</span>
+        <span class="k">if</span> <span class="n">save_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">synth_data</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">save_path</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">synth_data</span><span class="p">,</span> <span class="n">grid</span></div>
+</div>
+
+
+<div class="viewcode-block" id="ertforward">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ertforward">[docs]</a>
+<span class="k">def</span> <span class="nf">ertforward</span><span class="p">(</span><span class="n">fob</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">rhomodel</span><span class="p">,</span> <span class="n">xr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Forward model for ERT.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fob (pygimli.ERTModelling): ERT forward operator.</span>
+<span class="sd">        mesh (pg.Mesh): Mesh for the forward model.</span>
+<span class="sd">        rhomodel (pg.RVector): Resistivity model vector.</span>
+<span class="sd">        xr (np.ndarray): Log-transformed model parameter (resistivity).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dr (np.ndarray): Log-transformed forward response.</span>
+<span class="sd">        rhomodel (pg.RVector): Updated resistivity model.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">xr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">rhomodel</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
+    <span class="n">xr1</span><span class="p">[</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr</span><span class="p">)</span>
+    <span class="n">rhomodel</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">matrix</span><span class="o">.</span><span class="n">RVector</span><span class="p">(</span><span class="n">xr1</span><span class="p">)</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">array</span><span class="p">()),</span> <span class="n">rhomodel</span></div>
+
+
+
+<div class="viewcode-block" id="ertforward2">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ertforward2">[docs]</a>
+<span class="k">def</span> <span class="nf">ertforward2</span><span class="p">(</span><span class="n">fob</span><span class="p">,</span> <span class="n">xr</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simplified ERT forward model.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fob (pygimli.ERTModelling): ERT forward operator.</span>
+<span class="sd">        xr (np.ndarray): Log-transformed model parameter.</span>
+<span class="sd">        mesh (pg.Mesh): Mesh for the forward model.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dr (np.ndarray): Log-transformed forward response.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">xr1</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">xr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr</span><span class="p">)</span>
+    <span class="n">rhomodel</span> <span class="o">=</span> <span class="n">xr1</span>
+
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">dr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dr</span></div>
+
+
+
+<div class="viewcode-block" id="ertforandjac">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ertforandjac">[docs]</a>
+<span class="k">def</span> <span class="nf">ertforandjac</span><span class="p">(</span><span class="n">fob</span><span class="p">,</span> <span class="n">rhomodel</span><span class="p">,</span> <span class="n">xr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Forward model and Jacobian for ERT.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fob (pygimli.ERTModelling): ERT forward operator.</span>
+<span class="sd">        rhomodel (pg.RVector): Resistivity model.</span>
+<span class="sd">        xr (np.ndarray): Log-transformed model parameter.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dr (np.ndarray): Log-transformed forward response.</span>
+<span class="sd">        J (np.ndarray): Jacobian matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="n">fob</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">gmat2numpy</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr</span><span class="p">)</span><span class="o">*</span><span class="n">J</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">dr</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">J</span><span class="o">/</span><span class="n">dr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">dr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dr</span><span class="p">,</span> <span class="n">J</span></div>
+
+
+
+<div class="viewcode-block" id="ertforandjac2">
+<a class="viewcode-back" href="../../api/forward.html#forward.ert_forward.ertforandjac2">[docs]</a>
+<span class="k">def</span> <span class="nf">ertforandjac2</span><span class="p">(</span><span class="n">fob</span><span class="p">,</span> <span class="n">xr</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Alternative ERT forward model and Jacobian using log-resistivity values.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fob (pygimli.ERTModelling): ERT forward operator.</span>
+<span class="sd">        xr (np.ndarray): Log-transformed model parameter.</span>
+<span class="sd">        mesh (pg.Mesh): Mesh for the forward model.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dr (np.ndarray): Log-transformed forward response.</span>
+<span class="sd">        J (np.ndarray): Jacobian matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">xr1</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">xr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr</span><span class="p">)</span>
+    <span class="n">rhomodel</span> <span class="o">=</span> <span class="n">xr1</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="n">fob</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">gmat2numpy</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">*</span><span class="n">J</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">dr</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">J</span><span class="o">/</span><span class="n">dr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">dr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dr</span><span class="p">,</span> <span class="n">J</span></div>
+
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

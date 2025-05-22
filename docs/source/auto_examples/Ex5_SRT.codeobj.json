@@ -1,0 +1,470 @@
+{
+ "BlueDarkRed18_18.mpl_colormap": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "palettable.lightbartlein.diverging.BlueDarkRed18_18",
+   "module_short": "palettable.lightbartlein.diverging.BlueDarkRed18_18",
+   "name": "mpl_colormap"
+  }
+ ],
+ "DEMModel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.petrophysics.velocity_models",
+   "module_short": "PyHydroGeophysX.petrophysics.velocity_models",
+   "name": "DEMModel"
+  }
+ ],
+ "HertzMindlinModel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.petrophysics.velocity_models",
+   "module_short": "PyHydroGeophysX.petrophysics.velocity_models",
+   "name": "HertzMindlinModel"
+  }
+ ],
+ "MeshCreator": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.core.mesh_utils",
+   "module_short": "PyHydroGeophysX.core.mesh_utils",
+   "name": "MeshCreator"
+  }
+ ],
+ "ProfileInterpolator": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.core.interpolation",
+   "module_short": "PyHydroGeophysX.core.interpolation",
+   "name": "ProfileInterpolator"
+  }
+ ],
+ "TravelTimeManager": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics",
+   "module_short": "pygimli.physics",
+   "name": "TravelTimeManager"
+  }
+ ],
+ "create_surface_lines": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.core.interpolation",
+   "module_short": "PyHydroGeophysX.core.interpolation",
+   "name": "create_surface_lines"
+  }
+ ],
+ "griddata": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "scipy.interpolate",
+   "module_short": "scipy.interpolate",
+   "name": "griddata"
+  }
+ ],
+ "meshop.linear_interpolation": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "meshop",
+   "module_short": "meshop",
+   "name": "linear_interpolation"
+  }
+ ],
+ "meshop.nearest_neighbor_interpolation": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "meshop",
+   "module_short": "meshop",
+   "name": "nearest_neighbor_interpolation"
+  }
+ ],
+ "ndimage.binary_fill_holes": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "scipy.ndimage",
+   "module_short": "scipy.ndimage",
+   "name": "binary_fill_holes"
+  }
+ ],
+ "np.abs": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "abs"
+  }
+ ],
+ "np.absolute": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "absolute"
+  }
+ ],
+ "np.amin": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "amin"
+  }
+ ],
+ "np.array": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "array"
+  }
+ ],
+ "np.clip": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "clip"
+  }
+ ],
+ "np.linspace": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "linspace"
+  }
+ ],
+ "np.load": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "load"
+  }
+ ],
+ "np.loadtxt": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "loadtxt"
+  }
+ ],
+ "np.max": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "max"
+  }
+ ],
+ "np.maximum": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "maximum"
+  }
+ ],
+ "np.meshgrid": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "meshgrid"
+  }
+ ],
+ "np.min": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "min"
+  }
+ ],
+ "np.save": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "save"
+  }
+ ],
+ "np.unique": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "unique"
+  }
+ ],
+ "np.vstack": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "vstack"
+  }
+ ],
+ "np.where": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "where"
+  }
+ ],
+ "np.zeros": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "zeros"
+  }
+ ],
+ "np.zeros_like": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "zeros_like"
+  }
+ ],
+ "os.getcwd": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os",
+   "module_short": "os",
+   "name": "getcwd"
+  }
+ ],
+ "os.makedirs": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os",
+   "module_short": "os",
+   "name": "makedirs"
+  }
+ ],
+ "os.path.abspath": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "abspath"
+  }
+ ],
+ "os.path.dirname": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "dirname"
+  }
+ ],
+ "os.path.join": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "join"
+  }
+ ],
+ "pg.meshtools.cellDataToNodeData": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.meshtools",
+   "module_short": "pygimli.meshtools",
+   "name": "cellDataToNodeData"
+  }
+ ],
+ "pg.meshtools.createMesh": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.meshtools",
+   "module_short": "pygimli.meshtools",
+   "name": "createMesh"
+  }
+ ],
+ "pg.meshtools.createParaMeshPLC": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.meshtools",
+   "module_short": "pygimli.meshtools",
+   "name": "createParaMeshPLC"
+  }
+ ],
+ "pg.physics.traveltime.TravelTimeManager": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics.traveltime",
+   "module_short": "pygimli.physics.traveltime",
+   "name": "TravelTimeManager"
+  }
+ ],
+ "pg.physics.traveltime.createRAData": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics.traveltime",
+   "module_short": "pygimli.physics.traveltime",
+   "name": "createRAData"
+  }
+ ],
+ "pg.show": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli",
+   "module_short": "pygimli",
+   "name": "show"
+  }
+ ],
+ "pg.viewer.mpl.drawSensors": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.viewer.mpl",
+   "module_short": "pygimli.viewer.mpl",
+   "name": "drawSensors"
+  }
+ ],
+ "pg.x": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli",
+   "module_short": "pygimli",
+   "name": "x"
+  }
+ ],
+ "pg.y": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli",
+   "module_short": "pygimli",
+   "name": "y"
+  }
+ ],
+ "pg.z": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli",
+   "module_short": "pygimli",
+   "name": "z"
+  }
+ ],
+ "plt.figure": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "figure"
+  }
+ ],
+ "plt.rcParams": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib",
+   "name": "rcParams"
+  }
+ ],
+ "plt.subplots": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplots"
+  }
+ ],
+ "pylab.rcParams.update": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pylab.rcParams",
+   "module_short": "matplotlib.pylab.rcParams",
+   "name": "update"
+  }
+ ],
+ "sys.path": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "sys",
+   "module_short": "sys",
+   "name": "path"
+  }
+ ],
+ "sys.path.append": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "sys.path",
+   "module_short": "sys.path",
+   "name": "append"
+  }
+ ],
+ "tt": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics",
+   "module_short": "pygimli.physics",
+   "name": "traveltime"
+  }
+ ],
+ "tt.load": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics.traveltime",
+   "module_short": "pygimli.physics.traveltime",
+   "name": "load"
+  }
+ ]
+}
