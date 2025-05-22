@@ -1,0 +1,23 @@
+# Documentation requirements for PyHydroGeophysX
+
+# Core Sphinx
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.0.0
+sphinx-copybutton>=0.5.0
+sphinx-autobuild>=2021.3.14
+
+# Extensions
+myst-parser>=0.18.0
+nbsphinx>=0.8.8
+sphinx-gallery>=0.11.0
+
+# Plotting for examples
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# API documentation
+numpydoc>=1.4.0
+
+# Additional themes (optional)
+furo>=2022.6.21
+sphinx-book-theme>=0.3.3
