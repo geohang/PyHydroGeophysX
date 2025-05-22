@@ -1,0 +1,596 @@
+{
+ "BlueDarkRed18_18.mpl_colormap": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "palettable.lightbartlein.diverging.BlueDarkRed18_18",
+   "module_short": "palettable.lightbartlein.diverging.BlueDarkRed18_18",
+   "name": "mpl_colormap"
+  }
+ ],
+ "DEMModel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.petrophysics.velocity_models",
+   "module_short": "watershed_geophysics.petrophysics.velocity_models",
+   "name": "DEMModel"
+  }
+ ],
+ "ERTForwardModeling": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.forward.ert_forward",
+   "module_short": "watershed_geophysics.forward.ert_forward",
+   "name": "ERTForwardModeling"
+  }
+ ],
+ "ERTForwardModeling.create_synthetic_data": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.forward.ert_forward.ERTForwardModeling",
+   "module_short": "watershed_geophysics.forward.ert_forward.ERTForwardModeling",
+   "name": "create_synthetic_data"
+  }
+ ],
+ "ERTInversion": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.inversion.ert_inversion",
+   "module_short": "watershed_geophysics.inversion.ert_inversion",
+   "name": "ERTInversion"
+  }
+ ],
+ "Earth_7.mpl_colormap": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "palettable.cartocolors.diverging.Earth_7",
+   "module_short": "palettable.cartocolors.diverging.Earth_7",
+   "name": "mpl_colormap"
+  }
+ ],
+ "HertzMindlinModel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.petrophysics.velocity_models",
+   "module_short": "watershed_geophysics.petrophysics.velocity_models",
+   "name": "HertzMindlinModel"
+  }
+ ],
+ "MeshCreator": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.core.mesh_utils",
+   "module_short": "watershed_geophysics.core.mesh_utils",
+   "name": "MeshCreator"
+  }
+ ],
+ "ProfileInterpolator": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.core.interpolation",
+   "module_short": "watershed_geophysics.core.interpolation",
+   "name": "ProfileInterpolator"
+  }
+ ],
+ "SeismicForwardModeling.create_synthetic_data": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.forward.srt_forward.SeismicForwardModeling",
+   "module_short": "watershed_geophysics.forward.srt_forward.SeismicForwardModeling",
+   "name": "create_synthetic_data"
+  }
+ ],
+ "SeismicForwardModeling.draw_first_picks": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.forward.srt_forward.SeismicForwardModeling",
+   "module_short": "watershed_geophysics.forward.srt_forward.SeismicForwardModeling",
+   "name": "draw_first_picks"
+  }
+ ],
+ "TravelTimeManager": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics",
+   "module_short": "pygimli.physics",
+   "name": "TravelTimeManager"
+  }
+ ],
+ "create_surface_lines": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.core.interpolation",
+   "module_short": "watershed_geophysics.core.interpolation",
+   "name": "create_surface_lines"
+  }
+ ],
+ "ert.ERTManager": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics.ert",
+   "module_short": "pygimli.physics.ert",
+   "name": "ERTManager"
+  }
+ ],
+ "ert.ERTModelling": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics.ert",
+   "module_short": "pygimli.physics.ert",
+   "name": "ERTModelling"
+  }
+ ],
+ "ert.createData": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics.ert",
+   "module_short": "pygimli.physics.ert",
+   "name": "createData"
+  }
+ ],
+ "ert.showData": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics.ert",
+   "module_short": "pygimli.physics.ert",
+   "name": "showData"
+  }
+ ],
+ "mpl.rcParams": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "rcParams"
+  }
+ ],
+ "np.abs": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "abs"
+  }
+ ],
+ "np.absolute": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "absolute"
+  }
+ ],
+ "np.amin": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "amin"
+  }
+ ],
+ "np.array": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "array"
+  }
+ ],
+ "np.clip": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "clip"
+  }
+ ],
+ "np.copy": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "copy"
+  }
+ ],
+ "np.hstack": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "hstack"
+  }
+ ],
+ "np.interp": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "interp"
+  }
+ ],
+ "np.linspace": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "linspace"
+  }
+ ],
+ "np.load": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "load"
+  }
+ ],
+ "np.loadtxt": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "loadtxt"
+  }
+ ],
+ "np.max": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "max"
+  }
+ ],
+ "np.maximum": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "maximum"
+  }
+ ],
+ "np.mean": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "mean"
+  }
+ ],
+ "np.min": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "min"
+  }
+ ],
+ "np.nan": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "nan"
+  }
+ ],
+ "np.ones": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ones"
+  }
+ ],
+ "np.unique": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "unique"
+  }
+ ],
+ "np.where": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "where"
+  }
+ ],
+ "np.zeros_like": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "zeros_like"
+  }
+ ],
+ "os.getcwd": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os",
+   "module_short": "os",
+   "name": "getcwd"
+  }
+ ],
+ "os.makedirs": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os",
+   "module_short": "os",
+   "name": "makedirs"
+  }
+ ],
+ "os.path.abspath": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "abspath"
+  }
+ ],
+ "os.path.dirname": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "dirname"
+  }
+ ],
+ "os.path.join": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "join"
+  }
+ ],
+ "pg.meshtools.appendTriangleBoundary": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.meshtools",
+   "module_short": "pygimli.meshtools",
+   "name": "appendTriangleBoundary"
+  }
+ ],
+ "pg.physics.traveltime.createRAData": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics.traveltime",
+   "module_short": "pygimli.physics.traveltime",
+   "name": "createRAData"
+  }
+ ],
+ "pg.randn": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli",
+   "module_short": "pygimli",
+   "name": "randn"
+  }
+ ],
+ "pg.show": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli",
+   "module_short": "pygimli",
+   "name": "show"
+  }
+ ],
+ "pg.viewer.mpl.drawSensors": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.viewer.mpl",
+   "module_short": "pygimli.viewer.mpl",
+   "name": "drawSensors"
+  }
+ ],
+ "pg.x": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli",
+   "module_short": "pygimli",
+   "name": "x"
+  }
+ ],
+ "plt.colorbar": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "colorbar"
+  }
+ ],
+ "plt.figure": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "figure"
+  }
+ ],
+ "plt.imshow": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "imshow"
+  }
+ ],
+ "plt.legend": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "legend"
+  }
+ ],
+ "plt.plot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "plot"
+  }
+ ],
+ "plt.savefig": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "savefig"
+  }
+ ],
+ "plt.show": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "show"
+  }
+ ],
+ "plt.subplot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplot"
+  }
+ ],
+ "plt.subplots": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplots"
+  }
+ ],
+ "plt.tight_layout": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "tight_layout"
+  }
+ ],
+ "plt.title": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "title"
+  }
+ ],
+ "plt.xlabel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "xlabel"
+  }
+ ],
+ "plt.ylabel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "ylabel"
+  }
+ ],
+ "sys.path": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "sys",
+   "module_short": "sys",
+   "name": "path"
+  }
+ ],
+ "sys.path.append": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "sys.path",
+   "module_short": "sys.path",
+   "name": "append"
+  }
+ ],
+ "tt": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics",
+   "module_short": "pygimli.physics",
+   "name": "traveltime"
+  }
+ ],
+ "water_content_to_resistivity": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "watershed_geophysics.petrophysics.resistivity_models",
+   "module_short": "watershed_geophysics.petrophysics.resistivity_models",
+   "name": "water_content_to_resistivity"
+  }
+ ]
+}

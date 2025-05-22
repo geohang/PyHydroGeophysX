@@ -40,8 +40,8 @@ if parent_dir not in sys.path:
 
 
 # Import the time-lapse inversion class
-from PyHydroGeophysX.inversion.time_lapse import TimeLapseERTInversion
-from PyHydroGeophysX.inversion.windowed import WindowedTimeLapseERTInversion
+from watershed_geophysics.inversion.time_lapse import TimeLapseERTInversion
+from watershed_geophysics.inversion.windowed import WindowedTimeLapseERTInversion
 
 # %%
 data_dir = "results/TL_measurements/appres"
