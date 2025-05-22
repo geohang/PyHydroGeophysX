@@ -8,9 +8,9 @@ import pygimli.physics.traveltime as tt
 from pygimli.physics import TravelTimeManager
 from typing import Tuple, Optional, Dict, Any, Union, List
 
-from watershed_geophysics.core.interpolation import ProfileInterpolator
-from watershed_geophysics.petrophysics.velocity_models import HertzMindlinModel, DEMModel
-from watershed_geophysics.forward.srt_forward import SeismicForwardModeling
+from PyHydroGeophysX.core.interpolation import ProfileInterpolator
+from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
+from PyHydroGeophysX.forward.srt_forward import SeismicForwardModeling
 
 
 def hydro_to_srt(

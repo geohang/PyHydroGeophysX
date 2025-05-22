@@ -2,12 +2,14 @@
 
 import os
 import sys
+
+# Add the project root to the Python path
 sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
 project = 'PyHydroGeophysX'
-copyright = '2025, Hang Chen'  # ← Change this
-author = 'Hang Chen'          # ← Change this
+copyright = '2025, Hang Chen'
+author = 'Hang Chen'
 release = '0.1.0'
 
 # -- General configuration ---------------------------------------------------
@@ -19,7 +21,6 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
     'myst_parser',
-    'nbsphinx',
     'sphinx_copybutton',
     'sphinx_gallery.gen_gallery',
 ]
@@ -46,13 +47,23 @@ autodoc_default_options = {
     'exclude-members': '__weakref__'
 }
 
-# Sphinx Gallery configuration
+# Sphinx Gallery configuration - show examples but don't execute them
 sphinx_gallery_conf = {
     'examples_dirs': '../../examples',
     'gallery_dirs': 'auto_examples',
-    'plot_gallery': 'True',
+    'filename_pattern': '/Ex.*\.py$',
+    'ignore_pattern': '__pycache__|\.ipynb$|\.ipynb_checkpoints',
     'download_all_examples': False,
-    'filename_pattern': '/Ex',
+    'plot_gallery': False,  # Don't generate plots
+    'run_stale_examples': False,  # Don't run examples
+    'abort_on_example_error': False,  # Continue on errors
+    'capture_repr': (),  # Don't capture output
+    'show_memory': False,  # Don't show memory usage
+    'remove_config_comments': True,  # Clean up the display
+    'expected_failing_examples': [],
+    'gallery_dirs': 'auto_examples',
+    'mod_example_dir': False,  # Don't modify example directory
+    'subsection_order': 'ExplicitOrder',
 }
 
 # Templates path

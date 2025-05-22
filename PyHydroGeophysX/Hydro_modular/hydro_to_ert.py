@@ -7,9 +7,9 @@ import pygimli as pg
 from pygimli.physics import ert
 from typing import Tuple, Optional, Dict, Any, Union, List
 
-from watershed_geophysics.core.interpolation import ProfileInterpolator
-from watershed_geophysics.petrophysics.resistivity_models import water_content_to_resistivity
-from watershed_geophysics.forward.ert_forward import ERTForwardModeling
+from PyHydroGeophysX.core.interpolation import ProfileInterpolator
+from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_resistivity
+from PyHydroGeophysX.forward.ert_forward import ERTForwardModeling
 
 
 def hydro_to_ert(
