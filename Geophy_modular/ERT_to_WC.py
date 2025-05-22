@@ -1,6 +1,20 @@
 """
-Module for converting ERT resistivity models to water content with structural information.
+Module for converting Electrical Resistivity Tomography (ERT) resistivity models to
+volumetric water content, incorporating structural information (geological layers)
+and quantifying uncertainty using Monte Carlo simulations.
+
+This module provides the `ERTtoWC` class, which takes ERT resistivity data,
+a corresponding mesh, cell markers identifying different layers, and optional
+coverage information. It allows users to define petrophysical parameter
+distributions (saturated resistivity `rhos`, saturation exponent `n`,
+surface conductivity `sigma_sur`, and porosity `φ`) for each layer.
+The core functionality involves running Monte Carlo simulations to sample these
+parameters and convert resistivity to water content for each realization,
+thereby providing a distribution of possible water content values.
+Statistics (mean, std, percentiles) can then be calculated from these distributions.
+The module also includes utilities for plotting results and extracting time series.
 """
+
 import numpy as np
 import pygimli as pg
 from tqdm import tqdm
