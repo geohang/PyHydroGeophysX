@@ -32,12 +32,12 @@ from PyHydroGeophysX import ParflowSaturation, ParflowPorosity
 
 saturation_proc = ParflowSaturation("model_dir", "run_name")
 saturation = saturation_proc.load_timestep(100)
-2. Petrophysical Modeling
+```
+
+### 2. Petrophysical Modeling  
 Convert between hydrological and geophysical properties:
 
-python
-Copy
-Edit
+```python
 from PyHydroGeophysX.petrophysics import (
     water_content_to_resistivity,
     HertzMindlinModel,
@@ -55,12 +55,12 @@ vp_high, vp_low = hm_model.calculate_velocity(
     porosity=porosity, saturation=saturation,
     bulk_modulus=30.0, shear_modulus=20.0, mineral_density=2650
 )
-3. Forward Modeling
+```
+
+### 3. Forward Modeling  
 Generate synthetic geophysical data:
 
-python
-Copy
-Edit
+```python
 from PyHydroGeophysX.forward import ERTForwardModeling, SeismicForwardModeling
 
 # ERT forward modeling
@@ -74,12 +74,12 @@ srt_fwd = SeismicForwardModeling(mesh, scheme)
 travel_times = srt_fwd.create_synthetic_data(
     sensor_x=geophone_positions, velocity_model=velocity_model
 )
-4. Time-Lapse Inversion
+```
+
+### 4. Time-Lapse Inversion  
 Perform sophisticated time-lapse ERT inversions:
 
-python
-Copy
-Edit
+```python
 from PyHydroGeophysX.inversion import TimeLapseERTInversion, WindowedTimeLapseERTInversion
 
 # Full time-lapse inversion
@@ -97,12 +97,12 @@ windowed_inv = WindowedTimeLapseERTInversion(
     data_dir="data/", ert_files=files, window_size=3
 )
 result = windowed_inv.run(window_parallel=True)
-5. Uncertainty Quantification
+```
+
+### 5. Uncertainty Quantification  
 Quantify uncertainty in water content estimates:
 
-python
-Copy
-Edit
+```python
 from PyHydroGeophysX.Geophy_modular import ERTtoWC
 
 # Set up Monte Carlo analysis
@@ -125,11 +125,13 @@ layer_distributions = {
 converter.setup_layer_distributions(layer_distributions)
 wc_all, sat_all, params = converter.run_monte_carlo(n_realizations=100)
 stats = converter.get_statistics()  # mean, std, percentiles
-📊 Example Workflows
-Complete Workflow: Hydrology to Geophysics
-python
-Copy
-Edit
+```
+
+## 📊 Example Workflows
+
+### Complete Workflow: Hydrology to Geophysics
+
+```python
 from PyHydroGeophysX import *
 
 # 1. Load hydrological data
@@ -161,10 +163,11 @@ synthetic_data, _ = ERTForwardModeling.create_synthetic_data(
 # 6. Invert synthetic data
 inversion = ERTInversion(data_file="synthetic_data.dat")
 result = inversion.run()
-Structure-Constrained Inversion
-python
-Copy
-Edit
+```
+
+### Structure-Constrained Inversion
+
+```python
 # 1. Process seismic data to extract velocity structure
 from PyHydroGeophysX.Geophy_modular import process_seismic_tomography, extract_velocity_structure
 
@@ -185,11 +188,13 @@ inversion = TimeLapseERTInversion(
     data_files=ert_files, mesh=constrained_mesh
 )
 result = inversion.run()
-🛠 Advanced Features
-GPU Acceleration
-python
-Copy
-Edit
+```
+
+## 🛠 Advanced Features
+
+### GPU Acceleration
+
+```python
 # Enable GPU acceleration for large-scale inversions
 inversion = TimeLapseERTInversion(
     data_files=files,
@@ -197,10 +202,11 @@ inversion = TimeLapseERTInversion(
     parallel=True,          # CPU parallelization
     n_jobs=-1               # Use all available cores
 )
-Custom Solver Configuration
-python
-Copy
-Edit
+```
+
+### Custom Solver Configuration
+
+```python
 from PyHydroGeophysX.solvers import CGLSSolver, TikhonvRegularization
 
 # Configure custom solver
@@ -216,93 +222,77 @@ tikhonov = TikhonvRegularization(
     alpha=1e-3, 
     regularization_type='gradient'
 )
-📚 Documentation
-Installation Guide: See docs/installation.rst
+```
 
-API Reference: Full API documentation available in docs/
+## 📚 Documentation
 
-Examples: Comprehensive examples in examples/
+- **Installation Guide**: See `docs/installation.rst`  
+- **API Reference**: Full API documentation available in `docs/`  
+- **Examples**: Comprehensive examples in `examples/`  
+- **Tutorials**: Step-by-step tutorials for common workflows  
 
-Tutorials: Step-by-step tutorials for common workflows
+## 🧪 Examples
 
-🧪 Examples
-The examples/ directory contains comprehensive tutorials:
+The `examples/` directory contains comprehensive tutorials:
 
-Ex1_model_output.py: Loading hydrological model outputs
+- `Ex1_model_output.py`: Loading hydrological model outputs  
+- `Ex2_workflow.py`: Complete workflow from hydrology to geophysics  
+- `Ex3_Time_lapse_measurement.py`: Creating synthetic time-lapse data  
+- `Ex4_TL_inversion.py`: Time-lapse inversion techniques  
+- `Ex5_SRT.py`: Seismic refraction tomography  
+- `Ex6_Structure_resinv.py`: Structure-constrained inversion  
+- `Ex7_structure_TLresinv.py`: Structure-constrained time-lapse inversion  
+- `Ex8_MC_WC.py`: Monte Carlo uncertainty quantification  
 
-Ex2_workflow.py: Complete workflow from hydrology to geophysics
+## 🔗 Dependencies
 
-Ex3_Time_lapse_measurement.py: Creating synthetic time-lapse data
+**Required**
 
-Ex4_TL_inversion.py: Time-lapse inversion techniques
+- Python ≥ 3.8  
+- NumPy  
+- SciPy  
+- matplotlib  
+- PyGIMLI  
+- joblib  
+- tqdm  
 
-Ex5_SRT.py: Seismic refraction tomography
+**Optional**
 
-Ex6_Structure_resinv.py: Structure-constrained inversion
+- CuPy (for GPU acceleration)  
+- flopy (for MODFLOW support)  
+- parflow (for ParFlow support)  
 
-Ex7_structure_TLresinv.py: Structure-constrained time-lapse inversion
+## 🤝 Contributing
 
-Ex8_MC_WC.py: Monte Carlo uncertainty quantification
-
-🔗 Dependencies
-Required
-
-Python ≥ 3.8
-
-NumPy
-
-SciPy
-
-matplotlib
-
-PyGIMLI
-
-joblib
-
-tqdm
-
-Optional
-
-CuPy (for GPU acceleration)
-
-flopy (for MODFLOW support)
-
-parflow (for ParFlow support)
-
-🤝 Contributing
 We welcome contributions! Please see our Contributing Guidelines for details.
 
-Fork the repository
+1. Fork the repository  
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)  
+3. Commit your changes (`git commit -m 'Add amazing feature'`)  
+4. Push to the branch (`git push origin feature/amazing-feature`)  
+5. Open a Pull Request  
 
-Create a feature branch (git checkout -b feature/amazing-feature)
+## 📄 License
 
-Commit your changes (git commit -m 'Add amazing feature')
-
-Push to the branch (git push origin feature/amazing-feature)
-
-Open a Pull Request
-
-📄 License
 This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
 
-📞 Contact
-Author: Hang Chen
-Email: [your.email@domain.com]
-Institution: [Your Institution]
+## 📞 Contact
 
-🙏 Acknowledgments
-PyGIMLI team for the excellent geophysical modeling framework
+Author: Hang Chen  
+Email: [your.email@domain.com]  
+Institution: [Your Institution]  
 
-MODFLOW and ParFlow communities for hydrological modeling tools
+## 🙏 Acknowledgments
 
-Contributors and beta testers
+- PyGIMLI team for the excellent geophysical modeling framework  
+- MODFLOW and ParFlow communities for hydrological modeling tools  
+- Contributors and beta testers  
 
-📈 Citation
+## 📈 Citation
+
 If you use PyHydroGeophysX in your research, please cite:
 
-bibtex
-Copy
-Edit
+```bibtex
 @software{chen2025pyhydrogeophysx,
   title={PyHydroGeophysX: Integrated Hydrological-Geophysical Modeling for Watershed Monitoring},
   author={Chen, Hang},
@@ -310,14 +300,8 @@ Edit
   url={https://github.com/yourusername/PyHydroGeophysX},
   version={0.1.0}
 }
-Note: This package is under active development. Please report issues and feature requests through the GitHub issue tracker.
-
-yaml
-Copy
-Edit
+```
 
 ---
 
-Just select all, copy, and paste into your README.md. It will preserve formatting and code blocks perfectly.
-
-If you want me to split it into smaller sections or add a TOC, just say!
+**Note:** This package is under active development. Please report issues and feature requests through the GitHub issue tracker.
