@@ -542,8 +542,8 @@ TT_short.invert(ttData , mesh = mesh_inv,lam=50,
           verbose=1, limits=[300., 8000.])
 
 # %%
-x1, y1, triangles1, _, dataIndex1 = createTriangles(mesh_inv1)
-z1 = pg.meshtools.cellDataToNodeData(mesh_inv1,np.array(TT_short.model))
+x1, y1, triangles1, _, dataIndex1 = createTriangles(mesh_inv)
+z1 = pg.meshtools.cellDataToNodeData(mesh_inv,np.array(TT_short.model))
 pos = np.array(mesh_inv.cellCenters())
 filled_cov1 = fill_holes_2d(pos, TT_short.standardizedCoverage())
 

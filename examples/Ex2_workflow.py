@@ -1,5 +1,5 @@
 """
-Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion
+Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion
 ====================================================================
 
 This example demonstrates the complete workflow for integrating hydrological 
@@ -17,6 +17,9 @@ The workflow includes:
 This example serves as a comprehensive tutorial showing the integration
 of hydrological and geophysical modeling for watershed monitoring applications.
 """
+
+
+
 import os
 import sys
 import numpy as np
@@ -55,10 +58,10 @@ output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/
 os.makedirs(output_dir, exist_ok=True)
 
 # %% [markdown]
-# # Step by Step approach
+# ## Step by Step approach
 
 # %% [markdown]
-# ## Loading domain information...
+# ### Loading domain information...
 
 # %%
 # These would be your actual data files
@@ -72,7 +75,7 @@ top = np.loadtxt(os.path.join(data_dir, "top.txt"))
 porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
 
 # %% [markdown]
-# ## Loading MODFLOW water content data..
+# ### Loading MODFLOW water content data..
 
 # %%
 # Step 2: Exmaple of loading MODFLOW water content data
@@ -90,7 +93,7 @@ water_content = Water_Content[50]
 print(water_content.shape)
 
 # %% [markdown]
-# ## Set up profile for 2D section
+# ### Set up profile for 2D section
 
 # %%
 # Step 3: Set up profile for 2D section
@@ -113,7 +116,7 @@ interpolator = ProfileInterpolator(
 )
 
 # %% [markdown]
-# ## Interpolating data to profile
+# ### Interpolating data to profile
 
 # %%
 # Step 4: Interpolate data to profile
@@ -125,7 +128,7 @@ water_content_profile = interpolator.interpolate_3d_data(water_content)
 porosity_profile = interpolator.interpolate_3d_data(porosity)
 
 # %% [markdown]
-# ## Creating mesh
+# ### Creating mesh
 
 # %%
 
@@ -186,7 +189,7 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# ## Interpolating data to mesh
+# ### Interpolating data to mesh
 
 # %%
 # Step 6: Interpolate data to mesh
@@ -307,7 +310,7 @@ print("Saturation min/max:", np.min(saturation), np.max(saturation))
 
 
 # %% [markdown]
-# ## Calculating saturation
+# ### Calculating saturation
 
 # %%
 
@@ -318,7 +321,7 @@ saturation = np.clip(wc_mesh / porosity_safe, 0.0, 1.0)
 
 
 # %% [markdown]
-# ## Converting to resistivity
+# ### Converting to resistivity
 
 # %%
 
@@ -371,7 +374,7 @@ print(np.min(mid_res), np.max(mid_res))
 print(np.min(bot_res), np.max(bot_res))
 
 # %% [markdown]
-# ## Converting to P wave velocity
+# ### Converting to P wave velocity
 
 # %%
 # Step 9: Convert to P wave velocity using petrophysical model
@@ -481,7 +484,7 @@ plt.tight_layout(pad=3)
 plt.savefig(os.path.join(output_dir, "res_vel.tiff"), dpi=300)
 
 # %% [markdown]
-# ## ERT forward modeling simulation
+# ### ERT forward modeling simulation
 
 # %%
 
@@ -678,9 +681,9 @@ plt.tight_layout()
 
 
 # %%
-## Run ERT inversion on synthetic data
+# ### Run ERT inversion on synthetic data
 
-## using my code to the inversion
+# using my code to the inversion
 
 # Create ERT inversion object
 inversion = ERTInversion(
@@ -694,7 +697,7 @@ inversion = ERTInversion(
 inversion_result = inversion.run()
 
 # %%
-## Using Pygimili default to the inversion
+# ### Using Pygimili default to the inversion
 mgr = ert.ERTManager(os.path.join(output_dir, "synthetic_data.dat"))
 inv = mgr.invert(lam=10, verbose=True,quality=34)
 
@@ -726,10 +729,10 @@ plt.tight_layout()
 # the difference is that the chi2 value for stop inversion is not the same, we chose 1.5 while Pygimli is 1.0
 
 # %% [markdown]
-# # One step approach
+# ## One step approach
 
 # %% [markdown]
-# ## ERT one step from HM to GM
+# ### ERT one step from HM to GM
 
 # %%
 # Set up directories
@@ -737,7 +740,7 @@ output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/
 os.makedirs(output_dir, exist_ok=True)
 
 # Load your data
-data_dir = C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/"data/"
+data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/"data/"
 idomain = np.loadtxt(os.path.join(data_dir, "id.txt"))
 top = np.loadtxt(os.path.join(data_dir, "top.txt"))
 porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
@@ -817,7 +820,7 @@ synth_data, res_model = hydro_to_ert(
 ert.showData(synth_data,  logscale=True)
 
 # %% [markdown]
-# ## SRT one step from HM to GM
+# ### SRT one step from HM to GM
 
 # %%
 import os

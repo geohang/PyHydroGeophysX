@@ -383,21 +383,6 @@ ax.set_xlim([-10,120])
 ax.set_ylim([1580,1630])
 
 # %%
-mesh_with_interface
-
-# %%
-mgrConstrained = ert.ERTManager()
-mgrConstrained.invert(data=ertData, verbose=True, lam=10, mesh=mesh_with_interface,limits=[1., 10000.])
-
-# %%
-from palettable.lightbartlein.diverging import BlueDarkRed18_18
-fixed_cmap = BlueDarkRed18_18.mpl_colormap
-
-res_cov = mgrConstrained.coverage()[mgrConstrained.paraDomain.cellMarkers()]>-1.2
-
-mgrConstrained.showResult(xlabel="Distance (m)", ylabel="Elevation (m)",coverage = res_cov,cMap=fixed_cmap)
-
-# %%
 mesh_with_interface.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms")
 
 

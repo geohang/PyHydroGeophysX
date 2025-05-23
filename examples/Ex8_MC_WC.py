@@ -88,7 +88,7 @@ params_used = {
 }
 
 # Perform Monte Carlo simulation
-for mc_idx in tqdm(range(n_realizations), desc="Monte Carlo Simulations"):
+for mc_idx in range(n_realizations):
     # Sample parameters for each layer from their distributions
     # Layer 1
     layer1_params = {
