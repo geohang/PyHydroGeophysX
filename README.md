@@ -2,22 +2,103 @@
 
 A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, specializing in electrical resistivity tomography (ERT) and seismic refraction tomography (SRT) for watershed monitoring applications.
 
-[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)  
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
-
 ## 🌟 Key Features
 
-- **Hydrological Model Integration**: Seamless loading and processing of MODFLOW and ParFlow outputs  
-- **Petrophysical Relationships**: Advanced models for converting between water content, saturation, resistivity, and seismic velocity  
-- **Forward Modeling**: Complete ERT and SRT forward modeling capabilities with synthetic data generation  
-- **Time-Lapse Inversion**: Sophisticated algorithms for time-lapse ERT inversion with temporal regularization  
-- **Structure-Constrained Inversion**: Integration of seismic velocity interfaces for constrained ERT inversion  
-- **Uncertainty Quantification**: Monte Carlo methods for parameter uncertainty assessment  
-- **High-Performance Computing**: GPU acceleration and parallel processing support  
+- 🌊 **Hydrological Model Integration:** Seamless loading and processing of MODFLOW and ParFlow outputs  
+- 🪨 **Petrophysical Relationships:** Advanced models for converting between water content, saturation, resistivity, and seismic velocity  
+- ⚡ **Forward Modeling:** Complete ERT and SRT forward modeling capabilities with synthetic data generation  
+- 🔄 **Time-Lapse Inversion:** Sophisticated algorithms for time-lapse ERT inversion with temporal regularization  
+- 🏔️ **Structure-Constrained Inversion:** Integration of seismic velocity interfaces for constrained ERT inversion  
+- 📊 **Uncertainty Quantification:** Monte Carlo methods for parameter uncertainty assessment  
+- 🚀 **High Performance:** GPU acceleration support (CUDA/CuPy) and parallel processing capabilities  
+- 📈 **Advanced Solvers:** Multiple linear solvers (CGLS, LSQR, RRLS) with optional GPU acceleration
 
-## 🔧 Main Components
+## 📋 Requirements
 
-### 1. Hydrological Model Integration  
+- Python 3.8 or higher  
+- NumPy, SciPy, Matplotlib  
+- PyGIMLi (for geophysical modeling)  
+- Optional: CuPy (for GPU acceleration), joblib (for parallel processing)
+
+## 🛠️ Installation
+
+### From Source
+
+```bash
+git clone https://github.com/yourusername/PyHydroGeophysX.git
+cd PyHydroGeophysX
+pip install -e .
+```
+
+### Dependencies
+
+```bash
+pip install numpy scipy matplotlib pygimli joblib tqdm
+```
+
+For GPU support (optional):
+
+```bash
+pip install cupy-cuda11x  # Replace with your CUDA version
+```
+
+
+
+
+## 📚 Documentation
+
+Comprehensive documentation is available at Read the Docs.
+
+To build documentation locally:
+
+```bash
+cd docs
+make html
+```
+
+## 🗂️ Package Structure
+
+```
+PyHydroGeophysX/
+├── core/               # Core utilities
+│   ├── interpolation.py    # Profile interpolation tools
+│   └── mesh_utils.py       # Mesh creation and manipulation
+├── model_output/       # Hydrological model interfaces
+│   ├── modflow_output.py   # MODFLOW data loading
+│   └── parflow_output.py   # ParFlow data loading
+├── petrophysics/       # Rock physics models
+│   ├── resistivity_models.py  # Waxman-Smits, Archie models
+│   └── velocity_models.py     # DEM, Hertz-Mindlin models
+├── forward/            # Forward modeling
+│   ├── ert_forward.py      # ERT forward modeling
+│   └── srt_forward.py      # Seismic forward modeling
+├── inversion/          # Inverse modeling
+│   ├── ert_inversion.py    # Single-time ERT inversion
+│   ├── time_lapse.py       # Time-lapse inversion
+│   └── windowed.py         # Windowed time-lapse for large datasets
+├── solvers/            # Linear algebra solvers
+│   └── linear_solvers.py   # CGLS, LSQR, RRLS with GPU support
+├── Hydro_modular/      # Direct hydro-to-geophysics conversion
+└── Geophy_modular/     # Geophysical data processing tools
+```
+
+## 📖 Examples
+
+The `examples/` directory contains comprehensive tutorials:
+
+- `Ex1_model_output.py`: Loading hydrological model outputs  
+- `Ex2_workflow.py`: Complete workflow from hydro models to geophysical inversion  
+- `Ex3_Time_lapse_measurement.py`: Creating synthetic time-lapse ERT data  
+- `Ex4_TL_inversion.py`: Time-lapse ERT inversion techniques  
+- `Ex5_SRT.py`: Seismic refraction tomography workflow  
+- `Ex6_Structure_resinv.py`: Structure-constrained resistivity inversion  
+- `Ex7_structure_TLresinv.py`: Structure-constrained time-lapse inversion  
+- `Ex8_MC_WC.py`: Monte Carlo uncertainty quantification
+
+## 🚀 Quick Start
+
+## 1. Hydrological Model Integration
+
 Load and process outputs from various hydrological models:
 
 ```python
@@ -34,7 +115,8 @@ saturation_proc = ParflowSaturation("model_dir", "run_name")
 saturation = saturation_proc.load_timestep(100)
 ```
 
-### 2. Petrophysical Modeling  
+## 2. Petrophysical Modeling
+
 Convert between hydrological and geophysical properties:
 
 ```python
@@ -57,7 +139,8 @@ vp_high, vp_low = hm_model.calculate_velocity(
 )
 ```
 
-### 3. Forward Modeling  
+## 3. Forward Modeling
+
 Generate synthetic geophysical data:
 
 ```python
@@ -76,7 +159,8 @@ travel_times = srt_fwd.create_synthetic_data(
 )
 ```
 
-### 4. Time-Lapse Inversion  
+## 4. Time-Lapse Inversion
+
 Perform sophisticated time-lapse ERT inversions:
 
 ```python
@@ -99,7 +183,8 @@ windowed_inv = WindowedTimeLapseERTInversion(
 result = windowed_inv.run(window_parallel=True)
 ```
 
-### 5. Uncertainty Quantification  
+## 5. Uncertainty Quantification
+
 Quantify uncertainty in water content estimates:
 
 ```python
@@ -194,8 +279,9 @@ result = inversion.run()
 
 ### GPU Acceleration
 
+Enable GPU acceleration for large-scale inversions:
+
 ```python
-# Enable GPU acceleration for large-scale inversions
 inversion = TimeLapseERTInversion(
     data_files=files,
     use_gpu=True,           # Requires CuPy
@@ -204,104 +290,47 @@ inversion = TimeLapseERTInversion(
 )
 ```
 
-### Custom Solver Configuration
-
-```python
-from PyHydroGeophysX.solvers import CGLSSolver, TikhonvRegularization
-
-# Configure custom solver
-solver = CGLSSolver(
-    max_iterations=200,
-    tolerance=1e-8,
-    use_gpu=True,
-    damping=0.1
-)
-
-# Apply Tikhonov regularization
-tikhonov = TikhonvRegularization(
-    alpha=1e-3, 
-    regularization_type='gradient'
-)
-```
-
-## 📚 Documentation
-
-- **Installation Guide**: See `docs/installation.rst`  
-- **API Reference**: Full API documentation available in `docs/`  
-- **Examples**: Comprehensive examples in `examples/`  
-- **Tutorials**: Step-by-step tutorials for common workflows  
-
-## 🧪 Examples
-
-The `examples/` directory contains comprehensive tutorials:
-
-- `Ex1_model_output.py`: Loading hydrological model outputs  
-- `Ex2_workflow.py`: Complete workflow from hydrology to geophysics  
-- `Ex3_Time_lapse_measurement.py`: Creating synthetic time-lapse data  
-- `Ex4_TL_inversion.py`: Time-lapse inversion techniques  
-- `Ex5_SRT.py`: Seismic refraction tomography  
-- `Ex6_Structure_resinv.py`: Structure-constrained inversion  
-- `Ex7_structure_TLresinv.py`: Structure-constrained time-lapse inversion  
-- `Ex8_MC_WC.py`: Monte Carlo uncertainty quantification  
-
-## 🔗 Dependencies
-
-**Required**
-
-- Python ≥ 3.8  
-- NumPy  
-- SciPy  
-- matplotlib  
-- PyGIMLI  
-- joblib  
-- tqdm  
-
-**Optional**
-
-- CuPy (for GPU acceleration)  
-- flopy (for MODFLOW support)  
-- parflow (for ParFlow support)  
-
 ## 🤝 Contributing
 
 We welcome contributions! Please see our Contributing Guidelines for details.
 
-1. Fork the repository  
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)  
-3. Commit your changes (`git commit -m 'Add amazing feature'`)  
-4. Push to the branch (`git push origin feature/amazing-feature`)  
-5. Open a Pull Request  
+- Fork the repository  
+- Create your feature branch (`git checkout -b feature/AmazingFeature`)  
+- Commit your changes (`git commit -m 'Add some AmazingFeature'`)  
+- Push to the branch (`git push origin feature/AmazingFeature`)  
+- Open a Pull Request  
 
-## 📄 License
-
-This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
-
-## 📞 Contact
-
-Author: Hang Chen  
-Email: [your.email@domain.com]  
-Institution: [Your Institution]  
-
-## 🙏 Acknowledgments
-
-- PyGIMLI team for the excellent geophysical modeling framework  
-- MODFLOW and ParFlow communities for hydrological modeling tools  
-- Contributors and beta testers  
-
-## 📈 Citation
+## 📝 Citation
 
 If you use PyHydroGeophysX in your research, please cite:
 
 ```bibtex
 @software{chen2025pyhydrogeophysx,
-  title={PyHydroGeophysX: Integrated Hydrological-Geophysical Modeling for Watershed Monitoring},
-  author={Chen, Hang},
-  year={2025},
-  url={https://github.com/yourusername/PyHydroGeophysX},
-  version={0.1.0}
+  author = {Chen, Hang},
+  title = {PyHydroGeophysX: Integrating Hydrological and Geophysical Modeling},
+  year = {2025},
+  publisher = {GitHub},
+  url = {https://github.com/yourusername/PyHydroGeophysX}
 }
 ```
 
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- PyGIMLi team for the excellent geophysical modeling framework  
+- MODFLOW and ParFlow communities for hydrologic modeling tools  
+
+## 📧 Contact
+
+Author: Hang Chen  
+Email: hchen8@lbl.gov
+Issues: GitHub Issues  
+
 ---
 
-**Note:** This package is under active development. Please report issues and feature requests through the GitHub issue tracker.
+PyHydroGeophysX - Bridging the gap between hydrological models and geophysical monitoring
+
+Note: This package is under active development. Please report issues and feature requests through the GitHub issue tracker.
