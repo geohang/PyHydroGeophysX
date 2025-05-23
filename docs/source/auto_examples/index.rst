@@ -49,7 +49,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Loading and Processing Hydrological Model Outputs</div>
+      <div class="sphx-glr-thumbnail-title">Ex 1. Loading and Processing Hydrological Model Outputs</div>
     </div>
 
 
@@ -123,23 +123,6 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to create synthetic time-lapse electrical  resistivity tomography (ERT) measurements for watershed monitoring applications.">
-
-.. only:: html
-
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex3_Time_lapse_measurement_thumb.png
-    :alt:
-
-  :ref:`sphx_glr_auto_examples_Ex3_Time_lapse_measurement.py`
-
-.. raw:: html
-
-      <div class="sphx-glr-thumbnail-title">Ex3. Creating Synthetic Time-Lapse ERT Measurements</div>
-    </div>
-
-
-.. raw:: html
-
     <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates seismic refraction tomography forward modeling for watershed structure characterization using PyHydroGeophysX.">
 
 .. only:: html
@@ -157,7 +140,24 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for integrating hydrological  model outputs with geophysical forward modeling and inversion using PyHydroGeophysX.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to create synthetic time-lapse electrical  resistivity tomography (ERT) measurements for watershed monitoring applications.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex3_Time_lapse_measurement_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Ex3_Time_lapse_measurement.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex3. Creating Synthetic Time-Lapse ERT Measurements</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Example script with invalid Python syntax ">
 
 .. only:: html
 
@@ -168,7 +168,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex2. Complete Workflow: From Hydrological Models to Geophysical Inversion</div>
+      <div class="sphx-glr-thumbnail-title">SyntaxError</div>
     </div>
 
 
@@ -187,8 +187,8 @@ Each example includes detailed comments and demonstrates best practices for wate
    /auto_examples/Ex7_structure_TLresinv
    /auto_examples/Ex6_Structure_resinv
    /auto_examples/Ex8_MC_WC
-   /auto_examples/Ex3_Time_lapse_measurement
    /auto_examples/Ex5_SRT
+   /auto_examples/Ex3_Time_lapse_measurement
    /auto_examples/Ex2_workflow
 
 

@@ -270,7 +270,7 @@ Calculate statistics across all realizations
             cbar.remove()
 
     plt.tight_layout()
-    plt.savefig("results/Structure_WC/timelapse_sat.tiff", dpi=300, bbox_inches='tight')
+
 
 
 .. GENERATED FROM PYTHON SOURCE LINES 242-254
@@ -281,11 +281,11 @@ Calculate statistics across all realizations
 
     for i in np.arange(30,361,30):
         # Extract true water content values for the current timestep
-        true_values = np.load("results/TL_measurements/synwcmodel/synwcmodel"+str(i)+".npy")
+        true_values = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/synwcmodel/synwcmodel"+str(i)+".npy")
       
         # Store the true values for this timestep
         WC_true.append(true_values)
-    mesh_true = pg.load("results/TL_measurements/mesh.bms")
+    mesh_true = pg.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/mesh.bms")
     WC_true = np.array(WC_true)
     print(WC_true.shape)
 
@@ -449,7 +449,7 @@ Plot time series with uncertainty bands
     # plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("results/Structure_WC/regolith_WC.tiff", dpi=300, bbox_inches='tight')
+
 
 
 .. GENERATED FROM PYTHON SOURCE LINES 395-396
@@ -477,7 +477,7 @@ Fractured bedrock layer
 
 Plot time series with uncertainty bands
 
-.. GENERATED FROM PYTHON SOURCE LINES 410-444
+.. GENERATED FROM PYTHON SOURCE LINES 410-443
 
 .. code-block:: Python
 
@@ -512,7 +512,6 @@ Plot time series with uncertainty bands
     plt.grid(True)
     plt.tight_layout()
 
-    plt.savefig("results/Structure_WC/Fracture_WC.tiff", dpi=300, bbox_inches='tight')
 
 
 

@@ -94,7 +94,7 @@ time steps while allowing for realistic changes.
 
 .. GENERATED FROM PYTHON SOURCE LINES 68-69
 
-## 1.Full Time-Lapse Inversion
+## 1.Full L2 Time-Lapse Inversion
 
 .. GENERATED FROM PYTHON SOURCE LINES 71-72
 
@@ -164,7 +164,7 @@ time steps while allowing for realistic changes.
 
 .. GENERATED FROM PYTHON SOURCE LINES 126-127
 
-## 2. Window time-lapse inversion
+## 2. Window L2 time-lapse inversion
 
 .. GENERATED FROM PYTHON SOURCE LINES 129-130
 
@@ -289,7 +289,7 @@ Measurement times (can be timestamps or any sequential numbers representing time
             cbar.remove()
 
     plt.tight_layout()
-    plt.savefig("results/TL_measurements/timelapse_ert.tiff", dpi=300, bbox_inches='tight')
+
 
 
 .. GENERATED FROM PYTHON SOURCE LINES 240-241

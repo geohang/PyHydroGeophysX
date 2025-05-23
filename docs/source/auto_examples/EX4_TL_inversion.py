@@ -65,7 +65,7 @@ ert_files = [
 
 
 # %% [markdown]
-# ## 1.Full Time-Lapse Inversion
+# ## 1.Full L2 Time-Lapse Inversion
 
 # %%
 ##################### FUll Time-Lapse Inversion #####################
@@ -123,7 +123,7 @@ for i in range(12):
     cbar.remove()
 
 # %% [markdown]
-# ## 2. Window time-lapse inversion
+# ## 2. Window L2 time-lapse inversion
 
 # %%
 # Measurement times (can be timestamps or any sequential numbers representing time)
@@ -234,7 +234,7 @@ for i in range(12):
         cbar.remove()
 
 plt.tight_layout()
-plt.savefig("results/TL_measurements/timelapse_ert.tiff", dpi=300, bbox_inches='tight')
+
 
 # %% [markdown]
 # ## 3. Full L1 Time-lapse Inversion

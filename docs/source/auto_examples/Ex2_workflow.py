@@ -47,16 +47,20 @@ from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_res
 from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
 from PyHydroGeophysX.forward.ert_forward import ERTForwardModeling
 from PyHydroGeophysX.inversion.ert_inversion import ERTInversion
-
+from PyHydroGeophysX.Hydro_modular import hydro_to_ert
 
 
 # %%
 output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example"
 os.makedirs(output_dir, exist_ok=True)
 
-# %%
-print("Step 1: Loading domain information...")
+# %% [markdown]
+# # Step by Step approach
 
+# %% [markdown]
+# ## Loading domain information...
+
+# %%
 # These would be your actual data files
 data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 modflow_dir = os.path.join(data_dir, "modflow")
@@ -67,23 +71,11 @@ idomain = np.loadtxt(os.path.join(data_dir, "id.txt"))
 top = np.loadtxt(os.path.join(data_dir, "top.txt"))
 porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
 
+# %% [markdown]
+# ## Loading MODFLOW water content data..
+
 # %%
 # Step 2: Exmaple of loading MODFLOW water content data
-print("Step 2: Loading MODFLOW water content data...")
-
-
-# Initialize MODFLOW water content processor
-water_content_processor = MODFLOWWaterContent(
-    model_directory=modflow_dir,  # Changed from sim_ws
-    idomain=idomain
-)
-
-# Load water content for a specific timestep
-timestep = 10
-water_content = water_content_processor.load_timestep(timestep)
-
-print(water_content.shape)
-
 
 
 # Note that to save the loading time, we only use a low resoluation model load for the example
@@ -96,6 +88,9 @@ Water_Content = np.load(os.path.join(data_dir, "Watercontent.npy"))
 
 water_content = Water_Content[50]
 print(water_content.shape)
+
+# %% [markdown]
+# ## Set up profile for 2D section
 
 # %%
 # Step 3: Set up profile for 2D section
@@ -117,9 +112,11 @@ interpolator = ProfileInterpolator(
     num_points = 400
 )
 
+# %% [markdown]
+# ## Interpolating data to profile
+
 # %%
 # Step 4: Interpolate data to profile
-print("Step 4: Interpolating data to profile...")
 
 # Interpolate water content to profile
 water_content_profile = interpolator.interpolate_3d_data(water_content)
@@ -127,8 +124,10 @@ water_content_profile = interpolator.interpolate_3d_data(water_content)
 # Interpolate porosity to profile
 porosity_profile = interpolator.interpolate_3d_data(porosity)
 
+# %% [markdown]
+# ## Creating mesh
+
 # %%
-print("Step 5: Creating mesh...")
 
 # Load structure layers
 bot = np.load(os.path.join(data_dir, "bot.npy"))
@@ -161,8 +160,6 @@ mesh, geom = mesh_creator.create_from_layers(
 mesh.save(os.path.join(output_dir, "mesh.bms"))
 
 # %%
-
-
 # Visualize the result
 import matplotlib.pyplot as plt
 
@@ -188,9 +185,12 @@ plt.ylabel('Elevation')
 plt.tight_layout()
 plt.show()
 
+# %% [markdown]
+# ## Interpolating data to mesh
+
 # %%
 # Step 6: Interpolate data to mesh
-print("Step 6: Interpolating data to mesh...")
+
 
 ID1 = porosity_profile.copy()
 ID1[:mid_idx] = 0 #regolith
@@ -226,7 +226,7 @@ wc_mesh = interpolator.interpolate_to_mesh(
 )
 
 # %%
-len([0,0,0,0,3,3,3,3,3,3,3,3,2,2])
+ID1
 
 # %%
 import matplotlib.pyplot as plt
@@ -298,7 +298,7 @@ pg.show(mesh, saturation,
 
 # Layout adjustment
 plt.tight_layout(pad=3)
-plt.savefig(os.path.join(output_dir, "topography_and_properties.tiff"), dpi=300)
+
 
 
 # %%
@@ -306,21 +306,24 @@ print("Water Content min/max:", np.min(wc_mesh), np.max(wc_mesh))
 print("Saturation min/max:", np.min(saturation), np.max(saturation))
 
 
-# %%
-pg.show(mesh,markers=True)
+# %% [markdown]
+# ## Calculating saturation
 
 # %%
-print("Step 7: Calculating saturation...")
+
 
 # Ensure porosity is not zero to avoid division by zero
 porosity_safe = np.maximum(porosity_mesh, 0.01)
 saturation = np.clip(wc_mesh / porosity_safe, 0.0, 1.0)
 
 
+# %% [markdown]
+# ## Converting to resistivity
+
 # %%
 
 # Step 8: Convert to resistivity using petrophysical model
-print("Step 8: Converting to resistivity...")
+
 
 marker_labels = [0, 3, 2] # top. mid, bottom layers (example values)
 rho_sat = [100, 500, 2400] # Saturated resistivity for each layer (example values)
@@ -363,16 +366,16 @@ res_models[mask] = bot_res
 
 
 # %%
-wc_mesh[mask]
-
-# %%
 print(np.min(top_res), np.max(top_res))
 print(np.min(mid_res), np.max(mid_res))
 print(np.min(bot_res), np.max(bot_res))
 
+# %% [markdown]
+# ## Converting to P wave velocity
+
 # %%
 # Step 9: Convert to P wave velocity using petrophysical model
-print("Step9: Converting to P wave velocity ..")
+
 
 # Initialize velocity models
 hm_model = HertzMindlinModel(critical_porosity=0.4, coordination_number=6.0)
@@ -477,40 +480,11 @@ plt.tight_layout(pad=3)
 
 plt.savefig(os.path.join(output_dir, "res_vel.tiff"), dpi=300)
 
-# %%
-# Step 9: Create ERT survey design and modeling 
-print("Step 9: Creating ERT survey design...")
-xpos = np.linspace(15, 15+72 - 1, 72)
-ypos = np.interp(xpos, interpolator.L_profile, interpolator.surface_profile)
-
-
-print("Step 10: Performing forward modeling...")
-from watershed_geophysics.forward.ert_forward import ERTForwardModeling
-
-# Method 1: Using class method (one-step creation)
-synth_data, grid = ERTForwardModeling.create_synthetic_data(
-    xpos=xpos,
-    ypos=ypos,
-    mesh=mesh,
-    res_models=res_models,
-    noise_level=0.05,
-    absolute_error=0.0,
-    relative_error=0.05,
-    save_path=os.path.join(output_dir, "synthetic_data.dat"),
-    show_data=True
-)
-
-# %%
-Hydro_modular = 0
-
-# %%
-Hydro_modular.hydro_to_ert
-Hydro_modular.hydro_to_srt
+# %% [markdown]
+# ## ERT forward modeling simulation
 
 # %%
 
-# Method 2: Using step-by-step approach
-print("Step 9: Creating ERT survey design...")
 
 
 xpos = np.linspace(15,15+72 - 1,72)
@@ -520,7 +494,7 @@ pos = np.hstack((xpos.reshape(-1,1),ypos.reshape(-1,1)))
 schemeert = ert.createData(elecs=pos,schemeName='wa')
 
 # Step 10: Forward modeling to create synthetic ERT data
-print("Step 10: Performing forward modeling...")
+
 mesh.setCellMarkers(np.ones(mesh.cellCount())*2)
 grid = pg.meshtools.appendTriangleBoundary(mesh, marker=1,
                                           xbound=100, ybound=100)
@@ -539,38 +513,6 @@ ert_manager = ert.ERTManager(synth_data)
 synth_data['rhoa'] = dr
 synth_data['err'] = ert_manager.estimateError(synth_data, absoluteUError=0.0, relativeError=0.05)
 ert.showData(synth_data,  logscale=True)
-synth_data.save(os.path.join(output_dir, "synthetic_data.dat"))
-
-# %%
-################## Seismic data #####################
-print("Step 11: Creating seismic survey one step")
-
-# Step 11: Creating seismic survey design
-print("Step 11: Creating seismic survey design...")
-from watershed_geophysics.forward.srt_forward import SeismicForwardModeling
-
-# Using class method to create synthetic data in one step
-numberGeophones = 72
-sensor_x = np.linspace(15, 15 + 72 - 1, numberGeophones)
-
-datasrt, _ = SeismicForwardModeling.create_synthetic_data(
-    sensor_x=sensor_x, 
-    surface_points=surface,
-    mesh=mesh,
-    velocity_model=velocity_mesh,
-    slowness=False,
-    shot_distance=5,
-    noise_level=0.05,
-    noise_abs=0.00001,
-    save_path=os.path.join(output_dir, "synthetic_seismic_data.dat"),
-    verbose=True,
-    seed=1334
-)
-
-# Visualize the results
-fig, ax = plt.subplots(figsize=(8, 6))
-SeismicForwardModeling.draw_first_picks(datasrt, ax)
-plt.tight_layout()
 
 
 # %%
@@ -601,7 +543,7 @@ mgr = TravelTimeManager()
 datasrt = mgr.simulate(slowness=1.0 / velocity_mesh, scheme=scheme, mesh=mesh,
                     noiseLevel=0.05, noiseAbs=0.00001, seed=1334
                     ,verbose=True)
-datasrt.save(os.path.join(output_dir, "synthetic_seismic_data.dat"))
+
 
 # %%
 def drawFirstPicks(ax, data, tt=None, plotva=False, **kwargs):
@@ -732,26 +674,13 @@ ax4.spines['top'].set_visible(False)
 ax4.spines['right'].set_visible(False)
 
 plt.tight_layout()
-plt.savefig(os.path.join(output_dir, "ert_seismic.tiff"), dpi=300)
 
-
-# %%
-np.mean(np.array(synth_data['rhoa'][:600]))
-
-# %%
-synth_data
-
-# %%
-np.mean(inversion_result.final_model[inversion_result.coverage>-1.2])
-
-# %%
 
 
 # %%
-# Step 11: Run ERT inversion on synthetic data
+## Run ERT inversion on synthetic data
 
 ## using my code to the inversion
-print("Step 11: Running ERT inversion...")
 
 # Create ERT inversion object
 inversion = ERTInversion(
@@ -763,12 +692,6 @@ inversion = ERTInversion(
     lambda_rate= 1.0
 )
 inversion_result = inversion.run()
-
-# %%
-inversion_result.mesh
-
-# %%
-inversion_result.final_model.shape
 
 # %%
 ## Using Pygimili default to the inversion
@@ -802,12 +725,217 @@ plt.tight_layout()
 # The inversion results are almost same from this code and Pygimli default inversion.
 # the difference is that the chi2 value for stop inversion is not the same, we chose 1.5 while Pygimli is 1.0
 
+# %% [markdown]
+# # One step approach
+
+# %% [markdown]
+# ## ERT one step from HM to GM
+
 # %%
-# Step 12: Run SRT inversion on synthetic data
-print("Step 12: Running SRT inversion...")
+# Set up directories
+output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/hydro_to_ert_example"
+os.makedirs(output_dir, exist_ok=True)
 
+# Load your data
+data_dir = C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/"data/"
+idomain = np.loadtxt(os.path.join(data_dir, "id.txt"))
+top = np.loadtxt(os.path.join(data_dir, "top.txt"))
+porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
+water_content = np.load(os.path.join(data_dir, "Watercontent.npy"))[50]  # Time step 50
+
+# Set up profile
+point1 = [115, 70]  
+point2 = [95, 180]  
+
+interpolator = ProfileInterpolator(
+    point1=point1,
+    point2=point2,
+    surface_data=top,
+    origin_x=569156.0,
+    origin_y=4842444.0,
+    pixel_width=1.0,
+    pixel_height=-1.0,
+    num_points=400
+)
+
+# Create mesh structure
+bot = np.load(os.path.join(data_dir, "bot.npy"))
+layer_idx = [0, 4, 12]  # Example indices for top, middle, and bottom layers
+structure = interpolator.interpolate_layer_data([top] + bot.tolist())
+surface, line1, line2 = create_surface_lines(
+    L_profile=interpolator.L_profile,
+    structure=structure,
+    top_idx=layer_idx[0],
+    mid_idx=layer_idx[1],
+    bot_idx=layer_idx[2]
+)
+
+# Create mesh
+mesh_creator = MeshCreator(quality=32)
+mesh, geom = mesh_creator.create_from_layers(
+    surface=surface,
+    layers=[line1, line2],
+    bottom_depth=np.min(line2[:,1])-10
+)
+
+# Define layer markers
+marker_labels = [0, 3, 2]  # top, middle, bottom layers
+
+# Define resistivity parameters for each layer
+rho_parameters = {
+    'rho_sat': [100, 500, 2400],      # Saturated resistivity for each layer (Ohm-m)
+    'n': [2.2, 1.8, 2.5],             # Cementation exponent for each layer
+    'sigma_s': [1/500, 0, 0]          # Surface conductivity for each layer (S/m)
+}
+
+mesh_markers = np.array(mesh.cellMarkers())
+
+
+# Generate ERT response directly
+synth_data, res_model = hydro_to_ert(
+    water_content=water_content,
+    porosity=porosity,
+    mesh=mesh,
+    mesh_markers = mesh_markers,
+    profile_interpolator=interpolator,
+    layer_idx=layer_idx,
+    structure = structure,
+    marker_labels=marker_labels,
+    rho_parameters=rho_parameters,
+    electrode_spacing=1.0,
+    electrode_start=15,
+    num_electrodes=72,
+    scheme_name='wa',
+    noise_level=0.05,
+    abs_error=0.0,
+    rel_error=0.05,
+    save_path=os.path.join(output_dir, "synthetic_ert_data.dat"),
+    verbose=True,
+    seed=42,
+)
+
+ert.showData(synth_data,  logscale=True)
+
+# %% [markdown]
+# ## SRT one step from HM to GM
 
 # %%
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import pygimli as pg
 
+# Import PyHydroGeophysX modules
+from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surface_lines
+from PyHydroGeophysX.core.mesh_utils import MeshCreator
+from PyHydroGeophysX.Hydro_modular.hydro_to_srt import hydro_to_srt
 
+# 1. Set up output directory
+output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/srt_example"
+os.makedirs(output_dir, exist_ok=True)
 
+# Load your data
+data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
+idomain = np.loadtxt(os.path.join(data_dir, "id.txt"))
+top = np.loadtxt(os.path.join(data_dir, "top.txt"))
+porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
+water_content = np.load(os.path.join(data_dir, "Watercontent.npy"))[50]  # Time step 50
+
+# Set up profile
+point1 = [115, 70]  
+point2 = [95, 180]  
+
+interpolator = ProfileInterpolator(
+    point1=point1,
+    point2=point2,
+    surface_data=top,
+    origin_x=569156.0,
+    origin_y=4842444.0,
+    pixel_width=1.0,
+    pixel_height=-1.0,
+    num_points=400
+)
+
+# Create mesh structure
+bot = np.load(os.path.join(data_dir, "bot.npy"))
+layer_idx = [0, 4, 12]  # Example indices for top, middle, and bottom layers
+structure = interpolator.interpolate_layer_data([top] + bot.tolist())
+surface, line1, line2 = create_surface_lines(
+    L_profile=interpolator.L_profile,
+    structure=structure,
+    top_idx=layer_idx[0],
+    mid_idx=layer_idx[1],
+    bot_idx=layer_idx[2]
+)
+
+# Create mesh
+mesh_creator = MeshCreator(quality=32)
+mesh, geom = mesh_creator.create_from_layers(
+    surface=surface,
+    layers=[line1, line2],
+    bottom_depth=np.min(line2[:,1])-10
+)
+
+# Define layer markers
+marker_labels = [0, 3, 2]  # top, middle, bottom layers
+
+# Rock physics parameters for each layer
+vel_parameters = {
+    'top': {
+        'bulk_modulus': 30.0,         # GPa
+        'shear_modulus': 20.0,        # GPa
+        'mineral_density': 2650,      # kg/m³
+        'depth': 1.0                  # m
+    },
+    'mid': {
+        'bulk_modulus': 50.0,         # GPa
+        'shear_modulus': 35.0,        # GPa
+        'mineral_density': 2670,      # kg/m³
+        'aspect_ratio': 0.05          # Crack aspect ratio
+    },
+    'bot': {
+        'bulk_modulus': 55.0,         # GPa
+        'shear_modulus': 50.0,        # GPa
+        'mineral_density': 2680,      # kg/m³
+        'aspect_ratio': 0.03          # Crack aspect ratio
+    }
+}
+mesh_markers = np.array(mesh.cellMarkers())
+# 13. Now we call hydro_to_srt with the pre-processed mesh values
+synth_data, velocity_mesh = hydro_to_srt(
+    water_content=water_content,           # Use pre-interpolated mesh values
+    porosity=porosity,          # Use pre-interpolated mesh values
+    mesh=mesh,
+    profile_interpolator=interpolator,
+    layer_idx=layer_idx,
+    structure = structure,
+    marker_labels=marker_labels,
+    vel_parameters=vel_parameters,
+    sensor_spacing=1.0,              
+    sensor_start=15.0,               
+    num_sensors=72,                  
+    shot_distance=5,                 
+    noise_level=0.05,                
+    noise_abs=0.00001,               
+    save_path=os.path.join(output_dir, "synthetic_seismic_data.dat"),
+    mesh_markers=mesh_markers,       # Pass the mesh markers directly
+    verbose=True,
+    seed=1334                        
+)
+
+# 14. Visualize the results
+from PyHydroGeophysX.forward.srt_forward import SeismicForwardModeling
+
+# Create a figure
+fig, axes = plt.subplots(2, 1, figsize=(10, 10))
+
+# Plot velocity model
+pg.show(mesh, velocity_mesh, ax=axes[0], cMap='jet', 
+        cMin=500, cMax=5000, label='Velocity (m/s)',
+        xlabel="Distance (m)", ylabel="Elevation (m)")
+
+# Plot first-arrival travel times
+SeismicForwardModeling.draw_first_picks(axes[1], synth_data)
+axes[1].set_title('Synthetic First-Arrival Travel Times')
+
+plt.tight_layout()

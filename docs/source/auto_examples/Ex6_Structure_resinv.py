@@ -60,9 +60,9 @@ os.makedirs(output_dir, exist_ok=True)
 
 # %%
 # load seismic data
-ttData = tt.load("./results/workflow_example/synthetic_seismic_data.dat")
+ttData = tt.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/workflow_example/synthetic_seismic_data.dat")
 # load ERT data
-ertData = ert.load("./results/TL_measurements/appres/synthetic_data30.dat")
+ertData = ert.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/TL_measurements/appres/synthetic_data30.dat")
 
 # %%
 # ##  Using ERT data to create a mesh to take care of the boundary

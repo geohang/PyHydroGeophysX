@@ -71,24 +71,6 @@
    "name": "griddata"
   }
  ],
- "meshop.linear_interpolation": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "meshop",
-   "module_short": "meshop",
-   "name": "linear_interpolation"
-  }
- ],
- "meshop.nearest_neighbor_interpolation": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "meshop",
-   "module_short": "meshop",
-   "name": "nearest_neighbor_interpolation"
-  }
- ],
  "ndimage.binary_fill_holes": [
   {
    "is_class": false,
@@ -206,15 +188,6 @@
    "name": "min"
   }
  ],
- "np.save": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "save"
-  }
- ],
  "np.unique": [
   {
    "is_class": false,
@@ -312,24 +285,6 @@
    "module": "pygimli.meshtools",
    "module_short": "pygimli.meshtools",
    "name": "cellDataToNodeData"
-  }
- ],
- "pg.meshtools.createMesh": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "pygimli.meshtools",
-   "module_short": "pygimli.meshtools",
-   "name": "createMesh"
-  }
- ],
- "pg.meshtools.createParaMeshPLC": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "pygimli.meshtools",
-   "module_short": "pygimli.meshtools",
-   "name": "createParaMeshPLC"
   }
  ],
  "pg.physics.traveltime.TravelTimeManager": [

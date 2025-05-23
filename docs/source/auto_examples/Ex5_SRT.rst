@@ -35,7 +35,7 @@ SRT is valuable for determining subsurface structure and bedrock interface
 geometry, which provides important constraints for hydrogeophysical modeling
 and interpretation of ERT data.
 
-.. GENERATED FROM PYTHON SOURCE LINES 19-52
+.. GENERATED FROM PYTHON SOURCE LINES 19-49
 
 .. code-block:: Python
 
@@ -70,16 +70,17 @@ and interpretation of ERT data.
     from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
 
 
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 53-56
+.. GENERATED FROM PYTHON SOURCE LINES 50-53
 
 .. code-block:: Python
 
     output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/seismic_example"
     os.makedirs(output_dir, exist_ok=True)
 
+
+.. GENERATED FROM PYTHON SOURCE LINES 54-55
+
+## Long seismic profile
 
 .. GENERATED FROM PYTHON SOURCE LINES 57-101
 
@@ -198,21 +199,7 @@ and interpretation of ERT data.
     scheme.setSensors(pos)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 158-160
-
-.. code-block:: Python
-
-    sensors
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 161-163
-
-.. code-block:: Python
-
-    surface
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 164-171
+.. GENERATED FROM PYTHON SOURCE LINES 158-165
 
 .. code-block:: Python
 
@@ -224,11 +211,11 @@ and interpretation of ERT data.
                              facecolor='black', edgecolor='black')
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 172-173
+.. GENERATED FROM PYTHON SOURCE LINES 166-167
 
 Step 6: Interpolate data to mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 173-214
+.. GENERATED FROM PYTHON SOURCE LINES 167-208
 
 .. code-block:: Python
 
@@ -274,11 +261,11 @@ Step 6: Interpolate data to mesh
     saturation = np.clip(wc_mesh / porosity_safe, 0.0, 1.0)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 215-216
+.. GENERATED FROM PYTHON SOURCE LINES 209-210
 
 Step 9: Convert to P wave velocity using petrophysical model
 
-.. GENERATED FROM PYTHON SOURCE LINES 216-287
+.. GENERATED FROM PYTHON SOURCE LINES 210-281
 
 .. code-block:: Python
 
@@ -354,7 +341,7 @@ Step 9: Convert to P wave velocity using petrophysical model
     velocity_mesh[bot_mask] = Vp
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 288-294
+.. GENERATED FROM PYTHON SOURCE LINES 282-288
 
 .. code-block:: Python
 
@@ -365,7 +352,7 @@ Step 9: Convert to P wave velocity using petrophysical model
     datasrt.save(os.path.join(output_dir, "synthetic_seismic_data_long.dat"))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 295-371
+.. GENERATED FROM PYTHON SOURCE LINES 289-365
 
 .. code-block:: Python
 
@@ -446,7 +433,7 @@ Step 9: Convert to P wave velocity using petrophysical model
     drawFirstPicks(ax, datasrt)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 372-378
+.. GENERATED FROM PYTHON SOURCE LINES 366-372
 
 .. code-block:: Python
 
@@ -457,46 +444,16 @@ Step 9: Convert to P wave velocity using petrophysical model
               verbose=1, limits=[300., 8000.])
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 379-382
-
-.. code-block:: Python
-
-
-    pg.show(mesh_inv,TT.model.array(),coverage=TT.standardizedCoverage())
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 383-385
-
-.. code-block:: Python
-
-    pg.show(mesh_inv,TT.standardizedCoverage())
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 386-390
+.. GENERATED FROM PYTHON SOURCE LINES 373-377
 
 .. code-block:: Python
 
     cov = TT.standardizedCoverage()
-
-    cov.shape
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 391-394
-
-.. code-block:: Python
-
     pos = np.array(mesh_inv.cellCenters())
-    pos.shape
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 395-397
 
-.. code-block:: Python
-
-    pos
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 398-460
+.. GENERATED FROM PYTHON SOURCE LINES 378-440
 
 .. code-block:: Python
 
@@ -563,28 +520,7 @@ Step 9: Convert to P wave velocity using petrophysical model
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 461-477
-
-.. code-block:: Python
-
-    import meshop
-
-    geo = pg.meshtools.createParaMeshPLC(datasrt, quality=34, paraMaxCellSize=0.1,
-                                             paraBoundary=0.0,
-                                             boundary=0, paraDepth = 50)
-
-    meshall = pg.meshtools.createMesh(geo,quality=34,area=0.1)
-
-    out = meshop.linear_interpolation(TT.paraDomain, TT.model.array(), meshall)
-    out = out.array()
-    # out = meshop.nearest_neighbor_interpolation(TT.paraDomain, TT.model.array(), meshall)
-    # out = np.array(out)
-    Cvout= meshop.nearest_neighbor_interpolation(TT.paraDomain, filled_cov, meshall)
-
-    pg.show(meshall,out,cMap='jet',coverage=Cvout,label='velocity')
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 478-536
+.. GENERATED FROM PYTHON SOURCE LINES 441-499
 
 .. code-block:: Python
 
@@ -647,16 +583,7 @@ Step 9: Convert to P wave velocity using petrophysical model
         return x, y, triangles, z, dataIdx
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 537-541
-
-.. code-block:: Python
-
-    meshall.save(os.path.join(output_dir, 'velmesh'))
-    np.save(os.path.join(output_dir, 'Vinvmodel.npy'), out)
-    np.save(os.path.join(output_dir, 'Vsensmodel.npy'), Cvout)
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 542-545
+.. GENERATED FROM PYTHON SOURCE LINES 500-503
 
 .. code-block:: Python
 
@@ -664,7 +591,7 @@ Step 9: Convert to P wave velocity using petrophysical model
     z = pg.meshtools.cellDataToNodeData(mesh_inv,TT.model.array())
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 546-575
+.. GENERATED FROM PYTHON SOURCE LINES 504-533
 
 .. code-block:: Python
 
@@ -695,56 +622,18 @@ Step 9: Convert to P wave velocity using petrophysical model
 
     pg.viewer.mpl.drawSensors(ax1, datasrt.sensors(), diam=0.9,
                              facecolor='black', edgecolor='black')
-    fig.savefig(os.path.join(output_dir, 'seismic_velocity_long.tiff'), dpi=300, bbox_inches='tight')
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 579-582
 
-.. code-block:: Python
+.. GENERATED FROM PYTHON SOURCE LINES 534-535
 
-    x, y, triangles, _, dataIndex = createTriangles(meshall)
-    z = pg.meshtools.cellDataToNodeData(meshall,out)
+## Short seismic profiles
 
-
-.. GENERATED FROM PYTHON SOURCE LINES 583-612
+.. GENERATED FROM PYTHON SOURCE LINES 537-544
 
 .. code-block:: Python
 
-    params = {'legend.fontsize': 15,
-              #'figure.figsize': (15, 5),
-             'axes.labelsize': 15,
-             'axes.titlesize':16,
-             'xtick.labelsize':15,
-             'ytick.labelsize':15}
-    import matplotlib.pylab as pylab
-    pylab.rcParams.update(params)
-
-    plt.rcParams["font.family"] = "Arial"
-
-    from palettable.lightbartlein.diverging import BlueDarkRed18_18
-    fixed_cmap = BlueDarkRed18_18.mpl_colormap
-
-    fig = plt.figure(figsize=[8,9])
-    ax1 = fig.add_subplot(1,1,1)
-    pg.show(meshall,out,cMap=fixed_cmap,coverage = Cvout,ax = ax1,label='Velocity (m s$^{-1}$)',
-            xlabel="Distance (m)", ylabel="Elevation (m)",pad=0.3,cMin =500, cMax=5000
-           ,orientation="vertical")
-
-
-    ax1.tricontour(x, y, triangles, z, levels=[1200], linewidths=1.0, colors='k', linestyles='dashed')
-    ax1.tricontour(x, y, triangles, z, levels=[4200], linewidths=1.0, colors='k')
-
-
-    pg.viewer.mpl.drawSensors(ax1, datasrt.sensors(), diam=0.9,
-                             facecolor='black', edgecolor='black')
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 613-620
-
-.. code-block:: Python
-
-    ttData = tt.load("./results/workflow_example/synthetic_seismic_data.dat")
+    ttData = tt.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example/synthetic_seismic_data.dat")
     TT_short = pg.physics.traveltime.TravelTimeManager()
     mesh_inv1 = TT_short.createMesh(ttData , paraMaxCellSize=2, quality=32, paraDepth = 30.0)
     TT_short.invert(ttData , mesh = mesh_inv,lam=50,
@@ -752,26 +641,17 @@ Step 9: Convert to P wave velocity using petrophysical model
               verbose=1, limits=[300., 8000.])
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 624-630
+.. GENERATED FROM PYTHON SOURCE LINES 545-550
 
 .. code-block:: Python
 
     x1, y1, triangles1, _, dataIndex1 = createTriangles(mesh_inv1)
     z1 = pg.meshtools.cellDataToNodeData(mesh_inv1,np.array(TT_short.model))
-
-
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 631-634
-
-.. code-block:: Python
-
     pos = np.array(mesh_inv.cellCenters())
     filled_cov1 = fill_holes_2d(pos, TT_short.standardizedCoverage())
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 635-665
+.. GENERATED FROM PYTHON SOURCE LINES 551-577
 
 .. code-block:: Python
 
@@ -802,10 +682,6 @@ Step 9: Convert to P wave velocity using petrophysical model
 
     pg.viewer.mpl.drawSensors(ax1, ttData.sensors(), diam=0.8,
                              facecolor='black', edgecolor='black')
-    fig.savefig(os.path.join(output_dir, 'seismic_velocity_short.tiff'), dpi=300, bbox_inches='tight')
-
-
-
 
 .. _sphx_glr_download_auto_examples_Ex5_SRT.py:
 

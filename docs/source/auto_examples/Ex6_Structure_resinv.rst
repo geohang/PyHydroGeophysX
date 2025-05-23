@@ -94,9 +94,9 @@ load seismic data
 
 .. code-block:: Python
 
-    ttData = tt.load("./results/workflow_example/synthetic_seismic_data.dat")
+    ttData = tt.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/workflow_example/synthetic_seismic_data.dat")
     # load ERT data
-    ertData = ert.load("./results/TL_measurements/appres/synthetic_data30.dat")
+    ertData = ert.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/TL_measurements/appres/synthetic_data30.dat")
 
 
 .. GENERATED FROM PYTHON SOURCE LINES 68-69

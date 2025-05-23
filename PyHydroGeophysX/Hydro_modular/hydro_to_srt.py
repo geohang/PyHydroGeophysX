@@ -18,6 +18,8 @@ def hydro_to_srt(
     porosity: np.ndarray,
     mesh: pg.Mesh,
     profile_interpolator: ProfileInterpolator,
+    layer_idx: Union[int, List[int]],
+    structure: np.ndarray,
     marker_labels: List[int],
     vel_parameters: Dict[str, Any],
     sensor_spacing: float = 1.0,
@@ -77,17 +79,27 @@ def hydro_to_srt(
     # 1. If water_content is a 3D array (layer data), interpolate to mesh
     if water_content.ndim > 1 and water_content.shape[0] > 1:
         # Get structure from profile interpolator
-        structure = profile_interpolator.interpolate_layer_data([water_content])
-        
+       
+        # Step 4: Interpolate data to profile
+        # Initialize profile interpolator
+
+        # Interpolate water content to profile
+        water_content_profile = profile_interpolator.interpolate_3d_data(water_content)
+
+        # Interpolate porosity to profile
+        porosity_profile = profile_interpolator.interpolate_3d_data(porosity)
+
+
         # Set up layer IDs based on marker labels
-        ID_layers = np.zeros_like(structure[0])
-        ID_layers[:marker_labels[0]] = marker_labels[0]  # Top layer
-        ID_layers[marker_labels[0]:marker_labels[1]] = marker_labels[1]  # Middle layer
-        ID_layers[marker_labels[1]:] = marker_labels[2]  # Bottom layer
-        
+        ID_layers = porosity_profile.copy()
+        ID_layers[:layer_idx[1]] = marker_labels[0]  # Top layer
+        ID_layers[layer_idx[1]:layer_idx[2]] = marker_labels[1]  # Middle layer
+        ID_layers[layer_idx[2]:] = marker_labels[2]  # Bottom layer
+        print(ID_layers)
+
         # Interpolate water content to mesh
         wc_mesh = profile_interpolator.interpolate_to_mesh(
-            property_values=water_content,
+            property_values=water_content_profile,
             depth_values=structure,
             mesh_x=mesh_centers[:, 0],
             mesh_y=mesh_centers[:, 1],
@@ -98,7 +110,7 @@ def hydro_to_srt(
         
         # Interpolate porosity to mesh
         porosity_mesh = profile_interpolator.interpolate_to_mesh(
-            property_values=porosity,
+            property_values=porosity_profile,
             depth_values=structure,
             mesh_x=mesh_centers[:, 0],
             mesh_y=mesh_centers[:, 1],
@@ -194,12 +206,5 @@ def hydro_to_srt(
         seed=seed
     )
     
-    # Draw first picks if verbose is enabled
-    if verbose:
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(figsize=(8, 6))
-        SeismicForwardModeling.draw_first_picks(ax, synth_data)
-        plt.tight_layout()
-        plt.show()
     
     return synth_data, velocity_mesh

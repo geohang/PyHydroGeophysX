@@ -297,36 +297,36 @@ for i in range(len(Water_Content)):
 
 # %%
 # Create output directories if they don't exist
-os.makedirs(os.path.join(output_dir, "appres"), exist_ok=True)
+# os.makedirs(os.path.join(output_dir, "appres"), exist_ok=True)
 
 
-# Extract necessary data from interpolator to pass to workers
-interpolator_L_profile = interpolator.L_profile.copy()
-interpolator_surface_profile = interpolator.surface_profile.copy()
+# # Extract necessary data from interpolator to pass to workers
+# interpolator_L_profile = interpolator.L_profile.copy()
+# interpolator_surface_profile = interpolator.surface_profile.copy()
 
-# Process in parallel
-results = Parallel(n_jobs=2, verbose=10)(
-    delayed(process_timestep)(
-        i, 
-        output_dir, 
-        None,  # We'll reload the mesh from file instead of passing it
-        interpolator_L_profile,
-        interpolator_surface_profile
-    ) for i in range(Water_Content.shape[0])
-)
+# # Process in parallel
+# results = Parallel(n_jobs=2, verbose=10)(
+#     delayed(process_timestep)(
+#         i, 
+#         output_dir, 
+#         None,  # We'll reload the mesh from file instead of passing it
+#         interpolator_L_profile,
+#         interpolator_surface_profile
+#     ) for i in range(Water_Content.shape[0])
+# )
 
-# Check results
-success_count = sum(1 for _, success, _ in results if success)
-print(f"Successfully processed {success_count} out of {len(results)} timesteps")
+# # Check results
+# success_count = sum(1 for _, success, _ in results if success)
+# print(f"Successfully processed {success_count} out of {len(results)} timesteps")
 
-# Print any errors
-for i, success, error in results:
-    if not success:
-        print(f"Error in timestep {i}: {error}")
+# # Print any errors
+# for i, success, error in results:
+#     if not success:
+#         print(f"Error in timestep {i}: {error}")
 
 
 # %%
-### example to load and show the synthetic data
+# example to load and show the synthetic data
 syn_data = pg.load(os.path.join(output_dir, "appres/synthetic_data"+str(1)+".dat"))
 ert.show(syn_data)
 

@@ -18,7 +18,7 @@
 .. _sphx_glr_auto_examples_Ex1_model_output.py:
 
 
-Loading and Processing Hydrological Model Outputs
+Ex 1. Loading and Processing Hydrological Model Outputs
 ==================================================
 
 This example demonstrates how to load and process outputs from different 

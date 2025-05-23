@@ -116,15 +116,6 @@
    "name": "rcParams"
   }
  ],
- "plt.savefig": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "matplotlib.pyplot",
-   "module_short": "matplotlib.pyplot",
-   "name": "savefig"
-  }
- ],
  "plt.subplots_adjust": [
   {
    "is_class": false,

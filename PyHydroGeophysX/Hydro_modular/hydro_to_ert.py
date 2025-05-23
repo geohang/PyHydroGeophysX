@@ -17,6 +17,7 @@ def hydro_to_ert(
     porosity: np.ndarray,
     mesh: pg.Mesh,
     profile_interpolator: ProfileInterpolator,
+    layer_idx: Union[int, List[int]],
     structure: np.ndarray,
     marker_labels: List[int],
     rho_parameters: Dict[str, Any],
@@ -80,16 +81,26 @@ def hydro_to_ert(
     if water_content.ndim > 1 and water_content.shape[0] > 1:
         # Get structure from profile interpolator
        
-        
+        # Step 4: Interpolate data to profile
+        # Initialize profile interpolator
+
+        # Interpolate water content to profile
+        water_content_profile = profile_interpolator.interpolate_3d_data(water_content)
+
+        # Interpolate porosity to profile
+        porosity_profile = profile_interpolator.interpolate_3d_data(porosity)
+
+
         # Set up layer IDs based on marker labels
-        ID_layers = np.zeros_like(structure[0])
-        ID_layers[:marker_labels[0]] = marker_labels[0]  # Top layer
-        ID_layers[marker_labels[0]:marker_labels[1]] = marker_labels[1]  # Middle layer
-        ID_layers[marker_labels[1]:] = marker_labels[2]  # Bottom layer
-        
+        ID_layers = porosity_profile.copy()
+        ID_layers[:layer_idx[1]] = marker_labels[0]  # Top layer
+        ID_layers[layer_idx[1]:layer_idx[2]] = marker_labels[1]  # Middle layer
+        ID_layers[layer_idx[2]:] = marker_labels[2]  # Bottom layer
+        print(ID_layers)
+
         # Interpolate water content to mesh
         wc_mesh = profile_interpolator.interpolate_to_mesh(
-            property_values=water_content,
+            property_values=water_content_profile,
             depth_values=structure,
             mesh_x=mesh_centers[:, 0],
             mesh_y=mesh_centers[:, 1],
@@ -100,7 +111,7 @@ def hydro_to_ert(
         
         # Interpolate porosity to mesh
         porosity_mesh = profile_interpolator.interpolate_to_mesh(
-            property_values=porosity,
+            property_values=porosity_profile,
             depth_values=structure,
             mesh_x=mesh_centers[:, 0],
             mesh_y=mesh_centers[:, 1],
@@ -150,19 +161,25 @@ def hydro_to_ert(
                     profile_interpolator.L_profile, 
                     profile_interpolator.surface_profile)
     
+    mesh.setCellMarkers(np.ones(mesh.cellCount())*2)
+    grid = pg.meshtools.appendTriangleBoundary(mesh, marker=1,
+                                            xbound=100, ybound=100)
+    
+    pos = np.hstack((xpos.reshape(-1,1),ypos.reshape(-1,1)))
+    schemeert = ert.createData(elecs=pos,schemeName=scheme_name)
+    fwd_operator = ERTForwardModeling(mesh=grid, data=schemeert)
+
+
     # 5. Perform forward modeling to create synthetic ERT data
-    synth_data, _ = ERTForwardModeling.create_synthetic_data(
-        xpos=xpos,
-        ypos=ypos,
-        mesh=mesh,
-        res_models=res_model,
-        schemeName=scheme_name,
-        noise_level=noise_level,
-        absolute_error=abs_error,
-        relative_error=rel_error,
-        save_path=save_path,
-        show_data=verbose,
-        seed=seed
-    )
+    synth_data = schemeert.copy()
+    fob = ert.ERTModelling()
+    fob.setData(schemeert)
+    fob.setMesh(grid)
+    dr = fob.response(res_model)
+
+    dr *= 1. + pg.randn(dr.size()) * 0.05
+    ert_manager = ert.ERTManager(synth_data)
+    synth_data['rhoa'] = dr
+    synth_data['err'] = ert_manager.estimateError(synth_data, absoluteUError=0.0, relativeError=0.05)
     
     return synth_data, res_model
