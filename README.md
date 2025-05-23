@@ -30,6 +30,13 @@ pip install -r requirements.txt
 # Install the package
 pip install -e .# PyHydroGeophysX
 
+'''
+
+
+### 📦 Package Structure
+
+
+
 PyHydroGeophysX/
 ├── core/                    # Core utilities
 │   ├── interpolation.py    # Profile and mesh interpolation
