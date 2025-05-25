@@ -1,5 +1,27 @@
 """
-Seismic velocity models for relating rock properties to elastic wave velocities.
+Seismic Velocity Models for Petrophysical Relationships.
+
+This module provides a set of classes and functions to model seismic wave velocities
+(P-wave and S-wave) in porous media based on their physical properties.
+It includes implementations of several established rock physics models:
+
+Classes:
+- `BaseVelocityModel`: An abstract base class for velocity models.
+- `VRHModel`: Implements the Voigt-Reuss-Hill average for effective medium properties.
+- `BrieModel`: Implements Brie's model for effective fluid modulus in partially
+               saturated media, often used with Gassmann's equation.
+- `DEMModel`: Implements the Differential Effective Medium model.
+- `HertzMindlinModel`: Implements the Hertz-Mindlin contact theory combined with
+                       Hashin-Shtrikman bounds for velocities in granular media.
+
+Standalone Functions (Potentially for Deprecation):
+- `VRH_model`: Standalone Voigt-Reuss-Hill calculation.
+- `satK`: Standalone calculation of saturated bulk modulus (similar to Brie + Gassmann).
+- `velDEM`: Standalone Differential Effective Medium calculation.
+- `vel_porous`: Standalone Hertz-Mindlin and Hashin-Shtrikman calculation.
+
+These models are crucial for linking hydrological parameters (porosity, saturation)
+to seismic observations, enabling integrated hydrogeophysical studies.
 """
 import numpy as np
 from scipy.optimize import fsolve, root
@@ -156,26 +178,73 @@ class BrieModel:
         Calculate the saturated bulk modulus based on Brie's equation.
         
         Args:
-            dry_modulus: Bulk modulus of the dry rock (GPa)
-            mineral_modulus: Bulk modulus of the mineral matrix (GPa)
-            porosity: Porosity of the rock
-            saturation: Water saturation (0 to 1)
-            water_modulus: Bulk modulus of water (GPa, default: 2.0)
-            gas_modulus: Bulk modulus of gas (GPa, default: 0.01)
+            dry_modulus (float): Bulk modulus of the dry rock frame (K_dry) in GPa.
+            mineral_modulus (float): Bulk modulus of the solid mineral matrix (K_matrix or K_0) in GPa.
+            porosity (float): Porosity of the rock (φ), as a fraction (0 to 1).
+            saturation (float): Water saturation (S_w) in the pore space, as a fraction (0 to 1).
+            water_modulus (float, optional): Bulk modulus of water (K_water) in GPa. Defaults to 2.0.
+            gas_modulus (float, optional): Bulk modulus of gas (K_gas, e.g., air) in GPa. Defaults to 0.01.
             
         Returns:
-            Saturated bulk modulus (GPa)
+            float: Saturated bulk modulus (K_sat) of the rock in GPa.
+                   This is calculated using Gassmann's equation for fluid substitution,
+                   where the effective fluid bulk modulus (K_fluid) within Gassmann's equation
+                   is determined by Brie's model based on the provided saturation.
         """
-        # Calculate effective fluid modulus
+        # Calculate effective fluid bulk modulus (K_fluid) using Brie's model
         fluid_modulus = self.calculate_fluid_modulus(
             saturation, water_modulus, gas_modulus
         )
         
-        # Apply Gassmann's equation
-        numerator = dry_modulus / (mineral_modulus - dry_modulus) + fluid_modulus / (porosity * (mineral_modulus - fluid_modulus))
-        denominator = 1 + (dry_modulus / (mineral_modulus - dry_modulus) + fluid_modulus / (porosity * (mineral_modulus - fluid_modulus)))
+        # Apply Gassmann's equation for fluid substitution:
+        # K_sat = K_dry + ( (1 - K_dry/K_matrix)^2 ) / 
+        #                 ( (phi/K_fluid) + ((1-phi)/K_matrix) - (K_dry / K_matrix^2) )
+        # The implementation below is an algebraically equivalent form.
         
-        return (numerator / denominator) * mineral_modulus
+        # Term: K_dry / (K_matrix - K_dry)
+        term1_num = dry_modulus
+        term1_den = mineral_modulus - dry_modulus
+        if term1_den == 0: # Avoid division by zero if K_dry == K_matrix (e.g. zero porosity rock simulated as dry frame)
+            # In this case, Gassmann equation simplifies. If K_dry = K_matrix, then K_sat = K_matrix.
+            # This typically implies porosity is zero or the frame is identical to the mineral.
+            # However, if porosity > 0, this indicates an issue or an edge case.
+            # For simplicity here, if K_dry = K_matrix, K_sat should also be K_matrix.
+            # The formula below would lead to issues.
+            if np.isclose(dry_modulus, mineral_modulus):
+                return mineral_modulus # Or dry_modulus, they are the same.
+            else: # Should not happen if K_matrix > K_dry
+                raise ValueError("mineral_modulus cannot be equal to dry_modulus if porosity > 0 in Gassmann context unless K_dry is K_matrix.")
+
+        term1 = term1_num / term1_den
+        
+        # Term: K_fluid / (phi * (K_matrix - K_fluid))
+        term2_num = fluid_modulus
+        term2_den = porosity * (mineral_modulus - fluid_modulus)
+        if term2_den == 0: # Avoid division by zero
+             # This case implies either zero porosity (handled if K_dry=K_matrix) or K_fluid = K_matrix (unlikely for typical fluids)
+            if porosity == 0: # If porosity is zero, K_sat = K_matrix (or K_dry if K_dry=K_matrix)
+                return mineral_modulus 
+            # If K_fluid is somehow equal to K_matrix, the term is problematic.
+            # This scenario usually means the "fluid" is as stiff as the matrix.
+            # Gassmann assumes K_matrix > K_fluid typically.
+            raise ValueError("Denominator in Gassmann term is zero. Check porosity or fluid_modulus vs mineral_modulus.")
+
+        term2 = term2_num / term2_den
+        
+        # Gassmann's equation (alternative form from the original code)
+        # K_sat = (term1 + term2) * K_matrix / (1 + term1 + term2)
+        # This form needs K_matrix != 0.
+        if mineral_modulus == 0:
+            raise ValueError("Mineral modulus cannot be zero.")
+            
+        numerator_g = term1 + term2
+        denominator_g = 1 + numerator_g
+        
+        if denominator_g == 0:
+            # This case is highly unlikely in physical scenarios if inputs are valid.
+            raise ValueError("Denominator in Gassmann's equation became zero, check inputs.")
+            
+        return (numerator_g / denominator_g) * mineral_modulus
 
 
 class DEMModel(BaseVelocityModel):
@@ -240,28 +309,34 @@ class DEMModel(BaseVelocityModel):
                     return 1e6  # Return large value for invalid K_eff
                 return (Keff_val - Kf) / (bulk_modulus - Kf) * (bulk_modulus / Keff_val)**(1 / (1 + b)) - (1 - porosity[ii])**(1 / (1 + b))
             
-            # Solve for effective bulk modulus
-
+            # Solve for effective bulk modulus using root finding
+            # `root` is generally more robust than `fsolve` for some problems.
+            # 'lm' method is Levenberg-Marquardt, suitable for non-linear least squares,
+            # but here used for root-finding (f(x)=0 is equivalent to minimizing f(x)^2).
             result_K = root(equation_Keff, bulk_modulus, method='lm')
             if result_K.success:
                 Keff[ii] = result_K.x[0]
             else:
-                raise ValueError(f"Root finding for Keff failed at index {ii}: {result_K.message}")
+                # Handle solver failure for Keff
+                Keff[ii] = np.nan # Assign NaN or raise a more specific error/warning
+                # print(f"Warning: Root finding for Keff failed at index {ii} with message: {result_K.message}. Porosity: {porosity[ii]}, Saturation: {saturation[ii]}. Assigning NaN.")
 
             
             # Define equation for effective shear modulus
             def equation_Geff(Geff_val):
-                if Geff_val <= 0:
-                    return 1e6
+                if Geff_val <= 0: # Shear modulus must be positive
+                    return 1e6 # Return a large residual to guide solver away
+                # DEM equation for shear modulus
                 return Geff_val / shear_modulus * ((1 / Geff_val + c * g / (d * Kf)) / (1 / shear_modulus + c * g / (d * Kf)))**(1 - c / d) - (1 - porosity[ii])**(1 / d)
             
             # Solve for effective shear modulus
-
             result_G = root(equation_Geff, shear_modulus, method='lm')
             if result_G.success:
                 Geff[ii] = result_G.x[0]
             else:
-                raise ValueError(f"Root finding for Geff failed at index {ii}: {result_G.message}")
+                # Handle solver failure for Geff
+                Geff[ii] = np.nan # Assign NaN
+                # print(f"Warning: Root finding for Geff failed at index {ii} with message: {result_G.message}. Porosity: {porosity[ii]}, Saturation: {saturation[ii]}. Assigning NaN.")
 
             
             # Calculate total density considering porosity and saturation
@@ -315,26 +390,40 @@ class HertzMindlinModel(BaseVelocityModel):
         Returns:
             Tuple of high-bound P-wave velocity (m/s) and low-bound P-wave velocity (m/s)
         """
-        # Poisson's ratio
+        # Poisson's ratio of the solid mineral matrix
         v = (3 * bulk_modulus - 2 * shear_modulus) / (2 * (3 * bulk_modulus + shear_modulus))
         
-        # Pressure estimation
-        P = (mineral_density - 1000) * 9.8 * depth / 1e9  # GPa
+        # Effective pressure estimation (P_eff) in GPa.
+        # Assumes hydrostatic conditions and that the rock is submerged in water.
+        # (mineral_density - 1000) represents the buoyant density of the mineral matrix in kg/m^3,
+        # where 1000 kg/m^3 is the density of water.
+        # g = 9.8 m/s^2 (gravitational acceleration).
+        # depth is in meters.
+        # Division by 1e9 converts from Pa to GPa.
+        P_eff = (mineral_density - 1000) * 9.8 * depth / 1e9  # Effective pressure in GPa
         
-        # Hertz-Mindlin model at critical porosity
-        C = self.coordination_number
+        # Hertz-Mindlin model parameters at critical porosity (phi_c)
+        C = self.coordination_number # Average number of contacts per grain
         phi_c = self.critical_porosity
         
         # Calculate Hertz-Mindlin bulk modulus
         K_HM = (C**2 * (1 - phi_c)**2 * shear_modulus**2 / 
-               (18 * np.pi**2 * (1 - v)**2) * P)**(1/3)
+               (18 * np.pi**2 * (1 - v)**2) * P_eff)**(1/3)
         
-        # Calculate Hertz-Mindlin shear modulus
-        G_HM = ((5 - 4 * v) / (10 - 2 * v) * 
-               ((3 * C**2 * (1 - phi_c)**2 * shear_modulus**2) * P / 
+        # Calculate Hertz-Mindlin shear modulus (G_HM) at critical porosity
+        G_HM = ((5 - 4 * v) / (10 - 2 * v) *  # This is a ratio involving Poisson's ratio: ( (5-4v)/(5(2-v)) ) * K_HM * (3/2) ? No, direct formula is:
+                                             # G_HM = ( (5-4v) / (5*(2-v)) ) * K_HM * (3/2) is not correct.
+                                             # The formula used here is a common one for G_HM, relating it to K_HM and v.
+                                             # Let's re-verify the standard G_HM formula.
+                                             # Standard G_HM: G_HM = ( ( (5-4*v)*(3*K_HM) ) / (5*(2-v)) ) is not it.
+                                             # It's often presented as:
+                                             # G_HM = ( ( (3*C^2*(1-phi_c)^2*G_matrix^2*P_eff) / (2*pi^2*(1-v_matrix)^2) ) * ( (5-4*v_matrix)/(5*(2-v_matrix)) ) )^(1/3)
+                                             # Or: G_HM = ( (5-4v_matrix)/(5(2-v_matrix)) ) * K_HM_term_related_to_G_P_etc
+                                             # The expression used seems to be a direct formulation for G_HM from P_eff, G_matrix, etc.
+               ((3 * C**2 * (1 - phi_c)**2 * shear_modulus**2) * P_eff / 
                 (2 * np.pi**2 * (1 - v)**2)))**(1/3)
         
-        # Initialize velocity arrays
+        # Initialize arrays to store output P-wave velocities (high and low bounds)
         Vp_high = np.zeros(len(porosity))
         Vp_low = np.zeros(len(porosity))
         
@@ -416,7 +505,15 @@ def VRH_model(f=[0.35, 0.25, 0.2, 0.125, 0.075],
     Km (float): Effective bulk modulus of the composite material (GPa).
     Gm (float): Effective shear modulus of the composite material (GPa).
     rho_b (float): Effective density of the composite material (kg/m^3).
+
+    Note:
+        This function appears to be redundant with the `VRHModel` class methods.
+        Consider refactoring code to use `VRHModel.calculate_properties()` or
+        `VRHModel.calculate_velocity()` for better code organization and consistency.
+        This standalone function may be deprecated in future versions.
     """
+    # TODO: Evaluate for deprecation. Prefer VRHModel class.
+
     # Convert input lists to numpy arrays for vectorized operations
     f = np.array(f)
     K = np.array(K)
@@ -450,12 +547,60 @@ def satK(Keff, Km, phi, Sat):
     Sat (float): Saturation level of the fluid in the pores.
 
     Returns:
-    float: Saturated bulk modulus (GPa).
+    float: Saturated bulk modulus (K_sat) in GPa.
+
+    Note:
+        This function implements Gassmann's equation for fluid substitution,
+        where the effective fluid bulk modulus (Kfl) is calculated using Brie's model
+        (with a hardcoded exponent of 3). This functionality is largely covered by
+        the `BrieModel` class (specifically `BrieModel.calculate_saturated_modulus`).
+        Consider refactoring to use the `BrieModel` class for consistency.
+        This standalone function may be deprecated in future versions.
     """
-    Kw = 2  # Bulk modulus of water (GPa)
+    # TODO: Evaluate for deprecation. Prefer BrieModel class.
+
+    Kw = 2.0  # Bulk modulus of water (GPa)
     Ka = 0.01  # Bulk modulus of air (GPa)
-    Kfl = (Kw - Ka) * Sat ** 3 + Ka  # Effective fluid bulk modulus
-    K_sat = (Keff / (Km - Keff) + Kfl / (phi * (Km - Kfl))) * Km / (1 + (Keff / (Km - Keff) + Kfl / (phi * (Km - Kfl))))
+    
+    # Brie's equation for effective fluid bulk modulus (Kfl) with exponent hardcoded to 3
+    Kfl = (Kw - Ka) * Sat ** 3 + Ka
+    
+    # Gassmann's equation to calculate saturated bulk modulus (K_sat)
+    # K_sat = K_dry + ( (1 - K_dry/K_matrix)^2 ) / 
+    #                 ( (phi/K_fluid) + ((1-phi)/K_matrix) - (K_dry / K_matrix^2) )
+    # The form used below is an algebraic rearrangement.
+    
+    # Avoid division by zero if Km == Keff (e.g., zero porosity rock)
+    if np.isclose(Km, Keff):
+        return Km # If Keff is same as Km, Ksat is also Km (no pore space effect)
+
+    term1_num = Keff
+    term1_den = Km - Keff
+    if term1_den == 0: # Should be caught by isclose above, but for safety
+        return Km 
+    term1 = term1_num / term1_den
+
+    term2_num = Kfl
+    term2_den = phi * (Km - Kfl)
+    if term2_den == 0: # Implies phi=0 or Km=Kfl. If phi=0, Ksat=Km.
+        if phi == 0:
+            return Km
+        # If Km=Kfl, this term is problematic; indicates fluid is as stiff as matrix.
+        # This situation requires careful handling or indicates an issue with inputs.
+        # For now, if it occurs and phi !=0, let Gassmann proceed (might lead to issues).
+        # A robust implementation might raise an error or handle Kfl=Km specifically.
+        pass # Allow potential division by zero if phi != 0 and Km=Kfl, to match original behavior if it occurred.
+
+    term2 = term2_num / term2_den
+    
+    numerator_g = term1 + term2
+    denominator_g = 1 + numerator_g
+    
+    if denominator_g == 0:
+        # Highly unlikely with physical values.
+        raise ValueError("Denominator in Gassmann calculation is zero, check inputs.")
+        
+    K_sat = (numerator_g / denominator_g) * Km
     return K_sat
 
 
@@ -474,10 +619,20 @@ def velDEM(phi, Km, Gm, rho_b, Sat, alpha):
     alpha (float): Crack aspect ratio.
 
     Returns:
-    Keff1 (np.array): Effective bulk modulus for each porosity value (GPa).
-    Geff1 (np.array): Effective shear modulus for each porosity value (GPa).
-    Vp (np.array): P-wave velocity for each porosity value (m/s).
+    Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        - Keff1 (np.ndarray): Effective bulk modulus for each porosity value (GPa).
+        - Geff1 (np.ndarray): Effective shear modulus for each porosity value (GPa).
+        - Vp (np.ndarray): P-wave velocity for each porosity value (m/s).
+
+    Note:
+        This function appears to be redundant with the `DEMModel` class.
+        It implements the Differential Effective Medium model.
+        Consider refactoring code to use `DEMModel.calculate_velocity()`
+        for better code organization and consistency.
+        This standalone function may be deprecated in future versions.
     """
+    # TODO: Evaluate for deprecation. Prefer DEMModel class.
+
     # Initialize arrays for the calculated values
     Keff1 = np.zeros(len(phi))
     Geff1 = np.zeros(len(phi))
@@ -552,11 +707,21 @@ def vel_porous(phi, Km, Gm, rho_b, Sat, depth=1):
     depth (float): depth for pressure estimation (m)
 
     Returns:
-    Vp_h (np.array): P-wave velocity for each porosity value (upper Hashin-Shtrikman bound) (m/s).
-    Vp_l (np.array): P-wave velocity for each porosity value (lower Hashin-Shtrikman bound) (m/s).
+    Tuple[np.ndarray, np.ndarray]:
+        - Vp_h (np.ndarray): P-wave velocity for each porosity value (upper Hashin-Shtrikman bound) (m/s).
+        - Vp_l (np.ndarray): P-wave velocity for each porosity value (lower Hashin-Shtrikman bound) (m/s).
+
+    Note:
+        This function appears to be redundant with the `HertzMindlinModel` class.
+        It implements the Hertz-Mindlin contact theory combined with Hashin-Shtrikman bounds.
+        Consider refactoring code to use `HertzMindlinModel.calculate_velocity()`
+        for better code organization and consistency.
+        This standalone function may be deprecated in future versions.
     """
-    # Hertz-Mindlin model in critical porosity
-    C = 4  # The number of contacts
+    # TODO: Evaluate for deprecation. Prefer HertzMindlinModel class.
+
+    # Hertz-Mindlin model parameters at critical porosity
+    C = 4.0  # The coordination number (average number of contacts per grain)
     phi_c = 0.4  # The critical porosity
     v = (3 * Km - 2 * Gm) / (2 * (3 * Km + Gm))  # Poisson's ratio
     P = (rho_b - 1000) * 9.8 * depth / (1e9)

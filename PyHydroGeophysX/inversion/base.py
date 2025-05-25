@@ -189,8 +189,19 @@ class TimeLapseInversionResult(InversionResult):
         model_slice = self.final_models[:, timestep_idx]
         
         if coverage_threshold is not None and len(self.all_coverage) > 0:
-            # Create masked array for plotting
-            coverage = self.all_coverage[timestep_idx] if len(self.all_coverage) > timestep_idx else self.all_coverage[0]
+            # Create masked array for plotting.
+            # Fallback logic for coverage: If coverage for the specific timestep_idx is not available
+            # (e.g., if all_coverage wasn't populated for all steps or is shorter than expected),
+            # it uses the coverage from the first available timestep (self.all_coverage[0]).
+            # This ensures that a coverage mask can still be applied, albeit potentially from a different timestep.
+            # A more robust approach might involve checking if timestep_idx is within bounds of self.all_coverage.
+            if timestep_idx < len(self.all_coverage):
+                coverage = self.all_coverage[timestep_idx]
+            else:
+                coverage = self.all_coverage[0] # Fallback to the first timestep's coverage
+                # Consider adding a warning if this fallback is used:
+                # print(f"Warning: Coverage for timestep {timestep_idx} not found. Using coverage from first timestep.")
+            
             mask = coverage < coverage_threshold
             model_slice = np.ma.array(model_slice, mask=mask)
         

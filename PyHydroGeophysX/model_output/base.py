@@ -63,28 +63,53 @@ class HydroModelOutput(ABC):
         Calculate saturation from water content and porosity.
         
         Args:
-            water_content: Water content array
-            porosity: Porosity value(s)
+            water_content (np.ndarray): Array of water content values. Can be N-dimensional,
+                                        where the first dimension is typically time if multiple
+                                        timesteps are present.
+            porosity (Union[float, np.ndarray]): Porosity value(s). Can be a scalar float
+                                                 or a NumPy array. If an array, its dimensions
+                                                 should be compatible with `water_content`.
+                                                 A common case is for `porosity` to be spatial
+                                                 (e.g., (nz, ny, nx)) while `water_content` might be
+                                                 spatio-temporal (e.g., (nt, nz, ny, nx)).
             
         Returns:
-            Saturation array
+            np.ndarray: Saturation array, with values clipped between 0.0 and 1.0.
+
+        Raises:
+            ValueError: If `porosity` is an array and its dimensions are not compatible
+                        with `water_content` dimensions for broadcasting.
+                        Specifically, if `porosity.ndim == water_content.ndim - 1`,
+                        it's assumed that `porosity` is spatial (e.g., for a 3D grid) and
+                        `water_content` includes a time dimension as the first axis.
+                        The porosity array is then repeated (broadcast) across the time dimension.
+                        Other dimension mismatches will raise an error.
         """
-        # Handle scalar porosity
+        # Handle scalar porosity: directly divide.
         if isinstance(porosity, (int, float)):
             saturation = water_content / porosity
         else:
             # Make sure porosity has compatible dimensions
             if porosity.ndim != water_content.ndim:
                 if porosity.ndim == water_content.ndim - 1:
-                    # Expand porosity for multiple timesteps
-                    porosity = np.repeat(
-                        porosity[np.newaxis, ...], 
-                        water_content.shape[0], 
-                        axis=0
+                    # Assumed case: water_content is (time, z, y, x) and porosity is (z, y, x).
+                    # Expand porosity to (1, z, y, x) and then repeat along the time axis (axis=0)
+                    # to match water_content's shape for element-wise division.
+                    porosity_expanded = np.repeat(
+                        porosity[np.newaxis, ...],  # Add a new axis at the beginning: (1, z, y, x)
+                        water_content.shape[0],     # Number of timesteps from water_content
+                        axis=0                      # Repeat along the new time axis
                     )
+                    porosity = porosity_expanded # Use the expanded porosity
                 else:
-                    raise ValueError("Porosity dimensions not compatible with water content")
+                    raise ValueError(
+                        f"Porosity dimensions (shape: {porosity.shape}) are not directly compatible "
+                        f"with water content dimensions (shape: {water_content.shape}), "
+                        "and the case for porosity.ndim == water_content.ndim - 1 (spatial porosity for temporal water content) "
+                        "also does not match."
+                    )
             
+            # Element-wise division for saturation
             saturation = water_content / porosity
         
         # Ensure saturation is between 0 and 1

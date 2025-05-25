@@ -1,5 +1,16 @@
 """
-Mesh utilities for geophysical modeling and inversion.
+Mesh Utilities for Geophysical Modeling and Inversion.
+
+This module provides a collection of utility functions and a class for creating,
+manipulating, and preparing meshes, primarily for use with the PyGIMLi library.
+It includes functionalities such as:
+- Creating meshes from defined geological layer boundaries.
+- Extracting velocity interfaces from geophysical data on a mesh.
+- Adding velocity interfaces to existing mesh geometries for structured inversion.
+- A `MeshCreator` class that encapsulates some of these mesh creation processes.
+
+The module leverages PyGIMLi for mesh data structures and meshing algorithms,
+and SciPy for interpolation and signal processing tasks.
 """
 import numpy as np
 import pygimli as pg
@@ -15,26 +26,50 @@ def create_mesh_from_layers(surface: np.ndarray,
                           quality: float = 28,
                           area: float = 40) -> Tuple[pg.Mesh, np.ndarray, np.ndarray]:
     """
-    Create mesh from layer boundaries and get cell centers and markers.
+    Create a 2D mesh from three defined layer boundaries (surface, line1, line2)
+    and a specified bottom depth. It also returns cell centers and markers.
     
+    The function defines three main regions based on these boundaries:
+    1. From `surface` down to `line1`.
+    2. From `line1` down to `line2`.
+    3. From `line2` down to the `bottom_depth`.
+
     Args:
-        surface: Surface coordinates [[x,z],...] 
-        line1: First layer boundary coordinates 
-        line2: Second layer boundary coordinates 
-        bottom_depth: Depth below surface minimum for mesh bottom
-        quality: Mesh quality parameter
-        area: Maximum cell area
+        surface (np.ndarray): Coordinates of the top surface, as an array of [x, z] pairs.
+                              Example: `[[x1,z1], [x2,z2], ..., [xn,zn]]`.
+        line1 (np.ndarray): Coordinates of the first subsurface layer boundary, as [x, z] pairs.
+        line2 (np.ndarray): Coordinates of the second subsurface layer boundary, as [x, z] pairs.
+        bottom_depth (float, optional): Absolute elevation of the bottom of the mesh. 
+                                      The current implementation uses this value directly as the
+                                      Z-coordinate for the mesh bottom. For instance, if surface elevations
+                                      are around 100m and `bottom_depth` is 30.0, the mesh bottom will be at Z=30.0.
+                                      A previous commented line `min_surface_elev - bottom_depth` suggested
+                                      it might have been intended as a depth relative to the minimum surface
+                                      elevation, but this is not the current behavior. Defaults to 30.0.
+        quality (float, optional): Mesh quality parameter for `mt.createMesh`. Higher values generally
+                                 result in better quality meshes but may take longer to generate. 
+                                 Defaults to 28.
+        area (float, optional): Maximum cell area constraint for `mt.createMesh`. Defaults to 40.
         
     Returns:
-        mesh: PyGIMLI mesh
-        mesh_centers: Array of cell center coordinates
-        markers: Array of cell markers
+        Tuple[pg.Mesh, np.ndarray, np.ndarray, pg.meshtools.Geometry]:
+            - mesh (pg.Mesh): The generated PyGIMLi mesh.
+            - mesh_centers (np.ndarray): Array of cell center coordinates (x, z) for each cell in the mesh.
+            - markers (np.ndarray): Array of integer markers assigned to each cell in the mesh.
+                                    The markers are hardcoded during polygon creation:
+                                    - Layer 1 (surface to line1): marker 2 (from `layer1` and `Gline2` contributions)
+                                    - Layer 2 (line1 to line2): marker 3 (from `Gline1`)
+                                    - Layer 3 (line2 to bottom): marker 2 (from `layer2`)
+                                    This assignment strategy might need review for consistency if specific
+                                    marker values are critical for subsequent modeling steps.
+            - geom (pg.meshtools.Geometry): The combined geometry object used to create the mesh.
     """
-    # Calculate bottom elevation from normalized surface
-    min_surface_elev = np.nanmin(surface[:,1])
-    bottom_elev = bottom_depth #min_surface_elev - bottom_depth
+    # `bottom_elev` is set to `bottom_depth`. This means `bottom_depth` is treated as an absolute Z-coordinate.
+    # The commented-out part `min_surface_elev - bottom_depth` would imply `bottom_depth` is a relative depth.
+    # min_surface_elev = np.nanmin(surface[:,1]) # This line is not used for bottom_elev calculation currently.
+    bottom_elev = bottom_depth 
     
-    # Create reversed lines for polygon creation
+    # Create reversed versions of line1 and line2 for constructing closed polygons
     line1r = line1.copy()
     line1r[:,0] = np.flip(line1[:,0])
     line1r[:,1] = np.flip(line1[:,1])
@@ -43,46 +78,59 @@ def create_mesh_from_layers(surface: np.ndarray,
     line2r[:,0] = np.flip(line2[:,0])
     line2r[:,1] = np.flip(line2[:,1])
     
-    # Create surface layer
-    layer1 = mt.createPolygon(surface,
-                             isClosed=False, 
-                             marker=2, 
-                             boundaryMarker=-1,
-                             interpolate='linear', 
-                             area=0.1)
+    # Create polygons for each layer. Markers are hardcoded here.
+    # Polygon for the top layer (surface down to line1).
+    # Note: The way these polygons are constructed seems to define regions rather than just layers.
+    # `layer1` seems to define the region above `line1`, but its interaction with Gline2 is complex.
+    # The marker assignment (e.g. marker=2 for layer1) should be carefully considered for its final effect on cell markers.
+
+    # The "surface layer" polygon is defined by the surface line.
+    # It's not closed, suggesting it's part of a larger geometry definition.
+    # Area=0.1 is a meshing parameter for this specific polygon.
+    layer1_poly = mt.createPolygon(surface,
+                                   isClosed=False, 
+                                   marker=2, # Hardcoded marker for this part of the geometry
+                                   boundaryMarker=-1,
+                                   interpolate='linear', 
+                                   area=0.1) # Area constraint for meshing this polygon
     
-    # Create middle layer
-    Gline1 = mt.createPolygon(np.vstack((line1, line2r)),
-                             isClosed=True, 
-                             marker=3, 
-                             boundaryMarker=1,
-                             interpolate='linear', 
-                             area=1)
+    # Polygon for the "middle layer" (between line1 and line2).
+    # This forms a closed polygon by combining line1 and the reversed line2 (line2r).
+    middle_layer_poly = mt.createPolygon(np.vstack((line1, line2r)),
+                                         isClosed=True, 
+                                         marker=3, # Hardcoded marker for this layer
+                                         boundaryMarker=1,
+                                         interpolate='linear', 
+                                         area=1) # Area constraint
     
-    # Create bottom boundary
-    Gline2 = mt.createPolygon([[surface[0,0], surface[0,1]],
-                              [line2[0,0], bottom_elev],
-                              [line2[-1,0], bottom_elev],
-                              [surface[-1,0], surface[-1,1]]],
-                             isClosed=False, 
-                             marker=2, 
-                             boundaryMarker=1,
-                             interpolate='linear', 
-                             area=2)
+    # `Gline2` seems to define the overall extent or a background region.
+    # It connects the start of the surface, goes down to `bottom_elev` at the x-range of `line2`,
+    # then across at `bottom_elev`, and back up to the end of the surface.
+    # This is also marked with marker=2.
+    outer_boundary_poly = mt.createPolygon([[surface[0,0], surface[0,1]], # Start of surface
+                                           [line2[0,0], bottom_elev],    # Bottom-left based on line2's x-start
+                                           [line2[-1,0], bottom_elev],   # Bottom-right based on line2's x-end
+                                           [surface[-1,0], surface[-1,1]]], # End of surface
+                                          isClosed=False, # Should this be closed to form the overall domain?
+                                          marker=2, # Hardcoded marker
+                                          boundaryMarker=1,
+                                          interpolate='linear', 
+                                          area=2) # Area constraint
     
-    # Create bottom layer
-    layer2 = mt.createPolygon(np.vstack((line2r,
-                                        [[line2[0,0], line2[0,1]],
-                                         [line2[0,0], bottom_elev],
-                                         [line2[-1,0], bottom_elev],
-                                         [line2[-1,0], line2[-1,1]]])),
-                             isClosed=True, 
-                             marker=2, 
-                             area=2, 
-                             boundaryMarker=1)
+    # Polygon for the "bottom layer" (from line2r down to `bottom_elev`).
+    # This forms a closed region using the reversed line2, and lines extending down to `bottom_elev`.
+    bottom_layer_poly = mt.createPolygon(np.vstack((line2r,
+                                                    [[line2[0,0], line2[0,1]], # Point from original line2 start
+                                                     [line2[0,0], bottom_elev], # Down from line2 start
+                                                     [line2[-1,0], bottom_elev], # Across at bottom_elev
+                                                     [line2[-1,0], line2[-1,1]]])), # Point from original line2 end (connects back to line2r start)
+                                         isClosed=True, 
+                                         marker=2, # Hardcoded marker for this layer
+                                         area=2,   # Area constraint
+                                         boundaryMarker=1)
     
-    # Combine all geometries
-    geom = layer1 + layer2 + Gline1 + Gline2
+    # Combine all geometric parts. The order might matter for how markers are assigned in overlapping regions.
+    geom = layer1_poly + bottom_layer_poly + middle_layer_poly + outer_boundary_poly
     
     # Create mesh
     mesh = mt.createMesh(geom, quality=quality, area=area)
@@ -101,19 +149,31 @@ def create_mesh_from_layers(surface: np.ndarray,
 
 def extract_velocity_interface(mesh, velocity_data, threshold=1200, interval=4.0):
     """
-    Extract the interface where velocity equals the threshold value.
+    Extract an interface (e.g., bedrock) from velocity data on a mesh, defined by a threshold.
+    
+    The function bins cells by their x-coordinates, then for each bin, it searches vertically
+    for where the `velocity_data` crosses a given `threshold`. Linear interpolation is used
+    to find the precise depth of this crossing. The resulting interface points are then
+    optionally smoothed using cubic interpolation and a Savitzky-Golay filter.
     
     Args:
-        mesh: The PyGIMLi mesh
-        velocity_data: The velocity values
-        threshold: The velocity value defining the interface (default: 1200)
-        interval: Spacing between x-coordinate points (default: 4.0)
+        mesh (pg.Mesh): The PyGIMLi mesh object containing the cell structure.
+        velocity_data (np.ndarray): Array of velocity values, one per cell in `mesh`.
+        threshold (float, optional): The velocity value that defines the interface. 
+                                   Defaults to 1200.
+        interval (float, optional): Spacing (width) of the x-coordinate bins used to 
+                                  search for the interface. Defaults to 4.0.
         
     Returns:
-        x_dense, z_dense: Arrays with x and z coordinates of the smooth interface
+        Tuple[np.ndarray, np.ndarray]:
+            - x_dense (np.ndarray): Array of x-coordinates for the smoothed interface.
+            - z_dense (np.ndarray): Array of z-coordinates (depths) for the smoothed interface.
+                                    Note: The Savitzky-Golay filter parameters (`window_length=31`, 
+                                    `polyorder=3`) are empirically chosen and might need tuning 
+                                    for different datasets to achieve optimal smoothing.
     """
-    # Get cell centers
-    cell_centers = mesh.cellCenters()
+    # Get cell center coordinates
+    cell_centers = mesh.cellCenters() # Returns array of [x, z] for each cell
     x_coords = cell_centers[:,0]
     z_coords = cell_centers[:,1]
     
@@ -209,23 +269,46 @@ def extract_velocity_interface(mesh, velocity_data, threshold=1200, interval=4.0
 
 def add_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2, boundary=1):
     """
-    Add a velocity interface line to the geometry and create a mesh with different markers:
-    - Outside survey area: marker = 1
-    - Inside survey area, above velocity line: marker = 2
-    - Inside survey area, below velocity line: marker = 3
+    Add a velocity interface line to a mesh geometry derived from ERT data,
+    and assign cell markers based on cell position relative to this interface
+    and the survey area.
+
+    The function performs the following steps:
+    1. Creates an initial mesh geometry based on ERT sensor positions (`ertData`).
+    2. Defines the velocity interface as a polygon line using `smooth_x` and `smooth_z`.
+    3. Extends this interface line slightly beyond the survey data range.
+    4. Adds the interface line to the initial geometry.
+    5. Creates a new mesh (`meshafter`) from this combined geometry.
+    6. Assigns markers to cells in `meshafter`:
+        - Marker 1: Cells outside the defined survey area (laterally).
+        - Marker 2: Cells inside the survey area and determined to be *below* the velocity interface.
+        - Marker 3: Cells inside the survey area and determined to be *above* the velocity interface.
+    The determination of "above" or "below" assumes a coordinate system where Z values (depths)
+    are typically negative, or at least that smaller absolute Z values are shallower.
+    The condition `abs(cell_y) < abs(interface_y)` means the cell center is shallower (less deep)
+    than the interface at that x-location, thus it's marked as "above" (marker 3).
+    Conversely, if `abs(cell_y) >= abs(interface_y)`, it's deeper or at the interface, marked as "below" (marker 2).
+    It's assumed that the Z-axis points upwards (depths are negative or smaller values are shallower).
     
     Args:
-        ertData: ERT data with sensor positions
-        smooth_x, smooth_z: Arrays with x and z coordinates of the velocity interface
-        paraBoundary: Parameter boundary size (default: 2)
-        boundary: Boundary marker (default: 1)
+        ertData (pg.DataContainer): ERT data container, used to get sensor positions for defining
+                                   the initial mesh and survey area. It's assumed that
+                                   `ertData.sensors()` are sorted by x-coordinate.
+        smooth_x (np.ndarray): Array of x-coordinates for the velocity interface line.
+        smooth_z (np.ndarray): Array of z-coordinates (depths) for the velocity interface line.
+        paraBoundary (float, optional): Size of the parameter boundary used in `mt.createParaMeshPLC`
+                                      and for extending the interface line. Defaults to 2.
+        boundary (int, optional): This parameter is currently unused in the function body.
+                                   Original intent might have been for boundary conditions in mesh creation.
         
     Returns:
-        markers: Array with cell markers
-        meshafter: The created mesh with updated markers
+        Tuple[np.ndarray, pg.Mesh]:
+            - markers (np.ndarray): Array of cell markers assigned to the final mesh `meshafter`.
+            - meshafter (pg.Mesh): The created PyGIMLi mesh with updated cell markers reflecting
+                                   the regions defined by the velocity interface and survey area.
     """
-    # Create the initial parameter mesh
-    geo = mt.createParaMeshPLC(ertData, quality=32, paraMaxCellSize=30,
+    # Create the initial parameter mesh geometry based on ERT sensor locations
+    geo = mt.createParaMeshPLC(ertData, quality=32, paraMaxCellSize=30, # quality and cell size for primary mesh
                                paraBoundary=paraBoundary, paraDepth=30.0,
                                boundaryMaxCellSize=500)
     
@@ -261,19 +344,26 @@ def add_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2, boundary
         cell_x = meshafter.cell(i).center().x()
         cell_y = meshafter.cell(i).center().y()
         
-        # Only modify markers within the survey area
+        # Only modify markers for cells considered within the lateral extent of the survey area.
         if cell_x >= survey_left and cell_x <= survey_right:
-            # Interpolate the interface height at this x position
-            interface_y = np.interp(cell_x, input_points[:, 0], input_points[:, 1])
+            # Interpolate the z-coordinate (depth/elevation) of the velocity interface 
+            # at the current cell's x-center.
+            interface_y_at_cell_x = np.interp(cell_x, input_points[:, 0], input_points[:, 1])
             
-            # Set marker based on position relative to interface
-            if abs(cell_y) < abs(interface_y):
-                markers[i] = 2  # Below interface
+            # Assign markers based on cell center position relative to the interface.
+            # Assumes Z-axis points upwards (depths are negative, or smaller Z values are shallower).
+            # `abs(cell_y) < abs(interface_y)`: True if cell_y is shallower than interface_y.
+            # E.g., cell_y = -5, interface_y = -10. abs(-5) < abs(-10) is 5 < 10, so cell is above.
+            # E.g., cell_y = -10, interface_y = -5. abs(-10) < abs(-5) is 10 < 5 (False), so cell is below.
+            if abs(cell_y) < abs(interface_y_at_cell_x):
+                markers[i] = 3  # Cell is shallower than (above) the interface.
             else:
-                markers[i] = 3  # Above interface
+                markers[i] = 2  # Cell is deeper than or at (below) the interface.
     
-    # Keep original markers for outside cells
-    markers[meshafter.cellMarkers()==1] = 1
+    # Ensure cells that were originally marked as 1 (outside region by meshafter.cellMarkers())
+    # retain marker 1. This might be redundant if survey_left/right logic correctly handles this.
+    # However, it explicitly preserves the original "outside" marker if meshafter assigned it.
+    markers[meshafter.cellMarkers() == 1] = 1
     
     # Set the updated markers
     meshafter.setCellMarkers(markers)
@@ -306,44 +396,64 @@ class MeshCreator:
         Create a mesh from surface and layer boundaries.
         
         Args:
-            surface: Surface coordinates [[x,z],...]
-            layers: List of layer boundary coordinates
-            bottom_depth: Depth below surface minimum for mesh bottom
-            markers: List of markers for each layer (default: [2, 3, 2, ...])
+            surface (np.ndarray): Coordinates of the top surface, as an array of [x, z] pairs.
+            layers (List[np.ndarray]): List of layer boundary coordinates. Each element is an array
+                                      of [x, z] pairs defining a subsurface boundary.
+            bottom_depth (float, optional): Absolute elevation of the bottom of the mesh.
+                                          Passed to `create_mesh_from_layers`. Defaults to 30.0.
+            markers (List[int], optional): List of markers for each layer. This parameter is currently
+                                         NOT USED by this method, as the underlying `create_mesh_from_layers`
+                                         has hardcoded marker assignments. If provided, it will be ignored
+                                         for the 2-layer case. Defaults to None.
             
         Returns:
-            PyGIMLI mesh
+            pg.Mesh: The generated PyGIMLi mesh.
+            pg.meshtools.Geometry: The geometry object from which the mesh was created (returned by the 
+                                   standalone `create_mesh_from_layers` function).
+
+        Note:
+            This method currently only supports exactly 2 subsurface layer boundaries (plus the surface).
+            It calls the standalone `create_mesh_from_layers` function, and thus shares its behavior
+            regarding `bottom_depth` interpretation (absolute elevation) and the hardcoded layer marker
+            assignments (typically resulting in markers 2, 3, 2 for the three regions).
+            The normalization code for elevations (`surface_norm`, `layers_norm`) using `max_ele` has been
+            commented out, meaning original elevation values are used directly.
         """
         if len(layers) < 1:
-            raise ValueError("At least one layer boundary is required")
+            raise ValueError("At least one layer boundary (in the `layers` list) is required.")
             
-        # Create default markers if not provided
-        if markers is None:
-            markers = [2] * (len(layers) + 1)
-            if len(layers) > 0:
-                markers[1] = 3  # Middle layer
+        # The `markers` parameter is defined but not actually used to control polygon markers
+        # in the current 2-layer implementation, as `create_mesh_from_layers` has hardcoded markers.
+        # If `markers` were to be used, it would require modifying `create_mesh_from_layers`
+        # or implementing the polygon creation logic here.
+        # if markers is None:
+        #     markers = [2] * (len(layers) + 1) # Default: layer above first boundary is 2
+        #     if len(layers) > 0:
+        #         markers[1] = 3  # Layer between first and second boundary is 3
         
-        # Normalize elevation by maximum elevation
-        max_ele = np.nanmax(surface[:,1])
-        surface_norm = surface.copy()
-        surface_norm[:,1] = surface_norm[:,1]  #- max_ele
+        # Normalization of elevation by max_ele was previously commented out.
+        # Keeping it commented to reflect current behavior: absolute elevations are used.
+        # max_ele = np.nanmax(surface[:,1])
+        surface_processed = surface.copy()
+        # surface_processed[:,1] = surface_processed[:,1]  #- max_ele # No normalization applied
         
-        layers_norm = []
+        layers_processed = []
         for layer in layers:
-            layer_norm = layer.copy()
-            layer_norm[:,1] = layer_norm[:,1] # - max_ele
-            layers_norm.append(layer_norm)
+            layer_processed = layer.copy()
+            # layer_processed[:,1] = layer_processed[:,1] # - max_ele # No normalization applied
+            layers_processed.append(layer_processed)
         
-        # Create mesh using specific implementation
-        if len(layers) == 2:
-            mesh, centers, markers_array,geom = create_mesh_from_layers(
-                surface_norm, layers_norm[0], layers_norm[1], 
+        # Create mesh using the standalone function, currently specific to 2 layers.
+        if len(layers_processed) == 2:
+            # `create_mesh_from_layers` returns: mesh, mesh_centers, cell_markers, geom
+            mesh, _, _, geom = create_mesh_from_layers(
+                surface_processed, layers_processed[0], layers_processed[1], 
                 bottom_depth, self.quality, self.area
             )
-            return mesh,geom
+            return mesh, geom # Return the mesh and the geometry object
         else:
-            # Implement custom mesh creation for different number of layers
-            raise NotImplementedError("Currently only 2-layer mesh creation is implemented")
+            # If not 2 layers, raise NotImplementedError.
+            raise NotImplementedError("Mesh creation from layers is currently implemented only for exactly 2 subsurface layer boundaries.")
     
     def create_from_ert_data(self, data, max_depth: float = 30.0, quality: float = 34):
         """
