@@ -1,0 +1,1077 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PyHydroGeophysX.model_output package &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">PyHydroGeophysX.model_output package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/PyHydroGeophysX.model_output.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pyhydrogeophysx-model-output-package">
+<h1>PyHydroGeophysX.model_output package<a class="headerlink" href="#pyhydrogeophysx-model-output-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-PyHydroGeophysX.model_output.base">
+<span id="pyhydrogeophysx-model-output-base-module"></span><h2>PyHydroGeophysX.model_output.base module<a class="headerlink" href="#module-PyHydroGeophysX.model_output.base" title="Link to this heading"></a></h2>
+<p>Base classes for model output processing.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.base.HydroModelOutput">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.base.</span></span><span class="sig-name descname"><span class="pre">HydroModelOutput</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.base.HydroModelOutput" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>Base class for all hydrological model outputs.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.base.HydroModelOutput.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.base.HydroModelOutput.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize model output processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>model_directory</strong> – Path to model output directory</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.base.HydroModelOutput.load_timestep">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.base.HydroModelOutput.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load data for a specific timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters specific to the model type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Data array for the specified timestep</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.base.HydroModelOutput.load_time_range">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.base.HydroModelOutput.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load data for a range of timesteps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (exclusive)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters specific to the model type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Data array for the specified timestep range</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.base.HydroModelOutput.get_timestep_info">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.base.HydroModelOutput.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of timestep information tuples</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.base.HydroModelOutput.calculate_saturation">
+<span class="sig-name descname"><span class="pre">calculate_saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput.calculate_saturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.base.HydroModelOutput.calculate_saturation" title="Link to this definition"></a></dt>
+<dd><p>Calculate saturation from water content and porosity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array</p></li>
+<li><p><strong>porosity</strong> – Porosity value(s)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Saturation array</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.model_output.modflow_output">
+<span id="pyhydrogeophysx-model-output-modflow-output-module"></span><h2>PyHydroGeophysX.model_output.modflow_output module<a class="headerlink" href="#module-PyHydroGeophysX.model_output.modflow_output" title="Link to this heading"></a></h2>
+<p>Module for processing MODFLOW model outputs.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.binaryread">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.modflow_output.</span></span><span class="sig-name descname"><span class="pre">binaryread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vartype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charlen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#binaryread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.binaryread" title="Link to this definition"></a></dt>
+<dd><p>Uses numpy to read from binary file. This was found to be faster than the
+struct approach and is used as the default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file</strong> – Open file object in binary read mode</p></li>
+<li><p><strong>vartype</strong> – Variable type to read</p></li>
+<li><p><strong>shape</strong> – Shape of the data to read (default: (1,))</p></li>
+<li><p><strong>charlen</strong> – Length of character strings (default: 16)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The read data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWWaterContent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.modflow_output.</span></span><span class="sig-name descname"><span class="pre">MODFLOWWaterContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWWaterContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWWaterContent" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.model_output.base.HydroModelOutput" title="PyHydroGeophysX.model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
+<p>Class for processing water content data from MODFLOW simulations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWWaterContent.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWWaterContent.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWWaterContent.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize MODFLOWWaterContent processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_directory</strong> – Path to simulation workspace</p></li>
+<li><p><strong>idomain</strong> – Domain array indicating active cells</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWWaterContent.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWWaterContent.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWWaterContent.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load water content for a specific timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
+<li><p><strong>nlay</strong> – Number of layers in the model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Water content array with shape (nlay, nrows, ncols)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWWaterContent.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWWaterContent.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWWaterContent.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load water content for a range of timesteps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index (default: 0)</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (exclusive, default: None loads all)</p></li>
+<li><p><strong>nlay</strong> – Number of layers in the model (default: 3)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Water content array with shape (timesteps, nlay, nrows, ncols)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWWaterContent.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWWaterContent.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWWaterContent.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep in the WaterContent file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of tuples (kstp, kper, pertim, totim) for each timestep</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.modflow_output.</span></span><span class="sig-name descname"><span class="pre">MODFLOWPorosity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.model_output.base.HydroModelOutput" title="PyHydroGeophysX.model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
+<p>Class for processing porosity data from MODFLOW simulations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize MODFLOWPorosity processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_directory</strong> – Path to simulation workspace</p></li>
+<li><p><strong>model_name</strong> – Name of the MODFLOW model</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity.load_porosity">
+<span class="sig-name descname"><span class="pre">load_porosity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity.load_porosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity.load_porosity" title="Link to this definition"></a></dt>
+<dd><p>Load porosity data from MODFLOW model (supports both MODFLOW 6 and earlier versions).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>3D array of porosity values (nlay, nrow, ncol)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load porosity for a specific timestep.
+Note: For MODFLOW, porosity is typically constant over time,
+so this returns the same array regardless of timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timestep_idx</strong> – Index of the timestep (unused)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D array of porosity values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load porosity for a range of timesteps.
+Since porosity is typically constant, this returns a stack of identical arrays.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index (unused)</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (unused)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>4D array of porosity values (nt, nlay, nrow, ncol) where all timesteps are identical</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.modflow_output.MODFLOWPorosity.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep in the model.
+Returns a minimal placeholder since porosity doesn’t vary with time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List with single dummy timestep info</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.model_output.parflow_output">
+<span id="pyhydrogeophysx-model-output-parflow-output-module"></span><h2>PyHydroGeophysX.model_output.parflow_output module<a class="headerlink" href="#module-PyHydroGeophysX.model_output.parflow_output" title="Link to this heading"></a></h2>
+<p>Module for processing ParFlow model outputs.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowOutput">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.parflow_output.</span></span><span class="sig-name descname"><span class="pre">ParflowOutput</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowOutput"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowOutput" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.model_output.base.HydroModelOutput" title="PyHydroGeophysX.model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
+<p>Base class for processing ParFlow outputs.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowOutput.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowOutput.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowOutput.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize ParFlow output processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_directory</strong> – Path to ParFlow simulation directory</p></li>
+<li><p><strong>run_name</strong> – Name of the ParFlow run</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowOutput.get_pfb_dimensions">
+<span class="sig-name descname"><span class="pre">get_pfb_dimensions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pfb_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowOutput.get_pfb_dimensions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowOutput.get_pfb_dimensions" title="Link to this definition"></a></dt>
+<dd><p>Get dimensions of a PFB file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pfb_file</strong> – Path to PFB file</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (nz, ny, nx)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowSaturation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.parflow_output.</span></span><span class="sig-name descname"><span class="pre">ParflowSaturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowSaturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.model_output.parflow_output.ParflowOutput" title="PyHydroGeophysX.model_output.parflow_output.ParflowOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></p>
+<p>Class for processing saturation data from ParFlow simulations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowSaturation.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize ParFlow saturation processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_directory</strong> – Path to ParFlow simulation directory</p></li>
+<li><p><strong>run_name</strong> – Name of the ParFlow run</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowSaturation.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load saturation data for a specific timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timestep_idx</strong> – Index of the timestep to load</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D array of saturation values (nz, ny, nx)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowSaturation.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load saturation data for a range of timesteps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (exclusive)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>4D array of saturation values (nt, nz, ny, nx)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowSaturation.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of tuples (timestep, time)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowPorosity">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.parflow_output.</span></span><span class="sig-name descname"><span class="pre">ParflowPorosity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.model_output.parflow_output.ParflowOutput" title="PyHydroGeophysX.model_output.parflow_output.ParflowOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></p>
+<p>Class for processing porosity data from ParFlow simulations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize ParFlow porosity processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_directory</strong> – Path to ParFlow simulation directory</p></li>
+<li><p><strong>run_name</strong> – Name of the ParFlow run</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_porosity">
+<span class="sig-name descname"><span class="pre">load_porosity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.load_porosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_porosity" title="Link to this definition"></a></dt>
+<dd><p>Load porosity data from ParFlow model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>3D array of porosity values (nz, ny, nx)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_mask">
+<span class="sig-name descname"><span class="pre">load_mask</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.load_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_mask" title="Link to this definition"></a></dt>
+<dd><p>Load porosity data from ParFlow model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>3D array of porosity values (nz, ny, nx)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load porosity for a specific timestep.
+Note: For ParFlow, porosity is typically constant over time,
+so this returns the same array regardless of timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timestep_idx</strong> – Index of the timestep (unused)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D array of porosity values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load porosity for a range of timesteps.
+Since porosity is typically constant, this returns a stack of identical arrays.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index (unused)</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (unused)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>4D array of porosity values (nt, nz, ny, nx) where all timesteps are identical</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of tuples (timestep, time)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.model_output.water_content">
+<span id="pyhydrogeophysx-model-output-water-content-module"></span><h2>PyHydroGeophysX.model_output.water_content module<a class="headerlink" href="#module-PyHydroGeophysX.model_output.water_content" title="Link to this heading"></a></h2>
+<p>Module for handling MODFLOW water content data.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.water_content.binaryread">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.water_content.</span></span><span class="sig-name descname"><span class="pre">binaryread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vartype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charlen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/water_content.html#binaryread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.water_content.binaryread" title="Link to this definition"></a></dt>
+<dd><p>Uses numpy to read from binary file. This was found to be faster than the
+struct approach and is used as the default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file</strong> – Open file object in binary read mode</p></li>
+<li><p><strong>vartype</strong> – Variable type to read</p></li>
+<li><p><strong>shape</strong> – Shape of the data to read (default: (1,))</p></li>
+<li><p><strong>charlen</strong> – Length of character strings (default: 16)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The read data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.water_content.</span></span><span class="sig-name descname"><span class="pre">MODFLOWWaterContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sim_ws</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/water_content.html#MODFLOWWaterContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for processing water content data from MODFLOW simulations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sim_ws</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/water_content.html#MODFLOWWaterContent.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize MODFLOWWaterContent processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sim_ws</strong> – Path to simulation workspace</p></li>
+<li><p><strong>idomain</strong> – Domain array indicating active cells</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/water_content.html#MODFLOWWaterContent.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load water content for a specific timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
+<li><p><strong>nlay</strong> – Number of layers in the model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Water content array with shape (nlay, nrows, ncols)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/water_content.html#MODFLOWWaterContent.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load water content for a range of timesteps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index (default: 0)</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (exclusive, default: None loads all)</p></li>
+<li><p><strong>nlay</strong> – Number of layers in the model (default: 3)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Water content array with shape (timesteps, nlay, nrows, ncols)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.calculate_saturation">
+<span class="sig-name descname"><span class="pre">calculate_saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/water_content.html#MODFLOWWaterContent.calculate_saturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.calculate_saturation" title="Link to this definition"></a></dt>
+<dd><p>Calculate saturation from water content and porosity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array</p></li>
+<li><p><strong>porosity</strong> – Porosity value(s)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Saturation array with same shape as water_content</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/water_content.html#MODFLOWWaterContent.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep in the WaterContent file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of tuples (kstp, kper, pertim, totim) for each timestep</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.model_output">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-PyHydroGeophysX.model_output" title="Link to this heading"></a></h2>
+<p>Module for processing model outputs from various hydrological models.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.HydroModelOutput">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.</span></span><span class="sig-name descname"><span class="pre">HydroModelOutput</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.HydroModelOutput" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>Base class for all hydrological model outputs.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.HydroModelOutput.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.HydroModelOutput.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize model output processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>model_directory</strong> – Path to model output directory</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.HydroModelOutput.load_timestep">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.HydroModelOutput.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load data for a specific timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters specific to the model type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Data array for the specified timestep</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.HydroModelOutput.load_time_range">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.HydroModelOutput.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load data for a range of timesteps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (exclusive)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters specific to the model type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Data array for the specified timestep range</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.HydroModelOutput.get_timestep_info">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.HydroModelOutput.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of timestep information tuples</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.HydroModelOutput.calculate_saturation">
+<span class="sig-name descname"><span class="pre">calculate_saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/base.html#HydroModelOutput.calculate_saturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.HydroModelOutput.calculate_saturation" title="Link to this definition"></a></dt>
+<dd><p>Calculate saturation from water content and porosity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array</p></li>
+<li><p><strong>porosity</strong> – Porosity value(s)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Saturation array</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWWaterContent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.</span></span><span class="sig-name descname"><span class="pre">MODFLOWWaterContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWWaterContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWWaterContent" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.model_output.base.HydroModelOutput" title="PyHydroGeophysX.model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
+<p>Class for processing water content data from MODFLOW simulations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWWaterContent.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWWaterContent.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWWaterContent.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize MODFLOWWaterContent processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_directory</strong> – Path to simulation workspace</p></li>
+<li><p><strong>idomain</strong> – Domain array indicating active cells</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWWaterContent.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWWaterContent.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWWaterContent.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load water content for a specific timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
+<li><p><strong>nlay</strong> – Number of layers in the model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Water content array with shape (nlay, nrows, ncols)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWWaterContent.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWWaterContent.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWWaterContent.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load water content for a range of timesteps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index (default: 0)</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (exclusive, default: None loads all)</p></li>
+<li><p><strong>nlay</strong> – Number of layers in the model (default: 3)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Water content array with shape (timesteps, nlay, nrows, ncols)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWWaterContent.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWWaterContent.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWWaterContent.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep in the WaterContent file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of tuples (kstp, kper, pertim, totim) for each timestep</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWPorosity">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.</span></span><span class="sig-name descname"><span class="pre">MODFLOWPorosity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWPorosity" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.model_output.base.HydroModelOutput" title="PyHydroGeophysX.model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
+<p>Class for processing porosity data from MODFLOW simulations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWPorosity.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWPorosity.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize MODFLOWPorosity processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_directory</strong> – Path to simulation workspace</p></li>
+<li><p><strong>model_name</strong> – Name of the MODFLOW model</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWPorosity.load_porosity">
+<span class="sig-name descname"><span class="pre">load_porosity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity.load_porosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWPorosity.load_porosity" title="Link to this definition"></a></dt>
+<dd><p>Load porosity data from MODFLOW model (supports both MODFLOW 6 and earlier versions).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>3D array of porosity values (nlay, nrow, ncol)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWPorosity.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWPorosity.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load porosity for a specific timestep.
+Note: For MODFLOW, porosity is typically constant over time,
+so this returns the same array regardless of timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timestep_idx</strong> – Index of the timestep (unused)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D array of porosity values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWPorosity.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWPorosity.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load porosity for a range of timesteps.
+Since porosity is typically constant, this returns a stack of identical arrays.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index (unused)</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (unused)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>4D array of porosity values (nt, nlay, nrow, ncol) where all timesteps are identical</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.MODFLOWPorosity.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#MODFLOWPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.MODFLOWPorosity.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep in the model.
+Returns a minimal placeholder since porosity doesn’t vary with time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List with single dummy timestep info</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.binaryread">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.</span></span><span class="sig-name descname"><span class="pre">binaryread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vartype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charlen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/modflow_output.html#binaryread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.binaryread" title="Link to this definition"></a></dt>
+<dd><p>Uses numpy to read from binary file. This was found to be faster than the
+struct approach and is used as the default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file</strong> – Open file object in binary read mode</p></li>
+<li><p><strong>vartype</strong> – Variable type to read</p></li>
+<li><p><strong>shape</strong> – Shape of the data to read (default: (1,))</p></li>
+<li><p><strong>charlen</strong> – Length of character strings (default: 16)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The read data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowSaturation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.</span></span><span class="sig-name descname"><span class="pre">ParflowSaturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowSaturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowSaturation" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.model_output.parflow_output.ParflowOutput" title="PyHydroGeophysX.model_output.parflow_output.ParflowOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></p>
+<p>Class for processing saturation data from ParFlow simulations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowSaturation.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowSaturation.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowSaturation.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize ParFlow saturation processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_directory</strong> – Path to ParFlow simulation directory</p></li>
+<li><p><strong>run_name</strong> – Name of the ParFlow run</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowSaturation.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowSaturation.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowSaturation.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load saturation data for a specific timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timestep_idx</strong> – Index of the timestep to load</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D array of saturation values (nz, ny, nx)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowSaturation.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowSaturation.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowSaturation.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load saturation data for a range of timesteps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (exclusive)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>4D array of saturation values (nt, nz, ny, nx)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowSaturation.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowSaturation.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowSaturation.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of tuples (timestep, time)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowPorosity">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_output.</span></span><span class="sig-name descname"><span class="pre">ParflowPorosity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowPorosity" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.model_output.parflow_output.ParflowOutput" title="PyHydroGeophysX.model_output.parflow_output.ParflowOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></p>
+<p>Class for processing porosity data from ParFlow simulations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowPorosity.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowPorosity.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize ParFlow porosity processor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_directory</strong> – Path to ParFlow simulation directory</p></li>
+<li><p><strong>run_name</strong> – Name of the ParFlow run</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowPorosity.load_porosity">
+<span class="sig-name descname"><span class="pre">load_porosity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.load_porosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowPorosity.load_porosity" title="Link to this definition"></a></dt>
+<dd><p>Load porosity data from ParFlow model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>3D array of porosity values (nz, ny, nx)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowPorosity.load_mask">
+<span class="sig-name descname"><span class="pre">load_mask</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.load_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowPorosity.load_mask" title="Link to this definition"></a></dt>
+<dd><p>Load porosity data from ParFlow model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>3D array of porosity values (nz, ny, nx)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowPorosity.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowPorosity.load_timestep" title="Link to this definition"></a></dt>
+<dd><p>Load porosity for a specific timestep.
+Note: For ParFlow, porosity is typically constant over time,
+so this returns the same array regardless of timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timestep_idx</strong> – Index of the timestep (unused)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D array of porosity values</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowPorosity.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowPorosity.load_time_range" title="Link to this definition"></a></dt>
+<dd><p>Load porosity for a range of timesteps.
+Since porosity is typically constant, this returns a stack of identical arrays.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index (unused)</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (unused)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>4D array of porosity values (nt, nz, ny, nx) where all timesteps are identical</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_output.ParflowPorosity.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_output/parflow_output.html#ParflowPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_output.ParflowPorosity.get_timestep_info" title="Link to this definition"></a></dt>
+<dd><p>Get information about each timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of tuples (timestep, time)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

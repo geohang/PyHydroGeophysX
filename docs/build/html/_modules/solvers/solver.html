@@ -1,0 +1,489 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>solvers.solver &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">solvers.solver</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for solvers.solver</h1><div class="highlight"><pre>
+<span></span><span class="c1"># time_lapse_inversion/solver.py</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span>
+<span class="kn">from</span> <span class="nn">joblib</span> <span class="kn">import</span> <span class="n">Parallel</span><span class="p">,</span> <span class="n">delayed</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+
+<span class="c1"># Optional GPU acceleration with CuPy (if available)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">cupy</span> <span class="k">as</span> <span class="nn">cp</span>
+    <span class="kn">from</span> <span class="nn">cupyx.scipy.sparse</span> <span class="kn">import</span> <span class="n">csr_matrix</span>
+    <span class="n">gpu_available</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">gpu_available</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="generalized_solver">
+<a class="viewcode-back" href="../../api/solvers.html#solvers.solver.generalized_solver">[docs]</a>
+<span class="k">def</span> <span class="nf">generalized_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;cgls&quot;</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maxiter</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span>
+                       <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">damp</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generalized solver for Ax = b with optional GPU acceleration and parallelism.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    A : array_like or sparse matrix</span>
+<span class="sd">        The system matrix (Jacobian or forward operator).</span>
+<span class="sd">    b : array_like</span>
+<span class="sd">        Right-hand side vector.</span>
+<span class="sd">    method : str, optional</span>
+<span class="sd">        Solver method: &#39;lsqr&#39;, &#39;rrlsqr&#39;, &#39;cgls&#39;, or &#39;rrls&#39;. Default is &#39;cgls&#39;.</span>
+<span class="sd">    x : array_like, optional</span>
+<span class="sd">        Initial guess for the solution. If None, zeros are used.</span>
+<span class="sd">    maxiter : int, optional</span>
+<span class="sd">        Maximum number of iterations.</span>
+<span class="sd">    tol : float, optional</span>
+<span class="sd">        Convergence tolerance.</span>
+<span class="sd">    verbose : bool, optional</span>
+<span class="sd">        Print progress information every 10 iterations.</span>
+<span class="sd">    damp : float, optional</span>
+<span class="sd">        Damping factor (Tikhonov regularization).</span>
+<span class="sd">    use_gpu : bool, optional</span>
+<span class="sd">        Use GPU acceleration with CuPy (if available).</span>
+<span class="sd">    parallel : bool, optional</span>
+<span class="sd">        Use parallel CPU computations.</span>
+<span class="sd">    n_jobs : int, optional</span>
+<span class="sd">        Number of parallel jobs (if parallel is True).</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    x : array_like</span>
+<span class="sd">        The computed solution vector.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Choose the backend (NumPy or CuPy)</span>
+    <span class="n">xp</span> <span class="o">=</span> <span class="n">cp</span> <span class="k">if</span> <span class="n">use_gpu</span> <span class="ow">and</span> <span class="n">gpu_available</span> <span class="k">else</span> <span class="n">np</span>
+
+    <span class="c1"># Convert A and b to appropriate arrays</span>
+    <span class="k">if</span> <span class="n">use_gpu</span> <span class="ow">and</span> <span class="n">gpu_available</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">isspmatrix</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">csr_matrix</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">isspmatrix</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+
+    <span class="c1"># Initialize solution and residual</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">b</span> <span class="o">-</span> <span class="n">A</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="c1"># Precompute initial quantities</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">gamma</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+    <span class="n">rr</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+    <span class="n">rr0</span> <span class="o">=</span> <span class="n">rr</span>
+
+    <span class="c1"># Choose the solver routine based on method</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;lsqr&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_lsqr</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">rr0</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span>
+                     <span class="n">damp</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;rrlsqr&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_rrlsqr</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">rr0</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span>
+                       <span class="n">damp</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;cgls&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_cgls</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">rr0</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span>
+                     <span class="n">damp</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;rrls&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_rrls</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">rr0</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span>
+                     <span class="n">damp</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown method: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">))</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper routine for matrix-vector multiplication with optional GPU or parallel CPU support.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">use_gpu</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">A</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">isspmatrix</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">A</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">parallel</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">Parallel</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;threading&#39;</span><span class="p">)(</span>
+                    <span class="n">delayed</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">)(</span><span class="n">A</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">A</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_lsqr</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">rr0</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">damp</span><span class="p">,</span>
+          <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    LSQR solver with proper shape handling.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Ensure x and r are column vectors</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    
+    <span class="c1"># Initialize u and beta</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">u</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="n">beta</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span> <span class="o">/</span> <span class="n">beta</span>
+    
+    <span class="c1"># Initialize v and alpha</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">v</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="n">alpha</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">v</span> <span class="o">/</span> <span class="n">alpha</span>
+    
+    <span class="n">w</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">phi_bar</span> <span class="o">=</span> <span class="n">beta</span>
+    <span class="n">rho_bar</span> <span class="o">=</span> <span class="n">alpha</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">maxiter</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">verbose</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;LSQR Iteration:&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="s2">&quot;residual:&quot;</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="s2">&quot;relative:&quot;</span><span class="p">,</span> <span class="n">rr</span> <span class="o">/</span> <span class="n">rr0</span><span class="p">)</span>
+        
+        <span class="c1"># Bidiagonalization</span>
+        <span class="n">u_next</span> <span class="o">=</span> <span class="n">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">u_next</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">u_next</span> <span class="o">=</span> <span class="n">u_next</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">u_next</span> <span class="o">=</span> <span class="n">u_next</span> <span class="o">-</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">u</span>
+        
+        <span class="n">beta</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">u_next</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">u_next</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">beta</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">u_next</span> <span class="o">/</span> <span class="n">beta</span>
+            
+        <span class="n">v_next</span> <span class="o">=</span> <span class="n">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">v_next</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">v_next</span> <span class="o">=</span> <span class="n">v_next</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">v_next</span> <span class="o">=</span> <span class="n">v_next</span> <span class="o">-</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">v</span>
+        
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v_next</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">v_next</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">alpha</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v_next</span> <span class="o">/</span> <span class="n">alpha</span>
+        
+        <span class="c1"># Construct and apply orthogonal transformation</span>
+        <span class="n">rho</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">rho_bar</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">beta</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">rho_bar</span> <span class="o">/</span> <span class="n">rho</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">beta</span> <span class="o">/</span> <span class="n">rho</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">s</span> <span class="o">*</span> <span class="n">alpha</span>
+        <span class="n">rho_bar</span> <span class="o">=</span> <span class="o">-</span><span class="n">c</span> <span class="o">*</span> <span class="n">alpha</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">c</span> <span class="o">*</span> <span class="n">phi_bar</span>
+        <span class="n">phi_bar</span> <span class="o">=</span> <span class="n">s</span> <span class="o">*</span> <span class="n">phi_bar</span>
+        
+        <span class="c1"># Update x and w</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">/</span> <span class="n">rho</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="n">w</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">v</span> <span class="o">-</span> <span class="p">(</span><span class="n">theta</span> <span class="o">/</span> <span class="n">rho</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span>
+        
+        <span class="n">rr</span> <span class="o">=</span> <span class="n">phi_bar</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">if</span> <span class="n">rr</span> <span class="o">/</span> <span class="n">rr0</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+            <span class="k">break</span>
+    
+    <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="k">if</span> <span class="n">use_gpu</span> <span class="ow">and</span> <span class="n">gpu_available</span> <span class="k">else</span> <span class="n">x</span>
+
+
+
+
+<span class="k">def</span> <span class="nf">_rrlsqr</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">rr0</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">damp</span><span class="p">,</span>
+            <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Regularized LSQR solver with proper shape handling.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Ensure x and r are column vectors</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    
+    <span class="c1"># Initialize u and beta</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">beta</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">u</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="n">beta</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">u</span> <span class="o">/</span> <span class="n">beta</span>
+    
+    <span class="c1"># Initialize v and alpha with regularization</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">damp</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">v</span> <span class="o">+</span> <span class="n">damp</span> <span class="o">*</span> <span class="n">x</span>
+        
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">v</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="n">alpha</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">v</span> <span class="o">/</span> <span class="n">alpha</span>
+    
+    <span class="n">w</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">phi_bar</span> <span class="o">=</span> <span class="n">beta</span>
+    <span class="n">rho_bar</span> <span class="o">=</span> <span class="n">alpha</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">maxiter</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">verbose</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;RRLSQR Iteration:&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="s2">&quot;residual:&quot;</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="s2">&quot;relative:&quot;</span><span class="p">,</span> <span class="n">rr</span> <span class="o">/</span> <span class="n">rr0</span><span class="p">)</span>
+        
+        <span class="c1"># Bidiagonalization with regularization</span>
+        <span class="n">u_next</span> <span class="o">=</span> <span class="n">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">u_next</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">u_next</span> <span class="o">=</span> <span class="n">u_next</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">u_next</span> <span class="o">=</span> <span class="n">u_next</span> <span class="o">-</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">u</span>
+        
+        <span class="n">beta</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">u_next</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">u_next</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">beta</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">u_next</span> <span class="o">/</span> <span class="n">beta</span>
+            
+        <span class="n">v_next</span> <span class="o">=</span> <span class="n">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">v_next</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">v_next</span> <span class="o">=</span> <span class="n">v_next</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">v_next</span> <span class="o">=</span> <span class="n">v_next</span> <span class="o">-</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">v</span>
+        
+        <span class="k">if</span> <span class="n">damp</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">v_next</span> <span class="o">=</span> <span class="n">v_next</span> <span class="o">+</span> <span class="n">damp</span> <span class="o">*</span> <span class="n">x</span>
+            
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v_next</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">v_next</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">alpha</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">v_next</span> <span class="o">/</span> <span class="n">alpha</span>
+        
+        <span class="c1"># Apply regularization and update solution</span>
+        <span class="n">rho</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">rho_bar</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">beta</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">damp</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">rho_bar</span> <span class="o">/</span> <span class="n">rho</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">beta</span> <span class="o">/</span> <span class="n">rho</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">s</span> <span class="o">*</span> <span class="n">alpha</span>
+        <span class="n">rho_bar</span> <span class="o">=</span> <span class="o">-</span><span class="n">c</span> <span class="o">*</span> <span class="n">alpha</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">c</span> <span class="o">*</span> <span class="n">phi_bar</span>
+        <span class="n">phi_bar</span> <span class="o">=</span> <span class="n">s</span> <span class="o">*</span> <span class="n">phi_bar</span>
+        
+        <span class="c1"># Update x and w</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">/</span> <span class="n">rho</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="n">w</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">v</span> <span class="o">-</span> <span class="p">(</span><span class="n">theta</span> <span class="o">/</span> <span class="n">rho</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span>
+        
+        <span class="n">rr</span> <span class="o">=</span> <span class="n">phi_bar</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">if</span> <span class="n">rr</span> <span class="o">/</span> <span class="n">rr0</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+            <span class="k">break</span>
+    
+    <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="k">if</span> <span class="n">use_gpu</span> <span class="ow">and</span> <span class="n">gpu_available</span> <span class="k">else</span> <span class="n">x</span>
+
+
+
+<span class="k">def</span> <span class="nf">_cgls</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">rr0</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">damp</span><span class="p">,</span>
+          <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    CGLS solver core routine to solve A^T A x = A^T b.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">maxiter</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">verbose</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Iteration:&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="s2">&quot;residual:&quot;</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="s2">&quot;relative:&quot;</span><span class="p">,</span> <span class="n">rr</span> <span class="o">/</span> <span class="n">rr0</span><span class="p">)</span>
+
+        <span class="n">q</span> <span class="o">=</span> <span class="n">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">damp</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">+=</span> <span class="n">damp</span> <span class="o">*</span> <span class="n">p</span>
+        <span class="c1"># Ensure q is a column vector and update solution</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">alfa</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">/</span> <span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">+=</span> <span class="n">p</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">alfa</span>
+        <span class="n">r</span> <span class="o">-=</span> <span class="n">q</span> <span class="o">*</span> <span class="n">alfa</span>
+
+        <span class="c1"># Update s = A^T r (and include damping if needed)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">damp</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="n">damp</span> <span class="o">*</span> <span class="n">r</span>
+        <span class="n">newgamma</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">s</span> <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">newgamma</span> <span class="o">/</span> <span class="n">gamma</span><span class="p">)</span> <span class="o">*</span> <span class="n">p</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">newgamma</span><span class="p">)</span>
+
+        <span class="n">rr</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rr</span> <span class="o">/</span> <span class="n">rr0</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+            <span class="k">break</span>
+
+    <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="k">if</span> <span class="n">use_gpu</span> <span class="ow">and</span> <span class="n">gpu_available</span> <span class="k">else</span> <span class="n">x</span>
+
+
+<span class="k">def</span> <span class="nf">_rrls</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">rr0</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">damp</span><span class="p">,</span>
+          <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">):</span>
+    <span class="c1"># Ensure x, r, and s are column vectors</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        
+    <span class="n">w</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">maxiter</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">verbose</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;RRLS Iteration:&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="s2">&quot;residual:&quot;</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="s2">&quot;relative:&quot;</span><span class="p">,</span> <span class="n">rr</span> <span class="o">/</span> <span class="n">rr0</span><span class="p">)</span>
+        
+        <span class="n">p</span> <span class="o">=</span> <span class="n">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            
+        <span class="n">denom</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">xp</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">denom</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">):</span>
+            <span class="k">break</span>
+            
+        <span class="n">lam</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="n">denom</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">w</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">lam</span><span class="p">)</span>  <span class="c1"># Convert lam to scalar</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">r</span> <span class="o">-</span> <span class="n">p</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">lam</span><span class="p">)</span>
+        
+        <span class="n">s</span> <span class="o">=</span> <span class="n">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            
+        <span class="k">if</span> <span class="n">damp</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">s</span> <span class="o">+</span> <span class="n">damp</span> <span class="o">*</span> <span class="n">x</span>
+            
+        <span class="n">w</span> <span class="o">=</span> <span class="n">s</span>
+        <span class="n">rr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">r</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">rr</span> <span class="o">/</span> <span class="n">rr0</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+            <span class="k">break</span>
+            
+    <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="k">if</span> <span class="n">use_gpu</span> <span class="ow">and</span> <span class="n">gpu_available</span> <span class="k">else</span> <span class="n">x</span>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

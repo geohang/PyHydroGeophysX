@@ -1,0 +1,227 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hydro_modular package &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Hydro_modular package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/Hydro_modular.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="hydro-modular-package">
+<h1>Hydro_modular package<a class="headerlink" href="#hydro-modular-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-Hydro_modular.hydro_to_ert">
+<span id="hydro-modular-hydro-to-ert-module"></span><h2>Hydro_modular.hydro_to_ert module<a class="headerlink" href="#module-Hydro_modular.hydro_to_ert" title="Link to this heading"></a></h2>
+<p>Module for converting hydrologic model output to ERT apparent resistivity.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="Hydro_modular.hydro_to_ert.hydro_to_ert">
+<span class="sig-prename descclassname"><span class="pre">Hydro_modular.hydro_to_ert.</span></span><span class="sig-name descname"><span class="pre">hydro_to_ert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">water_content:</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">porosity:</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;,</span> <span class="pre">profile_interpolator:</span> <span class="pre">~PyHydroGeophysX.core.interpolation.ProfileInterpolator,</span> <span class="pre">layer_idx:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">~typing.List[int],</span> <span class="pre">structure:</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">marker_labels:</span> <span class="pre">~typing.List[int],</span> <span class="pre">rho_parameters:</span> <span class="pre">~typing.Dict[str,</span> <span class="pre">~typing.Any],</span> <span class="pre">electrode_spacing:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">1.0,</span> <span class="pre">electrode_start:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.0,</span> <span class="pre">num_electrodes:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">72,</span> <span class="pre">scheme_name:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'wa',</span> <span class="pre">noise_level:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.05,</span> <span class="pre">abs_error:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.0,</span> <span class="pre">rel_error:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.05,</span> <span class="pre">save_path:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">mesh_markers:</span> <span class="pre">~numpy.ndarray</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">verbose:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">seed:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray]</span></span></span><a class="reference internal" href="../_modules/Hydro_modular/hydro_to_ert.html#hydro_to_ert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Hydro_modular.hydro_to_ert.hydro_to_ert" title="Link to this definition"></a></dt>
+<dd><p>Convert hydrologic model output to ERT apparent resistivity.</p>
+<p>This function performs the complete workflow from water content to synthetic ERT data:
+1. Interpolates water content to mesh
+2. Calculates saturation
+3. Converts saturation to resistivity using petrophysical models
+4. Creates electrode array along surface profile
+5. Performs forward modeling to generate synthetic ERT data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>porosity</strong> – Porosity array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>mesh</strong> – PyGIMLI mesh</p></li>
+<li><p><strong>profile_interpolator</strong> – ProfileInterpolator for surface interpolation</p></li>
+<li><p><strong>marker_labels</strong> – Layer marker labels [top, middle, bottom]</p></li>
+<li><p><strong>rho_parameters</strong> – <p>Dictionary of resistivity parameters:
+{</p>
+<blockquote>
+<div><p>’rho_sat’: [100, 500, 2400],  # Saturated resistivity values
+‘n’: [2.2, 1.8, 2.5],         # Cementation exponents
+‘sigma_s’: [1/500, 0, 0]      # Surface conductivity values</p>
+</div></blockquote>
+<p>}</p>
+</p></li>
+<li><p><strong>electrode_spacing</strong> – Spacing between electrodes</p></li>
+<li><p><strong>electrode_start</strong> – Starting position of electrode array</p></li>
+<li><p><strong>num_electrodes</strong> – Number of electrodes</p></li>
+<li><p><strong>scheme_name</strong> – ERT scheme name (‘wa’, ‘dd’, etc.)</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level for synthetic data</p></li>
+<li><p><strong>abs_error</strong> – Absolute error for data estimation</p></li>
+<li><p><strong>rel_error</strong> – Relative error for data estimation</p></li>
+<li><p><strong>save_path</strong> – Path to save synthetic data (None = don’t save)</p></li>
+<li><p><strong>mesh_markers</strong> – Mesh cell markers (None = get from mesh)</p></li>
+<li><p><strong>verbose</strong> – Whether to display verbose information</p></li>
+<li><p><strong>seed</strong> – Random seed for noise generation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (synthetic ERT data container, resistivity model)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-Hydro_modular.hydro_to_srt">
+<span id="hydro-modular-hydro-to-srt-module"></span><h2>Hydro_modular.hydro_to_srt module<a class="headerlink" href="#module-Hydro_modular.hydro_to_srt" title="Link to this heading"></a></h2>
+<p>Module for converting hydrologic model output to seismic travel times.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="Hydro_modular.hydro_to_srt.hydro_to_srt">
+<span class="sig-prename descclassname"><span class="pre">Hydro_modular.hydro_to_srt.</span></span><span class="sig-name descname"><span class="pre">hydro_to_srt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">water_content:</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">porosity:</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;,</span> <span class="pre">profile_interpolator:</span> <span class="pre">~PyHydroGeophysX.core.interpolation.ProfileInterpolator,</span> <span class="pre">layer_idx:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">~typing.List[int],</span> <span class="pre">structure:</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">marker_labels:</span> <span class="pre">~typing.List[int],</span> <span class="pre">vel_parameters:</span> <span class="pre">~typing.Dict[str,</span> <span class="pre">~typing.Any],</span> <span class="pre">sensor_spacing:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">1.0,</span> <span class="pre">sensor_start:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.0,</span> <span class="pre">num_sensors:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">72,</span> <span class="pre">shot_distance:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">5,</span> <span class="pre">noise_level:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.05,</span> <span class="pre">noise_abs:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">1e-05,</span> <span class="pre">save_path:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">mesh_markers:</span> <span class="pre">~numpy.ndarray</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">verbose:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">seed:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray]</span></span></span><a class="reference internal" href="../_modules/Hydro_modular/hydro_to_srt.html#hydro_to_srt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Hydro_modular.hydro_to_srt.hydro_to_srt" title="Link to this definition"></a></dt>
+<dd><p>Convert hydrologic model output to seismic travel times.</p>
+<p>This function performs the complete workflow from water content to synthetic SRT data:
+1. Interpolates water content to mesh
+2. Calculates saturation
+3. Converts saturation to seismic velocities using petrophysical models
+4. Creates sensor array along surface profile
+5. Performs forward modeling to generate synthetic travel time data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>porosity</strong> – Porosity array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>mesh</strong> – PyGIMLI mesh</p></li>
+<li><p><strong>profile_interpolator</strong> – ProfileInterpolator for surface interpolation</p></li>
+<li><p><strong>marker_labels</strong> – Layer marker labels [top, middle, bottom]</p></li>
+<li><p><strong>vel_parameters</strong> – <p>Dictionary of velocity parameters:
+{</p>
+<blockquote>
+<div><p>’top’: {‘bulk_modulus’: 30.0, ‘shear_modulus’: 20.0, ‘mineral_density’: 2650, ‘depth’: 1.0},
+‘mid’: {‘bulk_modulus’: 50.0, ‘shear_modulus’: 35.0, ‘mineral_density’: 2670, ‘aspect_ratio’: 0.05},
+‘bot’: {‘bulk_modulus’: 55.0, ‘shear_modulus’: 50.0, ‘mineral_density’: 2680, ‘aspect_ratio’: 0.03}</p>
+</div></blockquote>
+<p>}</p>
+</p></li>
+<li><p><strong>sensor_spacing</strong> – Spacing between sensors</p></li>
+<li><p><strong>sensor_start</strong> – Starting position of sensor array</p></li>
+<li><p><strong>num_sensors</strong> – Number of sensors</p></li>
+<li><p><strong>shot_distance</strong> – Distance between shot points</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level for synthetic data</p></li>
+<li><p><strong>noise_abs</strong> – Absolute noise level for synthetic data</p></li>
+<li><p><strong>save_path</strong> – Path to save synthetic data (None = don’t save)</p></li>
+<li><p><strong>mesh_markers</strong> – Mesh cell markers (None = get from mesh)</p></li>
+<li><p><strong>verbose</strong> – Whether to display verbose information</p></li>
+<li><p><strong>seed</strong> – Random seed for noise generation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (synthetic SRT data container, velocity model)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-Hydro_modular">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-Hydro_modular" title="Link to this heading"></a></h2>
+<p>Hydro_modular package for hydrologic to geophysical conversion utilities.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

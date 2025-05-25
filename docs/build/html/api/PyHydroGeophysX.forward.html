@@ -1,0 +1,786 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PyHydroGeophysX.forward package &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">PyHydroGeophysX.forward package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/PyHydroGeophysX.forward.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pyhydrogeophysx-forward-package">
+<h1>PyHydroGeophysX.forward package<a class="headerlink" href="#pyhydrogeophysx-forward-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-PyHydroGeophysX.forward.ert_forward">
+<span id="pyhydrogeophysx-forward-ert-forward-module"></span><h2>PyHydroGeophysX.forward.ert_forward module<a class="headerlink" href="#module-PyHydroGeophysX.forward.ert_forward" title="Link to this heading"></a></h2>
+<p>Forward modeling utilities for Electrical Resistivity Tomography (ERT).</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ERTForwardModeling">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.ert_forward.</span></span><span class="sig-name descname"><span class="pre">ERTForwardModeling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ERTForwardModeling" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for forward modeling of Electrical Resistivity Tomography (ERT) data.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize ERT forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mesh</strong> – PyGIMLI mesh for forward modeling</p></li>
+<li><p><strong>data</strong> – ERT data container</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.set_data">
+<span class="sig-name descname"><span class="pre">set_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.set_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.set_data" title="Link to this definition"></a></dt>
+<dd><p>Set ERT data for forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> – ERT data container</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.set_mesh">
+<span class="sig-name descname"><span class="pre">set_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.set_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.set_mesh" title="Link to this definition"></a></dt>
+<dd><p>Set mesh for forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mesh</strong> – PyGIMLI mesh</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resistivity_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.forward" title="Link to this definition"></a></dt>
+<dd><p>Compute forward response for a given resistivity model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resistivity_model</strong> – Resistivity model values</p></li>
+<li><p><strong>log_transform</strong> – Whether resistivity_model is log-transformed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Forward response (apparent resistivity)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.forward_and_jacobian">
+<span class="sig-name descname"><span class="pre">forward_and_jacobian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resistivity_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.forward_and_jacobian"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.forward_and_jacobian" title="Link to this definition"></a></dt>
+<dd><p>Compute forward response and Jacobian matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resistivity_model</strong> – Resistivity model values</p></li>
+<li><p><strong>log_transform</strong> – Whether resistivity_model is log-transformed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (forward response, Jacobian matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.get_coverage">
+<span class="sig-name descname"><span class="pre">get_coverage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resistivity_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.get_coverage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.get_coverage" title="Link to this definition"></a></dt>
+<dd><p>Compute coverage (resolution) for a given resistivity model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resistivity_model</strong> – Resistivity model values</p></li>
+<li><p><strong>log_transform</strong> – Whether resistivity_model is log-transformed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Coverage values for each cell</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.create_synthetic_data">
+<span class="sig-name descname"><span class="pre">create_synthetic_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xpos:</span> <span class="pre">~numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ypos:</span> <span class="pre">~numpy.ndarray</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">res_models:</span> <span class="pre">~numpy.ndarray</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">schemeName:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'wa'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absolute_error:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relative_error:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_data:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xbound:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ybound:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">100</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Mesh'</span> <span class="pre">id='2176914854928'&gt;]</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.create_synthetic_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ERTForwardModeling.create_synthetic_data" title="Link to this definition"></a></dt>
+<dd><p>Create synthetic ERT data using forward modeling.</p>
+<p>This method simulates an ERT survey by placing electrodes, creating a measurement
+scheme, performing forward modeling to generate synthetic data, and adding noise.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>xpos</strong> – X-coordinates of electrodes</p></li>
+<li><p><strong>ypos</strong> – Y-coordinates of electrodes (if None, uses flat surface)</p></li>
+<li><p><strong>mesh</strong> – Mesh for forward modeling</p></li>
+<li><p><strong>res_models</strong> – Resistivity model values</p></li>
+<li><p><strong>schemeName</strong> – Name of measurement scheme (‘wa’, ‘dd’, etc.)</p></li>
+<li><p><strong>noise_level</strong> – Level of Gaussian noise to add</p></li>
+<li><p><strong>absolute_error</strong> – Absolute error for data estimation</p></li>
+<li><p><strong>relative_error</strong> – Relative error for data estimation</p></li>
+<li><p><strong>save_path</strong> – Path to save synthetic data (if None, does not save)</p></li>
+<li><p><strong>show_data</strong> – Whether to display data after creation</p></li>
+<li><p><strong>seed</strong> – Random seed for noise generation</p></li>
+<li><p><strong>xbound</strong> – X boundary extension for mesh</p></li>
+<li><p><strong>ybound</strong> – Y boundary extension for mesh</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (synthetic ERT data container, simulation mesh)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ertforward">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.ert_forward.</span></span><span class="sig-name descname"><span class="pre">ertforward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhomodel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ertforward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ertforward" title="Link to this definition"></a></dt>
+<dd><p>Forward model for ERT.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fob</strong> (<em>pygimli.ERTModelling</em>) – ERT forward operator.</p></li>
+<li><p><strong>mesh</strong> (<em>pg.Mesh</em>) – Mesh for the forward model.</p></li>
+<li><p><strong>rhomodel</strong> (<em>pg.RVector</em>) – Resistivity model vector.</p></li>
+<li><p><strong>xr</strong> (<em>np.ndarray</em>) – Log-transformed model parameter (resistivity).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Log-transformed forward response.
+rhomodel (pg.RVector): Updated resistivity model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dr (np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ertforward2">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.ert_forward.</span></span><span class="sig-name descname"><span class="pre">ertforward2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ertforward2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ertforward2" title="Link to this definition"></a></dt>
+<dd><p>Simplified ERT forward model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fob</strong> (<em>pygimli.ERTModelling</em>) – ERT forward operator.</p></li>
+<li><p><strong>xr</strong> (<em>np.ndarray</em>) – Log-transformed model parameter.</p></li>
+<li><p><strong>mesh</strong> (<em>pg.Mesh</em>) – Mesh for the forward model.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Log-transformed forward response.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dr (np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ertforandjac">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.ert_forward.</span></span><span class="sig-name descname"><span class="pre">ertforandjac</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhomodel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ertforandjac"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ertforandjac" title="Link to this definition"></a></dt>
+<dd><p>Forward model and Jacobian for ERT.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fob</strong> (<em>pygimli.ERTModelling</em>) – ERT forward operator.</p></li>
+<li><p><strong>rhomodel</strong> (<em>pg.RVector</em>) – Resistivity model.</p></li>
+<li><p><strong>xr</strong> (<em>np.ndarray</em>) – Log-transformed model parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Log-transformed forward response.
+J (np.ndarray): Jacobian matrix.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dr (np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ert_forward.ertforandjac2">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.ert_forward.</span></span><span class="sig-name descname"><span class="pre">ertforandjac2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ertforandjac2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ert_forward.ertforandjac2" title="Link to this definition"></a></dt>
+<dd><p>Alternative ERT forward model and Jacobian using log-resistivity values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fob</strong> (<em>pygimli.ERTModelling</em>) – ERT forward operator.</p></li>
+<li><p><strong>xr</strong> (<em>np.ndarray</em>) – Log-transformed model parameter.</p></li>
+<li><p><strong>mesh</strong> (<em>pg.Mesh</em>) – Mesh for the forward model.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Log-transformed forward response.
+J (np.ndarray): Jacobian matrix.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dr (np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.forward.srt_forward">
+<span id="pyhydrogeophysx-forward-srt-forward-module"></span><h2>PyHydroGeophysX.forward.srt_forward module<a class="headerlink" href="#module-PyHydroGeophysX.forward.srt_forward" title="Link to this heading"></a></h2>
+<p>Forward modeling utilities for Seismic Refraction Tomography (SRT).</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.srt_forward.</span></span><span class="sig-name descname"><span class="pre">SeismicForwardModeling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheme:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for forward modeling of Seismic Refraction Tomography (SRT) data.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheme:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize seismic forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mesh</strong> – PyGIMLI mesh for forward modeling</p></li>
+<li><p><strong>scheme</strong> – Seismic data scheme</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.set_scheme">
+<span class="sig-name descname"><span class="pre">set_scheme</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scheme:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.set_scheme"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.set_scheme" title="Link to this definition"></a></dt>
+<dd><p>Set seismic data scheme for forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>scheme</strong> – Seismic data scheme</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.set_mesh">
+<span class="sig-name descname"><span class="pre">set_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.set_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.set_mesh" title="Link to this definition"></a></dt>
+<dd><p>Set mesh for forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mesh</strong> – PyGIMLI mesh</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">velocity_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slowness</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.forward" title="Link to this definition"></a></dt>
+<dd><p>Compute forward response for a given velocity model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>velocity_model</strong> – Velocity model values (or slowness if slowness=True)</p></li>
+<li><p><strong>slowness</strong> – Whether velocity_model is slowness (1/v)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Forward response (travel times)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.create_synthetic_data">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_synthetic_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sensor_x:</span> <span class="pre">~numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">surface_points:</span> <span class="pre">~numpy.ndarray</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocity_model:</span> <span class="pre">~numpy.ndarray</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slowness:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shot_distance:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_abs:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">1e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_data:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Mesh'</span> <span class="pre">id='2176914854928'&gt;]</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.create_synthetic_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.create_synthetic_data" title="Link to this definition"></a></dt>
+<dd><p>Create synthetic seismic data using forward modeling.</p>
+<p>This method simulates a seismic survey by placing geophones along a surface,
+creating a measurement scheme, and performing forward modeling to generate
+synthetic travel time data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sensor_x</strong> – X-coordinates of geophones</p></li>
+<li><p><strong>surface_points</strong> – Surface coordinates for placing geophones [[x,y],…]
+If None, geophones will be placed on flat surface</p></li>
+<li><p><strong>mesh</strong> – Mesh for forward modeling</p></li>
+<li><p><strong>velocity_model</strong> – Velocity model values</p></li>
+<li><p><strong>slowness</strong> – Whether velocity_model is slowness (1/v)</p></li>
+<li><p><strong>shot_distance</strong> – Distance between shots</p></li>
+<li><p><strong>noise_level</strong> – Level of relative noise to add</p></li>
+<li><p><strong>noise_abs</strong> – Level of absolute noise to add</p></li>
+<li><p><strong>save_path</strong> – Path to save synthetic data (if None, does not save)</p></li>
+<li><p><strong>show_data</strong> – Whether to display data after creation</p></li>
+<li><p><strong>verbose</strong> – Whether to show verbose output</p></li>
+<li><p><strong>seed</strong> – Random seed for noise generation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (synthetic seismic data container, simulation mesh)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.draw_first_picks">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">draw_first_picks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plotva</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.draw_first_picks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.draw_first_picks" title="Link to this definition"></a></dt>
+<dd><p>Plot first arrivals as lines.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes</em>) – axis to draw the lines in</p></li>
+<li><p><strong>data</strong> (<a href="#id1"><span class="problematic" id="id2">:gimliapi:`GIMLI::DataContainer`</span></a>) – data containing shots (“s”), geophones (“g”) and traveltimes (“t”)</p></li>
+<li><p><strong>tt</strong> (<em>array</em><em>, </em><em>optional</em>) – traveltimes to use instead of data(“t”)</p></li>
+<li><p><strong>plotva</strong> (<em>bool</em><em>, </em><em>optional</em>) – plot apparent velocity instead of traveltimes</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ax</strong> – the modified axis</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>matplotlib.axes</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.forward">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-PyHydroGeophysX.forward" title="Link to this heading"></a></h2>
+<p>Forward modeling utilities for geophysical simulations.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ERTForwardModeling">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.</span></span><span class="sig-name descname"><span class="pre">ERTForwardModeling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ERTForwardModeling" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for forward modeling of Electrical Resistivity Tomography (ERT) data.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ERTForwardModeling.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ERTForwardModeling.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize ERT forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mesh</strong> – PyGIMLI mesh for forward modeling</p></li>
+<li><p><strong>data</strong> – ERT data container</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ERTForwardModeling.set_data">
+<span class="sig-name descname"><span class="pre">set_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.set_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ERTForwardModeling.set_data" title="Link to this definition"></a></dt>
+<dd><p>Set ERT data for forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> – ERT data container</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ERTForwardModeling.set_mesh">
+<span class="sig-name descname"><span class="pre">set_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.set_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ERTForwardModeling.set_mesh" title="Link to this definition"></a></dt>
+<dd><p>Set mesh for forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mesh</strong> – PyGIMLI mesh</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ERTForwardModeling.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resistivity_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ERTForwardModeling.forward" title="Link to this definition"></a></dt>
+<dd><p>Compute forward response for a given resistivity model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resistivity_model</strong> – Resistivity model values</p></li>
+<li><p><strong>log_transform</strong> – Whether resistivity_model is log-transformed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Forward response (apparent resistivity)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ERTForwardModeling.forward_and_jacobian">
+<span class="sig-name descname"><span class="pre">forward_and_jacobian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resistivity_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.forward_and_jacobian"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ERTForwardModeling.forward_and_jacobian" title="Link to this definition"></a></dt>
+<dd><p>Compute forward response and Jacobian matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resistivity_model</strong> – Resistivity model values</p></li>
+<li><p><strong>log_transform</strong> – Whether resistivity_model is log-transformed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (forward response, Jacobian matrix)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ERTForwardModeling.get_coverage">
+<span class="sig-name descname"><span class="pre">get_coverage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resistivity_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_transform</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.get_coverage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ERTForwardModeling.get_coverage" title="Link to this definition"></a></dt>
+<dd><p>Compute coverage (resolution) for a given resistivity model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resistivity_model</strong> – Resistivity model values</p></li>
+<li><p><strong>log_transform</strong> – Whether resistivity_model is log-transformed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Coverage values for each cell</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ERTForwardModeling.create_synthetic_data">
+<span class="sig-name descname"><span class="pre">create_synthetic_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xpos:</span> <span class="pre">~numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ypos:</span> <span class="pre">~numpy.ndarray</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">res_models:</span> <span class="pre">~numpy.ndarray</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">schemeName:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'wa'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absolute_error:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relative_error:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_data:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xbound:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ybound:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">100</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Mesh'</span> <span class="pre">id='2176914854928'&gt;]</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ERTForwardModeling.create_synthetic_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ERTForwardModeling.create_synthetic_data" title="Link to this definition"></a></dt>
+<dd><p>Create synthetic ERT data using forward modeling.</p>
+<p>This method simulates an ERT survey by placing electrodes, creating a measurement
+scheme, performing forward modeling to generate synthetic data, and adding noise.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>xpos</strong> – X-coordinates of electrodes</p></li>
+<li><p><strong>ypos</strong> – Y-coordinates of electrodes (if None, uses flat surface)</p></li>
+<li><p><strong>mesh</strong> – Mesh for forward modeling</p></li>
+<li><p><strong>res_models</strong> – Resistivity model values</p></li>
+<li><p><strong>schemeName</strong> – Name of measurement scheme (‘wa’, ‘dd’, etc.)</p></li>
+<li><p><strong>noise_level</strong> – Level of Gaussian noise to add</p></li>
+<li><p><strong>absolute_error</strong> – Absolute error for data estimation</p></li>
+<li><p><strong>relative_error</strong> – Relative error for data estimation</p></li>
+<li><p><strong>save_path</strong> – Path to save synthetic data (if None, does not save)</p></li>
+<li><p><strong>show_data</strong> – Whether to display data after creation</p></li>
+<li><p><strong>seed</strong> – Random seed for noise generation</p></li>
+<li><p><strong>xbound</strong> – X boundary extension for mesh</p></li>
+<li><p><strong>ybound</strong> – Y boundary extension for mesh</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (synthetic ERT data container, simulation mesh)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ertforward">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.</span></span><span class="sig-name descname"><span class="pre">ertforward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhomodel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ertforward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ertforward" title="Link to this definition"></a></dt>
+<dd><p>Forward model for ERT.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fob</strong> (<em>pygimli.ERTModelling</em>) – ERT forward operator.</p></li>
+<li><p><strong>mesh</strong> (<em>pg.Mesh</em>) – Mesh for the forward model.</p></li>
+<li><p><strong>rhomodel</strong> (<em>pg.RVector</em>) – Resistivity model vector.</p></li>
+<li><p><strong>xr</strong> (<em>np.ndarray</em>) – Log-transformed model parameter (resistivity).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Log-transformed forward response.
+rhomodel (pg.RVector): Updated resistivity model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dr (np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ertforward2">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.</span></span><span class="sig-name descname"><span class="pre">ertforward2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ertforward2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ertforward2" title="Link to this definition"></a></dt>
+<dd><p>Simplified ERT forward model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fob</strong> (<em>pygimli.ERTModelling</em>) – ERT forward operator.</p></li>
+<li><p><strong>xr</strong> (<em>np.ndarray</em>) – Log-transformed model parameter.</p></li>
+<li><p><strong>mesh</strong> (<em>pg.Mesh</em>) – Mesh for the forward model.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Log-transformed forward response.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dr (np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ertforandjac">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.</span></span><span class="sig-name descname"><span class="pre">ertforandjac</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhomodel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ertforandjac"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ertforandjac" title="Link to this definition"></a></dt>
+<dd><p>Forward model and Jacobian for ERT.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fob</strong> (<em>pygimli.ERTModelling</em>) – ERT forward operator.</p></li>
+<li><p><strong>rhomodel</strong> (<em>pg.RVector</em>) – Resistivity model.</p></li>
+<li><p><strong>xr</strong> (<em>np.ndarray</em>) – Log-transformed model parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Log-transformed forward response.
+J (np.ndarray): Jacobian matrix.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dr (np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.ertforandjac2">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.</span></span><span class="sig-name descname"><span class="pre">ertforandjac2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/ert_forward.html#ertforandjac2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.ertforandjac2" title="Link to this definition"></a></dt>
+<dd><p>Alternative ERT forward model and Jacobian using log-resistivity values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fob</strong> (<em>pygimli.ERTModelling</em>) – ERT forward operator.</p></li>
+<li><p><strong>xr</strong> (<em>np.ndarray</em>) – Log-transformed model parameter.</p></li>
+<li><p><strong>mesh</strong> (<em>pg.Mesh</em>) – Mesh for the forward model.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Log-transformed forward response.
+J (np.ndarray): Jacobian matrix.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dr (np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.SeismicForwardModeling">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.forward.</span></span><span class="sig-name descname"><span class="pre">SeismicForwardModeling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheme:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.SeismicForwardModeling" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for forward modeling of Seismic Refraction Tomography (SRT) data.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.SeismicForwardModeling.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheme:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.SeismicForwardModeling.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize seismic forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mesh</strong> – PyGIMLI mesh for forward modeling</p></li>
+<li><p><strong>scheme</strong> – Seismic data scheme</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.SeismicForwardModeling.set_scheme">
+<span class="sig-name descname"><span class="pre">set_scheme</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scheme:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2176945690384'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.set_scheme"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.SeismicForwardModeling.set_scheme" title="Link to this definition"></a></dt>
+<dd><p>Set seismic data scheme for forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>scheme</strong> – Seismic data scheme</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.SeismicForwardModeling.set_mesh">
+<span class="sig-name descname"><span class="pre">set_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.set_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.SeismicForwardModeling.set_mesh" title="Link to this definition"></a></dt>
+<dd><p>Set mesh for forward modeling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mesh</strong> – PyGIMLI mesh</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.SeismicForwardModeling.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">velocity_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slowness</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.SeismicForwardModeling.forward" title="Link to this definition"></a></dt>
+<dd><p>Compute forward response for a given velocity model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>velocity_model</strong> – Velocity model values (or slowness if slowness=True)</p></li>
+<li><p><strong>slowness</strong> – Whether velocity_model is slowness (1/v)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Forward response (travel times)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.SeismicForwardModeling.create_synthetic_data">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_synthetic_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sensor_x:</span> <span class="pre">~numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">surface_points:</span> <span class="pre">~numpy.ndarray</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2176914854928'&gt;</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocity_model:</span> <span class="pre">~numpy.ndarray</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slowness:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shot_distance:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_abs:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">1e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_data:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Mesh'</span> <span class="pre">id='2176914854928'&gt;]</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.create_synthetic_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.SeismicForwardModeling.create_synthetic_data" title="Link to this definition"></a></dt>
+<dd><p>Create synthetic seismic data using forward modeling.</p>
+<p>This method simulates a seismic survey by placing geophones along a surface,
+creating a measurement scheme, and performing forward modeling to generate
+synthetic travel time data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sensor_x</strong> – X-coordinates of geophones</p></li>
+<li><p><strong>surface_points</strong> – Surface coordinates for placing geophones [[x,y],…]
+If None, geophones will be placed on flat surface</p></li>
+<li><p><strong>mesh</strong> – Mesh for forward modeling</p></li>
+<li><p><strong>velocity_model</strong> – Velocity model values</p></li>
+<li><p><strong>slowness</strong> – Whether velocity_model is slowness (1/v)</p></li>
+<li><p><strong>shot_distance</strong> – Distance between shots</p></li>
+<li><p><strong>noise_level</strong> – Level of relative noise to add</p></li>
+<li><p><strong>noise_abs</strong> – Level of absolute noise to add</p></li>
+<li><p><strong>save_path</strong> – Path to save synthetic data (if None, does not save)</p></li>
+<li><p><strong>show_data</strong> – Whether to display data after creation</p></li>
+<li><p><strong>verbose</strong> – Whether to show verbose output</p></li>
+<li><p><strong>seed</strong> – Random seed for noise generation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (synthetic seismic data container, simulation mesh)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.forward.SeismicForwardModeling.draw_first_picks">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">draw_first_picks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plotva</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/forward/srt_forward.html#SeismicForwardModeling.draw_first_picks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.forward.SeismicForwardModeling.draw_first_picks" title="Link to this definition"></a></dt>
+<dd><p>Plot first arrivals as lines.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes</em>) – axis to draw the lines in</p></li>
+<li><p><strong>data</strong> (<a href="#id3"><span class="problematic" id="id4">:gimliapi:`GIMLI::DataContainer`</span></a>) – data containing shots (“s”), geophones (“g”) and traveltimes (“t”)</p></li>
+<li><p><strong>tt</strong> (<em>array</em><em>, </em><em>optional</em>) – traveltimes to use instead of data(“t”)</p></li>
+<li><p><strong>plotva</strong> (<em>bool</em><em>, </em><em>optional</em>) – plot apparent velocity instead of traveltimes</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ax</strong> – the modified axis</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>matplotlib.axes</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
