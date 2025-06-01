@@ -42,10 +42,10 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex1_model_output_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_01_model_output_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex1_model_output.py`
+  :ref:`sphx_glr_auto_examples_01_model_output.py`
 
 .. raw:: html
 
@@ -59,10 +59,10 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex7_structure_TLresinv_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_07_structure_TLresinv_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex7_structure_TLresinv.py`
+  :ref:`sphx_glr_auto_examples_07_structure_TLresinv.py`
 
 .. raw:: html
 
@@ -76,10 +76,10 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_EX4_TL_inversion_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_04_TL_inversion_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_EX4_TL_inversion.py`
+  :ref:`sphx_glr_auto_examples_04_TL_inversion.py`
 
 .. raw:: html
 
@@ -93,10 +93,10 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex6_Structure_resinv_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_06_Structure_resinv_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex6_Structure_resinv.py`
+  :ref:`sphx_glr_auto_examples_06_Structure_resinv.py`
 
 .. raw:: html
 
@@ -110,10 +110,10 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex8_MC_WC_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_08_MC_WC_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex8_MC_WC.py`
+  :ref:`sphx_glr_auto_examples_08_MC_WC.py`
 
 .. raw:: html
 
@@ -127,10 +127,10 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex5_SRT_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_05_SRT_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex5_SRT.py`
+  :ref:`sphx_glr_auto_examples_05_SRT.py`
 
 .. raw:: html
 
@@ -144,10 +144,10 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex3_Time_lapse_measurement_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_03_Time_lapse_measurement_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex3_Time_lapse_measurement.py`
+  :ref:`sphx_glr_auto_examples_03_Time_lapse_measurement.py`
 
 .. raw:: html
 
@@ -157,18 +157,18 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="Example script with invalid Python syntax ">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for integrating hydrological  model outputs with geophysical forward modeling and inversion using PyHydroGeophysX.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex2_workflow_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_02_workflow_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex2_workflow.py`
+  :ref:`sphx_glr_auto_examples_02_workflow.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">SyntaxError</div>
+      <div class="sphx-glr-thumbnail-title">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</div>
     </div>
 
 
@@ -182,14 +182,14 @@ Each example includes detailed comments and demonstrates best practices for wate
 .. toctree::
    :hidden:
 
-   /auto_examples/Ex1_model_output
-   /auto_examples/Ex7_structure_TLresinv
-   /auto_examples/EX4_TL_inversion
-   /auto_examples/Ex6_Structure_resinv
-   /auto_examples/Ex8_MC_WC
-   /auto_examples/Ex5_SRT
-   /auto_examples/Ex3_Time_lapse_measurement
-   /auto_examples/Ex2_workflow
+   /auto_examples/01_model_output
+   /auto_examples/07_structure_TLresinv
+   /auto_examples/04_TL_inversion
+   /auto_examples/06_Structure_resinv
+   /auto_examples/08_MC_WC
+   /auto_examples/05_SRT
+   /auto_examples/03_Time_lapse_measurement
+   /auto_examples/02_workflow
 
 
 

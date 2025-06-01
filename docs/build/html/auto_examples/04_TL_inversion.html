@@ -1,0 +1,4250 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ex 4. Time-Lapse ERT Inversion Techniques &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Ex 6. Structure-Constrained Resistivity Inversion" href="06_Structure_resinv.html" />
+    <link rel="prev" title="Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion" href="07_structure_TLresinv.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_model_output.html">Ex 1. Loading and Processing Hydrological Model Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 4. Time-Lapse ERT Inversion Techniques</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1.Full-L2-Time-Lapse-Inversion">1.Full L2 Time-Lapse Inversion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.-Window-L2-time-lapse-inversion">2. Window L2 time-lapse inversion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.-Full-L1-Time-lapse-Inversion">3. Full L1 Time-lapse Inversion</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="06_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
+      <li class="breadcrumb-item active">Ex 4. Time-Lapse ERT Inversion Techniques</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/auto_examples/04_TL_inversion.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Ex-4.-Time-Lapse-ERT-Inversion-Techniques">
+<h1>Ex 4. Time-Lapse ERT Inversion Techniques<a class="headerlink" href="#Ex-4.-Time-Lapse-ERT-Inversion-Techniques" title="Link to this heading"></a></h1>
+<p>This example demonstrates different approaches for time-lapse electrical resistivity tomography (ERT) inversion using PyHydroGeophysX.</p>
+<p>The example includes:</p>
+<ol class="arabic simple">
+<li><p>Full time-lapse inversion with temporal regularization</p></li>
+<li><p>Windowed time-lapse inversion for large datasets</p></li>
+<li><p>L1-norm regularized inversion for sharp boundary recovery</p></li>
+<li><p>Comparison of different inversion strategies</p></li>
+<li><p>Visualization of resistivity evolution over time</p></li>
+</ol>
+<p>Time-lapse ERT inversion is crucial for monitoring subsurface water content changes and understanding hydrological processes in watersheds. The temporal regularization helps maintain consistency between consecutive time steps while allowing for realistic changes.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="kn">import</span> <span class="n">make_axes_locatable</span>
+
+<span class="c1"># Setup package path for development</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># For regular Python scripts</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+    <span class="c1"># For Jupyter notebooks</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="c1"># Add the parent directory to Python path</span>
+<span class="n">parent_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">current_dir</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.time_lapse</span> <span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.windowed</span> <span class="kn">import</span> <span class="n">WindowedTimeLapseERTInversion</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres&quot;</span>
+
+<span class="c1"># List of ERT data files testing monthly time-lapse inversion</span>
+<span class="n">ert_files</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;synthetic_data30.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data60.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data90.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data120.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data150.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data180.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data210.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data240.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data270.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data300.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data330.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data360.dat&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<section id="1.Full-L2-Time-Lapse-Inversion">
+<h2>1.Full L2 Time-Lapse Inversion<a class="headerlink" href="#1.Full-L2-Time-Lapse-Inversion" title="Link to this heading"></a></h2>
+<p>FUll Time-Lapse Inversion</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Full paths to data files</span>
+<span class="n">data_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">ert_files</span><span class="p">]</span>
+
+<span class="c1"># Measurement times (can be timestamps or any sequential numbers representing time)</span>
+<span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">,</span><span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
+
+<span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
+
+<span class="c1"># Set up inversion parameters</span>
+<span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
+    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
+    <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>            <span class="c1"># Maximum iterations</span>
+    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>           <span class="c1"># Absolute data error (V)</span>
+    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>           <span class="c1"># Relative data error (5%)</span>
+    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># Lambda reduction rate</span>
+    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>               <span class="c1"># Minimum lambda value</span>
+    <span class="s2">&quot;inversion_type&quot;</span><span class="p">:</span> <span class="s2">&quot;L2&quot;</span>           <span class="c1"># &#39;L1&#39;, &#39;L2&#39;, or &#39;L1L2&#39;</span>
+<span class="p">}</span>
+
+<span class="c1"># Create the time-lapse inversion object</span>
+<span class="n">inversion</span> <span class="o">=</span> <span class="n">TimeLapseERTInversion</span><span class="p">(</span>
+    <span class="n">data_files</span><span class="o">=</span><span class="n">data_files</span><span class="p">,</span>
+    <span class="n">measurement_times</span><span class="o">=</span><span class="n">measurement_times</span><span class="p">,</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">inversion_params</span>
+<span class="p">)</span>
+
+<span class="c1"># Run the inversion</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting time-lapse inversion...&quot;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion complete!&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Starting time-lapse inversion...
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:16 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:16 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:16 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:25 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:25 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:25 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:34 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:34 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:34 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:43 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:44 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:44 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:53 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:53 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:04:53 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:02 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:02 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:02 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:12 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:12 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:12 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:21 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:21 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:21 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:31 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:31 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:31 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:41 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:41 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:41 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:51 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:51 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:05:51 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2345.302026235805
+dPhi: 1.0
+ERTphi_d: 23302920.932678957, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 67.57962709246587
+dPhi: 0.9711851069344231
+ERTphi_d: 671471.1747907408, ERTphi_m: 18389.227344704283, ERTphi_t: 7058.104426749452
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 5.249398091800431
+dPhi: 0.9223227721482107
+ERTphi_d: 52158.01944012908, ERTphi_m: 7683.611453164078, ERTphi_t: 6979.315231406636
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.597873010139211
+dPhi: 0.6956083379092373
+ERTphi_d: 15876.4662287432, ERTphi_m: 6949.935228190742, ERTphi_t: 6957.5900616662275
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.5611919437857833
+dPhi: 0.022956183702127778
+ERTphi_d: 15512.003153455542, ERTphi_m: 6969.753752388897, ERTphi_t: 6915.711457148964
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 5 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.5472964786105157
+dPhi: 0.008900548859848765
+ERTphi_d: 15373.937811474083, ERTphi_m: 6896.942326832285, ERTphi_t: 6922.44889185473
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 6 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.5484355230955555
+dPhi: 0.0007361514104024498
+ERTphi_d: 15385.25535747744, ERTphi_m: 6878.6424935781615, ERTphi_t: 6925.309979294298
+Convergence reached at iteration 6
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+Inversion complete!
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="n">cMax</span> <span class="o">=</span> <span class="mi">3000</span>
+                    <span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span><span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_04_TL_inversion_6_0.png" src="../_images/auto_examples_04_TL_inversion_6_0.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;Figure size 640x480 with 0 Axes&gt;
+</pre></div></div>
+</div>
+</section>
+<section id="2.-Window-L2-time-lapse-inversion">
+<h2>2. Window L2 time-lapse inversion<a class="headerlink" href="#2.-Window-L2-time-lapse-inversion" title="Link to this heading"></a></h2>
+<p>Measurement times (can be timestamps or any sequential numbers representing time)</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
+
+<span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">ert_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
+
+<span class="c1"># Set up inversion parameters</span>
+<span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
+    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
+    <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>            <span class="c1"># Maximum iterations</span>
+    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>           <span class="c1"># Absolute data error (V)</span>
+    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>           <span class="c1"># Relative data error (5%)</span>
+    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># Lambda reduction rate</span>
+    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>               <span class="c1"># Minimum lambda value</span>
+    <span class="s2">&quot;inversion_type&quot;</span><span class="p">:</span> <span class="s2">&quot;L2&quot;</span>           <span class="c1"># &#39;L1&#39;, &#39;L2&#39;, or &#39;L1L2&#39;</span>
+<span class="p">}</span>
+
+<span class="c1"># Define the window size (number of timesteps to process together)</span>
+<span class="n">window_size</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># A window size of 3 means each window includes 3 consecutive measurements</span>
+
+<span class="c1"># Create the windowed time-lapse inversion object</span>
+<span class="n">inversion</span> <span class="o">=</span> <span class="n">WindowedTimeLapseERTInversion</span><span class="p">(</span>
+    <span class="n">data_dir</span><span class="o">=</span><span class="n">data_dir</span><span class="p">,</span>               <span class="c1"># Directory containing ERT data files</span>
+    <span class="n">ert_files</span><span class="o">=</span><span class="n">ert_files</span><span class="p">,</span>             <span class="c1"># List of ERT data filenames</span>
+    <span class="n">measurement_times</span><span class="o">=</span><span class="n">measurement_times</span><span class="p">,</span>  <span class="c1"># List of measurement times</span>
+    <span class="n">window_size</span><span class="o">=</span><span class="n">window_size</span><span class="p">,</span>         <span class="c1"># Size of sliding window</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>                       <span class="c1"># Mesh for inversion</span>
+    <span class="o">**</span><span class="n">inversion_params</span>               <span class="c1"># Pass the same inversion parameters</span>
+<span class="p">)</span>
+
+<span class="c1"># Run the inversion, optionally in parallel</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting windowed time-lapse inversion...&quot;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion complete!&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:52 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:52 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Starting windowed time-lapse inversion...
+
+Processing 10 windows sequentially...
+Using L2 inversion
+
+Starting L2 inversion for window 0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:32:55 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:33:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:33:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:33:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:33:14 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:33:14 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:33:14 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2614.857697445681
+dPhi: 1.0
+ERTphi_d: 6495306.520455072, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 57.16073655172875
+dPhi: 0.9781400201595803
+ERTphi_d: 141987.26959449422, ERTphi_m: 2133.003255893837, ERTphi_t: 2019.3223466965517
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 22.55573500221438
+dPhi: 0.6053981043123522
+ERTphi_d: 56028.44574550052, ERTphi_m: 1094.5580317682484, ERTphi_t: 1990.359554027868
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 10.9322455564055
+dPhi: 0.515323018499187
+ERTphi_d: 27155.697962111262, ERTphi_m: 777.987125317511, ERTphi_t: 2016.1815216377208
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.4113906714244782
+dPhi: 0.8708965450746297
+ERTphi_d: 3505.8944278184035, ERTphi_m: 824.8468448433061, ERTphi_t: 2007.1689545064157
+Convergence reached at iteration 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+
+Window 0 results:
+Model shape: (1364, 3)
+Coverage available: True
+Number of iterations: 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Starting L2 inversion for window 1
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:34:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:34:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:34:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:34:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:34:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:34:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:34:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:34:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:34:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:35:09 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:35:09 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:35:09 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:35:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:35:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:35:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2424.799586453877
+dPhi: 1.0
+ERTphi_d: 6023202.17275143, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 49.15182088877167
+dPhi: 0.9797295326329822
+ERTphi_d: 122093.12308770882, ERTphi_m: 2029.7080574973747, ERTphi_t: 201.65934388575155
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 24.897208520457383
+dPhi: 0.4934631500875902
+ERTphi_d: 61844.66596481614, ERTphi_m: 1047.1914878354132, ERTphi_t: 196.0646129992439
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 10.83135267684408
+dPhi: 0.5649571449769463
+ERTphi_d: 26905.080049280696, ERTphi_m: 683.3813858619199, ERTphi_t: 185.19254835267859
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.2211346911253689
+dPhi: 0.887259262295467
+ERTphi_d: 3033.2985727554164, ERTphi_m: 749.2929797847487, ERTphi_t: 185.18771434480294
+Convergence reached at iteration 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+
+Window 1 results:
+Model shape: (1364, 3)
+Coverage available: True
+Number of iterations: 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Starting L2 inversion for window 2
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:37:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2361.2976889094757
+dPhi: 1.0
+ERTphi_d: 5865463.459251137, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 46.755866893480054
+dPhi: 0.9801990798902305
+ERTphi_d: 116141.57336340444, ERTphi_m: 2035.5921934192395, ERTphi_t: 271.626001673944
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 25.44126583462781
+dPhi: 0.455870085938338
+ERTphi_d: 63196.10433321548, ERTphi_m: 1048.3151489693867, ERTphi_t: 268.2950906811096
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 10.645345154319843
+dPhi: 0.5815717180302173
+ERTphi_d: 26443.03736333049, ERTphi_m: 704.7291619170779, ERTphi_t: 261.1529341722753
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.3259842382362352
+dPhi: 0.8754399956963203
+ERTphi_d: 3293.7448477788084, ERTphi_m: 767.14513889329, ERTphi_t: 258.77238747183895
+Convergence reached at iteration 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+
+Window 2 results:
+Model shape: (1364, 3)
+Coverage available: True
+Number of iterations: 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Starting L2 inversion for window 3
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:39 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:39 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:39:39 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2335.406380855519
+dPhi: 1.0
+ERTphi_d: 5801149.450045109, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 46.560955194860234
+dPhi: 0.9800630179070575
+ERTphi_d: 115657.41270403283, ERTphi_m: 2016.0965933630468, ERTphi_t: 246.01913854841175
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 25.851683421381036
+dPhi: 0.44477764012378446
+ERTphi_d: 64215.581618710494, ERTphi_m: 1001.7144494932209, ERTphi_t: 247.25800445345715
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 10.734800702143064
+dPhi: 0.5847542874803782
+ERTphi_d: 26665.24494412337, ERTphi_m: 672.1036389733492, ERTphi_t: 239.3721036665533
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.3377518212779602
+dPhi: 0.8753817738776561
+ERTphi_d: 3322.975524054453, ERTphi_m: 720.2485656561621, ERTphi_t: 238.7668273361141
+Convergence reached at iteration 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+
+Window 3 results:
+Model shape: (1364, 3)
+Coverage available: True
+Number of iterations: 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Starting L2 inversion for window 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:30 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:40 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:40 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:40 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:41:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2119.5610754349227
+dPhi: 1.0
+ERTphi_d: 5264989.711380348, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 43.203496700004365
+dPhi: 0.9796167719813691
+ERTphi_d: 107317.48580281084, ERTphi_m: 2036.5851479786302, ERTphi_t: 1915.4407940770034
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 24.884087194658218
+dPhi: 0.42402608364207467
+ERTphi_d: 61812.07259153101, ERTphi_m: 1012.9461339313791, ERTphi_t: 1887.0031923165004
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 9.432341122755123
+dPhi: 0.6209488799420406
+ERTphi_d: 23429.935348923726, ERTphi_m: 734.9573956428759, ERTphi_t: 1888.505719397765
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.5055504859129483
+dPhi: 0.8403842199598919
+ERTphi_d: 3739.7874070077632, ERTphi_m: 768.7531633062582, ERTphi_t: 1875.5138854901418
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 5 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.1636252914555916
+dPhi: 0.22710974999288533
+ERTphi_d: 2890.4452239756893, ERTphi_m: 743.8233221262482, ERTphi_t: 1869.4046128785776
+Convergence reached at iteration 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+
+Window 4 results:
+Model shape: (1364, 3)
+Coverage available: True
+Number of iterations: 6
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Starting L2 inversion for window 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:44:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1950.723115414603
+dPhi: 1.0
+ERTphi_d: 4845596.218689874, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 41.53062521035555
+dPhi: 0.9787101383675721
+ERTphi_d: 103162.0730225232, ERTphi_m: 2021.0803076002612, ERTphi_t: 1928.3174831699357
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 23.365101458994364
+dPhi: 0.43740068104805857
+ERTphi_d: 58038.912024142, ERTphi_m: 1051.94961796091, ERTphi_t: 1907.416040587268
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 8.185716673817543
+dPhi: 0.6496605551581518
+ERTphi_d: 20333.320217762775, ERTphi_m: 756.3418045464609, ERTphi_t: 1917.9851370229044
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.4235328729651622
+dPhi: 0.8260955112802268
+ERTphi_d: 3536.055656445463, ERTphi_m: 788.4096800609769, ERTphi_t: 1902.3195806570966
+Convergence reached at iteration 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+
+Window 5 results:
+Model shape: (1364, 3)
+Coverage available: True
+Number of iterations: 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Starting L2 inversion for window 6
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:39 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:39 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:46:39 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1883.650824187547
+dPhi: 1.0
+ERTphi_d: 4678988.6472818665, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 44.845163506833735
+dPhi: 0.9761924222201976
+ERTphi_d: 111395.386150975, ERTphi_m: 1953.1852308551115, ERTphi_t: 1358.0583651347467
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 22.49619135421429
+dPhi: 0.49835858328878196
+ERTphi_d: 55880.539323868295, ERTphi_m: 1037.7414963277365, ERTphi_t: 1330.4225821013767
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 7.98304895085479
+dPhi: 0.6451377557579631
+ERTphi_d: 19829.893593923298, ERTphi_m: 725.5656095357383, ERTphi_t: 1345.2446277835593
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.367691979461731
+dPhi: 0.8286754862858151
+ERTphi_d: 3397.3468769829396, ERTphi_m: 765.6526584764208, ERTphi_t: 1334.410891371757
+Convergence reached at iteration 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+
+Window 6 results:
+Model shape: (1364, 3)
+Coverage available: True
+Number of iterations: 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Starting L2 inversion for window 7
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:29 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:48 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:48 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:48:48 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2080.9823041318746
+dPhi: 1.0
+ERTphi_d: 5169160.043463577, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 53.03977642556602
+dPhi: 0.9745121444232113
+ERTphi_d: 131750.804641106, ERTphi_m: 1898.324156440062, ERTphi_t: 1438.1694368267836
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 20.891051110737664
+dPhi: 0.6061248270898094
+ERTphi_d: 51893.37095907235, ERTphi_m: 999.191814525675, ERTphi_t: 1402.702089895964
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 8.494560937564154
+dPhi: 0.5933875757358094
+ERTphi_d: 21100.48936890936, ERTphi_m: 668.7632209037306, ERTphi_t: 1397.4962391140505
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.3289450857588458
+dPhi: 0.8435534107616954
+ERTphi_d: 3301.099593024973, ERTphi_m: 719.3923225870938, ERTphi_t: 1387.9168335101692
+Convergence reached at iteration 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+
+Window 7 results:
+Model shape: (1364, 3)
+Coverage available: True
+Number of iterations: 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Starting L2 inversion for window 8
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:42 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:42 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:42 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:42 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:42 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:42 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:42 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:42 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:42 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:52 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:52 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:50:52 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:51:01 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:51:01 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:51:01 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2339.9500473783282
+dPhi: 1.0
+ERTphi_d: 5812435.917687767, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 60.965748991835724
+dPhi: 0.9739457049264185
+ERTphi_d: 151438.92049571994, ERTphi_m: 1919.0577982528503, ERTphi_t: 690.3463467540149
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 21.21891549643844
+dPhi: 0.6519535009849549
+ERTphi_d: 52707.78609315309, ERTphi_m: 944.7913967523074, ERTphi_t: 672.2320784514739
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 9.889800315580564
+dPhi: 0.5339158442267914
+ERTphi_d: 24566.26398390212, ERTphi_m: 613.2842048396997, ERTphi_t: 676.5429540117213
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.2898629139704008
+dPhi: 0.8695764451443647
+ERTphi_d: 3204.0194783024754, ERTphi_m: 661.4004038123053, ERTphi_t: 671.9408812356405
+Convergence reached at iteration 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+
+Window 8 results:
+Model shape: (1364, 3)
+Coverage available: True
+Number of iterations: 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Starting L2 inversion for window 9
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:50 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:52:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:53:09 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:53:09 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:53:09 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2547.2932024544716
+dPhi: 1.0
+ERTphi_d: 6327476.314896908, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 62.81224579464403
+dPhi: 0.9753415720914573
+ERTphi_d: 156025.61855389577, ERTphi_m: 2154.8025635697513, ERTphi_t: 930.4779534147474
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 21.75493013315524
+dPhi: 0.6536514519114635
+ERTphi_d: 54039.24645075762, ERTphi_m: 1116.1732211053359, ERTphi_t: 909.6446497389655
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 10.478575598463651
+dPhi: 0.5183355894812114
+ERTphi_d: 26028.78178658371, ERTphi_m: 804.1941564921749, ERTphi_t: 909.2203773099594
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.313421095334913
+dPhi: 0.8746565233992791
+ERTphi_d: 3262.538000811924, ERTphi_m: 854.9260922592373, ERTphi_t: 905.3651914967711
+Convergence reached at iteration 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+
+Window 9 results:
+Model shape: (1364, 3)
+Coverage available: True
+Number of iterations: 5
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Final result summary:
+Model shape: (1364, 12)
+Number of coverage arrays: 12
+Number of chi2 values: 51
+Mesh exists: True
+Inversion complete!
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(1364, 12)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">pylab</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+          <span class="c1">#&#39;figure.figsize&#39;: (15, 5),</span>
+         <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;axes.titlesize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;xtick.labelsize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;ytick.labelsize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">}</span>
+
+<span class="n">pylab</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">])</span>
+
+<span class="c1"># Use tight_layout with adjusted parameters to reduce space</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">wspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">i</span> <span class="o">//</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">4</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Add common ylabel only to leftmost panels</span>
+    <span class="n">ylabel</span> <span class="o">=</span> <span class="s2">&quot;Elevation (m)&quot;</span> <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Add resistivity label only to the middle-right panel (row 1, col 3)</span>
+    <span class="n">resistivity_label</span> <span class="o">=</span> <span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span> <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">7</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Only show axis ticks on leftmost and bottom panels</span>
+    <span class="k">if</span> <span class="n">col</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+
+    <span class="k">if</span> <span class="n">row</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Not bottom row</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Add &quot;distance (m)&quot; label to bottom row panels</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create the plot</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span>
+                      <span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span>
+                      <span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+                      <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+                      <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span>
+                      <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                      <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span>
+                      <span class="n">ylabel</span><span class="o">=</span><span class="n">ylabel</span><span class="p">,</span>
+                      <span class="n">label</span><span class="o">=</span><span class="n">resistivity_label</span><span class="p">,</span>
+                      <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                      <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                      <span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mf">1.2</span><span class="p">)</span>
+
+    <span class="c1"># Only keep colorbar for the middle-right panel (row 1, col 3)</span>
+    <span class="c1"># This corresponds to panel index 7 in a 0-based indexing system</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">7</span><span class="p">:</span>  <span class="c1"># Keep only the colorbar for panel 7</span>
+        <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_04_TL_inversion_11_0.png" src="../_images/auto_examples_04_TL_inversion_11_0.png" />
+</div>
+</div>
+</section>
+<section id="3.-Full-L1-Time-lapse-Inversion">
+<h2>3. Full L1 Time-lapse Inversion<a class="headerlink" href="#3.-Full-L1-Time-lapse-Inversion" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="n">cMax</span> <span class="o">=</span> <span class="mi">3000</span>
+                    <span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span><span class="p">,</span><span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_04_TL_inversion_13_0.png" src="../_images/auto_examples_04_TL_inversion_13_0.png" />
+</div>
+</div>
+<p>Full paths to data files</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">ert_files</span><span class="p">]</span>
+
+<span class="c1"># Measurement times (can be timestamps or any sequential numbers representing time)</span>
+<span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">,</span><span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
+
+<span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
+
+<span class="c1"># Set up inversion parameters</span>
+<span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
+    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
+    <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>            <span class="c1"># Maximum iterations</span>
+    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>           <span class="c1"># Absolute data error (V)</span>
+    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>           <span class="c1"># Relative data error (5%)</span>
+    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># Lambda reduction rate</span>
+    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>               <span class="c1"># Minimum lambda value</span>
+    <span class="s2">&quot;inversion_type&quot;</span><span class="p">:</span> <span class="s2">&quot;L1&quot;</span>           <span class="c1"># &#39;L1&#39;, &#39;L2&#39;, or &#39;L1L2&#39;</span>
+<span class="p">}</span>
+
+<span class="c1"># Create the time-lapse inversion object</span>
+<span class="n">inversion</span> <span class="o">=</span> <span class="n">TimeLapseERTInversion</span><span class="p">(</span>
+    <span class="n">data_files</span><span class="o">=</span><span class="n">data_files</span><span class="p">,</span>
+    <span class="n">measurement_times</span><span class="o">=</span><span class="n">measurement_times</span><span class="p">,</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">inversion_params</span>
+<span class="p">)</span>
+
+<span class="c1"># Run the inversion</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting time-lapse inversion...&quot;</span><span class="p">)</span>
+<span class="n">result_L1</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion complete!&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Starting time-lapse inversion...
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:03 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-6.907755278982137 9.210340371976184
+------------------- IRLS Iteration: 1 ---------------------------
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:15 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:15 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:15 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:24 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:24 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:24 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:34 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:34 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:34 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:44 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:44 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:44 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:55:54 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:04 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:05 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:15 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:15 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:15 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:26 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:26 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:26 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:49 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:49 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:56:49 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:57:01 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:57:01 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+24/05/25 - 22:57:01 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 3986 Cells: 7596 Boundaries: 5884
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2345.302026235805
+dPhi: 1.0
+ERTphi_d: 9774345.116330786, ERTphi_m: 0.0, ERTphi_t: 0.0
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 1 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 27.88963522281076
+dPhi: 0.9881082969652427
+ERTphi_d: 796718.9510931845, ERTphi_m: 17837.094889497657, ERTphi_t: 3813.0420300312917
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 2 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 6.960650124555295
+dPhi: 0.750421614734415
+ERTphi_d: 349998.6499148932, ERTphi_m: 30168.931161752495, ERTphi_t: 12984.687216288054
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 3 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 3.367077233395422
+dPhi: 0.5162697200485221
+ERTphi_d: 247935.01781488897, ERTphi_m: 37053.56086955759, ERTphi_t: 17688.69152133331
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 4 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 2.339416439450478
+dPhi: 0.3052085600390675
+ERTphi_d: 211258.7389166265, ERTphi_m: 41537.442372956364, ERTphi_t: 20109.8582618513
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 5 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.934822099938128
+dPhi: 0.17294669417959127
+ERTphi_d: 195045.44936667685, ERTphi_m: 44513.72907668628, ERTphi_t: 21403.3044941756
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 6 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.718080658032908
+dPhi: 0.11202138011145885
+ERTphi_d: 186092.15909465653, ERTphi_m: 46754.019826182215, ERTphi_t: 22240.856776769164
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 7 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.578421566800379
+dPhi: 0.08128785489758657
+ERTphi_d: 180505.14923543442, ERTphi_m: 48505.12571610589, ERTphi_t: 22808.059438706776
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+-------------------ERT Iteration: 8 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.4809780702482287
+dPhi: 0.06173477263724805
+ERTphi_d: 176667.18811712053, ERTphi_m: 49909.3621624477, ERTphi_t: 23213.87372794428
+Convergence reached at iteration 8
+------------------- IRLS Iteration: 2 ---------------------------
+-------------------ERT Iteration: 0 ---------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+ERT chi2: 1.4809780702482287
+dPhi: 1.0
+ERTphi_d: 176667.18811712053, ERTphi_m: 49909.3621624477, ERTphi_t: 23213.87372794428
+Convergence reached at iteration 0
+IRLS relative change: 0.0
+IRLS converged after 2 iterations
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+End of inversion
+Inversion complete!
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result_L1</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">result_L1</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="n">cMax</span> <span class="o">=</span> <span class="mi">3000</span>
+                    <span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span><span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_04_TL_inversion_16_0.png" src="../_images/auto_examples_04_TL_inversion_16_0.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="07_structure_TLresinv.html" class="btn btn-neutral float-left" title="Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="06_Structure_resinv.html" class="btn btn-neutral float-right" title="Ex 6. Structure-Constrained Resistivity Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

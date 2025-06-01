@@ -32,27 +32,27 @@ Computation times
    * - Example
      - Time
      - Mem (MB)
-   * - :ref:`sphx_glr_auto_examples_EX4_TL_inversion.py` (``EX4_TL_inversion.py``)
+   * - :ref:`sphx_glr_auto_examples_01_model_output.py` (``01_model_output.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex1_model_output.py` (``Ex1_model_output.py``)
+   * - :ref:`sphx_glr_auto_examples_02_workflow.py` (``02_workflow.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex2_workflow.py` (``Ex2_workflow.py``)
+   * - :ref:`sphx_glr_auto_examples_03_Time_lapse_measurement.py` (``03_Time_lapse_measurement.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex3_Time_lapse_measurement.py` (``Ex3_Time_lapse_measurement.py``)
+   * - :ref:`sphx_glr_auto_examples_04_TL_inversion.py` (``04_TL_inversion.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex5_SRT.py` (``Ex5_SRT.py``)
+   * - :ref:`sphx_glr_auto_examples_05_SRT.py` (``05_SRT.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex6_Structure_resinv.py` (``Ex6_Structure_resinv.py``)
+   * - :ref:`sphx_glr_auto_examples_06_Structure_resinv.py` (``06_Structure_resinv.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex7_structure_TLresinv.py` (``Ex7_structure_TLresinv.py``)
+   * - :ref:`sphx_glr_auto_examples_07_structure_TLresinv.py` (``07_structure_TLresinv.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex8_MC_WC.py` (``Ex8_MC_WC.py``)
+   * - :ref:`sphx_glr_auto_examples_08_MC_WC.py` (``08_MC_WC.py``)
      - 00:00.000
      - 0.0
