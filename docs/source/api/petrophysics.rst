@@ -1,29 +1,26 @@
-petrophysics package
-====================
+PyHydroGeophysX.petrophysics
+============================
+
+.. automodule:: PyHydroGeophysX.petrophysics
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Submodules
 ----------
 
-petrophysics.resistivity\_models module
----------------------------------------
+PyHydroGeophysX.petrophysics.resistivity\_models module
+-------------------------------------------------------
 
-.. automodule:: petrophysics.resistivity_models
+.. automodule:: PyHydroGeophysX.petrophysics.resistivity_models
    :members:
    :undoc-members:
    :show-inheritance:
 
-petrophysics.velocity\_models module
-------------------------------------
+PyHydroGeophysX.petrophysics.velocity\_models module
+----------------------------------------------------
 
-.. automodule:: petrophysics.velocity_models
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: petrophysics
+.. automodule:: PyHydroGeophysX.petrophysics.velocity_models
    :members:
    :undoc-members:
    :show-inheritance:

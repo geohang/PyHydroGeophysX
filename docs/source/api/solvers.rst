@@ -1,29 +1,26 @@
-solvers package
-===============
+PyHydroGeophysX.solvers
+=======================
+
+.. automodule:: PyHydroGeophysX.solvers
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Submodules
 ----------
 
-solvers.linear\_solvers module
-------------------------------
+PyHydroGeophysX.solvers.linear\_solvers module
+----------------------------------------------
 
-.. automodule:: solvers.linear_solvers
+.. automodule:: PyHydroGeophysX.solvers.linear_solvers
    :members:
    :undoc-members:
    :show-inheritance:
 
-solvers.solver module
----------------------
+PyHydroGeophysX.solvers.solver module
+-------------------------------------
 
-.. automodule:: solvers.solver
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: solvers
+.. automodule:: PyHydroGeophysX.solvers.solver
    :members:
    :undoc-members:
    :show-inheritance:
