@@ -1,0 +1,424 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PyHydroGeophysX.Geophy_modular.ERT_to_WC &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">PyHydroGeophysX.Geophy_modular.ERT_to_WC</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for PyHydroGeophysX.Geophy_modular.ERT_to_WC</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for converting Electrical Resistivity Tomography (ERT) resistivity models to</span>
+<span class="sd">volumetric water content, incorporating structural information (geological layers)</span>
+<span class="sd">and quantifying uncertainty using Monte Carlo simulations.</span>
+
+<span class="sd">This module provides the `ERTtoWC` class, which takes ERT resistivity data,</span>
+<span class="sd">a corresponding mesh, cell markers identifying different layers, and optional</span>
+<span class="sd">coverage information. It allows users to define petrophysical parameter</span>
+<span class="sd">distributions (saturated resistivity `rhos`, saturation exponent `n`,</span>
+<span class="sd">surface conductivity `sigma_sur`, and porosity `φ`) for each layer.</span>
+<span class="sd">The core functionality involves running Monte Carlo simulations to sample these</span>
+<span class="sd">parameters and convert resistivity to water content for each realization,</span>
+<span class="sd">thereby providing a distribution of possible water content values.</span>
+<span class="sd">Statistics (mean, std, percentiles) can then be calculated from these distributions.</span>
+<span class="sd">The module also includes utilities for plotting results and extracting time series.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span>
+
+
+<span class="kn">from</span> <span class="nn">..petrophysics.resistivity_models</span> <span class="kn">import</span> <span class="n">resistivity_to_saturation</span>
+
+
+
+<div class="viewcode-block" id="ERTtoWC">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#Geophy_modular.ERTtoWC">[docs]</a>
+<span class="k">class</span> <span class="nc">ERTtoWC</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for converting ERT resistivity models to water content.&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="ERTtoWC.__init__">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#Geophy_modular.ERTtoWC.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                 <span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span>
+                 <span class="n">resistivity_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                 <span class="n">cell_markers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                 <span class="n">coverage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize converter.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            mesh: PyGIMLI mesh</span>
+<span class="sd">            resistivity_values: Resistivity values, shape (n_cells, n_timesteps)</span>
+<span class="sd">            cell_markers: Cell markers to identify different geological layers</span>
+<span class="sd">            coverage: Coverage values (optional)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resistivity_values</span> <span class="o">=</span> <span class="n">resistivity_values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cell_markers</span> <span class="o">=</span> <span class="n">cell_markers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">coverage</span></div>
+
+    
+<div class="viewcode-block" id="ERTtoWC.setup_layer_distributions">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#Geophy_modular.ERTtoWC.setup_layer_distributions">[docs]</a>
+    <span class="k">def</span> <span class="nf">setup_layer_distributions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                                <span class="n">layer_distributions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set up parameter distributions for different layers.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            layer_distributions: Dictionary mapping layer markers to parameter distributions</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer_distributions</span> <span class="o">=</span> <span class="n">layer_distributions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer_markers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">layer_distributions</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
+    
+<div class="viewcode-block" id="ERTtoWC.run_monte_carlo">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#Geophy_modular.ERTtoWC.run_monte_carlo">[docs]</a>
+    <span class="k">def</span> <span class="nf">run_monte_carlo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_realizations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">progress_bar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run Monte Carlo simulation for uncertainty quantification.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            n_realizations: Number of Monte Carlo realizations</span>
+<span class="sd">            progress_bar: Whether to show progress bar</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (water_content_all, saturation_all, params_used)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;layer_distributions&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Layer distributions not set. Call setup_layer_distributions first.&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Initialize arrays to store results</span>
+        <span class="n">water_content_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_realizations</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">resistivity_values</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">saturation_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_realizations</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">resistivity_values</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        
+        <span class="c1"># Store parameters used for each realization</span>
+        <span class="n">params_used</span> <span class="o">=</span> <span class="p">{</span><span class="n">marker</span><span class="p">:</span> <span class="p">{</span><span class="n">param</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">)</span> <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> 
+                              <span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="s1">&#39;sigma_sur&#39;</span><span class="p">,</span> <span class="s1">&#39;porosity&#39;</span><span class="p">]}</span> 
+                     <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_markers</span><span class="p">}</span>
+        
+        <span class="c1"># Setup iterator</span>
+        <span class="n">iterator</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Monte Carlo Simulations&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">progress_bar</span> <span class="k">else</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">)</span>
+        
+        <span class="c1"># Run Monte Carlo simulation</span>
+        <span class="k">for</span> <span class="n">mc_idx</span> <span class="ow">in</span> <span class="n">iterator</span><span class="p">:</span>
+            <span class="c1"># Sample parameters for each layer</span>
+            <span class="n">layer_params</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cell_markers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            
+            <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_markers</span><span class="p">:</span>
+                <span class="c1"># Get distribution for this layer</span>
+                <span class="n">layer_dist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_distributions</span><span class="p">[</span><span class="n">marker</span><span class="p">]</span>
+                
+                <span class="c1"># Sample parameters</span>
+                <span class="n">layer_params</span><span class="p">[</span><span class="n">marker</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;rhos&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer_dist</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="n">layer_dist</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">])),</span>
+                    <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer_dist</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="n">layer_dist</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">])),</span>
+                    <span class="s1">&#39;sigma_sur&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer_dist</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="n">layer_dist</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">]))</span>
+                <span class="p">}</span>
+                
+                <span class="c1"># Sample porosity</span>
+                <span class="n">porosity_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer_dist</span><span class="p">[</span><span class="s1">&#39;porosity&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> 
+                                                         <span class="n">layer_dist</span><span class="p">[</span><span class="s1">&#39;porosity&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">]),</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">)</span>
+                <span class="n">porosity</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cell_markers</span> <span class="o">==</span> <span class="n">marker</span><span class="p">]</span> <span class="o">=</span> <span class="n">porosity_value</span>
+                
+                <span class="c1"># Store parameters</span>
+                <span class="k">for</span> <span class="n">param</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;rhos&#39;</span><span class="p">:</span> <span class="n">layer_params</span><span class="p">[</span><span class="n">marker</span><span class="p">][</span><span class="s1">&#39;rhos&#39;</span><span class="p">],</span> 
+                                   <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">layer_params</span><span class="p">[</span><span class="n">marker</span><span class="p">][</span><span class="s1">&#39;n&#39;</span><span class="p">],</span>
+                                   <span class="s1">&#39;sigma_sur&#39;</span><span class="p">:</span> <span class="n">layer_params</span><span class="p">[</span><span class="n">marker</span><span class="p">][</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">],</span>
+                                   <span class="s1">&#39;porosity&#39;</span><span class="p">:</span> <span class="n">porosity_value</span><span class="p">}</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">params_used</span><span class="p">[</span><span class="n">marker</span><span class="p">][</span><span class="n">param</span><span class="p">][</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            
+            <span class="c1"># Process each timestep</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resistivity_values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="n">resistivity_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resistivity_values</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span>
+                
+                <span class="c1"># Process each layer</span>
+                <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_markers</span><span class="p">:</span>
+                    <span class="n">mask_layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell_markers</span> <span class="o">==</span> <span class="n">marker</span>
+                    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask_layer</span><span class="p">):</span>
+                        <span class="n">params</span> <span class="o">=</span> <span class="n">layer_params</span><span class="p">[</span><span class="n">marker</span><span class="p">]</span>
+                        <span class="n">saturation_all</span><span class="p">[</span><span class="n">mc_idx</span><span class="p">,</span> <span class="n">mask_layer</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">resistivity_to_saturation</span><span class="p">(</span>
+                            <span class="n">resistivity_t</span><span class="p">[</span><span class="n">mask_layer</span><span class="p">],</span>
+                            <span class="n">params</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">],</span>
+                            <span class="n">params</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">],</span>
+                            <span class="n">params</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">]</span>
+                        <span class="p">)</span>
+                
+                <span class="c1"># Convert saturation to water content</span>
+                <span class="n">water_content_all</span><span class="p">[</span><span class="n">mc_idx</span><span class="p">,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">saturation_all</span><span class="p">[</span><span class="n">mc_idx</span><span class="p">,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">*</span> <span class="n">porosity</span>
+        
+        <span class="c1"># Store results</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">water_content_all</span> <span class="o">=</span> <span class="n">water_content_all</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">saturation_all</span> <span class="o">=</span> <span class="n">saturation_all</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params_used</span> <span class="o">=</span> <span class="n">params_used</span>
+        
+        <span class="k">return</span> <span class="n">water_content_all</span><span class="p">,</span> <span class="n">saturation_all</span><span class="p">,</span> <span class="n">params_used</span></div>
+
+    
+<div class="viewcode-block" id="ERTtoWC.get_statistics">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#Geophy_modular.ERTtoWC.get_statistics">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_statistics</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate statistics across Monte Carlo realizations.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;water_content_all&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No Monte Carlo results. Run run_monte_carlo first.&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">water_content_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">water_content_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="s1">&#39;p10&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="s1">&#39;p50&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="s1">&#39;p90&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="p">}</span></div>
+
+    
+<div class="viewcode-block" id="ERTtoWC.extract_time_series">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#Geophy_modular.ERTtoWC.extract_time_series">[docs]</a>
+    <span class="k">def</span> <span class="nf">extract_time_series</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">positions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract time series at specific positions.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;water_content_all&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No Monte Carlo results. Run run_monte_carlo first.&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Find indices of cells closest to specified positions</span>
+        <span class="n">cell_indices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">x_pos</span><span class="p">,</span> <span class="n">y_pos</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">:</span>
+            <span class="n">cell_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">cell_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_pos</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">cell_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y_pos</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">cell_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">distances</span><span class="p">))</span>
+        
+        <span class="c1"># Extract time series</span>
+        <span class="n">n_realizations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">water_content_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">n_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">water_content_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">time_series</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">positions</span><span class="p">),</span> <span class="n">n_realizations</span><span class="p">,</span> <span class="n">n_timesteps</span><span class="p">))</span>
+        
+        <span class="k">for</span> <span class="n">pos_idx</span><span class="p">,</span> <span class="n">cell_idx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cell_indices</span><span class="p">):</span>
+            <span class="n">time_series</span><span class="p">[</span><span class="n">pos_idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">water_content_all</span><span class="p">[:,</span> <span class="n">cell_idx</span><span class="p">,</span> <span class="p">:]</span>
+        
+        <span class="k">return</span> <span class="n">time_series</span><span class="p">,</span> <span class="n">cell_indices</span></div>
+
+    
+<div class="viewcode-block" id="ERTtoWC.plot_water_content">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#Geophy_modular.ERTtoWC.plot_water_content">[docs]</a>
+    <span class="k">def</span> <span class="nf">plot_water_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+                         <span class="n">cmap</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;jet&#39;</span><span class="p">,</span> <span class="n">cmin</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">cmax</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.32</span><span class="p">,</span>
+                         <span class="n">coverage_threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot water content for a specific time step.&quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;water_content_all&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No Monte Carlo results. Run run_monte_carlo first.&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Get values to plot</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_statistics</span><span class="p">()[</span><span class="s1">&#39;mean&#39;</span><span class="p">][:,</span> <span class="n">time_idx</span><span class="p">]</span>
+        
+        <span class="c1"># Create figure if needed</span>
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        
+        <span class="c1"># Apply coverage mask if needed</span>
+        <span class="k">if</span> <span class="n">coverage_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">coverage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">coverage</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">coverage_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coverage</span><span class="p">[</span><span class="n">time_idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">&lt;</span> <span class="n">coverage_threshold</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">coverage_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coverage</span> <span class="o">&lt;</span> <span class="n">coverage_threshold</span>
+                
+            <span class="n">values_masked</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">coverage_mask</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">values_masked</span> <span class="o">=</span> <span class="n">values</span>
+        
+        <span class="c1"># Create plot</span>
+        <span class="k">return</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span>
+            <span class="n">values_masked</span><span class="p">,</span>
+            <span class="n">cMap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span>
+            <span class="n">cMin</span><span class="o">=</span><span class="n">cmin</span><span class="p">,</span>
+            <span class="n">cMax</span><span class="o">=</span><span class="n">cmax</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Water Content (-)&#39;</span><span class="p">,</span>
+            <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">ax</span><span class="o">=</span><span class="n">ax</span>
+        <span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="ERTtoWC.save_results">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#Geophy_modular.ERTtoWC.save_results">[docs]</a>
+    <span class="k">def</span> <span class="nf">save_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">base_filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save Monte Carlo results to files.&quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">os</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># Save statistics</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_statistics</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">stat_name</span><span class="p">,</span> <span class="n">stat_values</span> <span class="ow">in</span> <span class="n">stats</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_filename</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">stat_name</span><span class="si">}</span><span class="s2">.npy&quot;</span><span class="p">),</span> <span class="n">stat_values</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="plot_time_series">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#Geophy_modular.plot_time_series">[docs]</a>
+<span class="k">def</span> <span class="nf">plot_time_series</span><span class="p">(</span><span class="n">time_steps</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">time_series_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                    <span class="n">true_values</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">labels</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">colors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">output_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot time series with uncertainty bands.&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+    
+    <span class="n">n_positions</span> <span class="o">=</span> <span class="n">time_series_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="c1"># Default labels and colors</span>
+    <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;Position </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_positions</span><span class="p">)]</span>
+    
+    <span class="k">if</span> <span class="n">colors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tab:blue&#39;</span><span class="p">,</span> <span class="s1">&#39;tab:orange&#39;</span><span class="p">,</span> <span class="s1">&#39;tab:green&#39;</span><span class="p">,</span> <span class="s1">&#39;tab:red&#39;</span><span class="p">]</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_positions</span><span class="p">)]</span>
+    
+    <span class="c1"># Create figure</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_positions</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+    <span class="n">axes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">axes</span><span class="p">)</span>
+    
+    <span class="c1"># Plot each position</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_positions</span><span class="p">):</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        
+        <span class="c1"># Calculate statistics</span>
+        <span class="n">mean_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">time_series_data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">std_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">time_series_data</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="c1"># Plot mean and uncertainty</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time_steps</span><span class="p">,</span> <span class="n">mean_ts</span><span class="p">,</span> <span class="s1">&#39;o-&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Estimated&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">time_steps</span><span class="p">,</span> <span class="n">mean_ts</span><span class="o">-</span><span class="n">std_ts</span><span class="p">,</span> <span class="n">mean_ts</span><span class="o">+</span><span class="n">std_ts</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+        
+        <span class="c1"># Plot true values if provided</span>
+        <span class="k">if</span> <span class="n">true_values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time_steps</span><span class="p">,</span> <span class="n">true_values</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;True&#39;</span><span class="p">)</span>
+        
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Time&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Water Content (-)&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;Position </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    
+    <span class="c1"># Save figure if output_file is provided</span>
+    <span class="k">if</span> <span class="n">output_file</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

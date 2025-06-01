@@ -1,0 +1,534 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PyHydroGeophysX.model_output.modflow_output &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">PyHydroGeophysX.model_output.modflow_output</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for PyHydroGeophysX.model_output.modflow_output</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for processing MODFLOW model outputs.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="n">HydroModelOutput</span>
+
+
+<div class="viewcode-block" id="binaryread">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.binaryread">[docs]</a>
+<span class="k">def</span> <span class="nf">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,),</span> <span class="n">charlen</span><span class="o">=</span><span class="mi">16</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Uses numpy to read from binary file. This was found to be faster than the</span>
+<span class="sd">    struct approach and is used as the default.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file: Open file object in binary read mode</span>
+<span class="sd">        vartype: Variable type to read</span>
+<span class="sd">        shape: Shape of the data to read (default: (1,))</span>
+<span class="sd">        charlen: Length of character strings (default: 16)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The read data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Read a string variable of length charlen</span>
+    <span class="k">if</span> <span class="n">vartype</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">charlen</span> <span class="o">*</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Find the number of values</span>
+        <span class="n">nval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">,</span> <span class="n">nval</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nval</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span>  <span class="c1"># [0]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+
+<div class="viewcode-block" id="MODFLOWWaterContent">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWWaterContent">[docs]</a>
+<span class="k">class</span> <span class="nc">MODFLOWWaterContent</span><span class="p">(</span><span class="n">HydroModelOutput</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for processing water content data from MODFLOW simulations.&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="MODFLOWWaterContent.__init__">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWWaterContent.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">idomain</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize MODFLOWWaterContent processor.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            model_directory: Path to simulation workspace</span>
+<span class="sd">            idomain: Domain array indicating active cells</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model_directory</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">idomain</span> <span class="o">=</span> <span class="n">idomain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span> <span class="o">=</span> <span class="n">idomain</span><span class="o">.</span><span class="n">shape</span>
+        
+        <span class="c1"># Build reverse lookup dictionary (only for first layer as in original code)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">iuzno</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">idomain</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span><span class="p">[</span><span class="n">iuzno</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+                    <span class="n">iuzno</span> <span class="o">+=</span> <span class="mi">1</span>
+        
+        <span class="c1"># Store number of UZ flow cells</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="MODFLOWWaterContent.load_timestep">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWWaterContent.load_timestep">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">nlay</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load water content for a specific timestep.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            timestep_idx: Index of the timestep to load</span>
+<span class="sd">            nlay: Number of layers in the model</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Water content array with shape (nlay, nrows, ncols)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_time_range</span><span class="p">(</span><span class="n">timestep_idx</span><span class="p">,</span> <span class="n">timestep_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nlay</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    
+<div class="viewcode-block" id="MODFLOWWaterContent.load_time_range">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWWaterContent.load_time_range">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                      <span class="n">nlay</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load water content for a range of timesteps.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            start_idx: Starting timestep index (default: 0)</span>
+<span class="sd">            end_idx: Ending timestep index (exclusive, default: None loads all)</span>
+<span class="sd">            nlay: Number of layers in the model (default: 3)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Water content array with shape (timesteps, nlay, nrows, ncols)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Calculate total UZ flow cells</span>
+        <span class="n">nuzfcells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells</span> <span class="o">*</span> <span class="n">nlay</span>
+        
+        <span class="c1"># Open water content file</span>
+        <span class="n">fpth</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="p">,</span> <span class="s2">&quot;WaterContent&quot;</span><span class="p">)</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fpth</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span>
+        
+        <span class="n">WC_tot</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="c1"># Skip to starting timestep</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start_idx</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Read header</span>
+                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="p">(</span><span class="s2">&quot;kstp&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;kper&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> 
+                    <span class="p">(</span><span class="s2">&quot;pertim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;totim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;S16&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;maxbound&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;11&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                <span class="p">]</span>
+                <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span>
+                
+                <span class="c1"># Skip data for this timestep</span>
+                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">)]</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nuzfcells</span><span class="p">):</span>
+                    <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error skipping to timestep </span><span class="si">{</span><span class="n">start_idx</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">WC_tot</span><span class="p">)</span>
+        
+        <span class="c1"># Read timesteps</span>
+        <span class="n">timestep</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="c1"># Break if we&#39;ve read the requested number of timesteps</span>
+            <span class="k">if</span> <span class="n">end_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">timestep</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="n">end_idx</span> <span class="o">-</span> <span class="n">start_idx</span><span class="p">):</span>
+                <span class="k">break</span>
+                
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Read header information</span>
+                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="p">(</span><span class="s2">&quot;kstp&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;kper&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> 
+                    <span class="p">(</span><span class="s2">&quot;pertim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;totim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;S16&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;maxbound&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;11&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                <span class="p">]</span>
+                <span class="n">header</span> <span class="o">=</span> <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span>
+                
+                <span class="c1"># Initialize water content array for this timestep</span>
+                <span class="n">WC_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nlay</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                
+                <span class="c1"># Read water content data</span>
+                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">)]</span>
+                
+                <span class="c1"># Read data for each layer and cell</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nlay</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells</span><span class="p">):</span>
+                        <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+                        <span class="n">WC_arr</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+                
+                <span class="n">WC_tot</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">WC_arr</span><span class="p">)</span>
+                <span class="n">timestep</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Reached end of file or error at timestep </span><span class="si">{</span><span class="n">timestep</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+        
+        <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">WC_tot</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="MODFLOWWaterContent.get_timestep_info">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWWaterContent.get_timestep_info">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get information about each timestep in the WaterContent file.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of tuples (kstp, kper, pertim, totim) for each timestep</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Open water content file</span>
+        <span class="n">fpth</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="p">,</span> <span class="s2">&quot;WaterContent&quot;</span><span class="p">)</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fpth</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span>
+        
+        <span class="n">timestep_info</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">nuzfcells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells</span> <span class="o">*</span> <span class="mi">3</span>  <span class="c1"># Assuming 3 layers by default</span>
+        
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Read header information</span>
+                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="p">(</span><span class="s2">&quot;kstp&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;kper&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> 
+                    <span class="p">(</span><span class="s2">&quot;pertim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;totim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;S16&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;maxbound&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="s2">&quot;11&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+                <span class="p">]</span>
+                <span class="n">header</span> <span class="o">=</span> <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span>
+                
+                <span class="c1"># Extract timestep info</span>
+                <span class="n">kstp</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">kper</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">pertim</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">totim</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span>
+                
+                <span class="n">timestep_info</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">kstp</span><span class="p">,</span> <span class="n">kper</span><span class="p">,</span> <span class="n">pertim</span><span class="p">,</span> <span class="n">totim</span><span class="p">))</span>
+                
+                <span class="c1"># Skip data for this timestep</span>
+                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">)]</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nuzfcells</span><span class="p">):</span>
+                    <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span>
+                    
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">break</span>
+        
+        <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">timestep_info</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="MODFLOWPorosity">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWPorosity">[docs]</a>
+<span class="k">class</span> <span class="nc">MODFLOWPorosity</span><span class="p">(</span><span class="n">HydroModelOutput</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for processing porosity data from MODFLOW simulations.&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="MODFLOWPorosity.__init__">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWPorosity.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize MODFLOWPorosity processor.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            model_directory: Path to simulation workspace</span>
+<span class="sd">            model_name: Name of the MODFLOW model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model_directory</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span> <span class="o">=</span> <span class="n">model_directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_name</span> <span class="o">=</span> <span class="n">model_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nlay</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nrow</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="mi">1</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">flopy</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">flopy_available</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">flopy_available</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;flopy is required to load MODFLOW porosity data. Please install flopy.&quot;</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="MODFLOWPorosity.load_porosity">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWPorosity.load_porosity">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_porosity</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load porosity data from MODFLOW model (supports both MODFLOW 6 and earlier versions).</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            3D array of porosity values (nlay, nrow, ncol)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">flopy_available</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;flopy is required to load MODFLOW porosity data.&quot;</span><span class="p">)</span>
+            
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">flopy</span>
+            
+            <span class="c1"># Check if this is a MODFLOW 6 model</span>
+            <span class="n">mf6_indicator_files</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;mfsim.nam&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="si">}</span><span class="s2">.sim&quot;</span><span class="p">]</span>
+            <span class="n">is_mf6</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="p">,</span> <span class="n">f</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">mf6_indicator_files</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">is_mf6</span><span class="p">:</span>
+                <span class="c1"># MODFLOW 6 approach</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># Load the MODFLOW 6 simulation</span>
+                    <span class="n">sim</span> <span class="o">=</span> <span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">MFSimulation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+                        <span class="n">sim_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
+                        <span class="n">sim_ws</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="p">,</span>
+                        <span class="n">exe_name</span><span class="o">=</span><span class="s2">&quot;mf6&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    
+                    <span class="c1"># Get the groundwater flow model</span>
+                    <span class="n">gwf</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">get_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="p">)</span>
+                    
+                    <span class="c1"># Try to get dimensions from DIS package</span>
+                    
+                    <span class="n">dis</span> <span class="o">=</span> <span class="n">gwf</span><span class="o">.</span><span class="n">get_package</span><span class="p">(</span><span class="s2">&quot;DIS&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">nlay</span> <span class="o">=</span> <span class="n">dis</span><span class="o">.</span><span class="n">nlay</span><span class="o">.</span><span class="n">data</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">nrow</span> <span class="o">=</span> <span class="n">dis</span><span class="o">.</span><span class="n">nrow</span><span class="o">.</span><span class="n">data</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">dis</span><span class="o">.</span><span class="n">ncol</span><span class="o">.</span><span class="n">data</span>
+                    
+                    <span class="c1"># Try to get porosity from the STO (Storage) package</span>
+                    
+                    <span class="n">sto</span> <span class="o">=</span> <span class="n">gwf</span><span class="o">.</span><span class="n">get_package</span><span class="p">(</span><span class="s2">&quot;STO&quot;</span><span class="p">)</span>
+                    
+                    <span class="k">return</span> <span class="n">sto</span><span class="o">.</span><span class="n">sy</span><span class="o">.</span><span class="n">array</span>
+                        
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading MODFLOW 6 model: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Legacy MODFLOW models (2005 or earlier)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># Load the model</span>
+                    <span class="n">model</span> <span class="o">=</span> <span class="n">flopy</span><span class="o">.</span><span class="n">modflow</span><span class="o">.</span><span class="n">Modflow</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="si">}</span><span class="s2">.nam&quot;</span><span class="p">,</span>
+                        <span class="n">model_ws</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="p">,</span>
+                        <span class="n">load_only</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;UPW&quot;</span><span class="p">,</span> <span class="s2">&quot;LPF&quot;</span><span class="p">,</span> <span class="s2">&quot;DIS&quot;</span><span class="p">],</span>  <span class="c1"># Load packages with porosity and dimensions</span>
+                        <span class="n">check</span><span class="o">=</span><span class="kc">False</span>
+                    <span class="p">)</span>
+                    
+                    <span class="c1"># Get dimensions</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">nlay</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">nlay</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">nrow</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">nrow</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">ncol</span>
+                    
+                    <span class="c1"># Try to get porosity from UPW package first</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">&#39;upw&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">model</span><span class="o">.</span><span class="n">upw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">upw</span><span class="p">,</span> <span class="s1">&#39;sy&#39;</span><span class="p">):</span>
+                            <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">upw</span><span class="o">.</span><span class="n">sy</span><span class="o">.</span><span class="n">array</span>
+                    
+                    <span class="c1"># Then try LPF package</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">&#39;lpf&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">model</span><span class="o">.</span><span class="n">lpf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">lpf</span><span class="p">,</span> <span class="s1">&#39;sy&#39;</span><span class="p">):</span>
+                            <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">lpf</span><span class="o">.</span><span class="n">sy</span><span class="o">.</span><span class="n">array</span>
+                    
+                    <span class="c1"># If specific yield not found, try specific storage</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">&#39;upw&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">model</span><span class="o">.</span><span class="n">upw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">upw</span><span class="p">,</span> <span class="s1">&#39;ss&#39;</span><span class="p">):</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: Using specific storage as substitute for porosity&quot;</span><span class="p">)</span>
+                            <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">upw</span><span class="o">.</span><span class="n">ss</span><span class="o">.</span><span class="n">array</span>
+                    
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">&#39;lpf&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">model</span><span class="o">.</span><span class="n">lpf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">lpf</span><span class="p">,</span> <span class="s1">&#39;ss&#39;</span><span class="p">):</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: Using specific storage as substitute for porosity&quot;</span><span class="p">)</span>
+                            <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">lpf</span><span class="o">.</span><span class="n">ss</span><span class="o">.</span><span class="n">array</span>
+                            
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading legacy MODFLOW model: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+            <span class="c1"># If nothing found, use default value</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: No porosity data found in model. Using default value of 0.3&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nlay</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrow</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncol</span><span class="p">))</span> <span class="o">*</span> <span class="mf">0.3</span>
+                
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading porosity data: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+    
+    <span class="c1"># Implement required abstract methods</span>
+<div class="viewcode-block" id="MODFLOWPorosity.load_timestep">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWPorosity.load_timestep">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load porosity for a specific timestep.</span>
+<span class="sd">        Note: For MODFLOW, porosity is typically constant over time,</span>
+<span class="sd">        so this returns the same array regardless of timestep.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            timestep_idx: Index of the timestep (unused)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            3D array of porosity values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_porosity</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="MODFLOWPorosity.load_time_range">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWPorosity.load_time_range">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load porosity for a range of timesteps.</span>
+<span class="sd">        Since porosity is typically constant, this returns a stack of identical arrays.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            start_idx: Starting timestep index (unused)</span>
+<span class="sd">            end_idx: Ending timestep index (unused)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            4D array of porosity values (nt, nlay, nrow, ncol) where all timesteps are identical</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">porosity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_porosity</span><span class="p">()</span>
+        
+        <span class="c1"># Determine number of timesteps</span>
+        <span class="n">nt</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">end_idx</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">end_idx</span> <span class="o">-</span> <span class="n">start_idx</span><span class="p">)</span>
+        
+        <span class="c1"># Stack porosity array for each timestep</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">porosity</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:],</span> <span class="p">(</span><span class="n">nt</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span></div>
+
+    
+<div class="viewcode-block" id="MODFLOWPorosity.get_timestep_info">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.MODFLOWPorosity.get_timestep_info">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get information about each timestep in the model.</span>
+<span class="sd">        Returns a minimal placeholder since porosity doesn&#39;t vary with time.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List with single dummy timestep info</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)]</span>  <span class="c1"># (stress_period, timestep, time)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

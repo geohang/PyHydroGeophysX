@@ -1,0 +1,1146 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling &mdash; PyHydroGeophysX 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Ex3. Creating Synthetic Time-Lapse ERT Measurements" href="Ex3_Time_lapse_measurement.html" />
+    <link rel="prev" title="Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation" href="Ex8_MC_WC.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Ex 1. Loading and Processing Hydrological Model Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Long-seismic-profile">Long seismic profile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Short-seismic-profiles">Short seismic profiles</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">SyntaxError</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
+      <li class="breadcrumb-item active">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/auto_examples/Ex5_SRT.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Ex-5.-Seismic-Refraction-Tomography-(SRT)-Forward-Modeling">
+<h1>Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling<a class="headerlink" href="#Ex-5.-Seismic-Refraction-Tomography-(SRT)-Forward-Modeling" title="Link to this heading"></a></h1>
+<p>This example demonstrates seismic refraction tomography forward modeling for watershed structure characterization using PyHydroGeophysX.</p>
+<p>The workflow includes:</p>
+<ol class="arabic simple">
+<li><p>Converting water content to seismic P-wave velocity using rock physics models</p></li>
+<li><p>Creating seismic survey geometry along topographic profiles</p></li>
+<li><p>Forward modeling to generate synthetic travel time data</p></li>
+<li><p>Seismic tomography inversion to recover velocity structure</p></li>
+<li><p>Visualization of velocity models and first-arrival picks</p></li>
+</ol>
+<p>SRT is valuable for determining subsurface structure and bedrock interface geometry, which provides important constraints for hydrogeophysical modeling and interpretation of ERT data.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">TravelTimeManager</span>
+<span class="kn">import</span> <span class="nn">pygimli.physics.traveltime</span> <span class="k">as</span> <span class="nn">tt</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="kn">import</span> <span class="n">make_axes_locatable</span>
+<span class="kn">import</span> <span class="nn">pygimli.meshtools</span> <span class="k">as</span> <span class="nn">mt</span>
+
+<span class="c1"># Setup package path for development</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># For regular Python scripts</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+    <span class="c1"># For Jupyter notebooks</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="c1"># Add the parent directory to Python path</span>
+<span class="n">parent_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">current_dir</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.model_output.modflow_output</span> <span class="kn">import</span> <span class="n">MODFLOWWaterContent</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.core.interpolation</span> <span class="kn">import</span> <span class="n">ProfileInterpolator</span><span class="p">,</span> <span class="n">create_surface_lines</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.core.mesh_utils</span> <span class="kn">import</span> <span class="n">MeshCreator</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.petrophysics.velocity_models</span> <span class="kn">import</span> <span class="n">HertzMindlinModel</span><span class="p">,</span> <span class="n">DEMModel</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/seismic_example&quot;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Long-seismic-profile">
+<h2>Long seismic profile<a class="headerlink" href="#Long-seismic-profile" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 1: Follow the workflow to create the mesh and model...&quot;</span><span class="p">)</span>
+
+<span class="c1"># These would be your actual data files</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/&quot;</span>
+<span class="n">modflow_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;modflow&quot;</span><span class="p">)</span>
+
+<span class="c1"># Load domain information from files</span>
+<span class="c1"># (Replace with your actual file paths)</span>
+<span class="n">idomain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;id.txt&quot;</span><span class="p">))</span>
+<span class="n">top</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;top.txt&quot;</span><span class="p">))</span>
+<span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;Porosity.npy&quot;</span><span class="p">))</span>
+
+<span class="n">Water_Content</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;Watercontent.npy&quot;</span><span class="p">))</span>
+
+<span class="n">water_content</span> <span class="o">=</span> <span class="n">Water_Content</span><span class="p">[</span><span class="mi">50</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">water_content</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+
+<span class="c1"># Step 3: Set up profile for 2D section</span>
+
+<span class="c1"># Define profile endpoints</span>
+<span class="n">point1</span> <span class="o">=</span> <span class="p">[</span><span class="mi">115</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span>  <span class="c1"># [col, row]</span>
+<span class="n">point2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">95</span><span class="p">,</span> <span class="mi">180</span><span class="p">]</span>  <span class="c1"># [col, row]</span>
+
+<span class="c1"># Initialize profile interpolator</span>
+<span class="n">interpolator</span> <span class="o">=</span> <span class="n">ProfileInterpolator</span><span class="p">(</span>
+    <span class="n">point1</span><span class="o">=</span><span class="n">point1</span><span class="p">,</span>
+    <span class="n">point2</span><span class="o">=</span><span class="n">point2</span><span class="p">,</span>
+    <span class="n">surface_data</span><span class="o">=</span><span class="n">top</span><span class="p">,</span>
+    <span class="n">origin_x</span><span class="o">=</span><span class="mf">569156.2983333333</span><span class="p">,</span>
+    <span class="n">origin_y</span><span class="o">=</span><span class="mf">4842444.17</span><span class="p">,</span>
+    <span class="n">pixel_width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pixel_height</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">num_points</span> <span class="o">=</span> <span class="mi">400</span>
+<span class="p">)</span>
+
+
+
+<span class="c1"># Interpolate water content to profile</span>
+<span class="n">water_content_profile</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">water_content</span><span class="p">)</span>
+
+<span class="c1"># Interpolate porosity to profile</span>
+<span class="n">porosity_profile</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Step 1: Follow the workflow to create the mesh and model...
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(14, 194, 157)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 2: Creating geometry for the seismic refraction survey...&quot;</span><span class="p">)</span>
+
+<span class="c1"># Load structure layers</span>
+<span class="n">bot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;bot.npy&quot;</span><span class="p">))</span>
+
+<span class="c1"># Process layers to get structure</span>
+<span class="n">structure</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_layer_data</span><span class="p">([</span><span class="n">top</span><span class="p">]</span> <span class="o">+</span> <span class="n">bot</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+<span class="c1"># Create surface lines</span>
+<span class="c1"># Indicate the layer for the structure regolith, fractured bedrock and fresh bedrock</span>
+<span class="n">top_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">mid_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">bot_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+<span class="n">surface</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span> <span class="o">=</span> <span class="n">create_surface_lines</span><span class="p">(</span>
+    <span class="n">L_profile</span><span class="o">=</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span>
+    <span class="n">structure</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">top_idx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">mid_idx</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">bot_idx</span><span class="o">=</span><span class="mi">12</span>
+<span class="p">)</span>
+
+<span class="c1"># Create mesh</span>
+<span class="n">mesh_creator</span> <span class="o">=</span> <span class="n">MeshCreator</span><span class="p">(</span><span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+<span class="n">mesh</span><span class="p">,</span> <span class="n">geom</span> <span class="o">=</span> <span class="n">mesh_creator</span><span class="o">.</span><span class="n">create_from_layers</span><span class="p">(</span>
+    <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span>
+    <span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">],</span>
+    <span class="n">bottom_depth</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span><span class="o">-</span><span class="mi">10</span> <span class="c1">#50.0</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Step 2: Creating geometry for the seismic refraction survey...
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">geom</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&lt;Axes: &gt;, None)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_Ex5_SRT_6_1.png" src="../_images/auto_examples_Ex5_SRT_6_1.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">numberGeophones</span> <span class="o">=</span> <span class="mi">90</span>
+<span class="n">shotDistance</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="n">sensors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">110</span><span class="p">,</span> <span class="n">numberGeophones</span><span class="p">)</span>
+
+<span class="n">scheme</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">traveltime</span><span class="o">.</span><span class="n">createRAData</span><span class="p">(</span><span class="n">sensors</span><span class="p">,</span><span class="n">shotDistance</span><span class="o">=</span><span class="n">shotDistance</span><span class="p">)</span>
+
+<span class="c1"># Adapt sensor positions to slope</span>
+<span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numberGeophones</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numberGeophones</span><span class="p">):</span>
+    <span class="n">minusx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">surface</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">sensors</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">minusx</span><span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">amin</span><span class="p">(</span><span class="n">minusx</span><span class="p">))</span>
+    <span class="n">new_x</span> <span class="o">=</span> <span class="n">surface</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">new_y</span> <span class="o">=</span> <span class="n">surface</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_x</span>
+    <span class="n">pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_y</span>
+
+
+<span class="n">scheme</span><span class="o">.</span><span class="n">setSensors</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+C:\Users\HChen8\AppData\Local\Temp\ipykernel_18664\2399746456.py:17: DeprecationWarning: Conversion of an array with ndim &gt; 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  pos[i, 0] = new_x
+C:\Users\HChen8\AppData\Local\Temp\ipykernel_18664\2399746456.py:18: DeprecationWarning: Conversion of an array with ndim &gt; 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  pos[i, 1] = new_y
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">ax</span><span class="p">)</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">mpl</span><span class="o">.</span><span class="n">drawSensors</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">scheme</span><span class="o">.</span><span class="n">sensors</span><span class="p">(),</span> <span class="n">diam</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+                         <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_Ex5_SRT_8_0.png" src="../_images/auto_examples_Ex5_SRT_8_0.png" />
+</div>
+</div>
+<p>Step 6: Interpolate data to mesh</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 6: Interpolating data to mesh...&quot;</span><span class="p">)</span>
+
+<span class="n">ID1</span> <span class="o">=</span> <span class="n">porosity_profile</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">ID1</span><span class="p">[:</span><span class="n">mid_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1">#regolith</span>
+<span class="n">ID1</span><span class="p">[</span><span class="n">mid_idx</span><span class="p">:</span><span class="n">bot_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># fractured bedrock</span>
+<span class="n">ID1</span><span class="p">[</span><span class="n">bot_idx</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># fresh bedrock</span>
+
+<span class="c1"># Get mesh centers and markers</span>
+<span class="n">mesh_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+<span class="n">mesh_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
+
+<span class="c1"># Interpolate porosity to mesh</span>
+<span class="n">porosity_mesh</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span>
+    <span class="n">property_values</span><span class="o">=</span><span class="n">porosity_profile</span><span class="p">,</span>
+    <span class="n">depth_values</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">mesh_x</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="n">mesh_y</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+    <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>
+    <span class="n">ID</span><span class="o">=</span><span class="n">ID1</span><span class="p">,</span> <span class="c1"># Use ID1 to indicate the layers for interpolation</span>
+    <span class="n">layer_markers</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span>
+
+<span class="p">)</span>
+
+<span class="c1"># Interpolate water content to mesh</span>
+<span class="n">wc_mesh</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span>
+    <span class="n">property_values</span><span class="o">=</span><span class="n">water_content_profile</span><span class="p">,</span>
+    <span class="n">depth_values</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">mesh_x</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="n">mesh_y</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+    <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>
+    <span class="n">ID</span><span class="o">=</span><span class="n">ID1</span><span class="p">,</span> <span class="c1"># Use ID1 to indicate the layers for interpolation</span>
+    <span class="n">layer_markers</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span>
+
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 7: Calculating saturation...&quot;</span><span class="p">)</span>
+
+<span class="c1"># Ensure porosity is not zero to avoid division by zero</span>
+<span class="n">porosity_safe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">porosity_mesh</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+<span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">wc_mesh</span> <span class="o">/</span> <span class="n">porosity_safe</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Step 6: Interpolating data to mesh...
+Step 7: Calculating saturation...
+</pre></div></div>
+</div>
+<p>Step 9: Convert to P wave velocity using petrophysical model</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step9: Converting to P wave velocity ..&quot;</span><span class="p">)</span>
+<span class="n">marker_labels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="c1"># top. mid, bottom layers (example values)</span>
+
+<span class="c1"># Initialize velocity models</span>
+<span class="n">hm_model</span> <span class="o">=</span> <span class="n">HertzMindlinModel</span><span class="p">(</span><span class="n">critical_porosity</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">coordination_number</span><span class="o">=</span><span class="mf">6.0</span><span class="p">)</span>
+<span class="n">dem_model</span> <span class="o">=</span> <span class="n">DEMModel</span><span class="p">()</span>
+
+<span class="c1"># Initialize velocity model</span>
+<span class="n">velocity_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">)</span>
+
+
+
+
+<span class="n">top_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">top_bulk_modulus</span> <span class="o">=</span> <span class="mf">30.0</span>  <span class="c1"># GPa</span>
+<span class="n">top_shear_modulus</span> <span class="o">=</span> <span class="mf">20.0</span>  <span class="c1"># GPa</span>
+<span class="n">top_mineral_density</span> <span class="o">=</span> <span class="mi">2650</span>  <span class="c1"># kg/m³</span>
+<span class="n">top_depth</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># m</span>
+
+<span class="c1"># Get Vp values using Hertz-Mindlin model</span>
+<span class="n">Vp_high</span><span class="p">,</span> <span class="n">Vp_low</span> <span class="o">=</span> <span class="n">hm_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">],</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">[</span><span class="n">top_mask</span><span class="p">],</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">top_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">top_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">top_mineral_density</span><span class="p">,</span>
+    <span class="n">depth</span><span class="o">=</span><span class="n">top_depth</span>
+<span class="p">)</span>
+
+<span class="c1"># Use average of high and low bounds</span>
+<span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">Vp_high</span> <span class="o">+</span> <span class="n">Vp_low</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+
+
+<span class="n">mid_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+<span class="n">mid_bulk_modulus</span> <span class="o">=</span> <span class="mf">50.0</span>  <span class="c1"># GPa</span>
+<span class="n">mid_shear_modulus</span> <span class="o">=</span> <span class="mf">35.0</span> <span class="c1"># GPa</span>
+<span class="n">mid_mineral_density</span> <span class="o">=</span> <span class="mi">2670</span>  <span class="c1"># kg/m³</span>
+<span class="n">mid_aspect_ratio</span> <span class="o">=</span> <span class="mf">0.05</span>
+
+<span class="c1"># Get Vp values using DEM model</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Vp</span> <span class="o">=</span> <span class="n">dem_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">],</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">],</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">mid_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">mid_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">mid_mineral_density</span><span class="p">,</span>
+    <span class="n">aspect_ratio</span><span class="o">=</span><span class="n">mid_aspect_ratio</span>
+<span class="p">)</span>
+
+<span class="n">velocity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">Vp</span>
+
+<span class="n">bot_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+<span class="n">bot_bulk_modulus</span> <span class="o">=</span> <span class="mi">55</span>  <span class="c1"># GPa</span>
+<span class="n">bot_shear_modulus</span> <span class="o">=</span> <span class="mi">50</span>  <span class="c1"># GPa</span>
+<span class="n">bot_mineral_density</span> <span class="o">=</span> <span class="mi">2680</span>  <span class="c1"># kg/m³</span>
+<span class="n">bot_aspect_ratio</span> <span class="o">=</span> <span class="mf">0.03</span>
+
+<span class="c1"># Get Vp values using DEM model</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Vp</span> <span class="o">=</span> <span class="n">dem_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">],</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">],</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">bot_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">bot_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">bot_mineral_density</span><span class="p">,</span>
+    <span class="n">aspect_ratio</span><span class="o">=</span><span class="n">bot_aspect_ratio</span>
+<span class="p">)</span>
+
+<span class="n">velocity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">Vp</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Step9: Converting to P wave velocity ..
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mgr</span> <span class="o">=</span> <span class="n">TravelTimeManager</span><span class="p">()</span>
+<span class="n">datasrt</span> <span class="o">=</span> <span class="n">mgr</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">slowness</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="n">scheme</span><span class="o">=</span><span class="n">scheme</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+                    <span class="n">noiseLevel</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">noiseAbs</span><span class="o">=</span><span class="mf">0.00001</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">1334</span>
+                    <span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">datasrt</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synthetic_seismic_data_long.dat&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:22:41 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (secnodes: 2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+min/max t: 0.002002676198374358 0.06435431843645598
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+1
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">tt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plotva</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot first arrivals as lines.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ax : matplotlib.axes</span>
+<span class="sd">        axis to draw the lines in</span>
+<span class="sd">    data : :gimliapi:`GIMLI::DataContainer`</span>
+<span class="sd">        data containing shots (&quot;s&quot;), geophones (&quot;g&quot;) and traveltimes (&quot;t&quot;)</span>
+<span class="sd">    tt : array, optional</span>
+<span class="sd">        traveltimes to use instead of data(&quot;t&quot;)</span>
+<span class="sd">    plotva : bool, optional</span>
+<span class="sd">        plot apparent velocity instead of traveltimes</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    ax : matplotlib.axes</span>
+<span class="sd">        the modified axis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extract coordinates</span>
+    <span class="n">px</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">x</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">gx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">px</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">g</span><span class="p">)]</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="s2">&quot;g&quot;</span><span class="p">)])</span>
+    <span class="n">sx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">px</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">)]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="s2">&quot;s&quot;</span><span class="p">)])</span>
+
+    <span class="c1"># Get traveltimes</span>
+    <span class="k">if</span> <span class="n">tt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">plotva</span><span class="p">:</span>
+        <span class="n">tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">gx</span> <span class="o">-</span> <span class="n">sx</span><span class="p">)</span> <span class="o">/</span> <span class="n">tt</span>
+
+    <span class="c1"># Find unique source positions</span>
+    <span class="n">uns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">sx</span><span class="p">)</span>
+
+    <span class="c1"># Override kwargs with clean, minimalist style</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;color&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;black&#39;</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linestyle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;--&#39;</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linewidth&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.9</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;marker&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># No markers on the lines</span>
+
+    <span class="c1"># Plot for each source</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">si</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">uns</span><span class="p">):</span>
+        <span class="n">ti</span> <span class="o">=</span> <span class="n">tt</span><span class="p">[</span><span class="n">sx</span> <span class="o">==</span> <span class="n">si</span><span class="p">]</span>
+        <span class="n">gi</span> <span class="o">=</span> <span class="n">gx</span><span class="p">[</span><span class="n">sx</span> <span class="o">==</span> <span class="n">si</span><span class="p">]</span>
+        <span class="n">ii</span> <span class="o">=</span> <span class="n">gi</span><span class="o">.</span><span class="n">argsort</span><span class="p">()</span>
+
+        <span class="c1"># Plot line</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">gi</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">ti</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Add source marker as black square at top</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">si</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                <span class="n">markeredgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">markeredgewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+
+    <span class="c1"># Clean grid style</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;lightgray&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Set proper axis labels with units</span>
+    <span class="k">if</span> <span class="n">plotva</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Apparent velocity (m s$^{-1}$)&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Traveltime (s)&quot;</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
+
+
+
+
+
+    <span class="c1"># Invert y-axis for traveltimes</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">invert_yaxis</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">ax</span>
+
+<span class="c1"># Usage</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">3.5</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+<span class="n">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">datasrt</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;Axes: xlabel=&#39;Distance (m)&#39;, ylabel=&#39;Traveltime (s)&#39;&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_Ex5_SRT_14_1.png" src="../_images/auto_examples_Ex5_SRT_14_1.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">TT</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">traveltime</span><span class="o">.</span><span class="n">TravelTimeManager</span><span class="p">()</span>
+<span class="n">mesh_inv</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">datasrt</span><span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">paraDepth</span> <span class="o">=</span> <span class="mf">50.0</span><span class="p">)</span>
+<span class="n">TT</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">datasrt</span><span class="p">,</span> <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh_inv</span><span class="p">,</span><span class="n">lam</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+          <span class="n">zWeight</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span><span class="n">vTop</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">vBottom</span><span class="o">=</span><span class="mi">5500</span><span class="p">,</span>
+          <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">limits</span><span class="o">=</span><span class="p">[</span><span class="mf">300.</span><span class="p">,</span> <span class="mf">8000.</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:23:19 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 1 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:23:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 1 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:23:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:23:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (secnodes: 2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:23:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Create gradient starting model. 500: 5500
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:23:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Created startmodel from forward operator: 5132, min/max=0.000182/0.002000
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:23:20 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Starting inversion.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+fop: &lt;pygimli.physics.traveltime.modelling.TravelTimeDijkstraModelling object at 0x0000028860678E00&gt;
+Data transformation: &lt;pgcore._pygimli_.RTrans object at 0x000002887325D4E0&gt;
+Model transformation (cumulative):
+         0 &lt;pgcore._pygimli_.RTransLogLU object at 0x0000028860750900&gt;
+min/max (data): 0.0019/0.07
+min/max (error): 4.31%/6.13%
+min/max (start model): 1.8e-04/0.002
+--------------------------------------------------------------------------------
+inv.iter 0 ... chi² =   66.64
+--------------------------------------------------------------------------------
+inv.iter 1 ...
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+chi² =    1.57 (dPhi = 97.33%) lam: 50.0
+--------------------------------------------------------------------------------
+inv.iter 2 ... chi² =    0.95 (dPhi = 35.81%) lam: 50.0
+
+
+################################################################################
+#                  Abort criterion reached: chi² &lt;= 1 (0.95)                   #
+################################################################################
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+5132 [673.3682475715169,...,2874.931631788835]
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cov</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">()</span>
+<span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_inv</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">griddata</span>
+
+<span class="k">def</span> <span class="nf">fill_holes_2d</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">grid_resolution</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fill holes (0 values) surrounded by 1 values in 2D scattered data.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    pos : ndarray of shape (n, 3)</span>
+<span class="sd">        Position array where first two columns are x,y coordinates</span>
+<span class="sd">    cov : ndarray of shape (n,)</span>
+<span class="sd">        Coverage values at each point (0 or 1)</span>
+<span class="sd">    grid_resolution : int</span>
+<span class="sd">        Resolution of the grid for interpolation</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    --------</span>
+<span class="sd">    filled_cov : ndarray of shape (n,)</span>
+<span class="sd">        Updated coverage values with holes filled</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extract only the first two columns (x, y) from pos</span>
+    <span class="n">pos_2d</span> <span class="o">=</span> <span class="n">pos</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="c1"># Extract min and max coordinates for grid boundaries</span>
+    <span class="n">min_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">pos_2d</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">max_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">pos_2d</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># Create a regular 2D grid</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">min_coords</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">max_coords</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">grid_resolution</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">min_coords</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">max_coords</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">grid_resolution</span><span class="p">)</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+    <span class="c1"># Interpolate scattered data to regular grid</span>
+    <span class="n">grid_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">X</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">Y</span><span class="o">.</span><span class="n">ravel</span><span class="p">()])</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">grid_cov</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">pos_2d</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">grid_points</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="c1"># Convert to binary</span>
+    <span class="n">binary_grid</span> <span class="o">=</span> <span class="p">(</span><span class="n">grid_cov</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">)</span>
+
+    <span class="c1"># Fill holes using binary_fill_holes from scipy</span>
+    <span class="n">filled_grid</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">binary_fill_holes</span><span class="p">(</span><span class="n">binary_grid</span><span class="p">)</span>
+
+    <span class="c1"># Convert back to original data type</span>
+    <span class="n">filled_grid</span> <span class="o">=</span> <span class="n">filled_grid</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="c1"># Interpolate back to original scattered points</span>
+    <span class="n">filled_cov</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">grid_points</span><span class="p">,</span> <span class="n">filled_grid</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">pos_2d</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">filled_cov</span>
+
+<span class="c1"># Example usage</span>
+<span class="c1"># Assuming you have your data loaded as pos and cov</span>
+<span class="c1"># cov = np.array([0, 1, 0, ...])  # Your original coverage values</span>
+
+<span class="c1"># Apply the hole filling function</span>
+<span class="n">filled_cov</span> <span class="o">=</span> <span class="n">fill_holes_2d</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">cov</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">createTriangles</span><span class="p">(</span><span class="n">mesh</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate triangle objects for later drawing.</span>
+
+<span class="sd">    Creates triangle for each 2D triangle cell or 3D boundary.</span>
+<span class="sd">    Quads will be split into two triangles. Result will be cached into mesh._triData.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mesh : :gimliapi:`GIMLI::Mesh`</span>
+<span class="sd">        2D mesh or 3D mesh</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    x : numpy array</span>
+<span class="sd">        x position of nodes</span>
+<span class="sd">    y : numpy array</span>
+<span class="sd">        x position of nodes</span>
+<span class="sd">    triangles : numpy array Cx3</span>
+<span class="sd">        cell indices for each triangle, quad or boundary face</span>
+<span class="sd">    z : numpy array</span>
+<span class="sd">        z position for given indices</span>
+<span class="sd">    dataIdx : list of int</span>
+<span class="sd">        List of indices for a data array</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="s1">&#39;_triData&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">hash</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span> <span class="o">==</span> <span class="n">mesh</span><span class="o">.</span><span class="n">_triData</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="n">mesh</span><span class="o">.</span><span class="n">_triData</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">x</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">y</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">z</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+    <span class="c1">#    x.round(1e-1)</span>
+    <span class="c1">#    y.round(1e-1)</span>
+
+    <span class="k">if</span> <span class="n">mesh</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">ents</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ents</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">boundaries</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">boundaryMarkers</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ents</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">boundaries</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">b</span><span class="o">.</span><span class="n">leftCell</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">b</span><span class="o">.</span><span class="n">rightCell</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">ents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+
+    <span class="n">triangles</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">dataIdx</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">ents</span><span class="p">:</span>
+        <span class="n">triangles</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">c</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">c</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">c</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">id</span><span class="p">()])</span>
+        <span class="n">dataIdx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">())</span>
+
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span><span class="o">.</span><span class="n">nodeCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="n">triangles</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">c</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">c</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">c</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">id</span><span class="p">()])</span>
+            <span class="n">dataIdx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">())</span>
+
+    <span class="n">mesh</span><span class="o">.</span><span class="n">_triData</span> <span class="o">=</span> <span class="p">[</span><span class="nb">hash</span><span class="p">(</span><span class="n">mesh</span><span class="p">),</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">dataIdx</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">dataIdx</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">dataIndex</span> <span class="o">=</span> <span class="n">createTriangles</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">)</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">cellDataToNodeData</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span><span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+          <span class="c1">#&#39;figure.figsize&#39;: (15, 5),</span>
+         <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+         <span class="s1">&#39;axes.titlesize&#39;</span><span class="p">:</span><span class="mi">16</span><span class="p">,</span>
+         <span class="s1">&#39;xtick.labelsize&#39;</span><span class="p">:</span><span class="mi">15</span><span class="p">,</span>
+         <span class="s1">&#39;ytick.labelsize&#39;</span><span class="p">:</span><span class="mi">15</span><span class="p">}</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">pylab</span>
+<span class="n">pylab</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+
+<span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">])</span>
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span><span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">(),</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">filled_cov</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">ax1</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m s$^{-1}$)&#39;</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">cMin</span> <span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span>
+       <span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">)</span>
+
+
+<span class="n">ax1</span><span class="o">.</span><span class="n">tricontour</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mi">1200</span><span class="p">],</span> <span class="n">linewidths</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="s1">&#39;dashed&#39;</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">tricontour</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mi">4300</span><span class="p">],</span> <span class="n">linewidths</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">)</span>
+
+
+<span class="n">pg</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">mpl</span><span class="o">.</span><span class="n">drawSensors</span><span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">datasrt</span><span class="o">.</span><span class="n">sensors</span><span class="p">(),</span> <span class="n">diam</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+                         <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_Ex5_SRT_20_0.png" src="../_images/auto_examples_Ex5_SRT_20_0.png" />
+</div>
+</div>
+</section>
+<section id="Short-seismic-profiles">
+<h2>Short seismic profiles<a class="headerlink" href="#Short-seismic-profiles" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ttData</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example/synthetic_seismic_data.dat&quot;</span><span class="p">)</span>
+<span class="n">TT_short</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">traveltime</span><span class="o">.</span><span class="n">TravelTimeManager</span><span class="p">()</span>
+<span class="n">mesh_inv1</span> <span class="o">=</span> <span class="n">TT_short</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">ttData</span> <span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">paraDepth</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">)</span>
+<span class="n">TT_short</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">ttData</span> <span class="p">,</span> <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh_inv</span><span class="p">,</span><span class="n">lam</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+          <span class="n">zWeight</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span><span class="n">vTop</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">vBottom</span><span class="o">=</span><span class="mi">5500</span><span class="p">,</span>
+          <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">limits</span><span class="o">=</span><span class="p">[</span><span class="mf">300.</span><span class="p">,</span> <span class="mf">8000.</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:24:09 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 1 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:24:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 1 regions.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:24:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:24:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (secnodes: 2) to solve forward task.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:24:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Create gradient starting model. 500: 5500
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:24:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Created startmodel from forward operator: 5132, min/max=0.000182/0.002000
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+23/05/25 - 12:24:10 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Starting inversion.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+fop: &lt;pygimli.physics.traveltime.modelling.TravelTimeDijkstraModelling object at 0x0000028873406A70&gt;
+Data transformation: &lt;pgcore._pygimli_.RTrans object at 0x0000028860B10C70&gt;
+Model transformation (cumulative):
+         0 &lt;pgcore._pygimli_.RTransLogLU object at 0x0000028873106110&gt;
+min/max (data): 0.0014/0.06
+min/max (error): 4.35%/6.41%
+min/max (start model): 1.8e-04/0.002
+--------------------------------------------------------------------------------
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+inv.iter 0 ... chi² =   15.78
+--------------------------------------------------------------------------------
+inv.iter 1 ... chi² =    2.08 (dPhi = 85.11%) lam: 50.0
+--------------------------------------------------------------------------------
+inv.iter 2 ...
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+chi² =    1.10 (dPhi = 41.78%) lam: 50.0
+--------------------------------------------------------------------------------
+inv.iter 3 ... chi² =    0.97 (dPhi = 10.01%) lam: 50.0
+
+
+################################################################################
+#                  Abort criterion reached: chi² &lt;= 1 (0.97)                   #
+################################################################################
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+5132 [559.610990404536,...,2674.0058707899498]
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">triangles1</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">dataIndex1</span> <span class="o">=</span> <span class="n">createTriangles</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">)</span>
+<span class="n">z1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">cellDataToNodeData</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">TT_short</span><span class="o">.</span><span class="n">model</span><span class="p">))</span>
+<span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_inv</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+<span class="n">filled_cov1</span> <span class="o">=</span> <span class="n">fill_holes_2d</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">TT_short</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+          <span class="c1">#&#39;figure.figsize&#39;: (15, 5),</span>
+         <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+         <span class="s1">&#39;axes.titlesize&#39;</span><span class="p">:</span><span class="mi">16</span><span class="p">,</span>
+         <span class="s1">&#39;xtick.labelsize&#39;</span><span class="p">:</span><span class="mi">15</span><span class="p">,</span>
+         <span class="s1">&#39;ytick.labelsize&#39;</span><span class="p">:</span><span class="mi">15</span><span class="p">}</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">pylab</span>
+<span class="n">pylab</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+
+<span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">])</span>
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span><span class="n">TT_short</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">(),</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">TT_short</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">(),</span><span class="n">ax</span> <span class="o">=</span> <span class="n">ax1</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m s$^{-1}$)&#39;</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">cMin</span> <span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span>
+       <span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">)</span>
+
+
+<span class="n">ax1</span><span class="o">.</span><span class="n">tricontour</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">triangles1</span><span class="p">,</span> <span class="n">z1</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mi">1200</span><span class="p">],</span> <span class="n">linewidths</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="s1">&#39;dashed&#39;</span><span class="p">)</span>
+
+
+
+<span class="n">pg</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">mpl</span><span class="o">.</span><span class="n">drawSensors</span><span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">ttData</span><span class="o">.</span><span class="n">sensors</span><span class="p">(),</span> <span class="n">diam</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
+                         <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/auto_examples_Ex5_SRT_24_0.png" src="../_images/auto_examples_Ex5_SRT_24_0.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Ex8_MC_WC.html" class="btn btn-neutral float-left" title="Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex3_Time_lapse_measurement.html" class="btn btn-neutral float-right" title="Ex3. Creating Synthetic Time-Lapse ERT Measurements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
