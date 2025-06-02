@@ -622,6 +622,7 @@ def create_surface_lines(L_profile: np.ndarray,
     """
     # Potential issue: Assumes structure_on_profile has enough layers to satisfy indices.
     # Add checks for indices bounds.
+    structure_on_profile = np.asarray(structure)  # Ensure structure is a numpy array
     num_layers, num_points = structure_on_profile.shape
     if not (0 <= top_idx < num_layers and 0 <= mid_idx < num_layers and 0 <= bot_idx < num_layers):
         raise IndexError(f"One or more indices (top_idx={top_idx}, mid_idx={mid_idx}, bot_idx={bot_idx}) "
