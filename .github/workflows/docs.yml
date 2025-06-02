@@ -34,14 +34,24 @@ jobs:
         pip install nbsphinx==0.9.1
         pip install sphinx-copybutton==0.5.2
         pip install sphinx-gallery==0.14.0
-        pip install numpy scipy matplotlib tqdm
+        pip install numpy scipy matplotlib tqdm palettable
+        # Install package in development mode with minimal dependencies
         pip install --no-deps -e .
+
+    - name: Create _static directory
+      run: |
+        mkdir -p docs/source/_static
 
     - name: Build documentation
       run: |
         cd docs
+        # Generate API documentation
         sphinx-apidoc -f -o source/api ../PyHydroGeophysX
-        sphinx-build -b html source build/html
+        # Build HTML documentation with warnings as errors disabled for gallery
+        sphinx-build -b html source build/html -W --keep-going
+      env:
+        # Set environment variable to disable gallery execution
+        SPHINX_GALLERY_PLOT: "False"
 
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'

@@ -2,14 +2,17 @@
 Base classes for geophysical inversion frameworks.
 
 This module defines:
-- `InversionResult`: A base class to store and manage common results from an inversion process,
+
+- InversionResult: A base class to store and manage common results from an inversion process,
   including final model, predicted data, convergence history, and plotting utilities.
-- `TimeLapseInversionResult`: A specialized version of `InversionResult` for time-lapse studies,
+- TimeLapseInversionResult: A specialized version of InversionResult for time-lapse studies,
   handling multiple models over time and providing time-slice plotting and animation.
-- `InversionBase`: An abstract base class outlining the common structure and interface
+- InversionBase: An abstract base class outlining the common structure and interface
   for various geophysical inversion methods (e.g., ERT, SRT). It handles data, mesh,
   and basic parameter management.
 """
+
+
 import numpy as np
 import pygimli as pg
 import matplotlib.pyplot as plt # Used for plotting methods

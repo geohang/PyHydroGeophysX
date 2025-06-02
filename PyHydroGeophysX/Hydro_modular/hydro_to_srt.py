@@ -13,6 +13,9 @@ from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMM
 from PyHydroGeophysX.forward.srt_forward import SeismicForwardModeling
 
 
+# Fix for PyHydroGeophysX/Hydro_modular/hydro_to_srt.py
+# Replace the docstring with proper formatting:
+
 def hydro_to_srt(
     water_content: np.ndarray,
     porosity: np.ndarray,
@@ -37,6 +40,7 @@ def hydro_to_srt(
     Convert hydrologic model output to seismic travel times.
     
     This function performs the complete workflow from water content to synthetic SRT data:
+    
     1. Interpolates water content to mesh
     2. Calculates saturation
     3. Converts saturation to seismic velocities using petrophysical models
@@ -49,12 +53,10 @@ def hydro_to_srt(
         mesh: PyGIMLI mesh
         profile_interpolator: ProfileInterpolator for surface interpolation
         marker_labels: Layer marker labels [top, middle, bottom]
-        vel_parameters: Dictionary of velocity parameters:
-            {
-                'top': {'bulk_modulus': 30.0, 'shear_modulus': 20.0, 'mineral_density': 2650, 'depth': 1.0},
-                'mid': {'bulk_modulus': 50.0, 'shear_modulus': 35.0, 'mineral_density': 2670, 'aspect_ratio': 0.05},
-                'bot': {'bulk_modulus': 55.0, 'shear_modulus': 50.0, 'mineral_density': 2680, 'aspect_ratio': 0.03}
-            }
+        vel_parameters: Dictionary of velocity parameters containing
+            'top': {'bulk_modulus': 30.0, 'shear_modulus': 20.0, 'mineral_density': 2650, 'depth': 1.0},
+            'mid': {'bulk_modulus': 50.0, 'shear_modulus': 35.0, 'mineral_density': 2670, 'aspect_ratio': 0.05},
+            'bot': {'bulk_modulus': 55.0, 'shear_modulus': 50.0, 'mineral_density': 2680, 'aspect_ratio': 0.03}
         sensor_spacing: Spacing between sensors
         sensor_start: Starting position of sensor array
         num_sensors: Number of sensors
@@ -69,6 +71,7 @@ def hydro_to_srt(
     Returns:
         Tuple of (synthetic SRT data container, velocity model)
     """
+    
     # Get mesh markers if not provided
     if mesh_markers is None:
         mesh_markers = np.array(mesh.cellMarkers())
