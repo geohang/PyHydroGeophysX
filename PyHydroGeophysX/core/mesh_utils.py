@@ -17,7 +17,7 @@ def create_mesh_from_layers(surface: np.ndarray,
                           line2: np.ndarray, # Coordinates of the second subsurface layer boundary
                           bottom_depth: float = 30.0, # Absolute depth for the bottom of the mesh
                           quality: float = 28, # Mesh quality (higher for finer mesh, affects triangle quality)
-                          area: float = 40) -> Tuple[pg.Mesh, np.ndarray, np.ndarray, pg.meshtools.geom.Polygon]: # Added geom to return
+                          area: float = 40) -> Tuple[pg.Mesh, np.ndarray, np.ndarray]: # Added geom to return
     """
     Create a 2D PyGIMLi mesh from three defined layer boundaries (surface, line1, line2).
 
@@ -640,7 +640,7 @@ class MeshCreator:
                            layer_markers: Optional[List[int]] = None, # Note: Not used by current underlying call
                            quality: Optional[float] = None,
                            area: Optional[float] = None 
-                           ) -> Tuple[pg.Mesh, pg.meshtools.geom.Polygon]:
+                           ) :
         """
         Create a 2D PyGIMLi mesh from a surface polyline and a list of subsurface layer boundary polylines.
 
@@ -667,7 +667,7 @@ class MeshCreator:
                   If None, uses class default. If class default is also None, PyGIMLi's default (often 0, no constraint) is used.
 
         Returns:
-            Tuple (pg.Mesh, pg.meshtools.geom.Polygon):
+            Tuple (pg.Mesh, pg.meshtools.Polygon):
                 - mesh: The generated PyGIMLi mesh.
                 - geom: The PLC geometry used to create the mesh.
 
