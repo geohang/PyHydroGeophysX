@@ -592,7 +592,7 @@ class ProfileInterpolator:
 
 
 def create_surface_lines(L_profile: np.ndarray,
-                        structure_on_profile: np.ndarray,
+                        structure: np.ndarray,
                         top_idx: int = 0,
                         mid_idx: int = 4,
                         bot_idx: int = 12) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -607,7 +607,7 @@ def create_surface_lines(L_profile: np.ndarray,
 
     Args:
         L_profile: 1D numpy array of distances along the profile.
-        structure_on_profile: 2D numpy array (n_layers, n_profile_points) of interpolated
+        structure: 2D numpy array (n_layers, n_profile_points) of interpolated
                               values (e.g., elevations or depths) for each layer
                               along the profile.
         top_idx: Index of the row in `structure_on_profile` that represents the top surface.
