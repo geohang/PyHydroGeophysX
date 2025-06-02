@@ -54,7 +54,7 @@ from PyHydroGeophysX.Hydro_modular import hydro_to_ert
 
 
 # %%
-script_dir = os.path.dirname(os.path.abspath(__file__))
+script_dir = script_dir = os.getcwd()
 
 output_dir = os.path.join(script_dir, "results", "workflow_example") #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example"
 os.makedirs(output_dir, exist_ok=True)

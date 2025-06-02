@@ -44,7 +44,7 @@ from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent, MOD
 # %%
 
 # Path to your Parflow model directory
-current_dir = os.path.dirname(__file__)
+current_dir =  os.getcwd()
 model_directory = os.path.join(current_dir, "data", "parflow", "test2")
 
 # Load saturation data

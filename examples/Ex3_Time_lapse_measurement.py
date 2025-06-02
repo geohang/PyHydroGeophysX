@@ -47,13 +47,14 @@ from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_res
 from PyHydroGeophysX.forward.ert_forward import ERTForwardModeling
 
 # %%
-output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements"
+
+output_dir = os.path.join(current_dir,  "results", "TL_measurements") #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements"
 os.makedirs(output_dir, exist_ok=True)
 
 # %%
 print("Step 1: Set up the ERT profiles like in the workflow example.")
 
-data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
+data_dir = os.path.join(current_dir,  "data") #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 modflow_dir = os.path.join(data_dir, "modflow")
 
 # Load domain information from files
@@ -141,64 +142,65 @@ Water_Content = np.load(os.path.join(data_dir, "Watercontent.npy"))
 os.makedirs("results/TL_measurements/synwcmodel", exist_ok=True)
 os.makedirs("results/TL_measurements/synresmodel", exist_ok=True)
 
+### comment here to skip the water content and resistivity model generation to save time
 
-for i in range(len(Water_Content)):
-    water_content = Water_Content[i]
-    # Interpolate water content to profile
-    water_content_profile = interpolator.interpolate_3d_data(water_content)
+# for i in range(len(Water_Content)):
+#     water_content = Water_Content[i]
+#     # Interpolate water content to profile
+#     water_content_profile = interpolator.interpolate_3d_data(water_content)
 
-    # Interpolate water content to mesh
-    wc_mesh = interpolator.interpolate_to_mesh(
-        property_values=water_content_profile,
-        depth_values=structure,
-        mesh_x=mesh_centers[:, 0],
-        mesh_y=mesh_centers[:, 1],
-        mesh_markers=mesh_markers,
-        ID=ID1,  # Use ID1 to indicate the layers for interpolation
-        layer_markers=[0, 3, 2],
-    )
+#     # Interpolate water content to mesh
+#     wc_mesh = interpolator.interpolate_to_mesh(
+#         property_values=water_content_profile,
+#         depth_values=structure,
+#         mesh_x=mesh_centers[:, 0],
+#         mesh_y=mesh_centers[:, 1],
+#         mesh_markers=mesh_markers,
+#         ID=ID1,  # Use ID1 to indicate the layers for interpolation
+#         layer_markers=[0, 3, 2],
+#     )
 
-    # Convert to resistivity using petrophysical model
-    marker_labels = [0, 3, 2]  # top, mid, bottom layers
-    rho_sat = [100, 500, 2400]  # Saturated resistivity for each layer (example values)
-    n_val = [2.2, 1.8, 2.5]  # Cementation exponent for each layer (example values)
-    # sigma_s was originally defined as [1/500, 0, 0] but here we use [0.002, 0, 0]
-    sigma_s = [0.002, 0, 0]
+#     # Convert to resistivity using petrophysical model
+#     marker_labels = [0, 3, 2]  # top, mid, bottom layers
+#     rho_sat = [100, 500, 2400]  # Saturated resistivity for each layer (example values)
+#     n_val = [2.2, 1.8, 2.5]  # Cementation exponent for each layer (example values)
+#     # sigma_s was originally defined as [1/500, 0, 0] but here we use [0.002, 0, 0]
+#     sigma_s = [0.002, 0, 0]
 
-    res_models = np.zeros_like(wc_mesh)
+#     res_models = np.zeros_like(wc_mesh)
 
-    mask = (mesh_markers == marker_labels[0])
-    top_res = water_content_to_resistivity(
-        wc_mesh[mask],
-        float(rho_sat[0]),
-        float(n_val[0]),
-        porosity_mesh[mask],
-        sigma_s[0]
-    )
-    res_models[mask] = top_res
+#     mask = (mesh_markers == marker_labels[0])
+#     top_res = water_content_to_resistivity(
+#         wc_mesh[mask],
+#         float(rho_sat[0]),
+#         float(n_val[0]),
+#         porosity_mesh[mask],
+#         sigma_s[0]
+#     )
+#     res_models[mask] = top_res
 
-    mask = (mesh_markers == marker_labels[1])
-    mid_res = water_content_to_resistivity(
-        wc_mesh[mask],
-        float(rho_sat[1]),
-        float(n_val[1]),
-        porosity_mesh[mask],
-        sigma_s[1]
-    )
-    res_models[mask] = mid_res
+#     mask = (mesh_markers == marker_labels[1])
+#     mid_res = water_content_to_resistivity(
+#         wc_mesh[mask],
+#         float(rho_sat[1]),
+#         float(n_val[1]),
+#         porosity_mesh[mask],
+#         sigma_s[1]
+#     )
+#     res_models[mask] = mid_res
 
-    mask = (mesh_markers == marker_labels[2])
-    bot_res = water_content_to_resistivity(
-        wc_mesh[mask],
-        float(rho_sat[2]),
-        float(n_val[2]),
-        porosity_mesh[mask],
-        sigma_s[2]
-    )
-    res_models[mask] = bot_res
+#     mask = (mesh_markers == marker_labels[2])
+#     bot_res = water_content_to_resistivity(
+#         wc_mesh[mask],
+#         float(rho_sat[2]),
+#         float(n_val[2]),
+#         porosity_mesh[mask],
+#         sigma_s[2]
+#     )
+#     res_models[mask] = bot_res
 
-    np.save(os.path.join(output_dir, "synwcmodel/synwcmodel" + str(i) ), wc_mesh)
-    np.save(os.path.join(output_dir, "synresmodel/synresmodel" + str(i) ), res_models)
+#     np.save(os.path.join(output_dir, "synwcmodel/synwcmodel" + str(i) ), wc_mesh)
+#     np.save(os.path.join(output_dir, "synresmodel/synresmodel" + str(i) ), res_models)
 
 
 
