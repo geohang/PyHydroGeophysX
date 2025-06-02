@@ -52,7 +52,7 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -95,15 +95,13 @@
 <section id="module-PyHydroGeophysX.inversion.base">
 <span id="pyhydrogeophysx-inversion-base-module"></span><h2>PyHydroGeophysX.inversion.base module<a class="headerlink" href="#module-PyHydroGeophysX.inversion.base" title="Permalink to this heading"></a></h2>
 <p>Base classes for geophysical inversion frameworks.</p>
-<p>This module defines:
-- <cite>InversionResult</cite>: A base class to store and manage common results from an inversion process,</p>
-<blockquote>
-<div><p>including final model, predicted data, convergence history, and plotting utilities.</p>
-</div></blockquote>
+<p>This module defines:</p>
 <ul class="simple">
-<li><p><cite>TimeLapseInversionResult</cite>: A specialized version of <cite>InversionResult</cite> for time-lapse studies,
+<li><p>InversionResult: A base class to store and manage common results from an inversion process,
+including final model, predicted data, convergence history, and plotting utilities.</p></li>
+<li><p>TimeLapseInversionResult: A specialized version of InversionResult for time-lapse studies,
 handling multiple models over time and providing time-slice plotting and animation.</p></li>
-<li><p><cite>InversionBase</cite>: An abstract base class outlining the common structure and interface
+<li><p>InversionBase: An abstract base class outlining the common structure and interface
 for various geophysical inversion methods (e.g., ERT, SRT). It handles data, mesh,
 and basic parameter management.</p></li>
 </ul>
@@ -233,7 +231,7 @@ It’s recommended to provide <cite>filename</cite> without <cite>.pkl</cite>.</
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.base.InversionResult.load">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionResult.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.InversionResult.load" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionResult.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.InversionResult.load" title="Permalink to this definition"></a></dt>
 <dd><p>Load inversion results from a file previously saved by the <cite>save</cite> method.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -248,7 +246,7 @@ If saved as <cite>name.pkl</cite> and <cite>name.bms</cite>, provide <cite>name.
 </p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult">InversionResult</a></p>
+<dd class="field-odd"><p><a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult">InversionResult</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
@@ -320,7 +318,7 @@ If None, a new figure and axes are created. Defaults to None.</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.base.TimeLapseInversionResult">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.base.</span></span><span class="sig-name descname"><span class="pre">TimeLapseInversionResult</span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#TimeLapseInversionResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionResult</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionResult</span></code></a></p>
 <p>Specialized class to store and manage results from time-lapse inversions.
 Inherits from <cite>InversionResult</cite> and adds attributes specific to time-lapse data.</p>
 <dl class="py attribute">
@@ -387,7 +385,7 @@ per iteration for the inversion of that specific timestep or window.
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.base.TimeLapseInversionResult.load">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#TimeLapseInversionResult.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.TimeLapseInversionResult.load" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#TimeLapseInversionResult.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.TimeLapseInversionResult.load" title="Permalink to this definition"></a></dt>
 <dd><p>Load time-lapse inversion results. Overrides base class <cite>load</cite>.</p>
 </dd></dl>
 
@@ -447,7 +445,7 @@ Defaults to None.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.base.InversionBase">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.base.</span></span><span class="sig-name descname"><span class="pre">InversionBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2068139737616'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.InversionBase" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.base.</span></span><span class="sig-name descname"><span class="pre">InversionBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockDataContainer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.InversionBase" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Abstract base class for geophysical inversion methods.</p>
 <p>This class provides a foundational structure for specific inversion techniques
@@ -457,7 +455,7 @@ setting up the inversion, running the inversion loop, computing Jacobians,
 and evaluating the objective function.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.base.InversionBase.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2068139737616'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.InversionBase.__init__" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockDataContainer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.InversionBase.__init__" title="Permalink to this definition"></a></dt>
 <dd><p>Initialize the base inversion class.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -487,7 +485,7 @@ for the inversion, such as:
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.base.InversionBase.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.InversionBase.run" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.base.InversionBase.run" title="Permalink to this definition"></a></dt>
 <dd><p>Abstract method to run the main inversion loop.</p>
 <p>Derived classes must implement this to perform the iterative optimization process.
 The method should populate and return an <cite>InversionResult</cite> (or subclass) object.</p>
@@ -496,7 +494,7 @@ The method should populate and return an <cite>InversionResult</cite> (or subcla
 <dd class="field-odd"><p>An object containing the results of the inversion.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult">InversionResult</a></p>
+<dd class="field-even"><p><a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult">InversionResult</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -547,50 +545,33 @@ is typically used. Defaults to None.</p></li>
 </section>
 <section id="module-PyHydroGeophysX.inversion.ert_inversion">
 <span id="pyhydrogeophysx-inversion-ert-inversion-module"></span><h2>PyHydroGeophysX.inversion.ert_inversion module<a class="headerlink" href="#module-PyHydroGeophysX.inversion.ert_inversion" title="Permalink to this heading"></a></h2>
-<p>Single-time Electrical Resistivity Tomography (ERT) inversion functionality.</p>
-<p>This module provides the <cite>ERTInversion</cite> class, which performs a standard
-single-time ERT inversion using PyGIMLi. It handles data loading, mesh creation
-(if not provided), forward modeling, Jacobian computation, and an iterative
-Gauss-Newton like optimization scheme with regularization and model constraints.</p>
+<p>Single-time ERT inversion functionality.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.ert_inversion.ERTInversion">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.ert_inversion.</span></span><span class="sig-name descname"><span class="pre">ERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_file:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ert_inversion.ERTInversion" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionBase" title="PyHydroGeophysX.inversion.base.InversionBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionBase</span></code></a></p>
-<p>Performs a single-time Electrical Resistivity Tomography (ERT) inversion.</p>
-<p>This class inherits from <cite>InversionBase</cite> and implements the specific steps
-for ERT inversion, including setting up PyGIMLi’s ERT forward operator,
-data weighting, model regularization, and an iterative inversion loop.</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.ert_inversion.</span></span><span class="sig-name descname"><span class="pre">ERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ert_inversion.ERTInversion" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionBase" title="PyHydroGeophysX.inversion.base.InversionBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionBase</span></code></a></p>
+<p>Single-time ERT inversion class.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.ert_inversion.ERTInversion.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_file:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ert_inversion.ERTInversion.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize the ERTInversion class.</p>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ert_inversion.ERTInversion.__init__" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data_file</strong> (<em>str</em>) – Path to the ERT data file (readable by <cite>pygimli.ert.load</cite>).</p></li>
-<li><p><strong>mesh</strong> (<em>Optional</em><em>[</em><em>pg.Mesh</em><em>]</em><em>, </em><em>optional</em>) – A pre-defined PyGIMLi mesh for the inversion.
-If None, a mesh will be automatically created
-based on the data during the <cite>setup()</cite> phase.
-Defaults to None.</p></li>
-<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments to override default inversion parameters.
-See <cite>InversionBase</cite> and ERT-specific defaults below. Common parameters include:
-- <cite>lambda_val</cite> (float): Initial regularization parameter.
-- <cite>method</cite> (str): Solver method for the linear system (e.g., ‘cgls’, ‘lsqr’).
-- <cite>model_constraints</cite> (Tuple[float, float]): Min and max bounds for resistivity [ohm·m].
-- <cite>max_iterations</cite> (int): Maximum number of inversion iterations.
-- <cite>absoluteUError</cite> (float): Absolute error in voltage (U) for data error estimation [V].
-- <cite>relativeError</cite> (float): Relative error percentage for data error estimation (e.g., 0.05 for 5%).
-- <cite>lambda_rate</cite> (float): Factor to reduce lambda at each iteration if chi^2 improves.
-- <cite>lambda_min</cite> (float): Minimum value for lambda.
-- <cite>use_gpu</cite> (bool): Whether to attempt GPU acceleration (requires CuPy and compatible solver).
-- <cite>parallel</cite> (bool): Whether to use parallel CPU computation for certain solver steps.
-- <cite>n_jobs</cite> (int): Number of CPU jobs for parallel execution.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>FileNotFoundError</strong> – If the <cite>data_file</cite> does not exist.</p></li>
-<li><p><strong>Exception</strong> – If <cite>pygimli.ert.load</cite> fails to load the data.</p></li>
+<li><p><strong>data_file</strong> – Path to ERT data file</p></li>
+<li><p><strong>mesh</strong> – Mesh for inversion (created if None)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters including:
+- lambda_val: Regularization parameter
+- method: Solver method (‘cgls’, ‘lsqr’, etc.)
+- model_constraints: (min, max) model parameter bounds
+- max_iterations: Maximum iterations
+- absoluteUError: Absolute data error
+- relativeError: Relative data error
+- lambda_rate: Lambda reduction rate
+- lambda_min: Minimum lambda value
+- use_gpu: Whether to use GPU acceleration (requires CuPy)
+- parallel: Whether to use parallel CPU computation
+- n_jobs: Number of parallel jobs (-1 for all cores)</p></li>
 </ul>
 </dd>
 </dl>
@@ -598,65 +579,20 @@ See <cite>InversionBase</cite> and ERT-specific defaults below. Common parameter
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.ert_inversion.ERTInversion.setup">
-<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ert_inversion.ERTInversion.setup" title="Permalink to this definition"></a></dt>
-<dd><p>Set up the ERT inversion environment.</p>
-<p>This involves:
-- Creating an inversion mesh if not already provided.
-- Initializing the PyGIMLi <cite>ERTModelling</cite> forward operator.
-- Preparing observed data (log-transforming apparent resistivities).
-- Calculating data error weighting matrix (<cite>self.Wd</cite>).
-- Creating the model regularization matrix (<cite>self.Wm_r</cite>).</p>
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ert_inversion.ERTInversion.setup" title="Permalink to this definition"></a></dt>
+<dd><p>Set up ERT inversion (create operators, matrices, etc.)</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.ert_inversion.ERTInversion.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_model_linear</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ert_inversion.ERTInversion.run" title="Permalink to this definition"></a></dt>
-<dd><p>Run the ERT inversion using an iterative Gauss-Newton like approach.</p>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ert_inversion.ERTInversion.run" title="Permalink to this definition"></a></dt>
+<dd><p>Run ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>initial_model_linear</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em><em>, </em><em>optional</em>) – Initial guess for the resistivity model [ohm·m] (linear scale).
-If None, a homogeneous model based on the median of observed apparent
-resistivities is used. Should be a 1D array or a 2D column vector.
-Defaults to None.</p>
+<dd class="field-odd"><p><strong>initial_model</strong> – Initial model parameters (if None, a homogeneous model is used)</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>An object containing all results of the inversion process.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionResult" title="PyHydroGeophysX.InversionResult">InversionResult</a></p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>RuntimeError</strong> – If <cite>setup()</cite> has not been called successfully.</p></li>
-<li><p><strong>ValueError</strong> – If initial model dimensions are incorrect.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="PyHydroGeophysX.inversion.ert_inversion.ERTInversion.get_coverage">
-<span class="sig-name descname"><span class="pre">get_coverage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_for_coverage</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.get_coverage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ert_inversion.ERTInversion.get_coverage" title="Permalink to this definition"></a></dt>
-<dd><p>Computes coverage (sensitivity/resolution proxy) for the current forward operator setup and a given model.
-This method is similar to <cite>ERTForwardModeling.get_coverage</cite> but uses the instance’s attributes.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_for_coverage</strong> (<em>np.ndarray</em>) – The model parameters (1D array, typically log-transformed resistivity
-if <cite>is_log_model</cite> is True) for which to calculate coverage.</p></li>
-<li><p><strong>is_log_model</strong> (<em>bool</em>) – If True, <cite>model_for_coverage</cite> is assumed to be log-transformed (natural log)
-and will be exponentiated before use.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>An array of log10-transformed coverage values for each cell,</dt><dd><p>or None if calculation fails.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Optional[np.ndarray]</p>
+<dd class="field-even"><p>InversionResult with inversion results</p>
 </dd>
 </dl>
 </dd></dl>
@@ -666,48 +602,33 @@ and will be exponentiated before use.</p></li>
 </section>
 <section id="module-PyHydroGeophysX.inversion.time_lapse">
 <span id="pyhydrogeophysx-inversion-time-lapse-module"></span><h2>PyHydroGeophysX.inversion.time_lapse module<a class="headerlink" href="#module-PyHydroGeophysX.inversion.time_lapse" title="Permalink to this heading"></a></h2>
-<p>Time-lapse Electrical Resistivity Tomography (ERT) inversion functionality.</p>
-<p>This module provides the <cite>TimeLapseERTInversion</cite> class for performing
-time-lapse ERT inversions. It builds upon the base inversion framework and
-incorporates temporal regularization to link inversions across different
-timesteps. Helper functions for Jacobian calculation and forward modeling
-in a time-lapse context are also included.</p>
+<p>Time-lapse ERT inversion functionality.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.time_lapse.</span></span><span class="sig-name descname"><span class="pre">TimeLapseERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">data_files:</span> <span class="pre">~typing.List[str],</span> <span class="pre">measurement_times:</span> <span class="pre">~typing.List[float]</span> <span class="pre">|</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionBase" title="PyHydroGeophysX.inversion.base.InversionBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionBase</span></code></a></p>
-<p>Performs time-lapse Electrical Resistivity Tomography (ERT) inversion.</p>
-<p>This class extends <cite>InversionBase</cite> to handle multiple ERT datasets collected
-over time. It incorporates temporal regularization to link the inversions of
-consecutive timesteps, promoting smoother changes or enforcing specific
-temporal behaviors in the resistivity models.</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.time_lapse.</span></span><span class="sig-name descname"><span class="pre">TimeLapseERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measurement_times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionBase" title="PyHydroGeophysX.inversion.base.InversionBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionBase</span></code></a></p>
+<p>Time-lapse ERT inversion class.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">data_files:</span> <span class="pre">~typing.List[str],</span> <span class="pre">measurement_times:</span> <span class="pre">~typing.List[float]</span> <span class="pre">|</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize the TimeLapseERTInversion class.</p>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measurement_times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion.__init__" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize time-lapse ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data_files</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – A list of file paths, where each path points to an
-ERT data file for a specific timestep.</p></li>
-<li><p><strong>measurement_times</strong> (<em>Union</em><em>[</em><em>List</em><em>[</em><em>float</em><em>]</em><em>, </em><em>np.ndarray</em><em>]</em>) – A list or NumPy array of time values
-(e.g., hours, days) corresponding to each data file.
-Must be the same length as <cite>data_files</cite>.</p></li>
-<li><p><strong>mesh</strong> (<em>Optional</em><em>[</em><em>pg.Mesh</em><em>]</em><em>, </em><em>optional</em>) – A PyGIMLi mesh for the inversion. If None,
-a mesh is created based on the first dataset
-during <cite>setup()</cite>. Defaults to None.</p></li>
-<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments for configuring the inversion.
-These override defaults in <cite>InversionBase</cite> and time-lapse specific defaults.
-Key time-lapse parameters include:
-- <cite>alpha</cite> (float): Temporal regularization strength.
-- <cite>decay_rate</cite> (float): Decay rate for temporal weights (exp(-decay*dt)).
-- <cite>inversion_type</cite> (str): Norm for misfit (‘L1’, ‘L2’, ‘L1L2’).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>ValueError</strong> – If <cite>data_files</cite> is empty or if lengths of <cite>data_files</cite> and <cite>measurement_times</cite> mismatch.</p></li>
-<li><p><strong>RuntimeError</strong> – If loading the first data file fails.</p></li>
+<li><p><strong>data_files</strong> – List of paths to ERT data files</p></li>
+<li><p><strong>measurement_times</strong> – List of measurement times</p></li>
+<li><p><strong>mesh</strong> – Mesh for inversion (created if None)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters including:
+- lambda_val: Regularization parameter
+- alpha: Temporal regularization parameter
+- decay_rate: Temporal decay rate
+- method: Solver method (‘cgls’, ‘lsqr’, etc.)
+- model_constraints: (min, max) model parameter bounds
+- max_iterations: Maximum iterations
+- absoluteUError: Absolute data error
+- relativeError: Relative data error
+- lambda_rate: Lambda reduction rate
+- lambda_min: Minimum lambda value</p></li>
 </ul>
 </dd>
 </dl>
@@ -715,40 +636,20 @@ Key time-lapse parameters include:
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion.setup">
-<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion.setup" title="Permalink to this definition"></a></dt>
-<dd><p>Set up the time-lapse ERT inversion environment.</p>
-<p>This involves:
-- Creating/validating the common inversion mesh.
-- Loading all time-lapse datasets and their error models.
-- Initializing a PyGIMLi <cite>ERTModelling</cite> forward operator for each dataset.
-- Preparing observed data (stacking log-transformed apparent resistivities).
-- Constructing combined data weighting matrix (<cite>self.Wd_stacked</cite>).
-- Constructing combined spatial regularization matrix (<cite>self.Wm_stacked</cite>).
-- Constructing temporal regularization matrix (<cite>self.Wt_temporal</cite>).</p>
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion.setup" title="Permalink to this definition"></a></dt>
+<dd><p>Set up time-lapse ERT inversion (load data, create operators, matrices, etc.)</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_model_linear_3d</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion.run" title="Permalink to this definition"></a></dt>
-<dd><p>Run the time-lapse ERT inversion.</p>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion.run" title="Permalink to this definition"></a></dt>
+<dd><p>Run time-lapse ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>initial_model_linear_3d</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em><em>, </em><em>optional</em>) – Initial guess for the resistivity model [ohm·m] (linear scale).
-Should be a 2D array of shape (num_cells, num_timesteps).
-If None, a homogeneous model for each timestep is derived from the median
-of its respective observed apparent resistivities. Defaults to None.</p>
+<dd class="field-odd"><p><strong>initial_model</strong> – Initial model parameters (if None, a homogeneous model is used)</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Object containing the results of the time-lapse inversion.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TimeLapseInversionResult" title="PyHydroGeophysX.TimeLapseInversionResult">TimeLapseInversionResult</a></p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>RuntimeError</strong> – If <cite>setup()</cite> has not been called or if inversion encounters critical errors.</p></li>
-<li><p><strong>ValueError</strong> – If <cite>initial_model_linear_3d</cite> has incorrect shape.</p></li>
-</ul>
+<dd class="field-even"><p>TimeLapseInversionResult with inversion results</p>
 </dd>
 </dl>
 </dd></dl>
@@ -761,12 +662,12 @@ of its respective observed apparent resistivities. Defaults to None.</p>
 <p>Windowed time-lapse ERT inversion for handling large temporal datasets.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.windowed.WindowedTimeLapseERTInversion">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.windowed.</span></span><span class="sig-name descname"><span class="pre">WindowedTimeLapseERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">data_dir:</span> <span class="pre">str,</span> <span class="pre">ert_files:</span> <span class="pre">~typing.List[str],</span> <span class="pre">measurement_times:</span> <span class="pre">~typing.List[float],</span> <span class="pre">window_size:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">3,</span> <span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">**kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.windowed.WindowedTimeLapseERTInversion" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.windowed.</span></span><span class="sig-name descname"><span class="pre">WindowedTimeLapseERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ert_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measurement_times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.windowed.WindowedTimeLapseERTInversion" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Class for windowed time-lapse ERT inversion to handle large temporal datasets.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.windowed.WindowedTimeLapseERTInversion.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">data_dir:</span> <span class="pre">str,</span> <span class="pre">ert_files:</span> <span class="pre">~typing.List[str],</span> <span class="pre">measurement_times:</span> <span class="pre">~typing.List[float],</span> <span class="pre">window_size:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">3,</span> <span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">**kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.windowed.WindowedTimeLapseERTInversion.__init__" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ert_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measurement_times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.windowed.WindowedTimeLapseERTInversion.__init__" title="Permalink to this definition"></a></dt>
 <dd><p>Initialize windowed time-lapse ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -784,7 +685,7 @@ of its respective observed apparent resistivities. Defaults to None.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.windowed.WindowedTimeLapseERTInversion.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_parallel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_window_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.windowed.WindowedTimeLapseERTInversion.run" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_parallel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_window_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.windowed.WindowedTimeLapseERTInversion.run" title="Permalink to this definition"></a></dt>
 <dd><p>Run windowed time-lapse ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -807,7 +708,7 @@ of its respective observed apparent resistivities. Defaults to None.</p>
 <p>Inversion framework for geophysical applications.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.InversionBase">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.</span></span><span class="sig-name descname"><span class="pre">InversionBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2068139737616'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.InversionBase" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.</span></span><span class="sig-name descname"><span class="pre">InversionBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockDataContainer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.InversionBase" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Abstract base class for geophysical inversion methods.</p>
 <p>This class provides a foundational structure for specific inversion techniques
@@ -817,7 +718,7 @@ setting up the inversion, running the inversion loop, computing Jacobians,
 and evaluating the objective function.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.InversionBase.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.DataContainer'</span> <span class="pre">id='2068139737616'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.InversionBase.__init__" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockDataContainer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.InversionBase.__init__" title="Permalink to this definition"></a></dt>
 <dd><p>Initialize the base inversion class.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -847,7 +748,7 @@ for the inversion, such as:
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.InversionBase.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.InversionBase.run" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionBase.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.InversionBase.run" title="Permalink to this definition"></a></dt>
 <dd><p>Abstract method to run the main inversion loop.</p>
 <p>Derived classes must implement this to perform the iterative optimization process.
 The method should populate and return an <cite>InversionResult</cite> (or subclass) object.</p>
@@ -856,7 +757,7 @@ The method should populate and return an <cite>InversionResult</cite> (or subcla
 <dd class="field-odd"><p>An object containing the results of the inversion.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.InversionResult" title="PyHydroGeophysX.inversion.InversionResult">InversionResult</a></p>
+<dd class="field-even"><p><a class="reference internal" href="#PyHydroGeophysX.inversion.InversionResult" title="PyHydroGeophysX.inversion.InversionResult">InversionResult</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1030,7 +931,7 @@ It’s recommended to provide <cite>filename</cite> without <cite>.pkl</cite>.</
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.InversionResult.load">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionResult.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.InversionResult.load" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#InversionResult.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.InversionResult.load" title="Permalink to this definition"></a></dt>
 <dd><p>Load inversion results from a file previously saved by the <cite>save</cite> method.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1045,7 +946,7 @@ If saved as <cite>name.pkl</cite> and <cite>name.bms</cite>, provide <cite>name.
 </p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.InversionResult" title="PyHydroGeophysX.inversion.InversionResult">InversionResult</a></p>
+<dd class="field-odd"><p><a class="reference internal" href="#PyHydroGeophysX.inversion.InversionResult" title="PyHydroGeophysX.inversion.InversionResult">InversionResult</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
@@ -1117,7 +1018,7 @@ If None, a new figure and axes are created. Defaults to None.</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.TimeLapseInversionResult">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.</span></span><span class="sig-name descname"><span class="pre">TimeLapseInversionResult</span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#TimeLapseInversionResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseInversionResult" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionResult</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionResult</span></code></a></p>
 <p>Specialized class to store and manage results from time-lapse inversions.
 Inherits from <cite>InversionResult</cite> and adds attributes specific to time-lapse data.</p>
 <dl class="py attribute">
@@ -1184,7 +1085,7 @@ per iteration for the inversion of that specific timestep or window.
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.TimeLapseInversionResult.load">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#TimeLapseInversionResult.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseInversionResult.load" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/base.html#TimeLapseInversionResult.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseInversionResult.load" title="Permalink to this definition"></a></dt>
 <dd><p>Load time-lapse inversion results. Overrides base class <cite>load</cite>.</p>
 </dd></dl>
 
@@ -1244,43 +1145,30 @@ Defaults to None.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.ERTInversion">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.</span></span><span class="sig-name descname"><span class="pre">ERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_file:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ERTInversion" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionBase" title="PyHydroGeophysX.inversion.base.InversionBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionBase</span></code></a></p>
-<p>Performs a single-time Electrical Resistivity Tomography (ERT) inversion.</p>
-<p>This class inherits from <cite>InversionBase</cite> and implements the specific steps
-for ERT inversion, including setting up PyGIMLi’s ERT forward operator,
-data weighting, model regularization, and an iterative inversion loop.</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.</span></span><span class="sig-name descname"><span class="pre">ERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ERTInversion" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionBase" title="PyHydroGeophysX.inversion.base.InversionBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionBase</span></code></a></p>
+<p>Single-time ERT inversion class.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.ERTInversion.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_file:</span> <span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ERTInversion.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize the ERTInversion class.</p>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ERTInversion.__init__" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data_file</strong> (<em>str</em>) – Path to the ERT data file (readable by <cite>pygimli.ert.load</cite>).</p></li>
-<li><p><strong>mesh</strong> (<em>Optional</em><em>[</em><em>pg.Mesh</em><em>]</em><em>, </em><em>optional</em>) – A pre-defined PyGIMLi mesh for the inversion.
-If None, a mesh will be automatically created
-based on the data during the <cite>setup()</cite> phase.
-Defaults to None.</p></li>
-<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments to override default inversion parameters.
-See <cite>InversionBase</cite> and ERT-specific defaults below. Common parameters include:
-- <cite>lambda_val</cite> (float): Initial regularization parameter.
-- <cite>method</cite> (str): Solver method for the linear system (e.g., ‘cgls’, ‘lsqr’).
-- <cite>model_constraints</cite> (Tuple[float, float]): Min and max bounds for resistivity [ohm·m].
-- <cite>max_iterations</cite> (int): Maximum number of inversion iterations.
-- <cite>absoluteUError</cite> (float): Absolute error in voltage (U) for data error estimation [V].
-- <cite>relativeError</cite> (float): Relative error percentage for data error estimation (e.g., 0.05 for 5%).
-- <cite>lambda_rate</cite> (float): Factor to reduce lambda at each iteration if chi^2 improves.
-- <cite>lambda_min</cite> (float): Minimum value for lambda.
-- <cite>use_gpu</cite> (bool): Whether to attempt GPU acceleration (requires CuPy and compatible solver).
-- <cite>parallel</cite> (bool): Whether to use parallel CPU computation for certain solver steps.
-- <cite>n_jobs</cite> (int): Number of CPU jobs for parallel execution.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>FileNotFoundError</strong> – If the <cite>data_file</cite> does not exist.</p></li>
-<li><p><strong>Exception</strong> – If <cite>pygimli.ert.load</cite> fails to load the data.</p></li>
+<li><p><strong>data_file</strong> – Path to ERT data file</p></li>
+<li><p><strong>mesh</strong> – Mesh for inversion (created if None)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters including:
+- lambda_val: Regularization parameter
+- method: Solver method (‘cgls’, ‘lsqr’, etc.)
+- model_constraints: (min, max) model parameter bounds
+- max_iterations: Maximum iterations
+- absoluteUError: Absolute data error
+- relativeError: Relative data error
+- lambda_rate: Lambda reduction rate
+- lambda_min: Minimum lambda value
+- use_gpu: Whether to use GPU acceleration (requires CuPy)
+- parallel: Whether to use parallel CPU computation
+- n_jobs: Number of parallel jobs (-1 for all cores)</p></li>
 </ul>
 </dd>
 </dl>
@@ -1288,65 +1176,20 @@ See <cite>InversionBase</cite> and ERT-specific defaults below. Common parameter
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.ERTInversion.setup">
-<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ERTInversion.setup" title="Permalink to this definition"></a></dt>
-<dd><p>Set up the ERT inversion environment.</p>
-<p>This involves:
-- Creating an inversion mesh if not already provided.
-- Initializing the PyGIMLi <cite>ERTModelling</cite> forward operator.
-- Preparing observed data (log-transforming apparent resistivities).
-- Calculating data error weighting matrix (<cite>self.Wd</cite>).
-- Creating the model regularization matrix (<cite>self.Wm_r</cite>).</p>
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ERTInversion.setup" title="Permalink to this definition"></a></dt>
+<dd><p>Set up ERT inversion (create operators, matrices, etc.)</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.ERTInversion.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_model_linear</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ERTInversion.run" title="Permalink to this definition"></a></dt>
-<dd><p>Run the ERT inversion using an iterative Gauss-Newton like approach.</p>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionResult" title="PyHydroGeophysX.inversion.base.InversionResult"><span class="pre">InversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ERTInversion.run" title="Permalink to this definition"></a></dt>
+<dd><p>Run ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>initial_model_linear</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em><em>, </em><em>optional</em>) – Initial guess for the resistivity model [ohm·m] (linear scale).
-If None, a homogeneous model based on the median of observed apparent
-resistivities is used. Should be a 1D array or a 2D column vector.
-Defaults to None.</p>
+<dd class="field-odd"><p><strong>initial_model</strong> – Initial model parameters (if None, a homogeneous model is used)</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>An object containing all results of the inversion process.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.InversionResult" title="PyHydroGeophysX.inversion.InversionResult">InversionResult</a></p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>RuntimeError</strong> – If <cite>setup()</cite> has not been called successfully.</p></li>
-<li><p><strong>ValueError</strong> – If initial model dimensions are incorrect.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="PyHydroGeophysX.inversion.ERTInversion.get_coverage">
-<span class="sig-name descname"><span class="pre">get_coverage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_for_coverage</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/ert_inversion.html#ERTInversion.get_coverage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.ERTInversion.get_coverage" title="Permalink to this definition"></a></dt>
-<dd><p>Computes coverage (sensitivity/resolution proxy) for the current forward operator setup and a given model.
-This method is similar to <cite>ERTForwardModeling.get_coverage</cite> but uses the instance’s attributes.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_for_coverage</strong> (<em>np.ndarray</em>) – The model parameters (1D array, typically log-transformed resistivity
-if <cite>is_log_model</cite> is True) for which to calculate coverage.</p></li>
-<li><p><strong>is_log_model</strong> (<em>bool</em>) – If True, <cite>model_for_coverage</cite> is assumed to be log-transformed (natural log)
-and will be exponentiated before use.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>An array of log10-transformed coverage values for each cell,</dt><dd><p>or None if calculation fails.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Optional[np.ndarray]</p>
+<dd class="field-even"><p>InversionResult with inversion results</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1355,40 +1198,30 @@ and will be exponentiated before use.</p></li>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.TimeLapseERTInversion">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.</span></span><span class="sig-name descname"><span class="pre">TimeLapseERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">data_files:</span> <span class="pre">~typing.List[str],</span> <span class="pre">measurement_times:</span> <span class="pre">~typing.List[float]</span> <span class="pre">|</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseERTInversion" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionBase" title="PyHydroGeophysX.inversion.base.InversionBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionBase</span></code></a></p>
-<p>Performs time-lapse Electrical Resistivity Tomography (ERT) inversion.</p>
-<p>This class extends <cite>InversionBase</cite> to handle multiple ERT datasets collected
-over time. It incorporates temporal regularization to link the inversions of
-consecutive timesteps, promoting smoother changes or enforcing specific
-temporal behaviors in the resistivity models.</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.</span></span><span class="sig-name descname"><span class="pre">TimeLapseERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measurement_times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseERTInversion" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#PyHydroGeophysX.inversion.base.InversionBase" title="PyHydroGeophysX.inversion.base.InversionBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">InversionBase</span></code></a></p>
+<p>Time-lapse ERT inversion class.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.TimeLapseERTInversion.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">data_files:</span> <span class="pre">~typing.List[str],</span> <span class="pre">measurement_times:</span> <span class="pre">~typing.List[float]</span> <span class="pre">|</span> <span class="pre">~numpy.ndarray,</span> <span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseERTInversion.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize the TimeLapseERTInversion class.</p>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measurement_times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseERTInversion.__init__" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize time-lapse ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data_files</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – A list of file paths, where each path points to an
-ERT data file for a specific timestep.</p></li>
-<li><p><strong>measurement_times</strong> (<em>Union</em><em>[</em><em>List</em><em>[</em><em>float</em><em>]</em><em>, </em><em>np.ndarray</em><em>]</em>) – A list or NumPy array of time values
-(e.g., hours, days) corresponding to each data file.
-Must be the same length as <cite>data_files</cite>.</p></li>
-<li><p><strong>mesh</strong> (<em>Optional</em><em>[</em><em>pg.Mesh</em><em>]</em><em>, </em><em>optional</em>) – A PyGIMLi mesh for the inversion. If None,
-a mesh is created based on the first dataset
-during <cite>setup()</cite>. Defaults to None.</p></li>
-<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments for configuring the inversion.
-These override defaults in <cite>InversionBase</cite> and time-lapse specific defaults.
-Key time-lapse parameters include:
-- <cite>alpha</cite> (float): Temporal regularization strength.
-- <cite>decay_rate</cite> (float): Decay rate for temporal weights (exp(-decay*dt)).
-- <cite>inversion_type</cite> (str): Norm for misfit (‘L1’, ‘L2’, ‘L1L2’).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>ValueError</strong> – If <cite>data_files</cite> is empty or if lengths of <cite>data_files</cite> and <cite>measurement_times</cite> mismatch.</p></li>
-<li><p><strong>RuntimeError</strong> – If loading the first data file fails.</p></li>
+<li><p><strong>data_files</strong> – List of paths to ERT data files</p></li>
+<li><p><strong>measurement_times</strong> – List of measurement times</p></li>
+<li><p><strong>mesh</strong> – Mesh for inversion (created if None)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters including:
+- lambda_val: Regularization parameter
+- alpha: Temporal regularization parameter
+- decay_rate: Temporal decay rate
+- method: Solver method (‘cgls’, ‘lsqr’, etc.)
+- model_constraints: (min, max) model parameter bounds
+- max_iterations: Maximum iterations
+- absoluteUError: Absolute data error
+- relativeError: Relative data error
+- lambda_rate: Lambda reduction rate
+- lambda_min: Minimum lambda value</p></li>
 </ul>
 </dd>
 </dl>
@@ -1396,40 +1229,20 @@ Key time-lapse parameters include:
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.TimeLapseERTInversion.setup">
-<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseERTInversion.setup" title="Permalink to this definition"></a></dt>
-<dd><p>Set up the time-lapse ERT inversion environment.</p>
-<p>This involves:
-- Creating/validating the common inversion mesh.
-- Loading all time-lapse datasets and their error models.
-- Initializing a PyGIMLi <cite>ERTModelling</cite> forward operator for each dataset.
-- Preparing observed data (stacking log-transformed apparent resistivities).
-- Constructing combined data weighting matrix (<cite>self.Wd_stacked</cite>).
-- Constructing combined spatial regularization matrix (<cite>self.Wm_stacked</cite>).
-- Constructing temporal regularization matrix (<cite>self.Wt_temporal</cite>).</p>
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseERTInversion.setup" title="Permalink to this definition"></a></dt>
+<dd><p>Set up time-lapse ERT inversion (load data, create operators, matrices, etc.)</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.TimeLapseERTInversion.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_model_linear_3d</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseERTInversion.run" title="Permalink to this definition"></a></dt>
-<dd><p>Run the time-lapse ERT inversion.</p>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/time_lapse.html#TimeLapseERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.TimeLapseERTInversion.run" title="Permalink to this definition"></a></dt>
+<dd><p>Run time-lapse ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>initial_model_linear_3d</strong> (<em>Optional</em><em>[</em><em>np.ndarray</em><em>]</em><em>, </em><em>optional</em>) – Initial guess for the resistivity model [ohm·m] (linear scale).
-Should be a 2D array of shape (num_cells, num_timesteps).
-If None, a homogeneous model for each timestep is derived from the median
-of its respective observed apparent resistivities. Defaults to None.</p>
+<dd class="field-odd"><p><strong>initial_model</strong> – Initial model parameters (if None, a homogeneous model is used)</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Object containing the results of the time-lapse inversion.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.TimeLapseInversionResult">TimeLapseInversionResult</a></p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>RuntimeError</strong> – If <cite>setup()</cite> has not been called or if inversion encounters critical errors.</p></li>
-<li><p><strong>ValueError</strong> – If <cite>initial_model_linear_3d</cite> has incorrect shape.</p></li>
-</ul>
+<dd class="field-even"><p>TimeLapseInversionResult with inversion results</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1438,12 +1251,12 @@ of its respective observed apparent resistivities. Defaults to None.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.WindowedTimeLapseERTInversion">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.</span></span><span class="sig-name descname"><span class="pre">WindowedTimeLapseERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">data_dir:</span> <span class="pre">str,</span> <span class="pre">ert_files:</span> <span class="pre">~typing.List[str],</span> <span class="pre">measurement_times:</span> <span class="pre">~typing.List[float],</span> <span class="pre">window_size:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">3,</span> <span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">**kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.WindowedTimeLapseERTInversion" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.inversion.</span></span><span class="sig-name descname"><span class="pre">WindowedTimeLapseERTInversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ert_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measurement_times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.WindowedTimeLapseERTInversion" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Class for windowed time-lapse ERT inversion to handle large temporal datasets.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.WindowedTimeLapseERTInversion.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">data_dir:</span> <span class="pre">str,</span> <span class="pre">ert_files:</span> <span class="pre">~typing.List[str],</span> <span class="pre">measurement_times:</span> <span class="pre">~typing.List[float],</span> <span class="pre">window_size:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">3,</span> <span class="pre">mesh:</span> <span class="pre">&lt;MagicMock</span> <span class="pre">name='mock.Mesh'</span> <span class="pre">id='2068138335696'&gt;</span> <span class="pre">|</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">**kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.WindowedTimeLapseERTInversion.__init__" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ert_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measurement_times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MockMesh</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.WindowedTimeLapseERTInversion.__init__" title="Permalink to this definition"></a></dt>
 <dd><p>Initialize windowed time-lapse ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1461,7 +1274,7 @@ of its respective observed apparent resistivities. Defaults to None.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="PyHydroGeophysX.inversion.WindowedTimeLapseERTInversion.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_parallel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_window_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.WindowedTimeLapseERTInversion.run" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_parallel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_window_workers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.inversion.base.TimeLapseInversionResult" title="PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><span class="pre">TimeLapseInversionResult</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/inversion/windowed.html#WindowedTimeLapseERTInversion.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.inversion.WindowedTimeLapseERTInversion.run" title="Permalink to this definition"></a></dt>
 <dd><p>Run windowed time-lapse ERT inversion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

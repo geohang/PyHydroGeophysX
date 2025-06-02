@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex2_workflow.html" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Ex3. Creating Synthetic Time-Lapse ERT Measurements" href="Ex3_Time_lapse_measurement.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Ex 1. Loading and Processing Hydrological Model Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
+      <li class="breadcrumb-item active">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/geohang/PyHydroGeophysX/blob/main/docs/source/auto_examples/Ex2_workflow.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex2-workflow-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
+</div>
+<section class="sphx-glr-example-title" id="ex-2-complete-workflow-from-hydrological-models-to-geophysical-inversion">
+<span id="sphx-glr-auto-examples-ex2-workflow-py"></span><h1>Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion<a class="headerlink" href="#ex-2-complete-workflow-from-hydrological-models-to-geophysical-inversion" title="Permalink to this heading"></a></h1>
+<p>This example demonstrates the complete workflow for integrating hydrological
+model outputs with geophysical forward modeling and inversion using PyHydroGeophysX.</p>
+<p>The workflow includes:
+1. Loading MODFLOW water content data
+2. Setting up 2D profile interpolation from 3D model data
+3. Creating meshes with geological layer structure
+4. Converting water content to resistivity using petrophysical relationships
+5. Converting water content to seismic velocity using rock physics models
+6. Forward modeling to create synthetic ERT and seismic data
+7. Performing ERT inversion to recover resistivity models</p>
+<p>This example serves as a comprehensive tutorial showing the integration
+of hydrological and geophysical modeling for watershed monitoring applications.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">TravelTimeManager</span>
+<span class="kn">import</span> <span class="nn">pygimli.physics.traveltime</span> <span class="k">as</span> <span class="nn">tt</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="kn">import</span> <span class="n">make_axes_locatable</span>
+
+<span class="c1"># Setup package path for development</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># For regular Python scripts</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+    <span class="c1"># For Jupyter notebooks</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="c1"># Add the parent directory to Python path</span>
+<span class="n">parent_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">current_dir</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.core.interpolation</span> <span class="kn">import</span> <span class="n">ProfileInterpolator</span><span class="p">,</span> <span class="n">create_surface_lines</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.core.mesh_utils</span> <span class="kn">import</span> <span class="n">MeshCreator</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span> <span class="kn">import</span> <span class="n">water_content_to_resistivity</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.petrophysics.velocity_models</span> <span class="kn">import</span> <span class="n">HertzMindlinModel</span><span class="p">,</span> <span class="n">DEMModel</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.forward.ert_forward</span> <span class="kn">import</span> <span class="n">ERTForwardModeling</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.ert_inversion</span> <span class="kn">import</span> <span class="n">ERTInversion</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.Hydro_modular</span> <span class="kn">import</span> <span class="n">hydro_to_ert</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">script_dir</span> <span class="o">=</span>  <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="n">output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">script_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="s2">&quot;workflow_example&quot;</span><span class="p">)</span> <span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example&quot;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>## Step by Step approach</p>
+<p>### Loading domain information…</p>
+<p>These would be your actual data files</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">script_dir</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">)</span> <span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/&quot;</span>
+<span class="n">modflow_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;modflow&quot;</span><span class="p">)</span>
+
+<span class="c1"># Load domain information from files</span>
+<span class="c1"># (Replace with your actual file paths)</span>
+<span class="n">idomain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;id.txt&quot;</span><span class="p">))</span>
+<span class="n">top</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;top.txt&quot;</span><span class="p">))</span>
+<span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;Porosity.npy&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>### Loading MODFLOW water content data..</p>
+<p>Step 2: Exmaple of loading MODFLOW water content data</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Note that to save the loading time, we only use a low resoluation model load for the example</span>
+<span class="c1"># In a real-world application, you would load the full resolution data</span>
+<span class="c1"># here we will load the npy file for the water content to save time</span>
+
+<span class="c1"># Load the water content from a .npy file for demonstration purposes</span>
+
+<span class="n">Water_Content</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;Watercontent.npy&quot;</span><span class="p">))</span>
+
+<span class="n">water_content</span> <span class="o">=</span> <span class="n">Water_Content</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">water_content</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>### Set up profile for 2D section</p>
+<p>Step 3: Set up profile for 2D section</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 3: Setting up profile...&quot;</span><span class="p">)</span>
+
+<span class="c1"># Define profile endpoints</span>
+<span class="n">point1</span> <span class="o">=</span> <span class="p">[</span><span class="mi">115</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span>  <span class="c1"># [col, row]</span>
+<span class="n">point2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">95</span><span class="p">,</span> <span class="mi">180</span><span class="p">]</span>  <span class="c1"># [col, row]</span>
+
+<span class="c1"># Initialize profile interpolator</span>
+<span class="n">interpolator</span> <span class="o">=</span> <span class="n">ProfileInterpolator</span><span class="p">(</span>
+    <span class="n">point1</span><span class="o">=</span><span class="n">point1</span><span class="p">,</span>
+    <span class="n">point2</span><span class="o">=</span><span class="n">point2</span><span class="p">,</span>
+    <span class="n">surface_data</span><span class="o">=</span><span class="n">top</span><span class="p">,</span>
+    <span class="n">origin_x</span><span class="o">=</span><span class="mf">569156.0</span><span class="p">,</span>
+    <span class="n">origin_y</span><span class="o">=</span><span class="mf">4842444.0</span><span class="p">,</span>
+    <span class="n">pixel_width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pixel_height</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">num_points</span> <span class="o">=</span> <span class="mi">400</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>### Interpolating data to profile</p>
+<p>Step 4: Interpolate data to profile</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Interpolate water content to profile</span>
+<span class="n">water_content_profile</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">water_content</span><span class="p">)</span>
+
+<span class="c1"># Interpolate porosity to profile</span>
+<span class="n">porosity_profile</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>### Creating mesh</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load structure layers</span>
+<span class="n">bot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;bot.npy&quot;</span><span class="p">))</span>
+
+<span class="c1"># Process layers to get structure</span>
+<span class="n">structure</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_layer_data</span><span class="p">([</span><span class="n">top</span><span class="p">]</span> <span class="o">+</span> <span class="n">bot</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+<span class="c1"># Create surface lines</span>
+<span class="c1"># Indicate the layer for the structure regolith, fractured bedrock and fresh bedrock</span>
+<span class="n">top_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">mid_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">bot_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+<span class="n">surface</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span> <span class="o">=</span> <span class="n">create_surface_lines</span><span class="p">(</span>
+    <span class="n">L_profile</span><span class="o">=</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span>
+    <span class="n">structure</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">top_idx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">mid_idx</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">bot_idx</span><span class="o">=</span><span class="mi">12</span>
+<span class="p">)</span>
+
+<span class="c1"># Create mesh</span>
+<span class="n">mesh_creator</span> <span class="o">=</span> <span class="n">MeshCreator</span><span class="p">(</span><span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+<span class="n">mesh</span><span class="p">,</span> <span class="n">geom</span> <span class="o">=</span> <span class="n">mesh_creator</span><span class="o">.</span><span class="n">create_from_layers</span><span class="p">(</span>
+    <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span>
+    <span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">],</span>
+    <span class="n">bottom_depth</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span><span class="o">-</span><span class="mi">10</span> <span class="c1">#50.0</span>
+<span class="p">)</span>
+
+<span class="c1"># Save mesh</span>
+<span class="n">mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;mesh.bms&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Visualize the result</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">top</span><span class="p">[</span><span class="n">idomain</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>  <span class="c1"># Mask out the inactive cells in the top layer</span>
+<span class="c1"># Plot the surface and profile line</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">121</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">top</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Top Elevation (m)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;ro&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Start&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;bo&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;End&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="s1">&#39;r--&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Surface Elevation with Profile Line&#39;</span><span class="p">)</span>
+
+<span class="c1"># Plot the profile coordinates</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">122</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">surface</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">surface</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Elevation Along Profile&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Distance Along Profile&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Elevation&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>### Interpolating data to mesh</p>
+<p>Step 6: Interpolate data to mesh</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ID1</span> <span class="o">=</span> <span class="n">porosity_profile</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">ID1</span><span class="p">[:</span><span class="n">mid_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1">#regolith</span>
+<span class="n">ID1</span><span class="p">[</span><span class="n">mid_idx</span><span class="p">:</span><span class="n">bot_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># fractured bedrock</span>
+<span class="n">ID1</span><span class="p">[</span><span class="n">bot_idx</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># fresh bedrock</span>
+
+<span class="c1"># Get mesh centers and markers</span>
+<span class="n">mesh_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+<span class="n">mesh_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
+
+<span class="c1"># Interpolate porosity to mesh</span>
+<span class="n">porosity_mesh</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span>
+    <span class="n">property_values</span><span class="o">=</span><span class="n">porosity_profile</span><span class="p">,</span>
+    <span class="n">depth_values</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">mesh_x</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="n">mesh_y</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+    <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>
+    <span class="n">ID</span><span class="o">=</span><span class="n">ID1</span><span class="p">,</span> <span class="c1"># Use ID1 to indicate the layers for interpolation</span>
+    <span class="n">layer_markers</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span>
+
+<span class="p">)</span>
+
+<span class="c1"># Interpolate water content to mesh</span>
+<span class="n">wc_mesh</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span>
+    <span class="n">property_values</span><span class="o">=</span><span class="n">water_content_profile</span><span class="p">,</span>
+    <span class="n">depth_values</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">mesh_x</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="n">mesh_y</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+    <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>
+    <span class="n">ID</span><span class="o">=</span><span class="n">ID1</span><span class="p">,</span> <span class="c1"># Use ID1 to indicate the layers for interpolation</span>
+    <span class="n">layer_markers</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span>
+
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ID1</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="nn">mpl</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">palettable.cartocolors.diverging</span> <span class="kn">import</span> <span class="n">Earth_7</span>
+
+<span class="c1"># Font settings for publication</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;font.family&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Arial&#39;</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;font.size&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;axes.labelsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">14</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;axes.titlesize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">14</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;xtick.labelsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;ytick.labelsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.dpi&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">150</span>
+
+<span class="c1"># Preprocessing</span>
+<span class="n">top_masked</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">top</span><span class="p">)</span>
+<span class="n">top_masked</span><span class="p">[</span><span class="n">idomain</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+<span class="n">saturation</span> <span class="o">=</span> <span class="n">wc_mesh</span> <span class="o">/</span> <span class="n">porosity_mesh</span>
+<span class="n">ctcolor</span> <span class="o">=</span> <span class="n">Earth_7</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+<span class="c1"># Create 2x2 figure</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+<span class="c1"># --- Top Left: Surface elevation map ---</span>
+<span class="n">im0</span> <span class="o">=</span> <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">top_masked</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;lower&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;terrain&#39;</span><span class="p">)</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">invert_yaxis</span><span class="p">()</span>
+
+<span class="c1"># Plot profile line and points</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;ro&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Start&#39;</span><span class="p">)</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;bo&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;End&#39;</span><span class="p">)</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="s1">&#39;r--&#39;</span><span class="p">)</span>
+
+<span class="c1"># Remove ticks and axis borders</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+<span class="k">for</span> <span class="n">spine</span> <span class="ow">in</span> <span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">spines</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+    <span class="n">spine</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># Title and colorbar</span>
+
+<span class="n">cbar0</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">im0</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">orientation</span><span class="o">=</span><span class="s1">&#39;vertical&#39;</span><span class="p">,</span> <span class="n">shrink</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+<span class="n">cbar0</span><span class="o">.</span><span class="n">set_label</span><span class="p">(</span><span class="s1">&#39;Elevation (m)&#39;</span><span class="p">)</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper right&#39;</span><span class="p">)</span>
+
+<span class="c1"># --- Top Right: Elevation profile ---</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">surface</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">surface</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;darkgreen&#39;</span><span class="p">)</span>
+
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Distance (m)&#39;</span><span class="p">)</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Elevation (m)&#39;</span><span class="p">)</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># --- Bottom Left: Porosity mesh ---</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">porosity_mesh</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">ctcolor</span><span class="p">,</span>
+        <span class="n">cMin</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mf">0.45</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Porosity (-)&#39;</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># --- Bottom Right: Saturation mesh ---</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">saturation</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;Blues&#39;</span><span class="p">,</span>
+        <span class="n">cMin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Saturation (-)&#39;</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Layout adjustment</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">(</span><span class="n">pad</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Water Content min/max:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Saturation min/max:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">saturation</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">saturation</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>### Calculating saturation</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Ensure porosity is not zero to avoid division by zero</span>
+<span class="n">porosity_safe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">porosity_mesh</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+<span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">wc_mesh</span> <span class="o">/</span> <span class="n">porosity_safe</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>### Converting to resistivity</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Step 8: Convert to resistivity using petrophysical model</span>
+
+
+<span class="n">marker_labels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="c1"># top. mid, bottom layers (example values)</span>
+<span class="n">rho_sat</span> <span class="o">=</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">2400</span><span class="p">]</span> <span class="c1"># Saturated resistivity for each layer (example values)</span>
+<span class="n">n</span> <span class="o">=</span> <span class="p">[</span><span class="mf">2.2</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">]</span> <span class="c1"># Cementation exponent for each layer (example values)</span>
+<span class="n">sigma_s</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="o">/</span><span class="mi">500</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="c1"># Saturated resistivity of the surface conductivity see Chen &amp; Niu, (2022) for each layer (example values)</span>
+<span class="c1"># Convert water content back to resistivity</span>
+
+<span class="n">res_models</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">)</span>  <span class="c1"># Initialize an array for resistivity values</span>
+
+<span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">top_res</span> <span class="o">=</span> <span class="n">water_content_to_resistivity</span><span class="p">(</span>
+    <span class="n">wc_mesh</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>                  <span class="c1"># Water content values for this layer</span>
+    <span class="nb">float</span><span class="p">(</span><span class="n">rho_sat</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>              <span class="c1"># Use a scalar value instead of an array</span>
+    <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>                    <span class="c1"># Use a scalar value instead of an array</span>
+    <span class="n">porosity_mesh</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>            <span class="c1"># Porosity values for this layer</span>
+    <span class="n">sigma_s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># Use a scalar value</span>
+<span class="p">)</span>
+<span class="n">res_models</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">top_res</span>
+
+<span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">mid_res</span> <span class="o">=</span> <span class="n">water_content_to_resistivity</span><span class="p">(</span>
+    <span class="n">wc_mesh</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>                  <span class="c1"># Water content values for this layer</span>
+    <span class="nb">float</span><span class="p">(</span><span class="n">rho_sat</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>              <span class="c1"># Use a scalar value instead of an array</span>
+    <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>                    <span class="c1"># Use a scalar value instead of an array</span>
+    <span class="n">porosity_mesh</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>            <span class="c1"># Porosity values for this layer</span>
+    <span class="n">sigma_s</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># Use a scalar value</span>
+<span class="p">)</span>
+<span class="n">res_models</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">mid_res</span>
+
+
+<span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+<span class="n">bot_res</span> <span class="o">=</span> <span class="n">water_content_to_resistivity</span><span class="p">(</span>
+    <span class="n">wc_mesh</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>                  <span class="c1"># Water content values for this layer</span>
+    <span class="nb">float</span><span class="p">(</span><span class="n">rho_sat</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>              <span class="c1"># Use a scalar value instead of an array</span>
+    <span class="nb">float</span><span class="p">(</span><span class="n">n</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>                    <span class="c1"># Use a scalar value instead of an array</span>
+    <span class="n">porosity_mesh</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>            <span class="c1"># Porosity values for this layer</span>
+    <span class="n">sigma_s</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">res_models</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">bot_res</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">top_res</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">top_res</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">mid_res</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">mid_res</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">bot_res</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">bot_res</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>### Converting to P wave velocity</p>
+<p>Step 9: Convert to P wave velocity using petrophysical model</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize velocity models</span>
+<span class="n">hm_model</span> <span class="o">=</span> <span class="n">HertzMindlinModel</span><span class="p">(</span><span class="n">critical_porosity</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">coordination_number</span><span class="o">=</span><span class="mf">6.0</span><span class="p">)</span>
+<span class="n">dem_model</span> <span class="o">=</span> <span class="n">DEMModel</span><span class="p">()</span>
+
+<span class="c1"># Initialize velocity model</span>
+<span class="n">velocity_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">)</span>
+
+
+
+
+<span class="n">top_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">top_bulk_modulus</span> <span class="o">=</span> <span class="mf">30.0</span>  <span class="c1"># GPa</span>
+<span class="n">top_shear_modulus</span> <span class="o">=</span> <span class="mf">20.0</span>  <span class="c1"># GPa</span>
+<span class="n">top_mineral_density</span> <span class="o">=</span> <span class="mi">2650</span>  <span class="c1"># kg/m³</span>
+<span class="n">top_depth</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># m</span>
+
+<span class="c1"># Get Vp values using Hertz-Mindlin model</span>
+<span class="n">Vp_high</span><span class="p">,</span> <span class="n">Vp_low</span> <span class="o">=</span> <span class="n">hm_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">],</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">[</span><span class="n">top_mask</span><span class="p">],</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">top_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">top_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">top_mineral_density</span><span class="p">,</span>
+    <span class="n">depth</span><span class="o">=</span><span class="n">top_depth</span>
+<span class="p">)</span>
+
+<span class="c1"># Use average of high and low bounds</span>
+<span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">Vp_high</span> <span class="o">+</span> <span class="n">Vp_low</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+
+
+<span class="n">mid_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+<span class="n">mid_bulk_modulus</span> <span class="o">=</span> <span class="mf">50.0</span>  <span class="c1"># GPa</span>
+<span class="n">mid_shear_modulus</span> <span class="o">=</span> <span class="mf">35.0</span> <span class="c1"># GPa</span>
+<span class="n">mid_mineral_density</span> <span class="o">=</span> <span class="mi">2670</span>  <span class="c1"># kg/m³</span>
+<span class="n">mid_aspect_ratio</span> <span class="o">=</span> <span class="mf">0.05</span>
+
+<span class="c1"># Get Vp values using DEM model</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Vp</span> <span class="o">=</span> <span class="n">dem_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">],</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">],</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">mid_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">mid_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">mid_mineral_density</span><span class="p">,</span>
+    <span class="n">aspect_ratio</span><span class="o">=</span><span class="n">mid_aspect_ratio</span>
+<span class="p">)</span>
+
+<span class="n">velocity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">Vp</span>
+
+<span class="n">bot_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+<span class="n">bot_bulk_modulus</span> <span class="o">=</span> <span class="mi">55</span>  <span class="c1"># GPa</span>
+<span class="n">bot_shear_modulus</span> <span class="o">=</span> <span class="mi">50</span>  <span class="c1"># GPa</span>
+<span class="n">bot_mineral_density</span> <span class="o">=</span> <span class="mi">2680</span>  <span class="c1"># kg/m³</span>
+<span class="n">bot_aspect_ratio</span> <span class="o">=</span> <span class="mf">0.03</span>
+
+<span class="c1"># Get Vp values using DEM model</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Vp</span> <span class="o">=</span> <span class="n">dem_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">],</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">],</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">bot_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">bot_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">bot_mineral_density</span><span class="p">,</span>
+    <span class="n">aspect_ratio</span><span class="o">=</span><span class="n">bot_aspect_ratio</span>
+<span class="p">)</span>
+
+<span class="n">velocity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">Vp</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">]))</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+
+
+<span class="c1"># --- Create figure with 1 row, 2 columns ---</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+<span class="c1"># --- Left: Resistivity with log scale ---</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">res_models</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+        <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Resistivity (Ω·m)&#39;</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
+
+
+<span class="c1"># --- Right: P-wave velocity with fixed color scale ---</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+        <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m/s)&#39;</span><span class="p">)</span>
+
+<span class="c1"># --- Print value range for debugging ---</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Velocity range:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">))</span>
+
+<span class="c1"># --- Final layout ---</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">(</span><span class="n">pad</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;res_vel.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>### ERT forward modeling simulation</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">xpos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="o">+</span><span class="mi">72</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span><span class="mi">72</span><span class="p">)</span>
+<span class="n">ypos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">xpos</span><span class="p">,</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span><span class="n">interpolator</span><span class="o">.</span><span class="n">surface_profile</span><span class="p">)</span>
+<span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">xpos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="n">ypos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+
+<span class="n">schemeert</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">createData</span><span class="p">(</span><span class="n">elecs</span><span class="o">=</span><span class="n">pos</span><span class="p">,</span><span class="n">schemeName</span><span class="o">=</span><span class="s1">&#39;wa&#39;</span><span class="p">)</span>
+
+<span class="c1"># Step 10: Forward modeling to create synthetic ERT data</span>
+
+<span class="n">mesh</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">grid</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                          <span class="n">xbound</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+
+<span class="n">fwd_operator</span> <span class="o">=</span> <span class="n">ERTForwardModeling</span><span class="p">(</span><span class="n">mesh</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">schemeert</span><span class="p">)</span>
+
+
+<span class="n">synth_data</span> <span class="o">=</span> <span class="n">schemeert</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">fob</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
+<span class="n">fob</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">schemeert</span><span class="p">)</span>
+<span class="n">fob</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+<span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">res_models</span><span class="p">)</span>
+
+<span class="n">dr</span> <span class="o">*=</span> <span class="mf">1.</span> <span class="o">+</span> <span class="n">pg</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">size</span><span class="p">())</span> <span class="o">*</span> <span class="mf">0.05</span>
+<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">synth_data</span><span class="p">)</span>
+<span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;rhoa&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dr</span>
+<span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">estimateError</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span> <span class="n">absoluteUError</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">relativeError</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">ert</span><span class="o">.</span><span class="n">showData</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span>  <span class="n">logscale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>################# Seismic data #####################</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 11: Creating seismic survey design...&quot;</span><span class="p">)</span>
+
+<span class="n">numberGeophones</span> <span class="o">=</span> <span class="mi">72</span>
+<span class="n">shotDistance</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">sensors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span> <span class="o">+</span> <span class="mi">72</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">numberGeophones</span><span class="p">)</span>
+<span class="n">scheme</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">traveltime</span><span class="o">.</span><span class="n">createRAData</span><span class="p">(</span><span class="n">sensors</span><span class="p">,</span><span class="n">shotDistance</span><span class="o">=</span><span class="n">shotDistance</span><span class="p">)</span>
+
+
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numberGeophones</span><span class="p">):</span>
+    <span class="n">minusx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">surface</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">sensors</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">minusx</span><span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">amin</span><span class="p">(</span><span class="n">minusx</span><span class="p">))</span>
+    <span class="n">new_x</span> <span class="o">=</span> <span class="n">surface</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">new_y</span> <span class="o">=</span> <span class="n">surface</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_x</span>
+    <span class="n">pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_y</span>
+
+
+<span class="n">scheme</span><span class="o">.</span><span class="n">setSensors</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+
+
+<span class="n">mgr</span> <span class="o">=</span> <span class="n">TravelTimeManager</span><span class="p">()</span>
+<span class="n">datasrt</span> <span class="o">=</span> <span class="n">mgr</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">slowness</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="n">scheme</span><span class="o">=</span><span class="n">scheme</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+                    <span class="n">noiseLevel</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">noiseAbs</span><span class="o">=</span><span class="mf">0.00001</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">1334</span>
+                    <span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">tt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plotva</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot first arrivals as lines.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ax : matplotlib.axes</span>
+<span class="sd">        axis to draw the lines in</span>
+<span class="sd">    data : :gimliapi:`GIMLI::DataContainer`</span>
+<span class="sd">        data containing shots (&quot;s&quot;), geophones (&quot;g&quot;) and traveltimes (&quot;t&quot;)</span>
+<span class="sd">    tt : array, optional</span>
+<span class="sd">        traveltimes to use instead of data(&quot;t&quot;)</span>
+<span class="sd">    plotva : bool, optional</span>
+<span class="sd">        plot apparent velocity instead of traveltimes</span>
+
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    ax : matplotlib.axes</span>
+<span class="sd">        the modified axis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extract coordinates</span>
+    <span class="n">px</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">x</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">gx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">px</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">g</span><span class="p">)]</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="s2">&quot;g&quot;</span><span class="p">)])</span>
+    <span class="n">sx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">px</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">)]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="s2">&quot;s&quot;</span><span class="p">)])</span>
+
+    <span class="c1"># Get traveltimes</span>
+    <span class="k">if</span> <span class="n">tt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">plotva</span><span class="p">:</span>
+        <span class="n">tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">gx</span> <span class="o">-</span> <span class="n">sx</span><span class="p">)</span> <span class="o">/</span> <span class="n">tt</span>
+
+    <span class="c1"># Find unique source positions</span>
+    <span class="n">uns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">sx</span><span class="p">)</span>
+
+    <span class="c1"># Override kwargs with clean, minimalist style</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;color&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;black&#39;</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linestyle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;--&#39;</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linewidth&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.9</span>
+    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;marker&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># No markers on the lines</span>
+
+    <span class="c1"># Plot for each source</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">si</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">uns</span><span class="p">):</span>
+        <span class="n">ti</span> <span class="o">=</span> <span class="n">tt</span><span class="p">[</span><span class="n">sx</span> <span class="o">==</span> <span class="n">si</span><span class="p">]</span>
+        <span class="n">gi</span> <span class="o">=</span> <span class="n">gx</span><span class="p">[</span><span class="n">sx</span> <span class="o">==</span> <span class="n">si</span><span class="p">]</span>
+        <span class="n">ii</span> <span class="o">=</span> <span class="n">gi</span><span class="o">.</span><span class="n">argsort</span><span class="p">()</span>
+
+        <span class="c1"># Plot line</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">gi</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">ti</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Add source marker as black square at top</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">si</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                <span class="n">markeredgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">markeredgewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+
+    <span class="c1"># Clean grid style</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;lightgray&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Set proper axis labels with units</span>
+    <span class="k">if</span> <span class="n">plotva</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Apparent velocity (m s$^{-1}$)&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Traveltime (s)&quot;</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
+
+
+
+
+
+    <span class="c1"># Invert y-axis for traveltimes</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">invert_yaxis</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">ax</span>
+
+<span class="c1"># Usage</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">3.5</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+<span class="n">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">datasrt</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+
+<span class="c1"># Assume mesh, res_models, velocity_mesh, fixed_cmap, synth_data, datasrt, ert, drawFirstPicks are already defined</span>
+
+<span class="c1"># Create 2×2 axes</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                        <span class="n">gridspec_kw</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;hspace&#39;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s1">&#39;wspace&#39;</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">})</span>
+
+<span class="c1"># Flatten for easy indexing</span>
+<span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">,</span> <span class="n">ax3</span><span class="p">,</span> <span class="n">ax4</span> <span class="o">=</span> <span class="n">axs</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+<span class="c1"># --- Top left: Resistivity (log scale) ---</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">res_models</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+        <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Resistivity (Ω·m)&#39;</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
+<span class="c1"># Invert y (so elevation decreases downward)</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">mpl</span><span class="o">.</span><span class="n">drawSensors</span><span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">schemeert</span><span class="o">.</span><span class="n">sensors</span><span class="p">(),</span> <span class="n">diam</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
+                         <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">)</span>
+
+
+<span class="c1"># --- Top right: P-wave velocity (fixed scale) ---</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax2</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+        <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m/s)&#39;</span><span class="p">)</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">mpl</span><span class="o">.</span><span class="n">drawSensors</span><span class="p">(</span><span class="n">ax2</span><span class="p">,</span> <span class="n">schemeert</span><span class="o">.</span><span class="n">sensors</span><span class="p">(),</span> <span class="n">diam</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
+                         <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">)</span>
+
+
+<span class="c1"># Print range for debugging</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Velocity range:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">))</span>
+
+<span class="c1"># --- Bottom left: Synthetic ERT data ---</span>
+<span class="n">ert</span><span class="o">.</span><span class="n">showData</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span> <span class="n">logscale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax3</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">)</span>
+
+<span class="n">ax3</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
+<span class="n">ax3</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">&#39;top&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">ax3</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># --- Bottom right: First-break picks ---</span>
+<span class="n">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax4</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">datasrt</span><span class="p">)</span>
+
+<span class="n">ax4</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
+<span class="n">ax4</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;First arrival time (s)&quot;</span><span class="p">)</span>
+<span class="n">ax4</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">&#39;top&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">ax4</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>### Run ERT inversion on synthetic data</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># using my code to the inversion</span>
+
+<span class="c1"># Create ERT inversion object</span>
+<span class="n">inversion</span> <span class="o">=</span> <span class="n">ERTInversion</span><span class="p">(</span>
+    <span class="n">data_file</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synthetic_data.dat&quot;</span><span class="p">),</span>
+    <span class="n">lambda_val</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+    <span class="n">method</span><span class="o">=</span><span class="s2">&quot;cgls&quot;</span><span class="p">,</span>
+    <span class="n">use_gpu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">max_iterations</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">lambda_rate</span><span class="o">=</span> <span class="mf">1.0</span>
+<span class="p">)</span>
+<span class="n">inversion_result</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>### Using Pygimili default to the inversion</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mgr</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synthetic_data.dat&quot;</span><span class="p">))</span>
+<span class="n">inv</span> <span class="o">=</span> <span class="n">mgr</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">lam</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">12</span><span class="p">))</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">cbar1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">res_models</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+              <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Resistivity [Ohm-m]&#39;</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;True Resistivity Model&quot;</span><span class="p">)</span>
+
+<span class="c1"># Inverted model</span>
+<span class="n">ax2</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">cbar2</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">inversion_result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="n">inversion_result</span><span class="o">.</span><span class="n">final_model</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax2</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+              <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Resistivity [Ohm-m]&#39;</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">inversion_result</span><span class="o">.</span><span class="n">coverage</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Inverted Resistivity Model (Our Code)&quot;</span><span class="p">)</span>
+
+<span class="n">ax3</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">cbar2</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mgr</span><span class="o">.</span><span class="n">paraDomain</span><span class="p">,</span> <span class="n">mgr</span><span class="o">.</span><span class="n">paraModel</span><span class="p">(),</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax3</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+              <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Resistivity [Ohm-m]&#39;</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">mgr</span><span class="o">.</span><span class="n">coverage</span><span class="p">()</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax3</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Inverted Resistivity Model (Pygimli)&quot;</span><span class="p">)</span>
+<span class="c1"># Adjust layout</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+
+
+<span class="c1"># The inversion results are almost same from this code and Pygimli default inversion.</span>
+<span class="c1"># the difference is that the chi2 value for stop inversion is not the same, we chose 1.5 while Pygimli is 1.0</span>
+</pre></div>
+</div>
+<p>## One step approach</p>
+<p>### ERT one step from HM to GM</p>
+<p>Set up directories</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="s2">&quot;hydro_to_ert_example&quot;</span><span class="p">)</span>
+<span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/hydro_to_ert_example&quot;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Load your data</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">)</span> <span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/&quot;</span>
+<span class="n">idomain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;id.txt&quot;</span><span class="p">))</span>
+<span class="n">top</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;top.txt&quot;</span><span class="p">))</span>
+<span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;Porosity.npy&quot;</span><span class="p">))</span>
+<span class="n">water_content</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;Watercontent.npy&quot;</span><span class="p">))[</span><span class="mi">5</span><span class="p">]</span>  <span class="c1"># Time step 50</span>
+
+<span class="c1"># Set up profile</span>
+<span class="n">point1</span> <span class="o">=</span> <span class="p">[</span><span class="mi">115</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span>
+<span class="n">point2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">95</span><span class="p">,</span> <span class="mi">180</span><span class="p">]</span>
+
+<span class="n">interpolator</span> <span class="o">=</span> <span class="n">ProfileInterpolator</span><span class="p">(</span>
+    <span class="n">point1</span><span class="o">=</span><span class="n">point1</span><span class="p">,</span>
+    <span class="n">point2</span><span class="o">=</span><span class="n">point2</span><span class="p">,</span>
+    <span class="n">surface_data</span><span class="o">=</span><span class="n">top</span><span class="p">,</span>
+    <span class="n">origin_x</span><span class="o">=</span><span class="mf">569156.0</span><span class="p">,</span>
+    <span class="n">origin_y</span><span class="o">=</span><span class="mf">4842444.0</span><span class="p">,</span>
+    <span class="n">pixel_width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pixel_height</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">num_points</span><span class="o">=</span><span class="mi">400</span>
+<span class="p">)</span>
+
+<span class="c1"># Create mesh structure</span>
+<span class="n">bot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;bot.npy&quot;</span><span class="p">))</span>
+<span class="n">layer_idx</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Example indices for top, middle, and bottom layers</span>
+<span class="n">structure</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_layer_data</span><span class="p">([</span><span class="n">top</span><span class="p">]</span> <span class="o">+</span> <span class="n">bot</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<span class="n">surface</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span> <span class="o">=</span> <span class="n">create_surface_lines</span><span class="p">(</span>
+    <span class="n">L_profile</span><span class="o">=</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span>
+    <span class="n">structure</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">top_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">mid_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">bot_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># Create mesh</span>
+<span class="n">mesh_creator</span> <span class="o">=</span> <span class="n">MeshCreator</span><span class="p">(</span><span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+<span class="n">mesh</span><span class="p">,</span> <span class="n">geom</span> <span class="o">=</span> <span class="n">mesh_creator</span><span class="o">.</span><span class="n">create_from_layers</span><span class="p">(</span>
+    <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span>
+    <span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">],</span>
+    <span class="n">bottom_depth</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span><span class="o">-</span><span class="mi">10</span>
+<span class="p">)</span>
+
+<span class="c1"># Define layer markers</span>
+<span class="n">marker_labels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>  <span class="c1"># top, middle, bottom layers</span>
+
+<span class="c1"># Define resistivity parameters for each layer</span>
+<span class="n">rho_parameters</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;rho_sat&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">2400</span><span class="p">],</span>      <span class="c1"># Saturated resistivity for each layer (Ohm-m)</span>
+    <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">2.2</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">],</span>             <span class="c1"># Cementation exponent for each layer</span>
+    <span class="s1">&#39;sigma_s&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="o">/</span><span class="mi">500</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>          <span class="c1"># Surface conductivity for each layer (S/m)</span>
+<span class="p">}</span>
+
+<span class="n">mesh_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
+
+
+<span class="c1"># Generate ERT response directly</span>
+<span class="n">synth_data</span><span class="p">,</span> <span class="n">res_model</span> <span class="o">=</span> <span class="n">hydro_to_ert</span><span class="p">(</span>
+    <span class="n">water_content</span><span class="o">=</span><span class="n">water_content</span><span class="p">,</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity</span><span class="p">,</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+    <span class="n">mesh_markers</span> <span class="o">=</span> <span class="n">mesh_markers</span><span class="p">,</span>
+    <span class="n">profile_interpolator</span><span class="o">=</span><span class="n">interpolator</span><span class="p">,</span>
+    <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span>
+    <span class="n">structure</span> <span class="o">=</span> <span class="n">structure</span><span class="p">,</span>
+    <span class="n">marker_labels</span><span class="o">=</span><span class="n">marker_labels</span><span class="p">,</span>
+    <span class="n">rho_parameters</span><span class="o">=</span><span class="n">rho_parameters</span><span class="p">,</span>
+    <span class="n">electrode_spacing</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">electrode_start</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+    <span class="n">num_electrodes</span><span class="o">=</span><span class="mi">72</span><span class="p">,</span>
+    <span class="n">scheme_name</span><span class="o">=</span><span class="s1">&#39;wa&#39;</span><span class="p">,</span>
+    <span class="n">noise_level</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">abs_error</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">rel_error</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">save_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synthetic_ert_data.dat&quot;</span><span class="p">),</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">ert</span><span class="o">.</span><span class="n">showData</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span>  <span class="n">logscale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>### SRT one step from HM to GM</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.core.interpolation</span> <span class="kn">import</span> <span class="n">ProfileInterpolator</span><span class="p">,</span> <span class="n">create_surface_lines</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.core.mesh_utils</span> <span class="kn">import</span> <span class="n">MeshCreator</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.Hydro_modular.hydro_to_srt</span> <span class="kn">import</span> <span class="n">hydro_to_srt</span>
+
+<span class="c1"># 1. Set up output directory</span>
+<span class="n">output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;srt_example&quot;</span><span class="p">)</span> <span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/srt_example&quot;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Load your data</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">)</span>
+<span class="n">idomain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;id.txt&quot;</span><span class="p">))</span>
+<span class="n">top</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;top.txt&quot;</span><span class="p">))</span>
+<span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;Porosity.npy&quot;</span><span class="p">))</span>
+<span class="n">water_content</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;Watercontent.npy&quot;</span><span class="p">))[</span><span class="mi">5</span><span class="p">]</span>  <span class="c1"># Time step 50</span>
+
+<span class="c1"># Set up profile</span>
+<span class="n">point1</span> <span class="o">=</span> <span class="p">[</span><span class="mi">115</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span>
+<span class="n">point2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">95</span><span class="p">,</span> <span class="mi">180</span><span class="p">]</span>
+
+<span class="n">interpolator</span> <span class="o">=</span> <span class="n">ProfileInterpolator</span><span class="p">(</span>
+    <span class="n">point1</span><span class="o">=</span><span class="n">point1</span><span class="p">,</span>
+    <span class="n">point2</span><span class="o">=</span><span class="n">point2</span><span class="p">,</span>
+    <span class="n">surface_data</span><span class="o">=</span><span class="n">top</span><span class="p">,</span>
+    <span class="n">origin_x</span><span class="o">=</span><span class="mf">569156.0</span><span class="p">,</span>
+    <span class="n">origin_y</span><span class="o">=</span><span class="mf">4842444.0</span><span class="p">,</span>
+    <span class="n">pixel_width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pixel_height</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">num_points</span><span class="o">=</span><span class="mi">400</span>
+<span class="p">)</span>
+
+<span class="c1"># Create mesh structure</span>
+<span class="n">bot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;bot.npy&quot;</span><span class="p">))</span>
+<span class="n">layer_idx</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Example indices for top, middle, and bottom layers</span>
+<span class="n">structure</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_layer_data</span><span class="p">([</span><span class="n">top</span><span class="p">]</span> <span class="o">+</span> <span class="n">bot</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<span class="n">surface</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span> <span class="o">=</span> <span class="n">create_surface_lines</span><span class="p">(</span>
+    <span class="n">L_profile</span><span class="o">=</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span>
+    <span class="n">structure</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">top_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">mid_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">bot_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># Create mesh</span>
+<span class="n">mesh_creator</span> <span class="o">=</span> <span class="n">MeshCreator</span><span class="p">(</span><span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+<span class="n">mesh</span><span class="p">,</span> <span class="n">geom</span> <span class="o">=</span> <span class="n">mesh_creator</span><span class="o">.</span><span class="n">create_from_layers</span><span class="p">(</span>
+    <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span>
+    <span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">],</span>
+    <span class="n">bottom_depth</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span><span class="o">-</span><span class="mi">10</span>
+<span class="p">)</span>
+
+<span class="c1"># Define layer markers</span>
+<span class="n">marker_labels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>  <span class="c1"># top, middle, bottom layers</span>
+
+<span class="c1"># Rock physics parameters for each layer</span>
+<span class="n">vel_parameters</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;top&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;bulk_modulus&#39;</span><span class="p">:</span> <span class="mf">30.0</span><span class="p">,</span>         <span class="c1"># GPa</span>
+        <span class="s1">&#39;shear_modulus&#39;</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">,</span>        <span class="c1"># GPa</span>
+        <span class="s1">&#39;mineral_density&#39;</span><span class="p">:</span> <span class="mi">2650</span><span class="p">,</span>      <span class="c1"># kg/m³</span>
+        <span class="s1">&#39;depth&#39;</span><span class="p">:</span> <span class="mf">1.0</span>                  <span class="c1"># m</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;mid&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;bulk_modulus&#39;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>         <span class="c1"># GPa</span>
+        <span class="s1">&#39;shear_modulus&#39;</span><span class="p">:</span> <span class="mf">35.0</span><span class="p">,</span>        <span class="c1"># GPa</span>
+        <span class="s1">&#39;mineral_density&#39;</span><span class="p">:</span> <span class="mi">2670</span><span class="p">,</span>      <span class="c1"># kg/m³</span>
+        <span class="s1">&#39;aspect_ratio&#39;</span><span class="p">:</span> <span class="mf">0.05</span>          <span class="c1"># Crack aspect ratio</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;bot&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;bulk_modulus&#39;</span><span class="p">:</span> <span class="mf">55.0</span><span class="p">,</span>         <span class="c1"># GPa</span>
+        <span class="s1">&#39;shear_modulus&#39;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>        <span class="c1"># GPa</span>
+        <span class="s1">&#39;mineral_density&#39;</span><span class="p">:</span> <span class="mi">2680</span><span class="p">,</span>      <span class="c1"># kg/m³</span>
+        <span class="s1">&#39;aspect_ratio&#39;</span><span class="p">:</span> <span class="mf">0.03</span>          <span class="c1"># Crack aspect ratio</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="n">mesh_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
+<span class="c1"># 13. Now we call hydro_to_srt with the pre-processed mesh values</span>
+<span class="n">synth_data</span><span class="p">,</span> <span class="n">velocity_mesh</span> <span class="o">=</span> <span class="n">hydro_to_srt</span><span class="p">(</span>
+    <span class="n">water_content</span><span class="o">=</span><span class="n">water_content</span><span class="p">,</span>           <span class="c1"># Use pre-interpolated mesh values</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity</span><span class="p">,</span>          <span class="c1"># Use pre-interpolated mesh values</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+    <span class="n">profile_interpolator</span><span class="o">=</span><span class="n">interpolator</span><span class="p">,</span>
+    <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span>
+    <span class="n">structure</span> <span class="o">=</span> <span class="n">structure</span><span class="p">,</span>
+    <span class="n">marker_labels</span><span class="o">=</span><span class="n">marker_labels</span><span class="p">,</span>
+    <span class="n">vel_parameters</span><span class="o">=</span><span class="n">vel_parameters</span><span class="p">,</span>
+    <span class="n">sensor_spacing</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">sensor_start</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
+    <span class="n">num_sensors</span><span class="o">=</span><span class="mi">72</span><span class="p">,</span>
+    <span class="n">shot_distance</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">noise_level</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">noise_abs</span><span class="o">=</span><span class="mf">0.00001</span><span class="p">,</span>
+    <span class="n">save_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synthetic_seismic_data.dat&quot;</span><span class="p">),</span>
+    <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>       <span class="c1"># Pass the mesh markers directly</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="mi">1334</span>
+<span class="p">)</span>
+
+<span class="c1"># 14. Visualize the results</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.forward.srt_forward</span> <span class="kn">import</span> <span class="n">SeismicForwardModeling</span>
+
+<span class="c1"># Create a figure</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+<span class="c1"># Plot velocity model</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span>
+        <span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m/s)&#39;</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">)</span>
+
+<span class="c1"># Plot first-arrival travel times</span>
+<span class="n">SeismicForwardModeling</span><span class="o">.</span><span class="n">draw_first_picks</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">synth_data</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Synthetic First-Arrival Travel Times&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.000 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex2-workflow-py">
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/49e057b00273087227612db66d0fd6b2/Ex2_workflow.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">Ex2_workflow.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/4856f028caaafe6fe593f3a56de174cb/Ex2_workflow.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex2_workflow.ipynb</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Ex3_Time_lapse_measurement.html" class="btn btn-neutral float-left" title="Ex3. Creating Synthetic Time-Lapse ERT Measurements" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

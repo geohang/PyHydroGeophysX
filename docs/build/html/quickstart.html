@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quick Start &mdash; PyHydroGeophysX Documentation</title>
+  <title>Quickstart &mdash; PyHydroGeophysX Documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
@@ -54,8 +54,14 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Start</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#basic-workflow">Basic Workflow</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-example-hydrological-model-integration">Basic Example: Hydrological Model Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#petrophysical-modeling">Petrophysical Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#forward-modeling-ert-srt">Forward Modeling (ERT/SRT)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#time-lapse-inversion-ert">Time-Lapse Inversion (ERT)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#more-examples-and-documentation">More Examples and Documentation</a></li>
 </ul>
 </li>
 </ul>
@@ -82,7 +88,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Quick Start</li>
+      <li class="breadcrumb-item active">Quickstart</li>
       <li class="wy-breadcrumbs-aside">
               <a href="https://github.com/geohang/PyHydroGeophysX/blob/main/docs/source/quickstart.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
@@ -92,15 +98,114 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="quick-start">
-<h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this heading"></a></h1>
-<p>This guide will get you up and running with PyHydroGeophysX.</p>
-<section id="basic-workflow">
-<h2>Basic Workflow<a class="headerlink" href="#basic-workflow" title="Permalink to this heading"></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Coming soon - complete workflow example</span>
-<span class="k">pass</span>
+  <section id="quickstart">
+<h1>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this heading"></a></h1>
+<p>Welcome to <strong>PyHydroGeophysX</strong>—a Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, specializing in ERT and SRT for watershed monitoring.</p>
+<section id="key-features">
+<h2>Key Features<a class="headerlink" href="#key-features" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Hydrological model integration (MODFLOW, ParFlow)</p></li>
+<li><p>Advanced petrophysical relationships (Archie, Waxman-Smits, DEM, Hertz-Mindlin)</p></li>
+<li><p>Forward modeling and time-lapse inversion for ERT &amp; SRT</p></li>
+<li><p>Structure-constrained inversion and uncertainty quantification</p></li>
+<li><p>Optional GPU acceleration and parallel processing</p></li>
+</ul>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h2>
+<p>PyHydroGeophysX requires <strong>Python 3.8 or higher</strong>.</p>
+<p><strong>From PyPI</strong> (when available):
+.. code-block:: bash</p>
+<blockquote>
+<div><p>pip install PyHydroGeophysX</p>
+</div></blockquote>
+<p><strong>From source</strong> (recommended for latest features):
+.. code-block:: bash</p>
+<blockquote>
+<div><p>git clone <a class="reference external" href="https://github.com/geohang/PyHydroGeophysX.git">https://github.com/geohang/PyHydroGeophysX.git</a>
+cd PyHydroGeophysX
+pip install -e .</p>
+</div></blockquote>
+<p>Install core dependencies if needed:
+.. code-block:: bash</p>
+<blockquote>
+<div><p>pip install numpy scipy matplotlib pygimli tqdm</p>
+</div></blockquote>
+<p>For optional GPU and parallel processing:
+.. code-block:: bash</p>
+<blockquote>
+<div><p>pip install cupy-cuda11x  # Replace ‘11x’ with your CUDA version
+pip install joblib</p>
+</div></blockquote>
+</section>
+<section id="basic-example-hydrological-model-integration">
+<h2>Basic Example: Hydrological Model Integration<a class="headerlink" href="#basic-example-hydrological-model-integration" title="Permalink to this heading"></a></h2>
+<p>Load and process MODFLOW or ParFlow outputs:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyHydroGeophysX.model_output</span> <span class="kn">import</span> <span class="n">MODFLOWWaterContent</span><span class="p">,</span> <span class="n">ParflowSaturation</span>
+
+<span class="c1"># For MODFLOW</span>
+<span class="n">processor</span> <span class="o">=</span> <span class="n">MODFLOWWaterContent</span><span class="p">(</span><span class="s2">&quot;path/to/modflow_workspace&quot;</span><span class="p">,</span> <span class="n">idomain</span><span class="p">)</span>  <span class="c1"># idomain: array for active model domain</span>
+<span class="n">water_content</span> <span class="o">=</span> <span class="n">processor</span><span class="o">.</span><span class="n">load_time_range</span><span class="p">(</span><span class="n">start_idx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+<span class="c1"># For ParFlow</span>
+<span class="n">saturation_proc</span> <span class="o">=</span> <span class="n">ParflowSaturation</span><span class="p">(</span><span class="s2">&quot;path/to/parflow_model_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;parflow_run_name&quot;</span><span class="p">)</span>
+<span class="n">saturation</span> <span class="o">=</span> <span class="n">saturation_proc</span><span class="o">.</span><span class="n">load_timestep</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
 </pre></div>
 </div>
+</section>
+<section id="petrophysical-modeling">
+<h2>Petrophysical Modeling<a class="headerlink" href="#petrophysical-modeling" title="Permalink to this heading"></a></h2>
+<p>Convert water content to resistivity, or water content to seismic velocity:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyHydroGeophysX.petrophysics</span> <span class="kn">import</span> <span class="n">water_content_to_resistivity</span><span class="p">,</span> <span class="n">HertzMindlinModel</span>
+
+<span class="n">resistivity</span> <span class="o">=</span> <span class="n">water_content_to_resistivity</span><span class="p">(</span>
+    <span class="n">water_content</span><span class="o">=</span><span class="n">wc</span><span class="p">,</span> <span class="n">rho_saturated</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">saturation_exponent_n</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity</span><span class="p">,</span> <span class="n">sigma_surface</span><span class="o">=</span><span class="mf">0.002</span>
+<span class="p">)</span>
+
+<span class="n">hm_model</span> <span class="o">=</span> <span class="n">HertzMindlinModel</span><span class="p">()</span>
+<span class="n">vp_high</span><span class="p">,</span> <span class="n">vp_low</span> <span class="o">=</span> <span class="n">hm_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity</span><span class="p">,</span> <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">,</span>
+    <span class="n">matrix_bulk_modulus</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span> <span class="n">matrix_shear_modulus</span><span class="o">=</span><span class="mf">20.0</span><span class="p">,</span> <span class="n">matrix_density</span><span class="o">=</span><span class="mf">2650.0</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="forward-modeling-ert-srt">
+<h2>Forward Modeling (ERT/SRT)<a class="headerlink" href="#forward-modeling-ert-srt" title="Permalink to this heading"></a></h2>
+<p>Generate synthetic geophysical data (requires mesh/data creation as in examples):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyHydroGeophysX.forward</span> <span class="kn">import</span> <span class="n">ERTForwardModeling</span>
+
+<span class="n">ert_fwd</span> <span class="o">=</span> <span class="n">ERTForwardModeling</span><span class="p">(</span><span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">data_scheme</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+<span class="n">synthetic_data_ert</span> <span class="o">=</span> <span class="n">ert_fwd</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">=</span><span class="n">resistivity_model</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="time-lapse-inversion-ert">
+<h2>Time-Lapse Inversion (ERT)<a class="headerlink" href="#time-lapse-inversion-ert" title="Permalink to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion</span> <span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
+
+<span class="c1"># inversion = TimeLapseERTInversion(</span>
+<span class="c1">#     data_files=ert_files,</span>
+<span class="c1">#     measurement_times=times,</span>
+<span class="c1">#     lambda_val=50.0,</span>
+<span class="c1">#     alpha=10.0,</span>
+<span class="c1">#     inversion_type=&quot;L2&quot;</span>
+<span class="c1"># )</span>
+<span class="c1"># result = inversion.run()</span>
+</pre></div>
+</div>
+</section>
+<section id="more-examples-and-documentation">
+<h2>More Examples and Documentation<a class="headerlink" href="#more-examples-and-documentation" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>See the <span class="xref std std-ref">api</span> for detailed API documentation.</p></li>
+<li><p>Explore the <span class="xref std std-ref">auto_examples</span> for more workflows.</p></li>
+<li><p>Example scripts are in the <cite>examples/</cite> directory on [GitHub](<a class="reference external" href="https://github.com/geohang/PyHydroGeophysX">https://github.com/geohang/PyHydroGeophysX</a>).</p></li>
+</ul>
+<p>For troubleshooting, updates, and community support, please visit our [GitHub Issues](<a class="reference external" href="https://github.com/geohang/PyHydroGeophysX/issues">https://github.com/geohang/PyHydroGeophysX/issues</a>).</p>
+<hr class="docutils" />
+<p><em>PyHydroGeophysX — Bridging the gap between hydrological models and geophysical monitoring.</em></p>
 </section>
 </section>
 

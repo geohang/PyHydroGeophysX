@@ -11,7 +11,7 @@
       <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
-    <link rel="canonical" href="https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/forward/ert_forward.html" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/forward/ert_forward.html" />
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -51,7 +51,7 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -88,812 +88,366 @@
              
   <h1>Source code for PyHydroGeophysX.forward.ert_forward</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Forward modeling utilities for Electrical Resistivity Tomography (ERT) using PyGIMLi.</span>
-
-<span class="sd">This module provides a class `ERTForwardModeling` to encapsulate ERT forward</span>
-<span class="sd">modeling operations, including Jacobian calculation and synthetic data generation.</span>
-<span class="sd">It also contains several standalone functions for forward modeling and Jacobian</span>
-<span class="sd">computation, which might be older or specialized versions.</span>
+<span class="sd">Forward modeling utilities for Electrical Resistivity Tomography (ERT).</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
-<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span> <span class="c1"># Electrical Resistivity Tomography functionalities</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Any</span> <span class="c1"># Any for flexible pg.Vector/np.ndarray type hints</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
 
 <div class="viewcode-block" id="ERTForwardModeling"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling">[docs]</a><span class="k">class</span> <span class="nc">ERTForwardModeling</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A class to perform ERT forward modeling using PyGIMLi.</span>
-
-<span class="sd">    This class wraps PyGIMLi&#39;s `ert.ERTModelling` operator, providing methods</span>
-<span class="sd">    to compute synthetic ERT data (apparent resistivities), calculate Jacobian matrices,</span>
-<span class="sd">    and estimate data coverage (resolution). It handles log transformations</span>
-<span class="sd">    for models and data if specified.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for forward modeling of Electrical Resistivity Tomography (ERT) data.&quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="ERTForwardModeling.__init__"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span> <span class="n">data_scheme</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="ERTForwardModeling.__init__"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the ERTForwardModeling class.</span>
-
+<span class="sd">        Initialize ERT forward modeling.</span>
+<span class="sd">        </span>
 <span class="sd">        Args:</span>
-<span class="sd">            mesh (pg.Mesh): A PyGIMLi mesh object representing the subsurface model domain.</span>
-<span class="sd">                            The mesh should be suitable for ERT simulation (e.g., 2D or 3D).</span>
-<span class="sd">            data_scheme (Optional[pg.DataContainer], optional):</span>
-<span class="sd">                A PyGIMLi DataContainer object defining the ERT measurement scheme</span>
-<span class="sd">                (electrode configurations, etc.). If provided, it&#39;s set on the</span>
-<span class="sd">                forward operator. Defaults to None.</span>
+<span class="sd">            mesh: PyGIMLI mesh for forward modeling</span>
+<span class="sd">            data: ERT data container</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;mesh must be a PyGIMLi pg.Mesh object.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">data_scheme</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data_scheme</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;data_scheme must be a PyGIMLi pg.DataContainer object or None.&quot;</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span> <span class="o">=</span> <span class="n">mesh</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">data_scheme</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_scheme</span> <span class="c1"># Store the data scheme</span>
-        
-        <span class="c1"># Initialize the ERTModelling operator from PyGIMLi</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
         
-        <span class="c1"># Associate the mesh with the forward operator</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         
-        <span class="c1"># If a data scheme is provided, associate it with the forward operator</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_scheme</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_scheme</span><span class="p">)</span></div>
-        <span class="c1"># Potential Issue: If no data_scheme is provided initially, some operations like</span>
-        <span class="c1"># response calculation might fail if the operator expects it.</span>
-        <span class="c1"># User must call set_data() later if not provided here.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="ERTForwardModeling.set_data"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.set_data">[docs]</a>    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_scheme</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="ERTForwardModeling.set_data"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.set_data">[docs]</a>    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Set or update the ERT data scheme for forward modeling.</span>
-
+<span class="sd">        Set ERT data for forward modeling.</span>
+<span class="sd">        </span>
 <span class="sd">        Args:</span>
-<span class="sd">            data_scheme (pg.DataContainer): The PyGIMLi DataContainer defining</span>
-<span class="sd">                                            the measurement configurations.</span>
+<span class="sd">            data: ERT data container</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data_scheme</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;data_scheme must be a PyGIMLi pg.DataContainer object.&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">data_scheme</span> <span class="o">=</span> <span class="n">data_scheme</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_scheme</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
     
 <div class="viewcode-block" id="ERTForwardModeling.set_mesh"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.set_mesh">[docs]</a>    <span class="k">def</span> <span class="nf">set_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Set or update the PyGIMLi mesh for forward modeling.</span>
-
+<span class="sd">        Set mesh for forward modeling.</span>
+<span class="sd">        </span>
 <span class="sd">        Args:</span>
-<span class="sd">            mesh (pg.Mesh): The PyGIMLi mesh object.</span>
+<span class="sd">            mesh: PyGIMLI mesh</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;mesh must be a PyGIMLi pg.Mesh object.&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span></div>
-        <span class="c1"># Potential Issue: If a data_scheme was already set, ensure its compatibility</span>
-        <span class="c1"># with the new mesh (e.g., electrode positions relative to mesh).</span>
-        <span class="c1"># PyGIMLi might handle this internally, but it&#39;s a point of attention.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="ERTForwardModeling.forward"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resistivity_model</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">],</span>
-                <span class="n">log_transform_model</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-                <span class="n">log_transform_response</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ERTForwardModeling.forward"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resistivity_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">log_transform</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute the forward ERT response (apparent resistivities) for a given resistivity model.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            resistivity_model (Union[np.ndarray, pg.Vector]):</span>
-<span class="sd">                The resistivity model values for each cell in the mesh [ohm·m].</span>
-<span class="sd">                Can be a NumPy array or a PyGIMLi RVector.</span>
-<span class="sd">            log_transform_model (bool, optional):</span>
-<span class="sd">                If True, `resistivity_model` is assumed to be log10-resistivity or</span>
-<span class="sd">                ln-resistivity. The method will exponentiate it (base e for ln)</span>
-<span class="sd">                before using it in the forward calculation. Defaults to True.</span>
-<span class="sd">                (Note: Original code uses `np.exp`, implying natural log for model).</span>
-<span class="sd">            log_transform_response (bool, optional):</span>
-<span class="sd">                If True, the computed apparent resistivities will be log-transformed (natural log)</span>
-<span class="sd">                before being returned. Defaults to True.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            np.ndarray: A NumPy array of the computed forward response values</span>
-<span class="sd">                        (apparent resistivities). Log-transformed if specified.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            RuntimeError: If the forward operator fails (e.g., if data scheme not set).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Ensure the data scheme is set on the operator, crucial for response calculation.</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_scheme</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;ERT data scheme is not set. Call set_data() before forward modeling.&quot;</span><span class="p">)</span>
-
-        <span class="c1"># Convert NumPy array model to PyGIMLi RVector if necessary.</span>
-        <span class="c1"># Ensure it&#39;s flattened, as ERTModelling expects a 1D vector for cell properties.</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-            <span class="n">model_pg</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">):</span>
-            <span class="n">model_pg</span> <span class="o">=</span> <span class="n">resistivity_model</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;resistivity_model must be a NumPy array or PyGIMLi RVector.&quot;</span><span class="p">)</span>
-            
-        <span class="c1"># If the input model is log-transformed, exponentiate it.</span>
-        <span class="k">if</span> <span class="n">log_transform_model</span><span class="p">:</span>
-            <span class="c1"># Assuming natural log for the model, as np.exp is used.</span>
-            <span class="c1"># If model was log10, use 10**model_pg.</span>
-            <span class="n">actual_resistivity_model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model_pg</span><span class="p">)))</span> <span class="c1"># Convert to np.array for np.exp</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">actual_resistivity_model</span> <span class="o">=</span> <span class="n">model_pg</span>
-            
-        <span class="c1"># Perform the forward calculation using PyGIMLi&#39;s ERTModelling.</span>
-        <span class="n">response_pg_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">actual_resistivity_model</span><span class="p">)</span>
-        <span class="n">response_np_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">response_pg_vector</span><span class="p">)</span> <span class="c1"># Convert RVector response to NumPy array</span>
-        
-        <span class="c1"># Log-transform the response if requested.</span>
-        <span class="k">if</span> <span class="n">log_transform_response</span><span class="p">:</span>
-            <span class="c1"># Handle potential non-positive resistivity values before log:</span>
-            <span class="c1"># np.log will issue warnings for &lt;=0. Can result in -inf or nan.</span>
-            <span class="c1"># This might indicate issues with model or simulation yielding non-physical results.</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">response_np_array</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Calculated apparent resistivities contain non-positive values. Log transform will result in -inf or NaN for these.&quot;</span><span class="p">)</span>
-            <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span> <span class="c1"># Suppress log(0) warnings</span>
-                <span class="n">log_response</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response_np_array</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">log_response</span>
-        
-        <span class="k">return</span> <span class="n">response_np_array</span></div>
-    
-<div class="viewcode-block" id="ERTForwardModeling.forward_and_jacobian"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.forward_and_jacobian">[docs]</a>    <span class="k">def</span> <span class="nf">forward_and_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                             <span class="n">resistivity_model</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">],</span>
-                             <span class="n">log_transform_model</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-                             <span class="n">log_transform_response</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-                            <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute the forward ERT response and the Jacobian matrix.</span>
-
-<span class="sd">        The Jacobian J_ij = ∂d_i / ∂m_j, where d_i is the i-th data point and</span>
-<span class="sd">        m_j is the j-th model parameter (cell resistivity).</span>
-<span class="sd">        If log transformations are used, the Jacobian is adjusted accordingly:</span>
-<span class="sd">        - If model is log(m) and data is log(d): J_log = (∂log(d) / ∂log(m)) = (m/d) * (∂d/∂m)</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            resistivity_model (Union[np.ndarray, pg.Vector]):</span>
-<span class="sd">                Resistivity model values [ohm·m] or log-resistivity.</span>
-<span class="sd">            log_transform_model (bool, optional): If True, input model is log-transformed (natural log).</span>
-<span class="sd">                                                  Defaults to True.</span>
-<span class="sd">            log_transform_response (bool, optional): If True, returned response and Jacobian</span>
-<span class="sd">                                                     are for log-transformed data. Defaults to True.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            Tuple[np.ndarray, np.ndarray]:</span>
-<span class="sd">                - response (np.ndarray): Forward response (apparent resistivities), potentially log-transformed.</span>
-<span class="sd">                - jacobian_matrix (np.ndarray): The Jacobian matrix, adjusted for log transforms if specified.</span>
-<span class="sd">                                                Shape (n_data, n_model_cells).</span>
-<span class="sd">        </span>
-<span class="sd">        Raises:</span>
-<span class="sd">            RuntimeError: If data scheme not set or Jacobian creation fails.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_scheme</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;ERT data scheme is not set. Call set_data() before Jacobian calculation.&quot;</span><span class="p">)</span>
-
-        <span class="c1"># Prepare the model in actual resistivity values (ρ)</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-            <span class="n">model_input_np_form</span> <span class="o">=</span> <span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="c1"># Keep original form if needed for scaling</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">):</span>
-            <span class="n">model_input_np_form</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;resistivity_model must be a NumPy array or PyGIMLi RVector.&quot;</span><span class="p">)</span>
-            
-        <span class="k">if</span> <span class="n">log_transform_model</span><span class="p">:</span>
-            <span class="n">actual_resistivity_values_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">model_input_np_form</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">actual_resistivity_values_np</span> <span class="o">=</span> <span class="n">model_input_np_form</span>
-        
-        <span class="n">actual_resistivity_pg_model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">actual_resistivity_values_np</span><span class="p">)</span>
-        
-        <span class="c1"># Calculate forward response d = f(ρ)</span>
-        <span class="n">response_pg_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">actual_resistivity_pg_model</span><span class="p">)</span>
-        <span class="n">response_np_linear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">response_pg_vector</span><span class="p">)</span> <span class="c1"># This is d (actual apparent resistivities)</span>
-        
-        <span class="c1"># Create and retrieve Jacobian J = ∂d/∂ρ (sensitivity of actual data to actual resistivity)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">actual_resistivity_pg_model</span><span class="p">)</span>
-        <span class="n">jacobian_gmat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span> <span class="c1"># This is a GMat object</span>
-        <span class="n">jacobian_np_linear</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">gmat2numpy</span><span class="p">(</span><span class="n">jacobian_gmat</span><span class="p">)</span> <span class="c1"># Convert GMat to NumPy array</span>
-        
-        <span class="c1"># Initialize final outputs</span>
-        <span class="n">final_response</span> <span class="o">=</span> <span class="n">response_np_linear</span>
-        <span class="n">final_jacobian</span> <span class="o">=</span> <span class="n">jacobian_np_linear</span>
-
-        <span class="c1"># Adjust response and Jacobian based on log transformation choices</span>
-        <span class="k">if</span> <span class="n">log_transform_model</span> <span class="ow">and</span> <span class="n">log_transform_response</span><span class="p">:</span>
-            <span class="c1"># Jacobian for d(log d) / d(log ρ) = (ρ/d) * (∂d/∂ρ)</span>
-            <span class="c1"># Here, actual_resistivity_values_np is ρ.</span>
-            <span class="c1"># response_np_linear is d.</span>
-            <span class="c1"># jacobian_np_linear is ∂d/∂ρ.</span>
-            
-            <span class="c1"># Avoid division by zero if response_np_linear (d) or actual_resistivity_values_np (ρ) contain zeros.</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">response_np_linear</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Non-positive apparent resistivities computed. Jacobian for log-log transform may contain NaN/Inf.&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">actual_resistivity_values_np</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">log_transform_model</span><span class="p">:</span> <span class="c1"># Check rho only if model was log (so rho came from exp)</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Non-positive resistivities in model after exponentiation. Jacobian for log-log transform may contain NaN/Inf.&quot;</span><span class="p">)</span>
-
-            <span class="c1"># Scaling factor matrix for Jacobian: diag(ρ/d)</span>
-            <span class="c1"># For J_new = diag(1/d) * J_old * diag(ρ)</span>
-            <span class="c1"># J_old is (n_data, n_model). diag(ρ) is (n_model, n_model). diag(1/d) is (n_data, n_data).</span>
-            
-            <span class="c1"># Create diagonal matrix of rho values</span>
-            <span class="n">diag_rho</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">actual_resistivity_values_np</span><span class="p">)</span>
-            <span class="c1"># Jacobian scaled by model parameters (J * rho)</span>
-            <span class="n">J_times_rho</span> <span class="o">=</span> <span class="n">jacobian_np_linear</span> <span class="o">@</span> <span class="n">diag_rho</span>
-            
-            <span class="c1"># Inverse of data vector, prepared for diagonal matrix</span>
-            <span class="n">inv_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">response_np_linear</span><span class="p">)</span>
-            <span class="n">valid_d_mask</span> <span class="o">=</span> <span class="n">response_np_linear</span> <span class="o">&gt;</span> <span class="mf">1e-12</span> <span class="c1"># Avoid division by zero or very small numbers</span>
-            <span class="n">inv_d</span><span class="p">[</span><span class="n">valid_d_mask</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">response_np_linear</span><span class="p">[</span><span class="n">valid_d_mask</span><span class="p">]</span>
-            <span class="c1"># For d &lt;= 0, inv_d remains 0. Multiplying by 0 will make that row of Jacobian zero.</span>
-            <span class="c1"># This might be acceptable if non-positive responses are errors or non-physical.</span>
-            <span class="n">diag_inv_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">inv_d</span><span class="p">)</span>
-            
-            <span class="n">final_jacobian</span> <span class="o">=</span> <span class="n">diag_inv_d</span> <span class="o">@</span> <span class="n">J_times_rho</span> <span class="c1"># diag(1/d) @ J @ diag(rho)</span>
-            <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
-                <span class="n">final_response</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response_np_linear</span><span class="p">)</span> <span class="c1"># log(d)</span>
-
-        <span class="k">elif</span> <span class="n">log_transform_model</span><span class="p">:</span> <span class="c1"># Model is log(ρ), data is d. Jacobian is ∂d/∂log(ρ) = ρ * ∂d/∂ρ</span>
-            <span class="c1"># final_jacobian = jacobian_np_linear * actual_resistivity_values_np # Element-wise row scaling</span>
-            <span class="n">final_jacobian</span> <span class="o">=</span> <span class="n">jacobian_np_linear</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">actual_resistivity_values_np</span><span class="p">)</span>
-            <span class="c1"># final_response remains response_np_linear</span>
-
-        <span class="k">elif</span> <span class="n">log_transform_response</span><span class="p">:</span> <span class="c1"># Model is ρ, data is log(d). Jacobian is ∂log(d)/∂ρ = (1/d) * ∂d/∂ρ</span>
-            <span class="n">inv_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">response_np_linear</span><span class="p">)</span>
-            <span class="n">valid_d_mask</span> <span class="o">=</span> <span class="n">response_np_linear</span> <span class="o">&gt;</span> <span class="mf">1e-12</span>
-            <span class="n">inv_d</span><span class="p">[</span><span class="n">valid_d_mask</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">response_np_linear</span><span class="p">[</span><span class="n">valid_d_mask</span><span class="p">]</span>
-            <span class="c1"># final_jacobian = inv_d[:, np.newaxis] * jacobian_np_linear # Column-wise scaling by 1/d</span>
-            <span class="n">final_jacobian</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">inv_d</span><span class="p">)</span> <span class="o">@</span> <span class="n">jacobian_np_linear</span>
-            <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
-                <span class="n">final_response</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response_np_linear</span><span class="p">)</span>
-            
-        <span class="k">return</span> <span class="n">final_response</span><span class="p">,</span> <span class="n">final_jacobian</span></div>
-    
-<div class="viewcode-block" id="ERTForwardModeling.get_coverage"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.get_coverage">[docs]</a>    <span class="k">def</span> <span class="nf">get_coverage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resistivity_model</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">],</span>
-                     <span class="n">log_transform_model</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute data coverage (approximate resolution or sensitivity density) for the mesh cells.</span>
-
-<span class="sd">        This uses PyGIMLi&#39;s `coverageDCtrans` which typically computes the diagonal</span>
-<span class="sd">        of J^T * diag(1/d^2) * J, often related to sensitivity or resolution matrix diagonal.</span>
-<span class="sd">        The result is then weighted by cell sizes and log10 transformed.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            resistivity_model (Union[np.ndarray, pg.Vector]):</span>
-<span class="sd">                Resistivity model values [ohm·m] or log-resistivity.</span>
-<span class="sd">            log_transform_model (bool, optional): If True, input model is log-transformed (natural log).</span>
-<span class="sd">                                                  Defaults to True.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            np.ndarray: An array of log10-transformed coverage values for each cell in the parameter domain.</span>
-<span class="sd">        </span>
-<span class="sd">        Raises:</span>
-<span class="sd">            RuntimeError: If data scheme not set or Jacobian/response calculation fails.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_scheme</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;ERT data scheme is not set. Call set_data() before get_coverage().&quot;</span><span class="p">)</span>
-
-        <span class="c1"># Prepare actual resistivity model (ρ)</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-            <span class="n">model_input_np_form</span> <span class="o">=</span> <span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">):</span>
-            <span class="n">model_input_np_form</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;resistivity_model must be a NumPy array or PyGIMLi RVector.&quot;</span><span class="p">)</span>
-            
-        <span class="k">if</span> <span class="n">log_transform_model</span><span class="p">:</span>
-            <span class="n">actual_resistivity_values_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">model_input_np_form</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">actual_resistivity_values_np</span> <span class="o">=</span> <span class="n">model_input_np_form</span>
-        
-        <span class="n">actual_resistivity_pg_model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">actual_resistivity_values_np</span><span class="p">)</span>
-        
-        <span class="c1"># Calculate response d=f(ρ) and Jacobian J=∂d/∂ρ</span>
-        <span class="n">response_pg_vector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">actual_resistivity_pg_model</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">actual_resistivity_pg_model</span><span class="p">)</span>
-        <span class="n">jacobian_gmat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span> <span class="c1"># GMat object</span>
-        
-        <span class="c1"># Prepare weights for coverageDCtrans: dataError = 1/response, modelWeight = 1/model (actual resistivity)</span>
-        <span class="c1"># These weights are specific to how coverageDCtrans is defined.</span>
-        <span class="n">response_for_weighting</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">response_pg_vector</span><span class="p">)</span>
-        <span class="n">response_for_weighting</span><span class="p">[</span><span class="n">response_for_weighting</span> <span class="o">&lt;=</span> <span class="mf">1e-12</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span> <span class="c1"># Avoid division by zero or very small numbers</span>
-        
-        <span class="n">model_for_weighting</span> <span class="o">=</span> <span class="n">actual_resistivity_values_np</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="c1"># Use the actual resistivity values</span>
-        <span class="n">model_for_weighting</span><span class="p">[</span><span class="n">model_for_weighting</span> <span class="o">&lt;=</span> <span class="mf">1e-12</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span>
-
-        <span class="c1"># Calculate coverage using pg.core.coverageDCtrans</span>
-        <span class="c1"># This function computes diag(J^T * diag(dataError^2) * J) * modelWeight^2 or similar.</span>
-        <span class="c1"># The exact formulation: sum_i (J_ij * dataError_i)^2 * modelWeight_j^2</span>
-        <span class="c1"># With dataError = 1/d and modelWeight = 1/m, this is sum_i (J_ij / (d_i * m_j))^2</span>
-        <span class="c1"># This seems to be related to normalized sensitivities.</span>
-        <span class="n">coverage_values_pg</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">coverageDCtrans</span><span class="p">(</span>
-            <span class="n">jacobian_gmat</span><span class="p">,</span> 
-            <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">response_for_weighting</span><span class="p">),</span> 
-            <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">model_for_weighting</span><span class="p">)</span>
-        <span class="p">)</span>
-        <span class="n">coverage_values_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coverage_values_pg</span><span class="p">)</span>
-        
-        <span class="c1"># Normalize coverage by cell sizes.</span>
-        <span class="c1"># The original code `paramSizes[c.marker()] += c.size()` is problematic</span>
-        <span class="c1"># if cell markers are not contiguous parameter indices from 0.</span>
-        <span class="c1"># A more robust approach is to get cell sizes directly corresponding to parameter indices.</span>
-        <span class="n">parameter_mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">paraDomain</span><span class="p">()</span> <span class="c1"># Mesh defining the parameters</span>
-        <span class="k">if</span> <span class="n">parameter_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coverage_values_np</span><span class="p">):</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Coverage vector length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">coverage_values_np</span><span class="p">)</span><span class="si">}</span><span class="s2">) does not match &quot;</span>
-                  <span class="sa">f</span><span class="s2">&quot;parameter mesh cell count (</span><span class="si">{</span><span class="n">parameter_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2">). &quot;</span>
-                  <span class="s2">&quot;Cell size normalization might be incorrect or skipped.&quot;</span><span class="p">)</span>
-            <span class="c1"># Fallback: do not normalize by size if counts mismatch.</span>
-            <span class="n">normalized_coverage</span> <span class="o">=</span> <span class="n">coverage_values_np</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">cell_sizes_for_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cell</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">parameter_mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">()])</span>
-            <span class="c1"># Avoid division by zero if any cell size is zero (should not happen for valid mesh cells)</span>
-            <span class="n">cell_sizes_for_norm</span><span class="p">[</span><span class="n">cell_sizes_for_norm</span> <span class="o">&lt;=</span> <span class="mf">1e-12</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span> 
-            <span class="n">normalized_coverage</span> <span class="o">=</span> <span class="n">coverage_values_np</span> <span class="o">/</span> <span class="n">cell_sizes_for_norm</span>
-            
-        <span class="c1"># Log10 transform the normalized coverage.</span>
-        <span class="c1"># Handle non-positive values before log10 to avoid warnings/errors.</span>
-        <span class="c1"># Coverage values (sum of squares) should ideally be positive.</span>
-        <span class="n">valid_coverage_mask</span> <span class="o">=</span> <span class="n">normalized_coverage</span> <span class="o">&gt;</span> <span class="mf">1e-12</span> <span class="c1"># Use a small threshold</span>
-        <span class="n">log10_transformed_coverage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">normalized_coverage</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span> <span class="c1"># Initialize with NaN</span>
-        <span class="n">log10_transformed_coverage</span><span class="p">[</span><span class="n">valid_coverage_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">normalized_coverage</span><span class="p">[</span><span class="n">valid_coverage_mask</span><span class="p">])</span>
-        
-        <span class="k">return</span> <span class="n">log10_transformed_coverage</span></div>
-    
-<div class="viewcode-block" id="ERTForwardModeling.create_synthetic_data"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.create_synthetic_data">[docs]</a>    <span class="nd">@classmethod</span> <span class="c1"># This should be a classmethod as it uses `cls`</span>
-    <span class="k">def</span> <span class="nf">create_synthetic_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">xpos_electrodes</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
-                            <span class="n">ypos_electrodes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
-                            <span class="n">fwd_mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
-                            <span class="n">resistivity_values</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
-                            <span class="n">scheme_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;wa&#39;</span><span class="p">,</span> <span class="c1"># Wenner alpha is common</span>
-                            <span class="n">noise_level_relative</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span> <span class="c1"># Relative noise</span>
-                            <span class="n">noise_abs_val</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="c1"># Absolute noise component (e.g. uV) for error estimation</span>
-                            <span class="c1"># The original &#39;relative_error&#39; parameter was for ert.estimateError.</span>
-                            <span class="c1"># Let&#39;s assume it&#39;s the same as noise_level_relative for error estimation if not specified.</span>
-                            <span class="n">relative_error_for_estimation</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                            <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
-                            <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Renamed for clarity</span>
-                            <span class="n">random_seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                            <span class="n">mesh_x_bound</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span> <span class="c1"># Boundary extension for mesh creation</span>
-                            <span class="n">mesh_y_bound</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span>  <span class="c1"># Boundary extension for mesh creation</span>
-                            <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create synthetic ERT data using forward modeling.</span>
-
-<span class="sd">        This class method simulates an ERT survey by:</span>
-<span class="sd">        1. Defining electrode positions.</span>
-<span class="sd">        2. Creating a measurement scheme (e.g., Wenner, Dipole-Dipole).</span>
-<span class="sd">        3. Generating or using a provided mesh for the forward calculation.</span>
-<span class="sd">        4. Assigning resistivity values to the mesh cells.</span>
-<span class="sd">        5. Computing synthetic apparent resistivities using the ERT forward operator.</span>
-<span class="sd">        6. Optionally adding Gaussian noise to the synthetic data.</span>
-<span class="sd">        7. Optionally saving the data and displaying a pseudosection.</span>
+<span class="sd">        Compute forward response for a given resistivity model.</span>
 <span class="sd">        </span>
 <span class="sd">        Args:</span>
-<span class="sd">            xpos_electrodes (np.ndarray): 1D NumPy array of X-coordinates for electrodes [m].</span>
-<span class="sd">            ypos_electrodes (Optional[np.ndarray], optional): 1D NumPy array of Y-coordinates (depth/elevation)</span>
-<span class="sd">                                                              for electrodes [m]. If None, assumes a flat</span>
-<span class="sd">                                                              surface (all Y=0). Defaults to None.</span>
-<span class="sd">            fwd_mesh (Optional[pg.Mesh], optional): A pre-defined PyGIMLi mesh to use for forward modeling.</span>
-<span class="sd">                                                    If None, a simple rectangular mesh is created based on</span>
-<span class="sd">                                                    electrode positions. Defaults to None.</span>
-<span class="sd">            resistivity_values (Optional[Union[np.ndarray, pg.Vector]], optional):</span>
-<span class="sd">                Resistivity values [ohm·m] for each cell of the `fwd_mesh`.</span>
-<span class="sd">                If None, a default homogeneous resistivity (100 ohm·m) is used.</span>
-<span class="sd">                Must match the number of cells in `fwd_mesh`. Defaults to None.</span>
-<span class="sd">            scheme_name (str, optional): Name of the ERT array configuration to use (e.g., &#39;wa&#39; for Wenner alpha,</span>
-<span class="sd">                                         &#39;dd&#39; for dipole-dipole, &#39;schlumberger&#39;, &#39;gr&#39; for gradient).</span>
-<span class="sd">                                         Passed to `ert.createData`. Defaults to &#39;wa&#39;.</span>
-<span class="sd">            noise_level_relative (float, optional): Relative level of Gaussian noise to add to the</span>
-<span class="sd">                                                    synthetic data (e.g., 0.05 for 5% noise).</span>
-<span class="sd">                                                    Noise is calculated as `data * (1 + N(0,1)*noise_level_relative)`.</span>
-<span class="sd">                                                    Defaults to 0.05.</span>
-<span class="sd">            noise_abs_val (float, optional): Absolute error component used for error estimation</span>
-<span class="sd">                                             by `ert.ERTManager().estimateError()`. Typically in units of the</span>
-<span class="sd">                                             measured quantity if that were voltage (e.g., uV), or ohm-m if data is already rhoa.</span>
-<span class="sd">                                             Defaults to 0.0.</span>
-<span class="sd">            relative_error_for_estimation (Optional[float], optional): Relative error percentage for </span>
-<span class="sd">                                                                    `ert.ERTManager().estimateError()`.</span>
-<span class="sd">                                                                    If None, `noise_level_relative` is used. Defaults to None.</span>
-<span class="sd">            save_path (Optional[str], optional): File path to save the generated synthetic data</span>
-<span class="sd">                                                 (e.g., &#39;synthetic_data.dat&#39;). If None, data is not saved.</span>
-<span class="sd">                                                 Defaults to None.</span>
-<span class="sd">            show_plot (bool, optional): If True, displays a pseudosection of the generated data.</span>
-<span class="sd">                                        Defaults to False.</span>
-<span class="sd">            random_seed (Optional[int], optional): Seed for the random number generator to ensure</span>
-<span class="sd">                                                   reproducible noise. If None, noise will vary.</span>
-<span class="sd">                                                   Defaults to None.</span>
-<span class="sd">            mesh_x_bound (float, optional): Horizontal boundary extension factor/distance if a new mesh</span>
-<span class="sd">                                            is created. Used by `pg.meshtools.appendTriangleBoundary`.</span>
-<span class="sd">                                            Defaults to 100.0.</span>
-<span class="sd">            mesh_y_bound (float, optional): Vertical boundary extension factor/distance if a new mesh</span>
-<span class="sd">                                            is created. Defaults to 100.0.</span>
+<span class="sd">            resistivity_model: Resistivity model values</span>
+<span class="sd">            log_transform: Whether resistivity_model is log-transformed</span>
 <span class="sd">            </span>
 <span class="sd">        Returns:</span>
-<span class="sd">            Tuple[pg.DataContainer, pg.Mesh]: A tuple containing:</span>
-<span class="sd">                - synth_data (pg.DataContainer): The generated synthetic ERT data with &#39;rhoa&#39; and &#39;err&#39; fields.</span>
-<span class="sd">                - simulation_mesh (pg.Mesh): The PyGIMLi mesh used for the forward simulation.</span>
-<span class="sd">        </span>
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If `xpos_electrodes` is empty or if `ypos_electrodes` (if provided)</span>
-<span class="sd">                        does not match `xpos_electrodes` length, or if resistivity_values</span>
-<span class="sd">                        length doesn&#39;t match mesh cell count.</span>
-<span class="sd">            TypeError: If inputs are of incorrect type.</span>
-<span class="sd">            RuntimeError: If PyGIMLi scheme creation or forward modeling fails.</span>
+<span class="sd">            Forward response (apparent resistivity)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">xpos_electrodes</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="n">xpos_electrodes</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">xpos_electrodes</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;xpos_electrodes must be a 1D NumPy array with at least one electrode position.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">ypos_electrodes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ypos_electrodes</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="n">ypos_electrodes</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">xpos_electrodes</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ypos_electrodes, if provided, must be a 1D NumPy array of the same shape as xpos_electrodes.&quot;</span><span class="p">)</span>
+        <span class="c1"># Convert to PyGIMLI RVector if needed</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">resistivity_model</span>
+            
+        <span class="c1"># Apply exponentiation if log-transformed input</span>
+        <span class="k">if</span> <span class="n">log_transform</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+            
+        <span class="c1"># Calculate response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
         
-        <span class="c1"># Set random seed for NumPy and PyGIMLi&#39;s RNG if provided for reproducibility</span>
-        <span class="k">if</span> <span class="n">random_seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">random_seed</span><span class="p">)</span>
-            <span class="n">pg</span><span class="o">.</span><span class="n">Core</span><span class="o">.</span><span class="n">RNG</span><span class="p">()</span><span class="o">.</span><span class="n">setSeed</span><span class="p">(</span><span class="n">random_seed</span><span class="p">)</span> <span class="c1"># More modern way for global GIMLi RNG</span>
+        <span class="c1"># Log-transform response if requested</span>
+        <span class="k">if</span> <span class="n">log_transform</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
         
-        <span class="c1"># Create electrode positions: array of [x, y] pairs</span>
-        <span class="k">if</span> <span class="n">ypos_electrodes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">ypos_electrodes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">xpos_electrodes</span><span class="p">)</span> <span class="c1"># Flat surface at y=0</span>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">array</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="ERTForwardModeling.forward_and_jacobian"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.forward_and_jacobian">[docs]</a>    <span class="k">def</span> <span class="nf">forward_and_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resistivity_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">log_transform</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute forward response and Jacobian matrix.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            resistivity_model: Resistivity model values</span>
+<span class="sd">            log_transform: Whether resistivity_model is log-transformed</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (forward response, Jacobian matrix)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Convert to PyGIMLI RVector if needed</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">resistivity_model</span>
+            
+        <span class="c1"># Apply exponentiation if log-transformed input</span>
+        <span class="k">if</span> <span class="n">log_transform</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
         
-        <span class="c1"># Ensure ypos_electrodes is 1D if xpos_electrodes is 1D, for consistent hstack</span>
-        <span class="n">electrode_positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">xpos_electrodes</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">ypos_electrodes</span><span class="o">.</span><span class="n">ravel</span><span class="p">()))</span><span class="o">.</span><span class="n">T</span>
+        <span class="c1"># Calculate response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
         
-        <span class="c1"># Create ERT survey scheme (DataContainer with electrode configurations)</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">scheme</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">createData</span><span class="p">(</span><span class="n">elecs</span><span class="o">=</span><span class="n">electrode_positions</span><span class="p">,</span> <span class="n">schemeName</span><span class="o">=</span><span class="n">scheme_name</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to create ERT scheme &#39;</span><span class="si">{</span><span class="n">scheme_name</span><span class="si">}</span><span class="s2">&#39; with PyGIMLi: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-        <span class="n">simulation_mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span>
+        <span class="c1"># Create Jacobian matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="n">jacobian</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">gmat2numpy</span><span class="p">(</span><span class="n">jacobian</span><span class="p">)</span>
+        
+        <span class="c1"># Process Jacobian according to log transformations</span>
+        <span class="k">if</span> <span class="n">log_transform</span><span class="p">:</span>
+            <span class="c1"># For log-transformed model and response</span>
+            <span class="c1"># J_log = J * exp(m) / d = d(log(d))/d(log(m))</span>
+            <span class="n">J</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span> <span class="o">*</span> <span class="n">J</span>
+            <span class="n">response_array</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+            <span class="n">J</span> <span class="o">=</span> <span class="n">J</span> <span class="o">/</span> <span class="n">response_array</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">response_array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+            
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">array</span><span class="p">()),</span> <span class="n">J</span>
+        
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">array</span><span class="p">(),</span> <span class="n">J</span></div>
+    
+<div class="viewcode-block" id="ERTForwardModeling.get_coverage"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.get_coverage">[docs]</a>    <span class="k">def</span> <span class="nf">get_coverage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resistivity_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">log_transform</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute coverage (resolution) for a given resistivity model.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            resistivity_model: Resistivity model values</span>
+<span class="sd">            log_transform: Whether resistivity_model is log-transformed</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Coverage values for each cell</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Convert to PyGIMLI RVector if needed</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">resistivity_model</span>
+            
+        <span class="c1"># Apply exponentiation if log-transformed input</span>
+        <span class="k">if</span> <span class="n">log_transform</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+        
+        <span class="c1"># Calculate response and Jacobian</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        
+        <span class="c1"># Calculate coverage</span>
+        <span class="n">covTrans</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">coverageDCtrans</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(),</span> 
+            <span class="mf">1.0</span> <span class="o">/</span> <span class="n">response</span><span class="p">,</span> 
+            <span class="mf">1.0</span> <span class="o">/</span> <span class="n">model</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Weight by cell sizes</span>
+        <span class="n">paramSizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="p">))</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">paraDomain</span>
+        
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">():</span>
+            <span class="n">paramSizes</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">marker</span><span class="p">()]</span> <span class="o">+=</span> <span class="n">c</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            
+        <span class="n">FinalJ</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">covTrans</span> <span class="o">/</span> <span class="n">paramSizes</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">FinalJ</span></div>
+    
+<div class="viewcode-block" id="ERTForwardModeling.create_synthetic_data"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ERTForwardModeling.create_synthetic_data">[docs]</a>    <span class="k">def</span> <span class="nf">create_synthetic_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">xpos</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+                            <span class="n">ypos</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">res_models</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">schemeName</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;wa&#39;</span><span class="p">,</span> 
+                            <span class="n">noise_level</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span> 
+                            <span class="n">absolute_error</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> 
+                            <span class="n">relative_error</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+                            <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">show_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> 
+                            <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">xbound</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> 
+                            <span class="n">ybound</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create synthetic ERT data using forward modeling.</span>
+<span class="sd">        </span>
+<span class="sd">        This method simulates an ERT survey by placing electrodes, creating a measurement </span>
+<span class="sd">        scheme, performing forward modeling to generate synthetic data, and adding noise.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            xpos: X-coordinates of electrodes</span>
+<span class="sd">            ypos: Y-coordinates of electrodes (if None, uses flat surface)</span>
+<span class="sd">            mesh: Mesh for forward modeling</span>
+<span class="sd">            res_models: Resistivity model values</span>
+<span class="sd">            schemeName: Name of measurement scheme (&#39;wa&#39;, &#39;dd&#39;, etc.)</span>
+<span class="sd">            noise_level: Level of Gaussian noise to add</span>
+<span class="sd">            absolute_error: Absolute error for data estimation</span>
+<span class="sd">            relative_error: Relative error for data estimation</span>
+<span class="sd">            save_path: Path to save synthetic data (if None, does not save)</span>
+<span class="sd">            show_data: Whether to display data after creation</span>
+<span class="sd">            seed: Random seed for noise generation</span>
+<span class="sd">            xbound: X boundary extension for mesh</span>
+<span class="sd">            ybound: Y boundary extension for mesh</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (synthetic ERT data container, simulation mesh)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Set random seed if provided</span>
+        <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">rrng</span><span class="o">.</span><span class="n">randpin</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        
+        <span class="c1"># Create electrode positions</span>
+        <span class="k">if</span> <span class="n">ypos</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Create flat surface if no y-coordinates provided</span>
+            <span class="n">ypos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">xpos</span><span class="p">)</span>
+        
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">xpos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">ypos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+        
+        <span class="c1"># Create ERT survey scheme</span>
+        <span class="n">scheme</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">createData</span><span class="p">(</span><span class="n">elecs</span><span class="o">=</span><span class="n">pos</span><span class="p">,</span> <span class="n">schemeName</span><span class="o">=</span><span class="n">schemeName</span><span class="p">)</span>
+        
         <span class="c1"># Prepare mesh for forward modeling</span>
-        <span class="k">if</span> <span class="n">fwd_mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fwd_mesh</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;fwd_mesh must be a PyGIMLi pg.Mesh object or None.&quot;</span><span class="p">)</span>
-            <span class="n">simulation_mesh</span> <span class="o">=</span> <span class="n">fwd_mesh</span>
-            <span class="c1"># The original code set all cell markers to 2. This might override user&#39;s intent.</span>
-            <span class="c1"># A common practice is to have region markers for different resistivities.</span>
-            <span class="c1"># If `resistivity_values` is per-cell, markers aren&#39;t strictly needed for fwd model assignment,</span>
-            <span class="c1"># but might be used by inversion later.</span>
-            <span class="c1"># For now, let&#39;s comment out the forced marker setting. User should prepare mesh markers if needed.</span>
-            <span class="c1"># simulation_mesh.setCellMarkers(pg.Vector(simulation_mesh.cellCount(), 2))</span>
+        <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Set all cells to same marker</span>
+            <span class="n">mesh</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
             
-            <span class="c1"># Append triangle boundary for forward modeling if it&#39;s a 2D mesh</span>
-            <span class="k">if</span> <span class="n">simulation_mesh</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span> <span class="p">:</span>
-                <span class="n">simulation_mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">simulation_mesh</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="c1"># Boundary marker</span>
-                                                                    <span class="n">xbound</span><span class="o">=</span><span class="n">mesh_x_bound</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="n">mesh_y_bound</span><span class="p">)</span>
+            <span class="c1"># Append triangle boundary for forward modeling</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                                        <span class="n">xbound</span><span class="o">=</span><span class="n">xbound</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="n">ybound</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Create a default 2D mesh if none is provided</span>
-            <span class="n">x_min_elec</span><span class="p">,</span> <span class="n">x_max_elec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">xpos_electrodes</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">xpos_electrodes</span><span class="p">)</span>
-            <span class="n">y_min_elec</span><span class="p">,</span> <span class="n">y_max_elec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">ypos_electrodes</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">ypos_electrodes</span><span class="p">)</span> 
+            <span class="c1"># Create a simple mesh if none provided</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">createGrid</span><span class="p">(</span>
+                <span class="n">x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">xpos</span><span class="p">)</span> <span class="o">-</span> <span class="mi">10</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">xpos</span><span class="p">)</span> <span class="o">+</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span>
+                <span class="n">y</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">ypos</span><span class="p">)</span> <span class="o">-</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                                        <span class="n">xbound</span><span class="o">=</span><span class="n">xbound</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="n">ybound</span><span class="p">)</span>
             
-            <span class="n">mesh_x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">x_min_elec</span> <span class="o">-</span> <span class="n">mesh_x_bound</span><span class="o">/</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">x_max_elec</span> <span class="o">+</span> <span class="n">mesh_x_bound</span><span class="o">/</span><span class="mf">5.0</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span> 
-            <span class="n">mesh_y_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">y_min_elec</span> <span class="o">-</span> <span class="n">mesh_y_bound</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">y_max_elec</span> <span class="o">+</span> <span class="n">mesh_y_bound</span><span class="o">/</span><span class="mf">10.0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span> 
+            <span class="c1"># Create homogeneous resistivity model if none provided</span>
+            <span class="k">if</span> <span class="n">res_models</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">res_models</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span> <span class="o">*</span> <span class="mi">100</span>
+        
+        <span class="c1"># Create synthetic data</span>
+        <span class="n">synth_data</span> <span class="o">=</span> <span class="n">scheme</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        
+        <span class="c1"># Initialize a forward operator</span>
+        <span class="n">fwd_operator</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">mesh</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">scheme</span><span class="p">)</span>
+        
+        <span class="c1"># Forward response</span>
+        <span class="n">fob</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
+        <span class="n">fob</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">scheme</span><span class="p">)</span>
+        <span class="n">fob</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+        <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">res_models</span><span class="p">)</span>
+        
+        <span class="c1"># Add noise</span>
+        <span class="n">dr</span> <span class="o">*=</span> <span class="mf">1.</span> <span class="o">+</span> <span class="n">pg</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">size</span><span class="p">())</span> <span class="o">*</span> <span class="n">noise_level</span>
+        
+        <span class="c1"># Set data and error values</span>
+        <span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;rhoa&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dr</span>
+        
+        <span class="c1"># Estimate error</span>
+        <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">synth_data</span><span class="p">)</span>
+        <span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">estimateError</span><span class="p">(</span>
+            <span class="n">synth_data</span><span class="p">,</span> <span class="n">absoluteUError</span><span class="o">=</span><span class="n">absolute_error</span><span class="p">,</span> <span class="n">relativeError</span><span class="o">=</span><span class="n">relative_error</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Display data if requested</span>
+        <span class="k">if</span> <span class="n">show_data</span><span class="p">:</span>
+            <span class="n">ert</span><span class="o">.</span><span class="n">showData</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span> <span class="n">logscale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="c1"># Save data if a path is provided</span>
+        <span class="k">if</span> <span class="n">save_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">synth_data</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">save_path</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">synth_data</span><span class="p">,</span> <span class="n">grid</span></div></div>
 
-            <span class="n">grid_core</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">createGrid</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">mesh_x_coords</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">mesh_y_coords</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># Assign a default marker for core cells</span>
-            <span class="n">simulation_mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">grid_core</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                                                                  <span class="n">xbound</span><span class="o">=</span><span class="n">mesh_x_bound</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="n">mesh_y_bound</span><span class="p">)</span>
-        
-        <span class="c1"># Prepare resistivity model for the simulation_mesh</span>
-        <span class="k">if</span> <span class="n">resistivity_values</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No resistivity_values provided. Using homogeneous 100 ohm·m for the simulation mesh.&quot;</span><span class="p">)</span>
-            <span class="n">current_resistivity_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">simulation_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span> <span class="o">*</span> <span class="mf">100.0</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">resistivity_values</span><span class="p">)</span> <span class="o">!=</span> <span class="n">simulation_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Length of resistivity_values (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">resistivity_values</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match cell count &quot;</span>
-                             <span class="sa">f</span><span class="s2">&quot;of the simulation_mesh (</span><span class="si">{</span><span class="n">simulation_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">current_resistivity_model</span> <span class="o">=</span> <span class="n">resistivity_values</span>
-
-        <span class="c1"># Convert to PyGIMLi RVector if it&#39;s a NumPy array</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">current_resistivity_model</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
-            <span class="n">res_model_pg</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">current_resistivity_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">current_resistivity_model</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">):</span>
-            <span class="n">res_model_pg</span> <span class="o">=</span> <span class="n">current_resistivity_model</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;resistivity_values must be a NumPy array or PyGIMLi RVector.&quot;</span><span class="p">)</span>
-
-        <span class="c1"># Create a DataContainer for synthetic data, copying scheme configurations</span>
-        <span class="n">synth_data</span> <span class="o">=</span> <span class="n">scheme</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="c1"># Copies electrode positions and configurations</span>
-        
-        <span class="c1"># Initialize a new ERTModelling operator for this specific simulation</span>
-        <span class="c1"># Avoid using `cls` to instantiate if this is a helper method not tied to ERTForwardModeling instance state.</span>
-        <span class="c1"># The original code used `cls(mesh=grid, data=scheme)` then `fob = ert.ERTModelling()`.</span>
-        <span class="c1"># Simpler to just use `ert.ERTModelling()` directly here.</span>
-        <span class="n">fwd_op_sim</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
-        <span class="n">fwd_op_sim</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">simulation_mesh</span><span class="p">)</span> 
-        <span class="n">fwd_op_sim</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">scheme</span><span class="p">)</span>      
-        
-        <span class="c1"># Compute forward response (apparent resistivities)</span>
-        <span class="n">simulated_rhoa_pg</span> <span class="o">=</span> <span class="n">fwd_op_sim</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">res_model_pg</span><span class="p">)</span>
-        <span class="n">simulated_rhoa_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">simulated_rhoa_pg</span><span class="p">)</span>
-        
-        <span class="c1"># Add Gaussian noise to the synthetic apparent resistivities</span>
-        <span class="k">if</span> <span class="n">noise_level_relative</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="c1"># Ensure noise is added in a way that doesn&#39;t make resistivities non-positive if possible</span>
-            <span class="c1"># Noise: N(0, noise_level_relative). Data_noisy = Data_true * (1 + noise)</span>
-            <span class="n">noise_values</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">simulated_rhoa_np</span><span class="p">))</span> <span class="o">*</span> <span class="n">noise_level_relative</span>
-            <span class="n">simulated_rhoa_noisy</span> <span class="o">=</span> <span class="n">simulated_rhoa_np</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">noise_values</span><span class="p">)</span>
-            <span class="c1"># Potential issue: if noise_level_relative is large, (1+noise) could be negative.</span>
-            <span class="c1"># This could make rhoa negative, which is non-physical.</span>
-            <span class="c1"># Clipping to a small positive value if that happens.</span>
-            <span class="n">simulated_rhoa_noisy</span><span class="p">[</span><span class="n">simulated_rhoa_noisy</span> <span class="o">&lt;=</span> <span class="mf">1e-6</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-6</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">simulated_rhoa_noisy</span> <span class="o">=</span> <span class="n">simulated_rhoa_np</span>
-        
-        <span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;rhoa&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">simulated_rhoa_noisy</span> <span class="c1"># Store apparent resistivity</span>
-        
-        <span class="c1"># Estimate and assign errors using ERTManager</span>
-        <span class="c1"># `absoluteUError` in estimateError refers to voltage error, not resistivity error.</span>
-        <span class="c1"># If we only have rhoa, we use `absoluteError` (for rhoa) and `relativeError`.</span>
-        <span class="n">err_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">()</span> <span class="c1"># Temporary manager for error estimation</span>
-        
-        <span class="c1"># Use `relative_error_for_estimation` if provided, otherwise default to `noise_level_relative`</span>
-        <span class="n">rel_err_param</span> <span class="o">=</span> <span class="n">relative_error_for_estimation</span> <span class="k">if</span> <span class="n">relative_error_for_estimation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">noise_level_relative</span>
-        
-        <span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">err_manager</span><span class="o">.</span><span class="n">estimateError</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span>
-                                                      <span class="n">absoluteError</span><span class="o">=</span><span class="n">noise_abs_val</span><span class="p">,</span> <span class="c1"># Absolute error in ohm-m</span>
-                                                      <span class="n">relativeError</span><span class="o">=</span><span class="n">rel_err_param</span><span class="p">)</span>
-        
-        <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">ert</span><span class="o">.</span><span class="n">showData</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span> <span class="n">vals</span><span class="o">=</span><span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;rhoa&#39;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;Apparent Resistivity ($\Omega$m)&quot;</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                <span class="c1"># For plots to show in non-interactive environments:</span>
-                <span class="c1"># import matplotlib.pyplot as plt</span>
-                <span class="c1"># plt.show()</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not display data plot: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">save_path</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">synth_data</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">save_path</span><span class="p">)</span>
-                <span class="c1"># print(f&quot;Synthetic ERT data saved to: {save_path}&quot;)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error saving synthetic data to &#39;</span><span class="si">{</span><span class="n">save_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        
-        <span class="k">return</span> <span class="n">synth_data</span><span class="p">,</span> <span class="n">simulation_mesh</span></div></div>
-
-<span class="c1"># Standalone functions - These appear to be alternative or older implementations.</span>
-<span class="c1"># They should be reviewed for consistency with the ERTForwardModeling class methods.</span>
-<span class="c1"># If they are redundant or outdated, they could be deprecated or removed.</span>
-<span class="c1"># If they serve a distinct purpose, their docstrings should clarify this.</span>
-
-<div class="viewcode-block" id="ertforward"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ertforward">[docs]</a><span class="k">def</span> <span class="nf">ertforward</span><span class="p">(</span><span class="n">fwd_op</span><span class="p">:</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">,</span> 
-               <span class="n">mesh_with_markers</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span> 
-               <span class="n">rhomodel_background</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">,</span> 
-               <span class="n">xr_active_log</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> 
-              <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">]:</span>
+<div class="viewcode-block" id="ertforward"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ertforward">[docs]</a><span class="k">def</span> <span class="nf">ertforward</span><span class="p">(</span><span class="n">fob</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">rhomodel</span><span class="p">,</span> <span class="n">xr</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Performs ERT forward modeling, updating only a specific region of the model.</span>
-
-<span class="sd">    This function takes an existing background resistivity model (`rhomodel_background`),</span>
-<span class="sd">    updates a portion of it (where cell markers == 2 in `mesh_with_markers`)</span>
-<span class="sd">    with new log-transformed resistivity values (`xr_active_log`), and then computes</span>
-<span class="sd">    the forward response. The response is returned as log-transformed apparent resistivities.</span>
+<span class="sd">    Forward model for ERT.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        fwd_op (ert.ERTModelling): Initialized PyGIMLi ERTModelling operator.</span>
-<span class="sd">                                   Must have data scheme and full forward mesh already set.</span>
-<span class="sd">                                   The full forward mesh should be consistent with `rhomodel_background`.</span>
-<span class="sd">        mesh_with_markers (pg.Mesh): A PyGIMLi mesh object whose cell markers define the active region.</span>
-<span class="sd">                                     Cells with marker 2 will be updated. This mesh&#39;s cell indexing</span>
-<span class="sd">                                     must correspond to `rhomodel_background`.</span>
-<span class="sd">        rhomodel_background (pg.RVector): Full resistivity model vector [ohm·m] for all cells</span>
-<span class="sd">                                          in the mesh associated with `fwd_op`.</span>
-<span class="sd">        xr_active_log (np.ndarray): 1D NumPy array of log-transformed (natural log) resistivity values</span>
-<span class="sd">                                for the active region cells (marker == 2). The length of `xr_active_log`</span>
-<span class="sd">                                must match the number of cells marked as 2.</span>
+<span class="sd">        fob (pygimli.ERTModelling): ERT forward operator.</span>
+<span class="sd">        mesh (pg.Mesh): Mesh for the forward model.</span>
+<span class="sd">        rhomodel (pg.RVector): Resistivity model vector.</span>
+<span class="sd">        xr (np.ndarray): Log-transformed model parameter (resistivity).</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        Tuple[np.ndarray, pg.RVector]:</span>
-<span class="sd">            - dr_log (np.ndarray): Log-transformed (natural log) forward response (apparent resistivities).</span>
-<span class="sd">            - rhomodel_updated_pg (pg.RVector): The updated full resistivity model vector [ohm·m] after</span>
-<span class="sd">                                                modifying the active region.</span>
+<span class="sd">        dr (np.ndarray): Log-transformed forward response.</span>
+<span class="sd">        rhomodel (pg.RVector): Updated resistivity model.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Convert the background resistivity model to a NumPy array for easier manipulation.</span>
-    <span class="n">rhomodel_current_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">rhomodel_background</span><span class="p">)</span>
-    
-    <span class="c1"># Identify cells in the active region using markers from `mesh_with_markers`.</span>
-    <span class="c1"># It&#39;s crucial that `mesh_with_markers` is the same mesh that `rhomodel_background` refers to.</span>
-    <span class="n">cell_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_with_markers</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
-    <span class="n">active_cell_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">cell_markers</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">active_cell_mask</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">xr_active_log</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Length of xr_active_log (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">xr_active_log</span><span class="p">)</span><span class="si">}</span><span class="s2">) does not match the number of cells &quot;</span>
-                         <span class="sa">f</span><span class="s2">&quot;with marker 2 (</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">active_cell_mask</span><span class="p">)</span><span class="si">}</span><span class="s2">) in mesh_with_markers.&quot;</span><span class="p">)</span>
-
-    <span class="c1"># Update the resistivity values in the active region.</span>
-    <span class="c1"># `xr_active_log` contains log-transformed values, so exponentiate them.</span>
-    <span class="n">rhomodel_current_np</span><span class="p">[</span><span class="n">active_cell_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr_active_log</span><span class="p">)</span>
-    
-    <span class="n">rhomodel_updated_pg</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">rhomodel_current_np</span><span class="p">)</span> <span class="c1"># Convert updated model back to RVector</span>
-    
-    <span class="c1"># Compute forward response with the updated model</span>
-    <span class="n">response_pg</span> <span class="o">=</span> <span class="n">fwd_op</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel_updated_pg</span><span class="p">)</span>
-    <span class="n">response_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">response_pg</span><span class="p">)</span>
-    
-    <span class="c1"># Log-transform the response, handling non-positive values</span>
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">response_np</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning (ertforward function): Response contains non-positive values. Log transform will result in -inf or NaN.&quot;</span><span class="p">)</span>
-    <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
-        <span class="n">log_response_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response_np</span><span class="p">)</span>
-    
-    <span class="k">return</span> <span class="n">log_response_np</span><span class="p">,</span> <span class="n">rhomodel_updated_pg</span></div>
+    <span class="n">xr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">rhomodel</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
+    <span class="n">xr1</span><span class="p">[</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr</span><span class="p">)</span>
+    <span class="n">rhomodel</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">matrix</span><span class="o">.</span><span class="n">RVector</span><span class="p">(</span><span class="n">xr1</span><span class="p">)</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">array</span><span class="p">()),</span> <span class="n">rhomodel</span></div>
 
 
-<div class="viewcode-block" id="ertforward2"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ertforward2">[docs]</a><span class="k">def</span> <span class="nf">ertforward2</span><span class="p">(</span><span class="n">fwd_op</span><span class="p">:</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">,</span>
-                <span class="n">xr_log_model_full</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
-                <span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># Argument kept for signature consistency, but often unused if fwd_op is pre-configured</span>
-               <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ertforward2"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ertforward2">[docs]</a><span class="k">def</span> <span class="nf">ertforward2</span><span class="p">(</span><span class="n">fob</span><span class="p">,</span> <span class="n">xr</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Simplified ERT forward model calculation from a full log-transformed resistivity model.</span>
-
-<span class="sd">    Assumes `xr_log_model_full` is a complete vector of log-transformed (natural log)</span>
-<span class="sd">    resistivity values for all cells in the mesh already associated with `fwd_op`.</span>
-<span class="sd">    The function exponentiates these values, computes the response, and returns the</span>
-<span class="sd">    natural log of the response.</span>
+<span class="sd">    Simplified ERT forward model.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        fwd_op (ert.ERTModelling): Initialized PyGIMLi ERTModelling operator, with mesh and data scheme set.</span>
-<span class="sd">        xr_log_model_full (np.ndarray): 1D NumPy array of log-transformed (natural log)</span>
-<span class="sd">                                        resistivity values for all model cells.</span>
-<span class="sd">        mesh (Optional[pg.Mesh]): This argument is present in the original signature but typically</span>
-<span class="sd">                                  not used if `fwd_op` is already configured with its mesh and</span>
-<span class="sd">                                  `xr_log_model_full` corresponds to that mesh&#39;s cells.</span>
-<span class="sd">                                  If provided, it could be used for validation.</span>
+<span class="sd">        fob (pygimli.ERTModelling): ERT forward operator.</span>
+<span class="sd">        xr (np.ndarray): Log-transformed model parameter.</span>
+<span class="sd">        mesh (pg.Mesh): Mesh for the forward model.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        np.ndarray: Log-transformed (natural log) forward response (apparent resistivities).</span>
+<span class="sd">        dr (np.ndarray): Log-transformed forward response.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Convert log-domain model to actual resistivity values: ρ = exp(log_ρ)</span>
-    <span class="n">actual_resistivity_values_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr_log_model_full</span><span class="p">)</span>
-    
-    <span class="c1"># Ensure model is in PyGIMLi RVector format for the forward operator</span>
-    <span class="n">rhomodel_pg_linear</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">actual_resistivity_values_np</span><span class="p">)</span> 
-    
-    <span class="n">response_pg</span> <span class="o">=</span> <span class="n">fwd_op</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel_pg_linear</span><span class="p">)</span>
-    <span class="n">response_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">response_pg</span><span class="p">)</span>
+    <span class="n">xr1</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">xr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr</span><span class="p">)</span>
+    <span class="n">rhomodel</span> <span class="o">=</span> <span class="n">xr1</span>
 
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">response_np</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning (ertforward2 function): Response contains non-positive values. Log transform will result in -inf or NaN.&quot;</span><span class="p">)</span>
-    <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
-        <span class="n">log_response_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response_np</span><span class="p">)</span>
-    
-    <span class="k">return</span> <span class="n">log_response_np</span></div>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">dr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dr</span></div>
 
 
-<div class="viewcode-block" id="ertforandjac"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ertforandjac">[docs]</a><span class="k">def</span> <span class="nf">ertforandjac</span><span class="p">(</span><span class="n">fwd_op</span><span class="p">:</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">,</span>
-                 <span class="n">rhomodel_linear_pg</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">,</span> <span class="c1"># Full model in linear resistivity [ohm·m]</span>
-                 <span class="n">xr_active_log_full</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>    <span class="c1"># Log-resistivity for the entire model [log(ohm·m)]</span>
-                <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<div class="viewcode-block" id="ertforandjac"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ertforandjac">[docs]</a><span class="k">def</span> <span class="nf">ertforandjac</span><span class="p">(</span><span class="n">fob</span><span class="p">,</span> <span class="n">rhomodel</span><span class="p">,</span> <span class="n">xr</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Forward model and Jacobian calculation for ERT, with log-transform adjustments.</span>
-
-<span class="sd">    This function computes the forward response `d` using `rhomodel_linear_pg` (which should be ρ).</span>
-<span class="sd">    It then calculates the Jacobian J_lin = ∂d/∂ρ based on `rhomodel_linear_pg`.</span>
-<span class="sd">    Finally, it transforms this Jacobian to J_loglog = ∂log(d)/∂log(ρ) = (ρ/d) * J_lin,</span>
-<span class="sd">    using `xr_active_log_full` to derive ρ for scaling (ρ = exp(xr_active_log_full)).</span>
-<span class="sd">    The response `d` is also returned as log(d).</span>
+<span class="sd">    Forward model and Jacobian for ERT.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        fwd_op (ert.ERTModelling): Initialized PyGIMLi ERTModelling operator.</span>
-<span class="sd">        rhomodel_linear_pg (pg.RVector): Full resistivity model vector in linear scale [ohm·m].</span>
-<span class="sd">                                         This is ρ, used to compute response and base Jacobian.</span>
-<span class="sd">        xr_active_log_full (np.ndarray): 1D NumPy array of log-transformed (natural log) resistivity values</span>
-<span class="sd">                                         for ALL model cells. This is log(ρ). Used for Jacobian scaling.</span>
-<span class="sd">                                         Length must match number of cells in `fwd_op`&#39;s mesh.</span>
+<span class="sd">        fob (pygimli.ERTModelling): ERT forward operator.</span>
+<span class="sd">        rhomodel (pg.RVector): Resistivity model.</span>
+<span class="sd">        xr (np.ndarray): Log-transformed model parameter.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        Tuple[np.ndarray, np.ndarray]:</span>
-<span class="sd">            - dr_log (np.ndarray): Log-transformed (natural log) forward response, log(d).</span>
-<span class="sd">            - J_loglog (np.ndarray): Adjusted Jacobian matrix for log-data versus log-model changes.</span>
+<span class="sd">        dr (np.ndarray): Log-transformed forward response.</span>
+<span class="sd">        J (np.ndarray): Jacobian matrix.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># 1. Compute response d = f(ρ) using the linear resistivity model `rhomodel_linear_pg`</span>
-    <span class="n">response_pg</span> <span class="o">=</span> <span class="n">fwd_op</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel_linear_pg</span><span class="p">)</span>
-    <span class="n">response_np_linear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">response_pg</span><span class="p">)</span> <span class="c1"># This is &#39;d&#39;</span>
-    
-    <span class="c1"># 2. Compute base Jacobian J_lin = ∂d/∂ρ using the linear resistivity model `rhomodel_linear_pg`</span>
-    <span class="n">fwd_op</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">rhomodel_linear_pg</span><span class="p">)</span>
-    <span class="n">jacobian_gmat</span> <span class="o">=</span> <span class="n">fwd_op</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span>
-    <span class="n">jacobian_np_linear</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">gmat2numpy</span><span class="p">(</span><span class="n">jacobian_gmat</span><span class="p">)</span> <span class="c1"># This is J_lin = ∂d/∂ρ</span>
-    
-    <span class="c1"># 3. Adjust Jacobian and response for log-log transformation.</span>
-    <span class="c1"># J_loglog = ∂(log d) / ∂(log ρ) = (ρ/d) * (∂d/∂ρ) = diag(ρ/d) * J_lin if J is row vector of gradients</span>
-    <span class="c1"># Or more generally, J_loglog_ij = (ρ_j / d_i) * (∂d_i / ∂ρ_j)</span>
-    <span class="c1"># This is achieved by: J_loglog = diag(1/d) @ J_lin @ diag(ρ)</span>
-    
-    <span class="c1"># ρ values from the provided log-transformed full model array</span>
-    <span class="n">rho_values_for_scaling_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr_active_log_full</span><span class="p">)</span>
-    
-    <span class="c1"># Check for issues before scaling</span>
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">response_np_linear</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning (ertforandjac function): Linear response `d` contains non-positive values. Jacobian scaling may yield NaN/Inf.&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">rho_values_for_scaling_np</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning (ertforandjac function): Model resistivities `ρ` (from exp(xr_active_log_full)) contain non-positive values. Jacobian scaling may yield NaN/Inf.&quot;</span><span class="p">)</span>
-
-    <span class="c1"># Create diagonal matrix diag(ρ)</span>
-    <span class="n">diag_rho</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">rho_values_for_scaling_np</span><span class="p">)</span>
-    <span class="c1"># J_lin @ diag(ρ) effectively scales columns of J_lin by corresponding ρ_j</span>
-    <span class="n">jacobian_times_rho</span> <span class="o">=</span> <span class="n">jacobian_np_linear</span> <span class="o">@</span> <span class="n">diag_rho</span>
-
-    <span class="c1"># Create diagonal matrix diag(1/d)</span>
-    <span class="n">inv_d_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">response_np_linear</span><span class="p">)</span>
-    <span class="n">valid_d_mask</span> <span class="o">=</span> <span class="n">response_np_linear</span> <span class="o">&gt;</span> <span class="mf">1e-12</span> <span class="c1"># Avoid division by zero or very small numbers</span>
-    <span class="n">inv_d_values</span><span class="p">[</span><span class="n">valid_d_mask</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">response_np_linear</span><span class="p">[</span><span class="n">valid_d_mask</span><span class="p">]</span>
-    <span class="c1"># For d &lt;= 0, inv_d_values remains 0. This means corresponding rows in J_loglog will be zero.</span>
-    <span class="n">diag_inv_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">inv_d_values</span><span class="p">)</span>
-    
-    <span class="n">J_loglog</span> <span class="o">=</span> <span class="n">diag_inv_d</span> <span class="o">@</span> <span class="n">jacobian_times_rho</span>
-    
-    <span class="c1"># Log-transform the linear response: log(d)</span>
-    <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
-        <span class="n">log_response_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response_np_linear</span><span class="p">)</span> 
-    
-    <span class="k">return</span> <span class="n">log_response_np</span><span class="p">,</span> <span class="n">J_loglog</span></div>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="n">fob</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">gmat2numpy</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr</span><span class="p">)</span><span class="o">*</span><span class="n">J</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">dr</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">J</span><span class="o">/</span><span class="n">dr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">dr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dr</span><span class="p">,</span> <span class="n">J</span></div>
 
 
-<div class="viewcode-block" id="ertforandjac2"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ertforandjac2">[docs]</a><span class="k">def</span> <span class="nf">ertforandjac2</span><span class="p">(</span><span class="n">fwd_op</span><span class="p">:</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">,</span>
-                  <span class="n">xr_log_model_full</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
-                  <span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># Typically unused if fwd_op is fully configured</span>
-                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<div class="viewcode-block" id="ertforandjac2"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.ertforandjac2">[docs]</a><span class="k">def</span> <span class="nf">ertforandjac2</span><span class="p">(</span><span class="n">fob</span><span class="p">,</span> <span class="n">xr</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Alternative ERT forward model and Jacobian calculation using log-resistivity values.</span>
-
-<span class="sd">    This function is very similar to `ertforandjac`. It assumes the input `xr_log_model_full`</span>
-<span class="sd">    is the natural log of resistivity for all cells. It calculates d = f(exp(log_ρ))</span>
-<span class="sd">    and then transforms the Jacobian to J_loglog = (ρ/d) * (∂d/∂ρ).</span>
-
-<span class="sd">    The main difference from `ertforandjac` seems to be how the linear model `rhomodel`</span>
-<span class="sd">    is derived (from `xr_log_model_full` directly) rather than being passed in.</span>
-<span class="sd">    The Jacobian transformation logic is intended to be the same (for log-data vs log-model).</span>
+<span class="sd">    Alternative ERT forward model and Jacobian using log-resistivity values.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        fwd_op (ert.ERTModelling): Initialized PyGIMLi ERTModelling operator.</span>
-<span class="sd">        xr_log_model_full (np.ndarray): 1D NumPy array of log-transformed (natural log)</span>
-<span class="sd">                                        resistivity values for all model cells.</span>
-<span class="sd">        mesh (Optional[pg.Mesh]): PyGIMLi mesh. Unused in the original logic if `xr_log_model_full`</span>
-<span class="sd">                                  is for the full model set in `fwd_op`. Retained for signature.</span>
+<span class="sd">        fob (pygimli.ERTModelling): ERT forward operator.</span>
+<span class="sd">        xr (np.ndarray): Log-transformed model parameter.</span>
+<span class="sd">        mesh (pg.Mesh): Mesh for the forward model.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        Tuple[np.ndarray, np.ndarray]:</span>
-<span class="sd">            - dr_log (np.ndarray): Log-transformed (natural log) forward response.</span>
-<span class="sd">            - J_loglog (np.ndarray): Adjusted Jacobian matrix for log-log space.</span>
+<span class="sd">        dr (np.ndarray): Log-transformed forward response.</span>
+<span class="sd">        J (np.ndarray): Jacobian matrix.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Convert full log-model to linear resistivity model: ρ = exp(log_ρ)</span>
-    <span class="n">actual_resistivity_values_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr_log_model_full</span><span class="p">)</span>
-    <span class="n">rhomodel_linear_pg</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">actual_resistivity_values_np</span><span class="p">)</span>
-    
-    <span class="c1"># Calculate response d = f(ρ)</span>
-    <span class="n">response_pg</span> <span class="o">=</span> <span class="n">fwd_op</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel_linear_pg</span><span class="p">)</span>
-    <span class="n">response_np_linear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">response_pg</span><span class="p">)</span> <span class="c1"># This is &#39;d&#39;</span>
-    
-    <span class="c1"># Calculate base Jacobian J_lin = ∂d/∂ρ</span>
-    <span class="n">fwd_op</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">rhomodel_linear_pg</span><span class="p">)</span>
-    <span class="n">jacobian_gmat</span> <span class="o">=</span> <span class="n">fwd_op</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span>
-    <span class="n">jacobian_np_linear</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">gmat2numpy</span><span class="p">(</span><span class="n">jacobian_gmat</span><span class="p">)</span> <span class="c1"># J_lin = ∂d/∂ρ</span>
-
-    <span class="c1"># Adjust Jacobian for log-log space: J_loglog = (ρ/d) * J_lin</span>
-    <span class="c1"># rho_values_for_scaling is actual_resistivity_values_np</span>
-    
-    <span class="c1"># Original line: J = np.exp(xr.T)*J. This is mathematically incorrect for matrix multiplication.</span>
-    <span class="c1"># If xr is (N,) and J is (M,N), exp(xr.T) is still (N,).</span>
-    <span class="c1"># `np.exp(xr.T) * J` would be element-wise multiplication if J was also (N,), or broadcasting.</span>
-    <span class="c1"># Correct scaling for J_loglog = diag(1/d) @ J_lin @ diag(ρ):</span>
-    
-    <span class="n">diag_rho</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">actual_resistivity_values_np</span><span class="p">)</span>
-    <span class="n">jacobian_times_rho</span> <span class="o">=</span> <span class="n">jacobian_np_linear</span> <span class="o">@</span> <span class="n">diag_rho</span>
-
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">response_np_linear</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning (ertforandjac2 function): Linear response `d` contains non-positive values. Jacobian scaling may yield NaN/Inf.&quot;</span><span class="p">)</span>
-        
-    <span class="n">inv_d_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">response_np_linear</span><span class="p">)</span>
-    <span class="n">valid_d_mask</span> <span class="o">=</span> <span class="n">response_np_linear</span> <span class="o">&gt;</span> <span class="mf">1e-12</span>
-    <span class="n">inv_d_values</span><span class="p">[</span><span class="n">valid_d_mask</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">response_np_linear</span><span class="p">[</span><span class="n">valid_d_mask</span><span class="p">]</span>
-    <span class="n">diag_inv_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">inv_d_values</span><span class="p">)</span>
-    
-    <span class="n">J_loglog</span> <span class="o">=</span> <span class="n">diag_inv_d</span> <span class="o">@</span> <span class="n">jacobian_times_rho</span>
-    
-    <span class="c1"># Log-transform the linear response</span>
-    <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
-        <span class="n">log_response_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">response_np_linear</span><span class="p">)</span>
-    
-    <span class="k">return</span> <span class="n">log_response_np</span><span class="p">,</span> <span class="n">J_loglog</span></div>
+    <span class="n">xr1</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">xr1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr</span><span class="p">)</span>
+    <span class="n">rhomodel</span> <span class="o">=</span> <span class="n">xr1</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="n">fob</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">gmat2numpy</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">xr</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">*</span><span class="n">J</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">dr</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+    <span class="n">J</span> <span class="o">=</span> <span class="n">J</span><span class="o">/</span><span class="n">dr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">dr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dr</span><span class="p">,</span> <span class="n">J</span></div>
 
 
 </pre></div>

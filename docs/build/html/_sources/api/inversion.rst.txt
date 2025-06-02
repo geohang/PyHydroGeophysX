@@ -1,42 +1,45 @@
-PyHydroGeophysX.inversion
-=========================
-
-.. automodule:: PyHydroGeophysX.inversion
-   :members:
-   :undoc-members:
-   :show-inheritance:
+inversion package
+=================
 
 Submodules
 ----------
 
-PyHydroGeophysX.inversion.base module
--------------------------------------
+inversion.base module
+---------------------
 
-.. automodule:: PyHydroGeophysX.inversion.base
+.. automodule:: inversion.base
    :members:
    :undoc-members:
    :show-inheritance:
 
-PyHydroGeophysX.inversion.ert\_inversion module
------------------------------------------------
+inversion.ert\_inversion module
+-------------------------------
 
-.. automodule:: PyHydroGeophysX.inversion.ert_inversion
+.. automodule:: inversion.ert_inversion
    :members:
    :undoc-members:
    :show-inheritance:
 
-PyHydroGeophysX.inversion.time\_lapse module
---------------------------------------------
+inversion.time\_lapse module
+----------------------------
 
-.. automodule:: PyHydroGeophysX.inversion.time_lapse
+.. automodule:: inversion.time_lapse
    :members:
    :undoc-members:
    :show-inheritance:
 
-PyHydroGeophysX.inversion.windowed module
------------------------------------------
+inversion.windowed module
+-------------------------
 
-.. automodule:: PyHydroGeophysX.inversion.windowed
+.. automodule:: inversion.windowed
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: inversion
    :members:
    :undoc-members:
    :show-inheritance:

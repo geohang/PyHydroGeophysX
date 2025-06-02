@@ -11,7 +11,7 @@
       <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
-    <link rel="canonical" href="https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/forward/srt_forward.html" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/forward/srt_forward.html" />
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -51,7 +51,7 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -88,471 +88,268 @@
              
   <h1>Source code for PyHydroGeophysX.forward.srt_forward</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Forward modeling utilities for Seismic Refraction Tomography (SRT) using PyGIMLi.</span>
-
-<span class="sd">This module provides a class `SeismicForwardModeling` to encapsulate SRT forward</span>
-<span class="sd">modeling operations, primarily focused on travel time calculations. It includes</span>
-<span class="sd">functionality for generating synthetic seismic refraction data and a helper</span>
-<span class="sd">function for plotting first arrival travel times.</span>
+<span class="sd">Forward modeling utilities for Seismic Refraction Tomography (SRT).</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
-<span class="kn">import</span> <span class="nn">pygimli.physics.traveltime</span> <span class="k">as</span> <span class="nn">tt</span> <span class="c1"># Travel time modeling specific tools</span>
-<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">TravelTimeManager</span> <span class="c1"># Main manager class for travel time physics</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span> <span class="c1"># Dict not used currently</span>
+<span class="kn">import</span> <span class="nn">pygimli.physics.traveltime</span> <span class="k">as</span> <span class="nn">tt</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">TravelTimeManager</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
 
 
 <div class="viewcode-block" id="SeismicForwardModeling"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling">[docs]</a><span class="k">class</span> <span class="nc">SeismicForwardModeling</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A class to perform Seismic Refraction Tomography (SRT) forward modeling using PyGIMLi.</span>
-
-<span class="sd">    This class wraps PyGIMLi&#39;s `TravelTimeManager` and its associated forward operator</span>
-<span class="sd">    to compute synthetic travel times based on a given velocity (or slowness) model</span>
-<span class="sd">    and measurement scheme. It also provides a method to generate synthetic datasets.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for forward modeling of Seismic Refraction Tomography (SRT) data.&quot;&quot;&quot;</span>
     
 <div class="viewcode-block" id="SeismicForwardModeling.__init__"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span> <span class="n">scheme</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the SeismicForwardModeling class.</span>
-
+<span class="sd">        Initialize seismic forward modeling.</span>
+<span class="sd">        </span>
 <span class="sd">        Args:</span>
-<span class="sd">            mesh (pg.Mesh): A PyGIMLi mesh object representing the subsurface model domain.</span>
-<span class="sd">                            The mesh should be suitable for seismic travel time calculation.</span>
-<span class="sd">            scheme (Optional[pg.DataContainer], optional):</span>
-<span class="sd">                A PyGIMLi DataContainer object defining the seismic survey scheme</span>
-<span class="sd">                (shot and receiver positions). If provided, it&#39;s set on the</span>
-<span class="sd">                TravelTimeManager. Defaults to None.</span>
+<span class="sd">            mesh: PyGIMLI mesh for forward modeling</span>
+<span class="sd">            scheme: Seismic data scheme</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;mesh must be a PyGIMLi pg.Mesh object.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">scheme</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">scheme</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;scheme must be a PyGIMLi pg.DataContainer object or None.&quot;</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span> <span class="o">=</span> <span class="n">mesh</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">scheme</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">]</span> <span class="o">=</span> <span class="n">scheme</span>
-        
-        <span class="c1"># Initialize PyGIMLi&#39;s TravelTimeManager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scheme</span> <span class="o">=</span> <span class="n">scheme</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">TravelTimeManager</span><span class="p">()</span>
         
-        <span class="c1"># Associate the mesh with the manager. The manager internally sets up the forward operator (fop).</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span>
-        <span class="c1"># Potential Issue: Mesh quality and type (e.g., triangular elements) are important for</span>
-        <span class="c1"># travel time calculations. Consider adding checks or recommendations.</span>
+        <span class="k">if</span> <span class="n">scheme</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">scheme</span><span class="p">)</span>
         
-        <span class="c1"># If a data scheme is provided, associate it with the manager.</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheme</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scheme</span><span class="p">)</span></div>
-            <span class="c1"># This sets the scheme for the manager&#39;s forward operator (fop).</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span></div>
     
 <div class="viewcode-block" id="SeismicForwardModeling.set_scheme"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.set_scheme">[docs]</a>    <span class="k">def</span> <span class="nf">set_scheme</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scheme</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Set or update the seismic data scheme for forward modeling.</span>
-
+<span class="sd">        Set seismic data scheme for forward modeling.</span>
+<span class="sd">        </span>
 <span class="sd">        Args:</span>
-<span class="sd">            scheme (pg.DataContainer): The PyGIMLi DataContainer defining the seismic</span>
-<span class="sd">                                       shot and receiver configurations.</span>
+<span class="sd">            scheme: Seismic data scheme</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">scheme</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;scheme must be a PyGIMLi pg.DataContainer object.&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scheme</span> <span class="o">=</span> <span class="n">scheme</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scheme</span><span class="p">)</span> <span class="c1"># Updates the scheme in the TravelTimeManager</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">scheme</span><span class="p">)</span></div>
     
 <div class="viewcode-block" id="SeismicForwardModeling.set_mesh"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.set_mesh">[docs]</a>    <span class="k">def</span> <span class="nf">set_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Set or update the PyGIMLi mesh for forward modeling.</span>
-
+<span class="sd">        Set mesh for forward modeling.</span>
+<span class="sd">        </span>
 <span class="sd">        Args:</span>
-<span class="sd">            mesh (pg.Mesh): The PyGIMLi mesh object.</span>
+<span class="sd">            mesh: PyGIMLI mesh</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;mesh must be a PyGIMLi pg.Mesh object.&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span> <span class="c1"># Updates the mesh in the TravelTimeManager</span></div>
-        <span class="c1"># Potential Issue: If a scheme was already set, ensure its compatibility</span>
-        <span class="c1"># with the new mesh (e.g., sensor positions).</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="SeismicForwardModeling.forward"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">is_slowness</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="SeismicForwardModeling.forward"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">velocity_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">slowness</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Compute the forward seismic response (travel times) for a given model.</span>
-
-<span class="sd">        The model can be provided as either velocity [m/s] or slowness [s/m].</span>
-
+<span class="sd">        Compute forward response for a given velocity model.</span>
+<span class="sd">        </span>
 <span class="sd">        Args:</span>
-<span class="sd">            model_values (np.ndarray): A 1D NumPy array representing the seismic property</span>
-<span class="sd">                                     (slowness or velocity) for each cell in the mesh.</span>
-<span class="sd">            is_slowness (bool, optional): If True, `model_values` are interpreted as slowness [s/m].</span>
-<span class="sd">                                       If False, `model_values` are interpreted as velocity [m/s]</span>
-<span class="sd">                                       and will be converted to slowness (1/velocity).</span>
-<span class="sd">                                       Defaults to True.</span>
-
+<span class="sd">            velocity_model: Velocity model values (or slowness if slowness=True)</span>
+<span class="sd">            slowness: Whether velocity_model is slowness (1/v)</span>
+<span class="sd">            </span>
 <span class="sd">        Returns:</span>
-<span class="sd">            np.ndarray: A NumPy array of the computed travel times [s] for the</span>
-<span class="sd">                        shot-receiver pairs defined in the scheme.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            RuntimeError: If the data scheme is not set on the manager.</span>
-<span class="sd">            ValueError: If `model_values` contains non-positive velocities when `is_slowness` is False.</span>
+<span class="sd">            Forward response (travel times)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheme</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># The manager&#39;s forward operator (fop) might not be correctly initialized</span>
-            <span class="c1"># or might not know the number of data points if scheme is missing.</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Seismic data scheme is not set. Call set_scheme() before forward modeling.&quot;</span><span class="p">)</span>
-
-        <span class="n">slowness_model_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_slowness</span><span class="p">:</span>
-            <span class="c1"># Convert velocity model to slowness model (s = 1/v)</span>
-            <span class="c1"># Potential Issue: Division by zero or negative velocities.</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">model_values</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Velocity model contains non-positive values, cannot convert to slowness.&quot;</span><span class="p">)</span>
-            <span class="n">slowness_model_values</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">model_values</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">slowness</span><span class="p">:</span>
+            <span class="c1"># Convert velocity to slowness</span>
+            <span class="n">slowness_values</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">velocity_model</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">slowness_model_values</span> <span class="o">=</span> <span class="n">model_values</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">slowness_model_values</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-                <span class="c1"># Slowness should also be positive for physical travel times.</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Slowness model contains non-positive values. This may lead to errors or non-physical travel times.&quot;</span><span class="p">)</span>
+            <span class="n">slowness_values</span> <span class="o">=</span> <span class="n">velocity_model</span>
         
-        <span class="c1"># PyGIMLi&#39;s travel time forward operator expects slowness.</span>
-        <span class="c1"># The `self.manager.fop` is the forward operator instance.</span>
-        <span class="c1"># `response()` takes the slowness model as a pg.Vector or NumPy array.</span>
-        <span class="c1"># Ensure the model_values array is flat, as expected by fop.response.</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="c1"># Ensure model is 1D array (ravel) and of type pg.Vector if required by specific PyGIMLi versions,</span>
-            <span class="c1"># though fop.response often handles numpy arrays directly.</span>
-            <span class="c1"># For safety, one could convert: pg.Vector(slowness_model_values.ravel())</span>
-            <span class="n">travel_times_pg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">fop</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">slowness_model_values</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">travel_times_pg</span><span class="p">)</span> <span class="c1"># Convert to NumPy array</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="c1"># Catch potential errors from PyGIMLi&#39;s forward calculation</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PyGIMLi forward modeling (response calculation) failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+        <span class="c1"># Calculate response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">fop</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">slowness_values</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">response</span></div>
 
     
 <div class="viewcode-block" id="SeismicForwardModeling.create_synthetic_data"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.create_synthetic_data">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">create_synthetic_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> 
-                            <span class="n">sensor_x_coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
-                            <span class="n">surface_topography_points</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># e.g., [[x1,z1], [x2,z2]...]</span>
-                            <span class="n">fwd_mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
-                            <span class="n">velocity_model_values</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                            <span class="n">model_is_slowness</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Input model type</span>
-                            <span class="n">shot_spacing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span> <span class="c1"># Renamed from shot_distance for clarity</span>
-                            <span class="n">noise_relative_level</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span> 
-                            <span class="n">noise_absolute_val</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span><span class="p">,</span> <span class="c1"># Changed from 1e-5 for more realistic time unit</span>
-                            <span class="n">save_data_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
-                            <span class="n">show_travel_time_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Renamed for clarity</span>
-                            <span class="n">verbose_simulation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Renamed for clarity</span>
-                            <span class="n">random_seed_value</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># Renamed for clarity</span>
-                            <span class="n">mesh_x_boundary_ext</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50.0</span><span class="p">,</span> <span class="c1"># Renamed, more descriptive</span>
-                            <span class="n">mesh_y_boundary_ext</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50.0</span>  <span class="c1"># Renamed</span>
-                            <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]:</span>
+                            <span class="n">sensor_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+                            <span class="n">surface_points</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">velocity_model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">slowness</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="n">shot_distance</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+                            <span class="n">noise_level</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span> 
+                            <span class="n">noise_abs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.00001</span><span class="p">,</span>
+                            <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">show_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create synthetic seismic refraction tomography (SRT) data.</span>
-
-<span class="sd">        This class method simulates an SRT survey by:</span>
-<span class="sd">        1. Defining geophone positions (potentially on a given surface topography).</span>
-<span class="sd">        2. Creating a measurement scheme with shots at specified intervals.</span>
-<span class="sd">        3. Generating or using a provided mesh for the forward calculation.</span>
-<span class="sd">        4. Assigning velocity/slowness values to the mesh cells.</span>
-<span class="sd">        5. Computing synthetic travel times using the SRT forward operator.</span>
-<span class="sd">        6. Optionally adding Gaussian noise to the synthetic travel times.</span>
-<span class="sd">        7. Optionally saving the data and displaying a plot of the first arrivals.</span>
+<span class="sd">        Create synthetic seismic data using forward modeling.</span>
+<span class="sd">        </span>
+<span class="sd">        This method simulates a seismic survey by placing geophones along a surface,</span>
+<span class="sd">        creating a measurement scheme, and performing forward modeling to generate</span>
+<span class="sd">        synthetic travel time data.</span>
 <span class="sd">        </span>
 <span class="sd">        Args:</span>
-<span class="sd">            sensor_x_coords (np.ndarray): 1D NumPy array of X-coordinates for geophone locations [m].</span>
-<span class="sd">            surface_topography_points (Optional[np.ndarray], optional):</span>
-<span class="sd">                2D NumPy array of [x, z] coordinates defining the surface topography.</span>
-<span class="sd">                If provided, geophone Z-coordinates will be interpolated from this surface.</span>
-<span class="sd">                If None, geophones are placed on a flat surface (Z=0). Defaults to None.</span>
-<span class="sd">            fwd_mesh (Optional[pg.Mesh], optional): A pre-defined PyGIMLi mesh for forward modeling.</span>
-<span class="sd">                                                    If None, a simple 2D mesh is created. Defaults to None.</span>
-<span class="sd">            velocity_model_values (Optional[np.ndarray], optional):</span>
-<span class="sd">                Seismic property values for each cell of `fwd_mesh`.</span>
-<span class="sd">                Interpreted as velocity [m/s] or slowness [s/m] based on `model_is_slowness`.</span>
-<span class="sd">                If None, a default velocity model (increasing with depth) is used. Defaults to None.</span>
-<span class="sd">            model_is_slowness (bool, optional): If True, `velocity_model_values` are slowness [s/m].</span>
-<span class="sd">                                                If False, they are velocity [m/s]. Defaults to False.</span>
-<span class="sd">            shot_spacing (float, optional): Distance between shot points along the geophone line [m].</span>
-<span class="sd">                                           Defaults to 5.0.</span>
-<span class="sd">            noise_relative_level (float, optional): Relative level of Gaussian noise to add to travel times</span>
-<span class="sd">                                                    (e.g., 0.05 for 5%). Defaults to 0.05.</span>
-<span class="sd">            noise_absolute_val (float, optional): Absolute level of Gaussian noise to add to travel times [s].</span>
-<span class="sd">                                                 Defaults to 1e-5 s (0.01 ms).</span>
-<span class="sd">            save_data_path (Optional[str], optional): File path to save the generated synthetic data.</span>
-<span class="sd">                                                      If None, data is not saved. Defaults to None.</span>
-<span class="sd">            show_travel_time_data (bool, optional): If True, displays a plot of the first arrival picks.</span>
-<span class="sd">                                                   Defaults to False.</span>
-<span class="sd">            verbose_simulation (bool, optional): If True, PyGIMLi&#39;s TravelTimeManager may print progress.</span>
-<span class="sd">                                                 Defaults to False.</span>
-<span class="sd">            random_seed_value (Optional[int], optional): Seed for random number generator for reproducible noise.</span>
-<span class="sd">                                                        If None, noise varies. Defaults to None.</span>
-<span class="sd">            mesh_x_boundary_ext (float, optional): Horizontal boundary extension for auto-generated mesh [m].</span>
-<span class="sd">                                                   Defaults to 50.0.</span>
-<span class="sd">            mesh_y_boundary_ext (float, optional): Vertical boundary extension for auto-generated mesh [m].</span>
-<span class="sd">                                                   Defaults to 50.0.</span>
+<span class="sd">            sensor_x: X-coordinates of geophones</span>
+<span class="sd">            surface_points: Surface coordinates for placing geophones [[x,y],...] </span>
+<span class="sd">                            If None, geophones will be placed on flat surface</span>
+<span class="sd">            mesh: Mesh for forward modeling</span>
+<span class="sd">            velocity_model: Velocity model values</span>
+<span class="sd">            slowness: Whether velocity_model is slowness (1/v)</span>
+<span class="sd">            shot_distance: Distance between shots</span>
+<span class="sd">            noise_level: Level of relative noise to add</span>
+<span class="sd">            noise_abs: Level of absolute noise to add</span>
+<span class="sd">            save_path: Path to save synthetic data (if None, does not save)</span>
+<span class="sd">            show_data: Whether to display data after creation</span>
+<span class="sd">            verbose: Whether to show verbose output</span>
+<span class="sd">            seed: Random seed for noise generation</span>
 <span class="sd">            </span>
 <span class="sd">        Returns:</span>
-<span class="sd">            Tuple[pg.DataContainer, pg.Mesh]:</span>
-<span class="sd">                - synth_srt_data (pg.DataContainer): Generated synthetic SRT data with travel times and error estimates.</span>
-<span class="sd">                - simulation_mesh (pg.Mesh): The PyGIMLi mesh used for the simulation.</span>
-<span class="sd">        </span>
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: For invalid inputs (e.g., empty sensor_x_coords, model/mesh dimension mismatch).</span>
+<span class="sd">            Tuple of (synthetic seismic data container, simulation mesh)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sensor_x_coords</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="n">sensor_x_coords</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">sensor_x_coords</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;sensor_x_coords must be a 1D NumPy array with at least one geophone position.&quot;</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">random_seed_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">random_seed_value</span><span class="p">)</span>
-            <span class="n">pg</span><span class="o">.</span><span class="n">Core</span><span class="o">.</span><span class="n">RNG</span><span class="p">()</span><span class="o">.</span><span class="n">setSeed</span><span class="p">(</span><span class="n">random_seed_value</span><span class="p">)</span> <span class="c1"># For PyGIMLi&#39;s internal RNG</span>
-
-        <span class="c1"># Create seismic data scheme (DataContainer for SRT)</span>
-        <span class="c1"># tt.createRAData generates a scheme with shots and receivers based on sensor_x and shot_spacing.</span>
-        <span class="c1"># It assumes geophones are also shots unless specified otherwise.</span>
-        <span class="c1"># &#39;RA&#39; likely stands for Refraction Array or similar.</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">scheme</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">createRAData</span><span class="p">(</span><span class="n">sensors</span><span class="o">=</span><span class="n">sensor_x_coords</span><span class="p">,</span> <span class="n">shotDistance</span><span class="o">=</span><span class="n">shot_spacing</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to create seismic scheme with PyGIMLi: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         
-        <span class="c1"># Adjust sensor Z-coordinates if surface topography is provided</span>
-        <span class="k">if</span> <span class="n">surface_topography_points</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">surface_topography_points</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="n">surface_topography_points</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">surface_topography_points</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;surface_topography_points must be a 2D NumPy array of [x, z] coordinates.&quot;</span><span class="p">)</span>
+        <span class="c1"># Create seismic scheme (Refraction Data)</span>
+        <span class="n">scheme</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">createRAData</span><span class="p">(</span><span class="n">sensor_x</span><span class="p">,</span> <span class="n">shotDistance</span><span class="o">=</span><span class="n">shot_distance</span><span class="p">)</span>
+        
+        <span class="c1"># If surface points are provided, place geophones on the surface</span>
+        <span class="k">if</span> <span class="n">surface_points</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sensor_positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">sensor_x</span><span class="p">),</span> <span class="mi">2</span><span class="p">))</span>
             
-            <span class="n">sensor_positions_adjusted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">sensor_x_coords</span><span class="p">),</span> <span class="mi">2</span><span class="p">))</span>
-            <span class="c1"># Interpolate Z for each sensor X from the provided surface points</span>
-            <span class="c1"># This simple interpolation finds the Z of the nearest X in surface_topography_points.</span>
-            <span class="c1"># More sophisticated interpolation (e.g., linear) could be used if surface_topography_points are sparse.</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sx_coord</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sensor_x_coords</span><span class="p">):</span>
-                <span class="n">distances_to_surface_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">surface_topography_points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">sx_coord</span><span class="p">)</span>
-                <span class="n">closest_surface_point_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">distances_to_surface_x</span><span class="p">)</span>
-                <span class="n">sensor_positions_adjusted</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">surface_topography_points</span><span class="p">[</span><span class="n">closest_surface_point_idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="c1"># Use actual surface X</span>
-                <span class="n">sensor_positions_adjusted</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">surface_topography_points</span><span class="p">[</span><span class="n">closest_surface_point_idx</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="c1"># Interpolated Z</span>
+            <span class="c1"># Find the closest point on the surface for each geophone</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sensor_x</span><span class="p">):</span>
+                <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">surface_points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">sx</span><span class="p">)</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">distances</span><span class="p">)</span>
+                <span class="n">sensor_positions</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">surface_points</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+                <span class="n">sensor_positions</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">surface_points</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+                
+            <span class="c1"># Set sensor positions</span>
+            <span class="n">scheme</span><span class="o">.</span><span class="n">setSensors</span><span class="p">(</span><span class="n">sensor_positions</span><span class="p">)</span>
+        
+        <span class="c1"># Initialize manager</span>
+        <span class="n">manager</span> <span class="o">=</span> <span class="n">TravelTimeManager</span><span class="p">()</span>
+        
+        <span class="c1"># If no mesh is provided, create a simple one</span>
+        <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">surface_points</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># Create a mesh based on the surface profile</span>
+                <span class="n">x_min</span><span class="p">,</span> <span class="n">x_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">sensor_positions</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">-</span> <span class="mi">10</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">sensor_positions</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="mi">10</span>
+                <span class="n">y_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">sensor_positions</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="mi">20</span>
+                
+                <span class="c1"># Create a simple grid</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">createGrid</span><span class="p">(</span>
+                    <span class="n">x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">x_min</span><span class="p">,</span> <span class="n">x_max</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span>
+                    <span class="n">y</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">y_min</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">xbound</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Create a simple mesh for flat surface</span>
+                <span class="n">x_min</span><span class="p">,</span> <span class="n">x_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">sensor_x</span><span class="p">)</span> <span class="o">-</span> <span class="mi">10</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">sensor_x</span><span class="p">)</span> <span class="o">+</span> <span class="mi">10</span>
+                
+                <span class="c1"># Create a simple grid</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">createGrid</span><span class="p">(</span>
+                    <span class="n">x</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">x_min</span><span class="p">,</span> <span class="n">x_max</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span>
+                    <span class="n">y</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">xbound</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+        
+        <span class="c1"># Create velocity model if not provided</span>
+        <span class="k">if</span> <span class="n">velocity_model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Create a simple velocity model that increases with depth</span>
+            <span class="n">velocity_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span>
+            <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
             
-            <span class="n">scheme</span><span class="o">.</span><span class="n">setSensors</span><span class="p">(</span><span class="n">sensor_positions_adjusted</span><span class="p">)</span>
-            <span class="c1"># Note: Shot positions also need to be updated if they are derived from sensor positions</span>
-            <span class="c1"># and topography is applied. createRAData might place shots at sensor locations by default.</span>
-            <span class="c1"># If shots are separate, their Z would also need adjustment.</span>
-            <span class="c1"># For now, assuming shots are at sensors and setSensors updates all relevant positions.</span>
-
-        <span class="n">simulation_mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span>
-        <span class="c1"># Prepare mesh for forward modeling</span>
-        <span class="k">if</span> <span class="n">fwd_mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fwd_mesh</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;fwd_mesh must be a PyGIMLi pg.Mesh object or None.&quot;</span><span class="p">)</span>
-            <span class="n">simulation_mesh</span> <span class="o">=</span> <span class="n">fwd_mesh</span>
-            <span class="c1"># As in ERT, user should handle markers if specific regions are needed.</span>
-            <span class="c1"># Defaulting all to marker 1 for SRT is common if model is cell-based.</span>
-            <span class="k">if</span> <span class="n">simulation_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">marker</span><span class="p">()</span> <span class="o">!=</span><span class="mi">0</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">simulation_mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">()):</span>
-                 <span class="n">simulation_mesh</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">simulation_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">(),</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="c1"># Velocity increases with depth</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">center</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">centers</span><span class="p">):</span>
+                <span class="n">velocity_model</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">500</span> <span class="o">+</span> <span class="mi">50</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        
+        <span class="c1"># Prepare slowness model</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">slowness</span><span class="p">:</span>
+            <span class="n">slowness_values</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">velocity_model</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Auto-create a 2D mesh if none provided</span>
-            <span class="n">min_x_sensor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">scheme</span><span class="o">.</span><span class="n">sensorPositions</span><span class="p">()[:,</span><span class="mi">0</span><span class="p">])</span> <span class="c1"># Use actual sensor positions after topography</span>
-            <span class="n">max_x_sensor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scheme</span><span class="o">.</span><span class="n">sensorPositions</span><span class="p">()[:,</span><span class="mi">0</span><span class="p">])</span>
-            <span class="n">min_z_sensor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">scheme</span><span class="o">.</span><span class="n">sensorPositions</span><span class="p">()[:,</span><span class="mi">1</span><span class="p">])</span> <span class="c1"># Min Z (could be max elevation if Z is up)</span>
-            <span class="c1"># max_z_sensor = np.max(scheme.sensorPositions()[:,1]) # Max Z (usually surface, e.g. 0)</span>
-
-            <span class="c1"># Define mesh extent slightly larger than survey line</span>
-            <span class="n">mesh_x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">min_x_sensor</span> <span class="o">-</span> <span class="n">mesh_x_boundary_ext</span> <span class="o">/</span> <span class="mf">5.0</span><span class="p">,</span> 
-                                        <span class="n">max_x_sensor</span> <span class="o">+</span> <span class="n">mesh_x_boundary_ext</span> <span class="o">/</span> <span class="mf">5.0</span><span class="p">,</span> 
-                                        <span class="mi">50</span><span class="p">)</span> <span class="c1"># Example discretization</span>
-            <span class="c1"># Mesh depth should extend below lowest sensor/topography point.</span>
-            <span class="c1"># If Z is elevation, y_coords might go from (min_z_sensor - depth_extent) to (max_z_sensor + surface_buffer).</span>
-            <span class="c1"># Assuming Z is depth-like (increases downwards) or elevation (increases upwards, surface near 0).</span>
-            <span class="c1"># Original code: y=np.linspace(-20, 0, 20) for flat.</span>
-            <span class="c1"># For topography: y_min = np.min(sensor_positions[:, 1]) - 20</span>
-            <span class="n">mesh_z_min</span> <span class="o">=</span> <span class="n">min_z_sensor</span> <span class="o">-</span> <span class="n">mesh_y_boundary_ext</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="c1"># Extends deeper</span>
-            <span class="n">mesh_z_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">scheme</span><span class="o">.</span><span class="n">sensorPositions</span><span class="p">()[:,</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">mesh_y_boundary_ext</span> <span class="o">/</span> <span class="mf">10.0</span> <span class="c1"># Small buffer above highest sensor</span>
-            <span class="n">mesh_z_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">mesh_z_min</span><span class="p">,</span> <span class="n">mesh_z_max</span><span class="p">,</span> <span class="mi">25</span><span class="p">)</span> <span class="c1"># Example discretization for Z</span>
-
-            <span class="n">grid_core</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">createGrid</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">mesh_x_coords</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">mesh_z_coords</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Default marker 1 for cells</span>
-            <span class="n">simulation_mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">grid_core</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="c1"># Boundary marker different from cells</span>
-                                                                  <span class="n">xbound</span><span class="o">=</span><span class="n">mesh_x_boundary_ext</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="n">mesh_y_boundary_ext</span><span class="p">)</span>
+            <span class="n">slowness_values</span> <span class="o">=</span> <span class="n">velocity_model</span>
         
-        <span class="c1"># Prepare slowness/velocity model for the simulation_mesh</span>
-        <span class="k">if</span> <span class="n">velocity_model_values</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No velocity_model_values provided. Using default model (500 m/s + 50*abs(depth)).&quot;</span><span class="p">)</span>
-            <span class="n">slowness_for_fwd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">simulation_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span>
-            <span class="n">cell_centers_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">simulation_mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span> <span class="c1"># Get cell centers as NumPy array</span>
-            <span class="c1"># Velocity increases with depth (abs(z_coord) assuming z is neg depth or elevation)</span>
-            <span class="c1"># If z is positive depth, then (500 + 50*z_coord)</span>
-            <span class="c1"># Assuming PyGIMLi&#39;s y is depth-like for createGrid, or z for general mesh.</span>
-            <span class="c1"># Let&#39;s assume cell_centers_np[:,1] is the vertical coordinate.</span>
-            <span class="c1"># If y is elevation (surface at 0, deeper is negative): 500 + 50 * abs(centers_y)</span>
-            <span class="c1"># If y is depth (surface at 0, deeper is positive): 500 + 50 * centers_y</span>
-            <span class="c1"># Default createGrid y goes from -20 to 0. So abs(y) makes sense.</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cell_center_y</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cell_centers_np</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]):</span>
-                <span class="n">velocity</span> <span class="o">=</span> <span class="mf">500.0</span> <span class="o">+</span> <span class="mf">50.0</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">cell_center_y</span><span class="p">)</span>
-                <span class="n">slowness_for_fwd</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">velocity</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">velocity_model_values</span><span class="p">)</span> <span class="o">!=</span> <span class="n">simulation_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Length of velocity_model_values (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">velocity_model_values</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match &quot;</span>
-                                 <span class="sa">f</span><span class="s2">&quot;cell count of simulation_mesh (</span><span class="si">{</span><span class="n">simulation_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">model_is_slowness</span><span class="p">:</span>
-                <span class="n">slowness_for_fwd</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">velocity_model_values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">slowness_for_fwd</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Slowness model contains non-positive values.&quot;</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span> <span class="c1"># Input is velocity</span>
-                <span class="n">velo_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">velocity_model_values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">velo_np</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Velocity model contains non-positive values.&quot;</span><span class="p">)</span>
-                <span class="n">slowness_for_fwd</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">velo_np</span>
+        <span class="c1"># Simulate data</span>
+        <span class="n">synth_data</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span>
+            <span class="n">slowness</span><span class="o">=</span><span class="n">slowness_values</span><span class="p">,</span>
+            <span class="n">scheme</span><span class="o">=</span><span class="n">scheme</span><span class="p">,</span>
+            <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+            <span class="n">noiseLevel</span><span class="o">=</span><span class="n">noise_level</span><span class="p">,</span>
+            <span class="n">noiseAbs</span><span class="o">=</span><span class="n">noise_abs</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span>
+        <span class="p">)</span>
         
-        <span class="c1"># Initialize TravelTimeManager for simulation</span>
-        <span class="c1"># The class `cls` is used here to call its own constructor if this were part of the class.</span>
-        <span class="c1"># However, create_synthetic_data is a @classmethod, so `cls` refers to `SeismicForwardModeling`.</span>
-        <span class="c1"># An instance is not strictly needed if using `manager.simulate` static-like.</span>
-        <span class="c1"># The original created a new `manager = TravelTimeManager()`. This is cleaner.</span>
-        <span class="n">sim_manager</span> <span class="o">=</span> <span class="n">TravelTimeManager</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose_simulation</span><span class="p">)</span>
+        <span class="c1"># Save data if a path is provided</span>
+        <span class="k">if</span> <span class="n">save_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">synth_data</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">save_path</span><span class="p">)</span>
         
-        <span class="c1"># Simulate synthetic travel time data</span>
-        <span class="c1"># `manager.simulate` is a high-level utility that sets mesh, scheme, slowness, and runs fop.</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">synth_srt_data</span> <span class="o">=</span> <span class="n">sim_manager</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span>
-                <span class="n">slowness</span><span class="o">=</span><span class="n">slowness_for_fwd</span><span class="p">,</span> <span class="c1"># Expects slowness</span>
-                <span class="n">scheme</span><span class="o">=</span><span class="n">scheme</span><span class="p">,</span>
-                <span class="n">mesh</span><span class="o">=</span><span class="n">simulation_mesh</span><span class="p">,</span>
-                <span class="n">noiseLevel</span><span class="o">=</span><span class="n">noise_relative_level</span><span class="p">,</span> <span class="c1"># Relative noise</span>
-                <span class="n">noiseAbs</span><span class="o">=</span><span class="n">noise_absolute_val</span><span class="p">,</span>          <span class="c1"># Absolute noise in seconds</span>
-                <span class="n">seed</span><span class="o">=</span><span class="n">random_seed_value</span> <span class="c1"># Pass seed to simulate for reproducibility</span>
-            <span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PyGIMLi simulate() method failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># Display data if requested</span>
+        <span class="k">if</span> <span class="n">show_data</span><span class="p">:</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+            <span class="n">tt</span><span class="o">.</span><span class="n">drawFirstPicks</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">(),</span> <span class="n">synth_data</span><span class="p">)</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
         
-        <span class="c1"># `simulate` already adds noise and populates &#39;t&#39; and &#39;err&#39;.</span>
-        
-        <span class="k">if</span> <span class="n">save_data_path</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">synth_srt_data</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">save_data_path</span><span class="p">)</span>
-                <span class="c1"># print(f&quot;Synthetic SRT data saved to: {save_data_path}&quot;)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error saving synthetic SRT data to &#39;</span><span class="si">{</span><span class="n">save_data_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        
-        <span class="k">if</span> <span class="n">show_travel_time_data</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="c1"># Use the static plotting method also defined in this file for consistency.</span>
-                <span class="c1"># Need a matplotlib axes object.</span>
-                <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span> <span class="c1"># Import locally for plotting</span>
-                <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">6</span><span class="p">))</span>
-                <span class="bp">cls</span><span class="o">.</span><span class="n">draw_first_picks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">synth_srt_data</span><span class="p">)</span> <span class="c1"># Call staticmethod with cls</span>
-                <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Synthetic First Arrival Travel Times&quot;</span><span class="p">)</span>
-                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not display travel time data plot: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        
-        <span class="k">return</span> <span class="n">synth_srt_data</span><span class="p">,</span> <span class="n">simulation_mesh</span></div>
+        <span class="k">return</span> <span class="n">synth_data</span><span class="p">,</span> <span class="n">mesh</span></div>
     
 
-<div class="viewcode-block" id="SeismicForwardModeling.draw_first_picks"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.draw_first_picks">[docs]</a>    <span class="nd">@staticmethod</span> <span class="c1"># This method does not depend on instance state, so it&#39;s a staticmethod.</span>
-    <span class="k">def</span> <span class="nf">draw_first_picks</span><span class="p">(</span><span class="n">ax</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="c1"># matplotlib.axes.Axes</span>
-                         <span class="n">data</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">,</span> 
-                         <span class="n">travel_times</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># Renamed from tt for clarity</span>
-                         <span class="n">plot_app_velocity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Renamed from plotva</span>
-                         <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span> <span class="c1"># Pass through to ax.plot</span>
-                        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span> <span class="c1"># matplotlib.axes.Axes</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Plot first arrival travel times (or apparent velocities) for seismic refraction data.</span>
-
-<span class="sd">        This function visualizes travel time curves for each shot point.</span>
+<div class="viewcode-block" id="SeismicForwardModeling.draw_first_picks"><a class="viewcode-back" href="../../../api/forward.html#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling.draw_first_picks">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">draw_first_picks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">tt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plotva</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot first arrivals as lines.</span>
 <span class="sd">        </span>
-<span class="sd">        Args:</span>
-<span class="sd">            ax (matplotlib.axes.Axes): The matplotlib Axes object to plot on.</span>
-<span class="sd">            data (pg.DataContainer): PyGIMLi DataContainer containing the seismic survey layout</span>
-<span class="sd">                                     (sensor positions &#39;x&#39;, &#39;z&#39;; shot &#39;s&#39;; geophone &#39;g&#39; indices).</span>
-<span class="sd">                                     It should also contain travel times &#39;t&#39; if `travel_times` is None.</span>
-<span class="sd">            travel_times (Optional[np.ndarray], optional):</span>
-<span class="sd">                Array of travel times [s] to plot. If None, uses &#39;t&#39; from `data`. Defaults to None.</span>
-<span class="sd">            plot_app_velocity (bool, optional): If True, plots apparent velocity (distance/travel_time)</span>
-<span class="sd">                                                instead of travel times. Defaults to False.</span>
-<span class="sd">            **kwargs (Any): Additional keyword arguments passed directly to `ax.plot()`</span>
-<span class="sd">                            for customizing line appearance (e.g., color, linestyle).</span>
-<span class="sd">                            Default style is black dashed lines.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ax : matplotlib.axes</span>
+<span class="sd">            axis to draw the lines in</span>
+<span class="sd">        data : :gimliapi:`GIMLI::DataContainer`</span>
+<span class="sd">            data containing shots (&quot;s&quot;), geophones (&quot;g&quot;) and traveltimes (&quot;t&quot;)</span>
+<span class="sd">        tt : array, optional</span>
+<span class="sd">            traveltimes to use instead of data(&quot;t&quot;)</span>
+<span class="sd">        plotva : bool, optional</span>
+<span class="sd">            plot apparent velocity instead of traveltimes</span>
 <span class="sd">        </span>
-<span class="sd">        Returns:</span>
-<span class="sd">            matplotlib.axes.Axes: The modified matplotlib Axes object with the plot.</span>
+<span class="sd">        Return</span>
+<span class="sd">        ------</span>
+<span class="sd">        ax : matplotlib.axes</span>
+<span class="sd">            the modified axis</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Extract sensor (geophone) X-coordinates from the data container</span>
-        <span class="c1"># pg.x(data) typically returns all unique X positions of sensors.</span>
-        <span class="c1"># &#39;s&#39; and &#39;g&#39; in data are indices referring to these sensor positions.</span>
-        <span class="c1"># A more robust way to get all unique sensor X positions:</span>
-        <span class="c1"># sensor_x_all = np.unique(np.array(data.sensorPositions()[:,0]))</span>
-        <span class="c1"># However, pg.x(data) is a shortcut if data is simple.</span>
-        <span class="c1"># For safety, directly use sensorPositions:</span>
-        <span class="n">sensor_x_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">sensorPositions</span><span class="p">()[:,</span><span class="mi">0</span><span class="p">])</span> <span class="c1"># Get X directly from sensor positions</span>
+        <span class="c1"># Extract coordinates</span>
+        <span class="n">px</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">x</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">gx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">px</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">g</span><span class="p">)]</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="s2">&quot;g&quot;</span><span class="p">)])</span>
+        <span class="n">sx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">px</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">)]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="s2">&quot;s&quot;</span><span class="p">)])</span>
         
-        <span class="c1"># Get X-coordinates for geophones (g) and shots (s) for each measurement</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">receiver_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;g&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
-            <span class="n">shot_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;s&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data container missing required fields (&#39;g&#39; or &#39;s&#39;): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-        <span class="n">gx</span> <span class="o">=</span> <span class="n">sensor_x_all</span><span class="p">[</span><span class="n">receiver_indices</span><span class="p">]</span> <span class="c1"># X-coordinates of geophones for each datum</span>
-        <span class="n">sx</span> <span class="o">=</span> <span class="n">sensor_x_all</span><span class="p">[</span><span class="n">shot_indices</span><span class="p">]</span>     <span class="c1"># X-coordinates of shots for each datum</span>
+        <span class="c1"># Get traveltimes</span>
+        <span class="k">if</span> <span class="n">tt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">plotva</span><span class="p">:</span>
+            <span class="n">tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">gx</span> <span class="o">-</span> <span class="n">sx</span><span class="p">)</span> <span class="o">/</span> <span class="n">tt</span>
         
-        <span class="c1"># Get travel times to plot</span>
-        <span class="k">if</span> <span class="n">travel_times</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="s1">&#39;t&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Travel times &#39;t&#39; not found in data container and not provided via &#39;travel_times&#39; argument.&quot;</span><span class="p">)</span>
-            <span class="n">current_travel_times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">])</span>
+        <span class="c1"># Find unique source positions    </span>
+        <span class="n">uns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">sx</span><span class="p">)</span>
+        
+        <span class="c1"># Override kwargs with clean, minimalist style</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;color&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;black&#39;</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linestyle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;--&#39;</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linewidth&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.9</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;marker&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># No markers on the lines</span>
+        
+        <span class="c1"># Plot for each source</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">si</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">uns</span><span class="p">):</span>
+            <span class="n">ti</span> <span class="o">=</span> <span class="n">tt</span><span class="p">[</span><span class="n">sx</span> <span class="o">==</span> <span class="n">si</span><span class="p">]</span>
+            <span class="n">gi</span> <span class="o">=</span> <span class="n">gx</span><span class="p">[</span><span class="n">sx</span> <span class="o">==</span> <span class="n">si</span><span class="p">]</span>
+            <span class="n">ii</span> <span class="o">=</span> <span class="n">gi</span><span class="o">.</span><span class="n">argsort</span><span class="p">()</span>
+            
+            <span class="c1"># Plot line</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">gi</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">ti</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            
+            <span class="c1"># Add source marker as black square at top</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">si</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> 
+                    <span class="n">markeredgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">markeredgewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+        
+        <span class="c1"># Clean grid style</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;lightgray&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Set proper axis labels with units</span>
+        <span class="k">if</span> <span class="n">plotva</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Apparent velocity (m s$^{-1}$)&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">travel_times</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;s&#39;</span><span class="p">]):</span> <span class="c1"># Check consistency</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Provided &#39;travel_times&#39; length must match the number of data points in &#39;data&#39;.&quot;</span><span class="p">)</span>
-            <span class="n">current_travel_times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">travel_times</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Traveltime (s)&quot;</span><span class="p">)</span>
         
-        <span class="k">if</span> <span class="n">plot_app_velocity</span><span class="p">:</span>
-            <span class="c1"># Calculate apparent velocity: distance / time</span>
-            <span class="c1"># Distance is |geophone_x - shot_x|</span>
-            <span class="c1"># Avoid division by zero if time is zero (should not happen for physical data)</span>
-            <span class="n">delta_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">gx</span> <span class="o">-</span> <span class="n">sx</span><span class="p">)</span>
-            <span class="c1"># Prevent division by zero or very small travel times leading to huge velocities</span>
-            <span class="n">valid_tt_mask</span> <span class="o">=</span> <span class="n">current_travel_times</span> <span class="o">&gt;</span> <span class="mf">1e-9</span> <span class="c1"># Threshold for valid time</span>
-            <span class="n">plot_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">current_travel_times</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span> <span class="c1"># Default to NaN</span>
-            <span class="n">plot_values</span><span class="p">[</span><span class="n">valid_tt_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta_x</span><span class="p">[</span><span class="n">valid_tt_mask</span><span class="p">]</span> <span class="o">/</span> <span class="n">current_travel_times</span><span class="p">[</span><span class="n">valid_tt_mask</span><span class="p">]</span>
-            <span class="n">y_label</span> <span class="o">=</span> <span class="s2">&quot;Apparent Velocity (m/s)&quot;</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">plot_values</span> <span class="o">=</span> <span class="n">current_travel_times</span>
-            <span class="n">y_label</span> <span class="o">=</span> <span class="s2">&quot;Travel Time (s)&quot;</span>
-        
-        <span class="c1"># Find unique shot positions to iterate through shots</span>
-        <span class="n">unique_shot_x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">sx</span><span class="p">)</span>
-        
-        <span class="c1"># Default plotting style if not overridden by kwargs</span>
-        <span class="n">plot_style</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s1">&#39;color&#39;</span><span class="p">:</span> <span class="s1">&#39;black&#39;</span><span class="p">,</span>
-            <span class="s1">&#39;linestyle&#39;</span><span class="p">:</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span>
-            <span class="s1">&#39;linewidth&#39;</span><span class="p">:</span> <span class="mf">0.9</span><span class="p">,</span>
-            <span class="s1">&#39;marker&#39;</span><span class="p">:</span> <span class="kc">None</span> <span class="c1"># No markers on the lines themselves by default</span>
-        <span class="p">}</span>
-        <span class="n">plot_style</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1"># Allow user to override defaults</span>
-        
-        <span class="c1"># Plot travel time (or apparent velocity) curves for each shot</span>
-        <span class="k">for</span> <span class="n">shot_x_val</span> <span class="ow">in</span> <span class="n">unique_shot_x_coords</span><span class="p">:</span>
-            <span class="n">shot_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">sx</span> <span class="o">==</span> <span class="n">shot_x_val</span><span class="p">)</span> <span class="c1"># Mask for data from the current shot</span>
-            
-            <span class="n">current_shot_plot_values</span> <span class="o">=</span> <span class="n">plot_values</span><span class="p">[</span><span class="n">shot_mask</span><span class="p">]</span>
-            <span class="n">current_shot_geophone_x</span> <span class="o">=</span> <span class="n">gx</span><span class="p">[</span><span class="n">shot_mask</span><span class="p">]</span>
-            
-            <span class="c1"># Sort by geophone position for smooth line plotting</span>
-            <span class="n">sort_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">current_shot_geophone_x</span><span class="p">)</span>
-            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">current_shot_geophone_x</span><span class="p">[</span><span class="n">sort_indices</span><span class="p">],</span> <span class="n">current_shot_plot_values</span><span class="p">[</span><span class="n">sort_indices</span><span class="p">],</span> <span class="o">**</span><span class="n">plot_style</span><span class="p">)</span>
-            
-            <span class="c1"># Add a marker for the shot position itself (typically at t=0 or top of y-axis)</span>
-            <span class="c1"># Plotting shot marker at y=0 (or slightly offset if y-axis is inverted and starts at 0)</span>
-            <span class="c1"># If apparent velocity, y=0 might not be appropriate. Plot on actual axis.</span>
-            <span class="c1"># For travel times, y=0 makes sense.</span>
-            <span class="c1"># The original code plots shot marker at y=0.0</span>
-            <span class="n">y_shot_marker</span> <span class="o">=</span> <span class="mf">0.0</span>
-            <span class="k">if</span> <span class="n">plot_app_velocity</span> <span class="ow">and</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">:</span> <span class="c1"># If y-axis min is positive (typical for velocity)</span>
-                 <span class="n">y_shot_marker</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># Place at bottom of current y-axis view for visibility</span>
-            
-            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">shot_x_val</span><span class="p">,</span> <span class="n">y_shot_marker</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> 
-                    <span class="n">markeredgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">markeredgewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;None&#39;</span><span class="p">)</span>
-        
-        <span class="c1"># Apply styling to the plot</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;lightgrey&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">y_label</span><span class="p">)</span>
         <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
         
-        <span class="c1"># Invert y-axis if plotting travel times (common convention)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">plot_app_velocity</span><span class="p">:</span>
-            <span class="n">ax</span><span class="o">.</span><span class="n">invert_yaxis</span><span class="p">()</span>
+        <span class="c1"># Invert y-axis for traveltimes</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">invert_yaxis</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">ax</span></div></div>
 </pre></div>

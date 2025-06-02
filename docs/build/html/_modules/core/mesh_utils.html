@@ -1,28 +1,29 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../../">
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>core.mesh_utils &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
-
+  <title>core.mesh_utils &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/core/mesh_utils.html" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="../../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -50,7 +51,7 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -96,9 +97,7 @@
 <span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">interp1d</span>
 <span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">savgol_filter</span>
 
-<div class="viewcode-block" id="create_mesh_from_layers">
-<a class="viewcode-back" href="../../api/core.html#core.mesh_utils.create_mesh_from_layers">[docs]</a>
-<span class="k">def</span> <span class="nf">create_mesh_from_layers</span><span class="p">(</span><span class="n">surface</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<div class="viewcode-block" id="create_mesh_from_layers"><a class="viewcode-back" href="../../api/core.html#core.mesh_utils.create_mesh_from_layers">[docs]</a><span class="k">def</span> <span class="nf">create_mesh_from_layers</span><span class="p">(</span><span class="n">surface</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                           <span class="n">line1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                           <span class="n">line2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                           <span class="n">bottom_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>
@@ -189,10 +188,7 @@
 
 
 
-
-<div class="viewcode-block" id="extract_velocity_interface">
-<a class="viewcode-back" href="../../api/core.html#core.mesh_utils.extract_velocity_interface">[docs]</a>
-<span class="k">def</span> <span class="nf">extract_velocity_interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_data</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="mf">4.0</span><span class="p">):</span>
+<div class="viewcode-block" id="extract_velocity_interface"><a class="viewcode-back" href="../../api/core.html#core.mesh_utils.extract_velocity_interface">[docs]</a><span class="k">def</span> <span class="nf">extract_velocity_interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_data</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="mf">4.0</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Extract the interface where velocity equals the threshold value.</span>
 <span class="sd">    </span>
@@ -300,10 +296,7 @@
     <span class="k">return</span> <span class="n">x_dense</span><span class="p">,</span> <span class="n">z_dense</span></div>
 
 
-
-<div class="viewcode-block" id="add_velocity_interface">
-<a class="viewcode-back" href="../../api/core.html#core.mesh_utils.add_velocity_interface">[docs]</a>
-<span class="k">def</span> <span class="nf">add_velocity_interface</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">,</span> <span class="n">paraBoundary</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="add_velocity_interface"><a class="viewcode-back" href="../../api/core.html#core.mesh_utils.add_velocity_interface">[docs]</a><span class="k">def</span> <span class="nf">add_velocity_interface</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">,</span> <span class="n">paraBoundary</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Add a velocity interface line to the geometry and create a mesh with different markers:</span>
 <span class="sd">    - Outside survey area: marker = 1</span>
@@ -380,15 +373,10 @@
 
 
 
-
-<div class="viewcode-block" id="MeshCreator">
-<a class="viewcode-back" href="../../api/core.html#core.mesh_utils.MeshCreator">[docs]</a>
-<span class="k">class</span> <span class="nc">MeshCreator</span><span class="p">:</span>
+<div class="viewcode-block" id="MeshCreator"><a class="viewcode-back" href="../../api/core.html#core.mesh_utils.MeshCreator">[docs]</a><span class="k">class</span> <span class="nc">MeshCreator</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for creating and managing meshes for geophysical inversion.&quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="MeshCreator.__init__">
-<a class="viewcode-back" href="../../api/core.html#core.mesh_utils.MeshCreator.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quality</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">28</span><span class="p">,</span> <span class="n">area</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">40</span><span class="p">):</span>
+<div class="viewcode-block" id="MeshCreator.__init__"><a class="viewcode-back" href="../../api/core.html#core.mesh_utils.MeshCreator.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quality</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">28</span><span class="p">,</span> <span class="n">area</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">40</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize MeshCreator with quality and area parameters.</span>
 <span class="sd">        </span>
@@ -398,11 +386,8 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">quality</span> <span class="o">=</span> <span class="n">quality</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">area</span> <span class="o">=</span> <span class="n">area</span></div>
-
     
-<div class="viewcode-block" id="MeshCreator.create_from_layers">
-<a class="viewcode-back" href="../../api/core.html#core.mesh_utils.MeshCreator.create_from_layers">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_from_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">surface</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+<div class="viewcode-block" id="MeshCreator.create_from_layers"><a class="viewcode-back" href="../../api/core.html#core.mesh_utils.MeshCreator.create_from_layers">[docs]</a>    <span class="k">def</span> <span class="nf">create_from_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">surface</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
                           <span class="n">layers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
                           <span class="n">bottom_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>
                           <span class="n">markers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">:</span>
@@ -448,11 +433,8 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Implement custom mesh creation for different number of layers</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Currently only 2-layer mesh creation is implemented&quot;</span><span class="p">)</span></div>
-
     
-<div class="viewcode-block" id="MeshCreator.create_from_ert_data">
-<a class="viewcode-back" href="../../api/core.html#core.mesh_utils.MeshCreator.create_from_ert_data">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_from_ert_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">max_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span> <span class="n">quality</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">34</span><span class="p">):</span>
+<div class="viewcode-block" id="MeshCreator.create_from_ert_data"><a class="viewcode-back" href="../../api/core.html#core.mesh_utils.MeshCreator.create_from_ert_data">[docs]</a>    <span class="k">def</span> <span class="nf">create_from_ert_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">max_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span> <span class="n">quality</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">34</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a mesh suitable for ERT inversion from ERT data.</span>
 <span class="sd">        </span>
@@ -466,9 +448,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
         <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="n">quality</span><span class="p">)</span></div>
-</div>
-
+        <span class="k">return</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="n">quality</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>

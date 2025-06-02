@@ -11,7 +11,7 @@
       <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
-    <link rel="canonical" href="https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/model_output/parflow_output.html" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/model_output/parflow_output.html" />
   <!--[if lt IE 9]>
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -51,7 +51,7 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -101,7 +101,7 @@
 <span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="n">HydroModelOutput</span> <span class="c1"># Assuming base.py is in the same directory or package</span>
 
 
-<div class="viewcode-block" id="ParflowOutput"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowOutput">[docs]</a><span class="k">class</span> <span class="nc">ParflowOutput</span><span class="p">(</span><span class="n">HydroModelOutput</span><span class="p">):</span>
+<div class="viewcode-block" id="ParflowOutput"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowOutput">[docs]</a><span class="k">class</span> <span class="nc">ParflowOutput</span><span class="p">(</span><span class="n">HydroModelOutput</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Base class for processing ParFlow model outputs.</span>
 
@@ -111,7 +111,7 @@
 <span class="sd">    saturation, porosity) should be handled by subclasses.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="ParflowOutput.__init__"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowOutput.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<div class="viewcode-block" id="ParflowOutput.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowOutput.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize ParFlow output processor.</span>
 
@@ -127,7 +127,7 @@
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model_directory</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model directory not found: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            
+
         <span class="bp">self</span><span class="o">.</span><span class="n">run_name</span> <span class="o">=</span> <span class="n">run_name</span>
         
         <span class="k">try</span><span class="p">:</span>
@@ -163,21 +163,21 @@
 <span class="sd">                       Returns an empty list if no matching files are found.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">timesteps_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span> <span class="c1"># Use a set to automatically handle duplicates if patterns overlap</span>
-        
+
         <span class="c1"># Common ParFlow output file patterns.</span>
         <span class="c1"># Files are typically named &lt;run_name&gt;.out.&lt;variable_name&gt;.&lt;timestep_number&gt;.pfb</span>
         <span class="c1"># The timestep number is often zero-padded (e.g., 00001, 00002, ...).</span>
         <span class="c1"># This pattern tries to capture that.</span>
         <span class="c1"># Example: my_run.out.satur.00001.pfb -&gt; timestep 1</span>
         <span class="c1"># Example: my_run.out.press.00010.pfb -&gt; timestep 10</span>
-        
+
         <span class="c1"># Define patterns to search for. Prioritize saturation files, then pressure if no saturation found.</span>
         <span class="c1"># This is heuristic; ParFlow output naming can be configured.</span>
         <span class="n">patterns_to_check</span> <span class="o">=</span> <span class="p">[</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">.out.satur.&quot;</span><span class="p">,</span> <span class="c1"># Saturation files</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">.out.press.&quot;</span>  <span class="c1"># Pressure files (as fallback for timestep discovery)</span>
         <span class="p">]</span>
-        
+
         <span class="n">found_primary_pattern</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">for</span> <span class="n">pattern_prefix</span> <span class="ow">in</span> <span class="n">patterns_to_check</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">found_primary_pattern</span> <span class="ow">and</span> <span class="n">pattern_prefix</span> <span class="o">==</span> <span class="n">patterns_to_check</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="c1"># If already found satur, skip press for discovery</span>
@@ -201,10 +201,10 @@
                     <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span> <span class="c1"># If split by &#39;.&#39; results in empty list (shouldn&#39;t happen with .pfb)</span>
                         <span class="c1"># print(f&quot;Warning: Could not parse timestep due to unexpected filename structure: {filename}&quot;)</span>
                         <span class="k">continue</span>
-        
+
         <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">timesteps_set</span><span class="p">))</span> <span class="c1"># Return sorted list of unique timesteps</span>
     
-<div class="viewcode-block" id="ParflowOutput.get_pfb_dimensions"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowOutput.get_pfb_dimensions">[docs]</a>    <span class="k">def</span> <span class="nf">get_pfb_dimensions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pfb_file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<div class="viewcode-block" id="ParflowOutput.get_pfb_dimensions"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowOutput.get_pfb_dimensions">[docs]</a>    <span class="k">def</span> <span class="nf">get_pfb_dimensions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pfb_file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Reads a PFB file and returns its data dimensions (nz, ny, nx).</span>
 
@@ -221,14 +221,14 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">pfb_file_path</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PFB file not found: </span><span class="si">{</span><span class="n">pfb_file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        
+
         <span class="c1"># self.read_pfb is `parflow.tools.io.read_pfb`</span>
         <span class="c1"># This function typically returns a NumPy array.</span>
         <span class="n">data_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_pfb</span><span class="p">(</span><span class="n">pfb_file_path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data_array</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
             <span class="c1"># Should not happen if read_pfb works as expected.</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected NumPy array from read_pfb, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">data_array</span><span class="p">)</span><span class="si">}</span><span class="s2"> for file </span><span class="si">{</span><span class="n">pfb_file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        
+
         <span class="c1"># ParFlow PFB files usually store data in (nz, ny, nx) order.</span>
         <span class="k">if</span> <span class="n">data_array</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
             <span class="c1"># Potential Issue: If data is not 3D (e.g., 2D slice, or 1D output).</span>
@@ -239,16 +239,16 @@
             <span class="k">if</span> <span class="n">data_array</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="k">return</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">data_array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data_array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
             <span class="c1"># If &gt; 3D, this is unexpected for standard ParFlow scalar outputs.</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PFB file &#39;</span><span class="si">{</span><span class="n">pfb_file_path</span><span class="si">}</span><span class="s2">&#39; has unsupported data dimensionality: </span><span class="si">{</span><span class="n">data_array</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            
+
         <span class="k">return</span> <span class="n">data_array</span><span class="o">.</span><span class="n">shape</span> <span class="c1"># Returns (nz, ny, nx)</span></div></div>
 
 
-<div class="viewcode-block" id="ParflowSaturation"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation">[docs]</a><span class="k">class</span> <span class="nc">ParflowSaturation</span><span class="p">(</span><span class="n">ParflowOutput</span><span class="p">):</span>
+<div class="viewcode-block" id="ParflowSaturation"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation">[docs]</a><span class="k">class</span> <span class="nc">ParflowSaturation</span><span class="p">(</span><span class="n">ParflowOutput</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Processes saturation data from ParFlow simulations (.out.satur.*.pfb files).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="ParflowSaturation.__init__"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<div class="viewcode-block" id="ParflowSaturation.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize ParFlow saturation processor.</span>
 
@@ -260,7 +260,7 @@
         <span class="c1"># Additional check: Ensure saturation files were indeed the source of timesteps if specific.</span>
         <span class="c1"># For now, _get_available_timesteps is generic.</span>
     
-<div class="viewcode-block" id="ParflowSaturation.load_timestep"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.load_timestep">[docs]</a>    <span class="k">def</span> <span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ParflowSaturation.load_timestep"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.load_timestep">[docs]</a>    <span class="k">def</span> <span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load saturation data for a specific, zero-based timestep index.</span>
 
@@ -307,7 +307,7 @@
         <span class="c1"># This seems like a reasonable fallback.</span>
         <span class="n">satur_filename_padded</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">.out.satur.</span><span class="si">{</span><span class="n">timestep_number</span><span class="si">:</span><span class="s2">05d</span><span class="si">}</span><span class="s2">.pfb&quot;</span>
         <span class="n">satur_file_path_padded</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="p">,</span> <span class="n">satur_filename_padded</span><span class="p">)</span>
-        
+
         <span class="n">satur_filename_unpadded</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">.out.satur.</span><span class="si">{</span><span class="n">timestep_number</span><span class="si">}</span><span class="s2">.pfb&quot;</span>
         <span class="n">satur_file_path_unpadded</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="p">,</span> <span class="n">satur_filename_unpadded</span><span class="p">)</span>
 
@@ -320,7 +320,7 @@
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Saturation file for timestep </span><span class="si">{</span><span class="n">timestep_number</span><span class="si">}</span><span class="s2"> not found. &quot;</span>
                 <span class="sa">f</span><span class="s2">&quot;Checked: &#39;</span><span class="si">{</span><span class="n">satur_file_path_padded</span><span class="si">}</span><span class="s2">&#39; and &#39;</span><span class="si">{</span><span class="n">satur_file_path_unpadded</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
-        
+
         <span class="k">try</span><span class="p">:</span>
             <span class="n">saturation_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_pfb</span><span class="p">(</span><span class="n">chosen_path</span><span class="p">)</span> <span class="c1"># Use the instance&#39;s PFB reader</span>
             
@@ -329,13 +329,13 @@
             <span class="c1"># The threshold -1e38 is from the original code.</span>
             <span class="c1"># Potential Improvement: This threshold might need to be more robust or configurable</span>
             <span class="c1"># if ParFlow&#39;s no-data value representation varies.</span>
-            <span class="n">saturation_data</span><span class="p">[</span><span class="n">saturation_data</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">1e38</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> 
+            <span class="n">saturation_data</span><span class="p">[</span><span class="n">saturation_data</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">1e38</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
             
             <span class="k">return</span> <span class="n">saturation_data</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> <span class="c1"># Catch errors from read_pfb or subsequent numpy operations</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading or processing saturation data from &#39;</span><span class="si">{</span><span class="n">chosen_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     
-<div class="viewcode-block" id="ParflowSaturation.load_time_range"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.load_time_range">[docs]</a>    <span class="k">def</span> <span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ParflowSaturation.load_time_range"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.load_time_range">[docs]</a>    <span class="k">def</span> <span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load saturation data for a specified range of zero-based timestep indices.</span>
 
@@ -349,7 +349,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            np.ndarray: A 4D NumPy array of saturation values (num_timesteps, nz, ny, nx).</span>
 <span class="sd">                        Returns an empty 4D array if the range is invalid or no data is found.</span>
-<span class="sd">        </span>
+
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If no timesteps are available, or if the specified range is invalid</span>
 <span class="sd">                        (e.g., `start_idx` out of bounds, `end_idx` &lt;= `start_idx` leading to empty range).</span>
@@ -369,7 +369,7 @@
                 <span class="n">actual_end_idx</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">)</span> <span class="o">+</span> <span class="n">end_idx</span>
             <span class="k">else</span><span class="p">:</span> <span class="c1"># Positive or zero</span>
                 <span class="n">actual_end_idx</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">end_idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">))</span>
-        
+
         <span class="k">if</span> <span class="n">actual_end_idx</span> <span class="o">&lt;=</span> <span class="n">start_idx</span><span class="p">:</span>
             <span class="c1"># print(f&quot;Warning: Requested time range (start_idx={start_idx}, end_idx={end_idx} -&gt; actual_end_idx={actual_end_idx}) is empty or invalid.&quot;)</span>
             <span class="c1"># Return empty array with expected dimensions if possible (need to know spatial dims first)</span>
@@ -384,7 +384,7 @@
 
         <span class="c1"># Get the list of actual ParFlow timestep numbers to load based on indices</span>
         <span class="n">timesteps_to_load_numbers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">[</span><span class="n">start_idx</span><span class="p">:</span><span class="n">actual_end_idx</span><span class="p">]</span>
-        
+
         <span class="k">if</span> <span class="ow">not</span> <span class="n">timesteps_to_load_numbers</span><span class="p">:</span>
             <span class="c1"># This case should ideally be caught by actual_end_idx &lt;= start_idx logic.</span>
             <span class="c1"># However, if slicing results in empty list for other reasons:</span>
@@ -410,7 +410,7 @@
         
         <span class="k">return</span> <span class="n">all_saturation_data</span></div>
     
-<div class="viewcode-block" id="ParflowSaturation.get_timestep_info"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.get_timestep_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<div class="viewcode-block" id="ParflowSaturation.get_timestep_info"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowSaturation.get_timestep_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Provides information about available ParFlow timesteps.</span>
 
@@ -432,14 +432,14 @@
         <span class="k">return</span> <span class="p">[(</span><span class="n">ts_num</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">ts_num</span><span class="p">))</span> <span class="k">for</span> <span class="n">ts_num</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">]</span></div></div>
 
 
-<div class="viewcode-block" id="ParflowPorosity"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity">[docs]</a><span class="k">class</span> <span class="nc">ParflowPorosity</span><span class="p">(</span><span class="n">ParflowOutput</span><span class="p">):</span>
+<div class="viewcode-block" id="ParflowPorosity"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity">[docs]</a><span class="k">class</span> <span class="nc">ParflowPorosity</span><span class="p">(</span><span class="n">ParflowOutput</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Processes porosity data from ParFlow simulations.</span>
 <span class="sd">    Porosity in ParFlow is typically static (time-invariant) and stored in a</span>
 <span class="sd">    single PFB file (e.g., &lt;run_name&gt;.out.porosity.pfb or similar).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="ParflowPorosity.__init__"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<div class="viewcode-block" id="ParflowPorosity.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize ParFlow porosity processor.</span>
 
@@ -454,7 +454,7 @@
         <span class="c1"># Porosity doesn&#39;t usually have multiple timesteps, so self.available_timesteps</span>
         <span class="c1"># from base class (derived from saturation/pressure files) might be misleading if used here.</span>
     
-<div class="viewcode-block" id="ParflowPorosity.load_porosity"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_porosity">[docs]</a>    <span class="k">def</span> <span class="nf">load_porosity</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ParflowPorosity.load_porosity"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_porosity">[docs]</a>    <span class="k">def</span> <span class="nf">load_porosity</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load the static porosity data from the ParFlow model.</span>
 
@@ -475,7 +475,7 @@
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">.porosity.pfb&quot;</span><span class="p">,</span>     <span class="c1"># Sometimes used if input or static field</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">.pf.porosity.pfb&quot;</span><span class="p">,</span>  <span class="c1"># Alternative prefixing</span>
             <span class="c1"># Add non-pfb extensions if ParFlow might write them as plain binary without .pfb</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">.out.porosity&quot;</span><span class="p">,</span> 
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">.out.porosity&quot;</span><span class="p">,</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">.pf.porosity&quot;</span>
         <span class="p">]</span>
         
@@ -485,16 +485,16 @@
             <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
                 <span class="n">found_file_path</span> <span class="o">=</span> <span class="n">file_path</span>
                 <span class="k">break</span> <span class="c1"># Found a candidate</span>
-        
+
         <span class="k">if</span> <span class="ow">not</span> <span class="n">found_file_path</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Could not find a porosity file for run &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">&#39; in directory &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
                 <span class="sa">f</span><span class="s2">&quot;Checked patterns like &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">.out.porosity.pfb&#39;.&quot;</span><span class="p">)</span>
-        
+
         <span class="k">try</span><span class="p">:</span>
             <span class="n">porosity_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_pfb</span><span class="p">(</span><span class="n">found_file_path</span><span class="p">)</span>
             <span class="c1"># Handle ParFlow&#39;s no-data values, similar to saturation.</span>
-            <span class="n">porosity_data</span><span class="p">[</span><span class="n">porosity_data</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">1e38</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> 
+            <span class="n">porosity_data</span><span class="p">[</span><span class="n">porosity_data</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">1e38</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
             <span class="c1"># Potential Issue: Porosity should ideally be between 0 and 1.</span>
             <span class="c1"># Add validation or clipping if ParFlow might output other values for active cells.</span>
             <span class="c1"># e.g., np.clip(porosity_data, 0.0, 1.0) after NaNs are set.</span>
@@ -503,7 +503,7 @@
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading or processing porosity data from &#39;</span><span class="si">{</span><span class="n">found_file_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="ParflowPorosity.load_mask"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_mask">[docs]</a>    <span class="k">def</span> <span class="nf">load_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span> <span class="c1"># Original name was load_porosity, but seems to load mask</span>
+<div class="viewcode-block" id="ParflowPorosity.load_mask"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_mask">[docs]</a>    <span class="k">def</span> <span class="nf">load_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span> <span class="c1"># Original name was load_porosity, but seems to load mask</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load the domain mask data from a ParFlow model.</span>
 <span class="sd">        The mask file (.out.mask.pfb) indicates active (1) and inactive (0) cells.</span>
@@ -546,8 +546,8 @@
             <span class="k">return</span> <span class="n">mask_data</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading or processing mask data from &#39;</span><span class="si">{</span><span class="n">found_file_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
-        
-<div class="viewcode-block" id="ParflowPorosity.load_timestep"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_timestep">[docs]</a>    <span class="k">def</span> <span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+
+<div class="viewcode-block" id="ParflowPorosity.load_timestep"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_timestep">[docs]</a>    <span class="k">def</span> <span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load porosity data. For ParFlow, porosity is typically time-invariant.</span>
 <span class="sd">        This method returns the static porosity array, ignoring `timestep_idx`.</span>
@@ -562,12 +562,12 @@
         <span class="c1"># Porosity is static, so any timestep_idx request returns the same data.</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_porosity</span><span class="p">()</span></div>
     
-<div class="viewcode-block" id="ParflowPorosity.load_time_range"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_time_range">[docs]</a>    <span class="k">def</span> <span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ParflowPorosity.load_time_range"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.load_time_range">[docs]</a>    <span class="k">def</span> <span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load porosity data for a conceptual range of timesteps.</span>
 <span class="sd">        Since porosity is time-invariant, this method returns a 4D array where</span>
 <span class="sd">        the static 3D porosity data is repeated along the time axis.</span>
-<span class="sd">        </span>
+
 <span class="sd">        The number of repetitions along the time axis (`nt`) is determined by</span>
 <span class="sd">        the length of `self.available_timesteps` (discovered from saturation/pressure files)</span>
 <span class="sd">        if `end_idx` is None, or by `min(end_idx - start_idx, len(available_timesteps))`.</span>
@@ -584,7 +584,7 @@
 <span class="sd">                        All slices along the time dimension are identical.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">porosity_3d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_porosity</span><span class="p">()</span> <span class="c1"># (nz, ny, nx)</span>
-        
+
         <span class="n">num_timesteps_in_output</span><span class="p">:</span> <span class="nb">int</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">:</span> <span class="c1"># No timed output files found by base class</span>
             <span class="n">num_timesteps_in_output</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># Assume at least one &quot;time&quot; for static data</span>
@@ -597,7 +597,7 @@
             <span class="n">actual_end_idx</span> <span class="o">=</span> <span class="n">end_idx</span>
             <span class="k">if</span> <span class="n">end_idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">actual_end_idx</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">)</span> <span class="o">+</span> <span class="n">end_idx</span>
             <span class="n">actual_end_idx</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">actual_end_idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">))</span>
-            
+
             <span class="c1"># Ensure start_idx is valid</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">start_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">)):</span> <span class="n">start_idx</span> <span class="o">=</span> <span class="mi">0</span>
 
@@ -616,7 +616,7 @@
         
         <span class="k">return</span> <span class="n">porosity_4d</span></div>
     
-<div class="viewcode-block" id="ParflowPorosity.get_timestep_info"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.get_timestep_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<div class="viewcode-block" id="ParflowPorosity.get_timestep_info"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.parflow_output.ParflowPorosity.get_timestep_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns timestep information, typically based on other ParFlow outputs</span>
 <span class="sd">        (like saturation) as porosity itself is static.</span>

@@ -1,28 +1,29 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../../">
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>core.interpolation &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
-
+  <title>core.interpolation &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/core/interpolation.html" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="../../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -50,7 +51,7 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -94,9 +95,7 @@
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
 
-<div class="viewcode-block" id="interpolate_to_profile">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.interpolate_to_profile">[docs]</a>
-<span class="k">def</span> <span class="nf">interpolate_to_profile</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+<div class="viewcode-block" id="interpolate_to_profile"><a class="viewcode-back" href="../../api/core.html#core.interpolation.interpolate_to_profile">[docs]</a><span class="k">def</span> <span class="nf">interpolate_to_profile</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
                          <span class="n">X_grid</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
                          <span class="n">Y_grid</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                          <span class="n">X_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
@@ -125,10 +124,7 @@
                    <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span></div>
 
 
-
-<div class="viewcode-block" id="setup_profile_coordinates">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.setup_profile_coordinates">[docs]</a>
-<span class="k">def</span> <span class="nf">setup_profile_coordinates</span><span class="p">(</span><span class="n">point1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> 
+<div class="viewcode-block" id="setup_profile_coordinates"><a class="viewcode-back" href="../../api/core.html#core.interpolation.setup_profile_coordinates">[docs]</a><span class="k">def</span> <span class="nf">setup_profile_coordinates</span><span class="p">(</span><span class="n">point1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> 
                             <span class="n">point2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                             <span class="n">surface_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                             <span class="n">origin_x</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
@@ -182,10 +178,7 @@
     <span class="k">return</span> <span class="n">X_pro</span><span class="p">,</span> <span class="n">Y_pro</span><span class="p">,</span> <span class="n">L_profile</span><span class="p">,</span> <span class="n">XX</span><span class="p">,</span> <span class="n">YY</span></div>
 
 
-
-<div class="viewcode-block" id="interpolate_structure_to_profile">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.interpolate_structure_to_profile">[docs]</a>
-<span class="k">def</span> <span class="nf">interpolate_structure_to_profile</span><span class="p">(</span><span class="n">structure_data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+<div class="viewcode-block" id="interpolate_structure_to_profile"><a class="viewcode-back" href="../../api/core.html#core.interpolation.interpolate_structure_to_profile">[docs]</a><span class="k">def</span> <span class="nf">interpolate_structure_to_profile</span><span class="p">(</span><span class="n">structure_data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
                                    <span class="n">X_grid</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                                    <span class="n">Y_grid</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                                    <span class="n">X_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -211,10 +204,7 @@
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">structure</span><span class="p">)</span></div>
 
 
-
-<div class="viewcode-block" id="prepare_2D_profile_data">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.prepare_2D_profile_data">[docs]</a>
-<span class="k">def</span> <span class="nf">prepare_2D_profile_data</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+<div class="viewcode-block" id="prepare_2D_profile_data"><a class="viewcode-back" href="../../api/core.html#core.interpolation.prepare_2D_profile_data">[docs]</a><span class="k">def</span> <span class="nf">prepare_2D_profile_data</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
                           <span class="n">XX</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
                           <span class="n">YY</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                           <span class="n">X_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -246,10 +236,7 @@
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">profile_values</span><span class="p">)</span></div>
 
 
-
-<div class="viewcode-block" id="interpolate_to_mesh">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.interpolate_to_mesh">[docs]</a>
-<span class="k">def</span> <span class="nf">interpolate_to_mesh</span><span class="p">(</span><span class="n">property_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<div class="viewcode-block" id="interpolate_to_mesh"><a class="viewcode-back" href="../../api/core.html#core.interpolation.interpolate_to_mesh">[docs]</a><span class="k">def</span> <span class="nf">interpolate_to_mesh</span><span class="p">(</span><span class="n">property_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                        <span class="n">profile_distance</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                        <span class="n">depth_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                        <span class="n">mesh_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -310,15 +297,10 @@
     <span class="k">return</span> <span class="n">result</span></div>
 
 
-
-<div class="viewcode-block" id="ProfileInterpolator">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.ProfileInterpolator">[docs]</a>
-<span class="k">class</span> <span class="nc">ProfileInterpolator</span><span class="p">:</span>
+<div class="viewcode-block" id="ProfileInterpolator"><a class="viewcode-back" href="../../api/core.html#core.interpolation.ProfileInterpolator">[docs]</a><span class="k">class</span> <span class="nc">ProfileInterpolator</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for handling interpolation of data to/from profiles.&quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="ProfileInterpolator.__init__">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.ProfileInterpolator.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">point2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> 
+<div class="viewcode-block" id="ProfileInterpolator.__init__"><a class="viewcode-back" href="../../api/core.html#core.interpolation.ProfileInterpolator.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">point2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> 
                 <span class="n">surface_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                 <span class="n">origin_x</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">origin_y</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
                 <span class="n">pixel_width</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">pixel_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
@@ -353,11 +335,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">surface_profile</span> <span class="o">=</span> <span class="n">interpolate_to_profile</span><span class="p">(</span>
             <span class="n">surface_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">XX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">YY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span>
         <span class="p">)</span></div>
-
     
-<div class="viewcode-block" id="ProfileInterpolator.interpolate_layer_data">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.ProfileInterpolator.interpolate_layer_data">[docs]</a>
-    <span class="k">def</span> <span class="nf">interpolate_layer_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer_data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ProfileInterpolator.interpolate_layer_data"><a class="viewcode-back" href="../../api/core.html#core.interpolation.ProfileInterpolator.interpolate_layer_data">[docs]</a>    <span class="k">def</span> <span class="nf">interpolate_layer_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer_data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Interpolate multiple layer data to profile.</span>
 <span class="sd">        </span>
@@ -370,11 +349,8 @@
         <span class="k">return</span> <span class="n">interpolate_structure_to_profile</span><span class="p">(</span>
             <span class="n">layer_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">XX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">YY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span>
         <span class="p">)</span></div>
-
     
-<div class="viewcode-block" id="ProfileInterpolator.interpolate_3d_data">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.ProfileInterpolator.interpolate_3d_data">[docs]</a>
-    <span class="k">def</span> <span class="nf">interpolate_3d_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ProfileInterpolator.interpolate_3d_data"><a class="viewcode-back" href="../../api/core.html#core.interpolation.ProfileInterpolator.interpolate_3d_data">[docs]</a>    <span class="k">def</span> <span class="nf">interpolate_3d_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Interpolate 3D data (n_layers, ny, nx) to profile.</span>
 <span class="sd">        </span>
@@ -387,11 +363,8 @@
         <span class="k">return</span> <span class="n">prepare_2D_profile_data</span><span class="p">(</span>
             <span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">XX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">YY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span>
         <span class="p">)</span></div>
-
     
-<div class="viewcode-block" id="ProfileInterpolator.interpolate_to_mesh">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.ProfileInterpolator.interpolate_to_mesh">[docs]</a>
-    <span class="k">def</span> <span class="nf">interpolate_to_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">property_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<div class="viewcode-block" id="ProfileInterpolator.interpolate_to_mesh"><a class="viewcode-back" href="../../api/core.html#core.interpolation.ProfileInterpolator.interpolate_to_mesh">[docs]</a>    <span class="k">def</span> <span class="nf">interpolate_to_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">property_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                           <span class="n">depth_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                           <span class="n">mesh_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                           <span class="n">mesh_y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -414,14 +387,10 @@
         <span class="k">return</span> <span class="n">interpolate_to_mesh</span><span class="p">(</span>
             <span class="n">property_values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span> <span class="n">depth_values</span><span class="p">,</span>
             <span class="n">mesh_x</span><span class="p">,</span> <span class="n">mesh_y</span><span class="p">,</span> <span class="n">mesh_markers</span><span class="p">,</span> <span class="n">ID</span><span class="p">,</span><span class="n">layer_markers</span>
-        <span class="p">)</span></div>
-</div>
+        <span class="p">)</span></div></div>
 
 
-
-<div class="viewcode-block" id="create_surface_lines">
-<a class="viewcode-back" href="../../api/core.html#core.interpolation.create_surface_lines">[docs]</a>
-<span class="k">def</span> <span class="nf">create_surface_lines</span><span class="p">(</span><span class="n">L_profile</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<div class="viewcode-block" id="create_surface_lines"><a class="viewcode-back" href="../../api/core.html#core.interpolation.create_surface_lines">[docs]</a><span class="k">def</span> <span class="nf">create_surface_lines</span><span class="p">(</span><span class="n">L_profile</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                         <span class="n">structure</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                         <span class="n">top_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                         <span class="n">mid_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
@@ -458,7 +427,6 @@
     <span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="c1">#- maxele</span>
     
     <span class="k">return</span> <span class="n">surface</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span></div>
-
 </pre></div>
 
            </div>
