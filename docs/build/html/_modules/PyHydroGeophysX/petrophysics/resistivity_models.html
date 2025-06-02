@@ -1,28 +1,29 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../../../">
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PyHydroGeophysX.petrophysics.resistivity_models &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
-
+  <title>PyHydroGeophysX.petrophysics.resistivity_models &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/petrophysics/resistivity_models.html" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../../../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
@@ -87,143 +88,366 @@
              
   <h1>Source code for PyHydroGeophysX.petrophysics.resistivity_models</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Simplified Waxman-Smits model for converting between water content and resistivity.</span>
+<span class="sd">Petrophysical models for electrical resistivity.</span>
 
-<span class="sd">This implementation follows the Waxman-Smits model that expresses conductivity as:</span>
-<span class="sd">    </span>
-<span class="sd">    σ = σsat * S^n + σs * S^(n-1)</span>
-<span class="sd">    </span>
-<span class="sd">where:</span>
-<span class="sd">- σ is the electrical conductivity of the formation</span>
-<span class="sd">- σsat is the conductivity at full saturation without surface effects (1/rhos)</span>
-<span class="sd">- σs is the surface conductivity</span>
-<span class="sd">- S is the water saturation (S = θ/φ where θ is water content and φ is porosity)</span>
-<span class="sd">- n is the saturation exponent</span>
+<span class="sd">This module implements the Waxman-Smits model to relate subsurface electrical</span>
+<span class="sd">resistivity to water content, porosity, and other formation properties.</span>
+<span class="sd">The model accounts for both electrolytic conduction through pore water and</span>
+<span class="sd">surface conduction along grain-water interfaces.</span>
 
-<span class="sd">The resistivity is the reciprocal of conductivity: ρ = 1/σ</span>
+<span class="sd">The core Waxman-Smits equation for formation conductivity (σ) is:</span>
+<span class="sd">    σ_formation = (1/F*) * σ_water * S^n + B * Qv * S^(n-1) / F* </span>
+<span class="sd">    where F* is formation factor, σ_water is water conductivity, S is saturation,</span>
+<span class="sd">    n is saturation exponent, B is equivalent conductance of clay cations, </span>
+<span class="sd">    Qv is cation exchange capacity per unit pore volume.</span>
+
+<span class="sd">A simplified form used here (as described in the original module docstring) is:</span>
+<span class="sd">    σ = σ_fully_saturated * S^n + σ_surface_effects * S^(n-1)</span>
+<span class="sd">    where:</span>
+<span class="sd">    - σ is the bulk electrical conductivity of the formation.</span>
+<span class="sd">    - σ_fully_saturated (σ_sat) is the conductivity of the rock when fully saturated</span>
+<span class="sd">      with conductive fluid, assuming no surface conduction effects. This can be</span>
+<span class="sd">      equated to (1/F*) * σ_water from Archie&#39;s law, or 1/rhos where rhos is</span>
+<span class="sd">      the resistivity of the rock fully saturated with this water (no surface effects).</span>
+<span class="sd">    - σ_surface_effects (σ_s or sigma_sur) represents the contribution from surface</span>
+<span class="sd">      conduction, related to B * Qv / F*.</span>
+<span class="sd">    - S is the water saturation (S = θ/φ, where θ is volumetric water content</span>
+<span class="sd">      and φ is porosity).</span>
+<span class="sd">    - n is the saturation exponent (often close to 2).</span>
+
+<span class="sd">Resistivity (ρ) is the reciprocal of conductivity (ρ = 1/σ).</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">fsolve</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">cast</span> <span class="c1"># Used for type hinting</span>
+
+<span class="c1"># Define a type alias for inputs that can be scalar or array-like</span>
+<span class="n">ScalarOrArray</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="water_content_to_resistivity">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.petrophysics.resistivity_models.water_content_to_resistivity">[docs]</a>
-<span class="k">def</span> <span class="nf">water_content_to_resistivity</span><span class="p">(</span><span class="n">water_content</span><span class="p">,</span> <span class="n">rhos</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">porosity</span><span class="p">,</span> <span class="n">sigma_sur</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="water_content_to_resistivity"><a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.petrophysics.resistivity_models.water_content_to_resistivity">[docs]</a><span class="k">def</span> <span class="nf">water_content_to_resistivity</span><span class="p">(</span><span class="n">water_content</span><span class="p">:</span> <span class="n">ScalarOrArray</span><span class="p">,</span>
+                                 <span class="n">rhos</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                                 <span class="n">n</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                                 <span class="n">porosity</span><span class="p">:</span> <span class="n">ScalarOrArray</span><span class="p">,</span>
+                                 <span class="n">sigma_sur</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScalarOrArray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Convert water content to resistivity using Waxman-Smits model.</span>
-<span class="sd">    </span>
+<span class="sd">    Convert volumetric water content to bulk resistivity using a simplified Waxman-Smits model.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        water_content (array): Volumetric water content (θ)</span>
-<span class="sd">        rhos (float): Saturated resistivity without surface effects</span>
-<span class="sd">        n (float): Saturation exponent</span>
-<span class="sd">        porosity (array): Porosity values (φ)</span>
-<span class="sd">        sigma_sur (float): Surface conductivity. Default is 0 (no surface effects).</span>
-<span class="sd">    </span>
+<span class="sd">        water_content (ScalarOrArray): Volumetric water content (θ) [m³/m³].</span>
+<span class="sd">                                       Can be a scalar or a NumPy array.</span>
+<span class="sd">        rhos (float): Resistivity of the rock when fully saturated with water,</span>
+<span class="sd">                      assuming no surface conduction effects (1/σ_sat) [ohm·m].</span>
+<span class="sd">                      This represents the Archie part of the rock resistivity.</span>
+<span class="sd">        n (float): Saturation exponent (dimensionless). Typically around 2.</span>
+<span class="sd">        porosity (ScalarOrArray): Porosity (φ) of the rock [m³/m³].</span>
+<span class="sd">                                  Can be a scalar or a NumPy array (must be broadcastable</span>
+<span class="sd">                                  with `water_content`).</span>
+<span class="sd">        sigma_sur (float, optional): Surface conductivity term (σs) [S/m].</span>
+<span class="sd">                                     Represents the contribution of clay/surface conduction.</span>
+<span class="sd">                                     Defaults to 0.0, which reduces the model to Archie&#39;s Law</span>
+<span class="sd">                                     if n-1 term is handled appropriately or if saturation is 1.</span>
+<span class="sd">                                     (Note: The original model has S^(n-1); if S is very low and n&gt;1,</span>
+<span class="sd">                                     this term can become very large if sigma_sur is non-zero).</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        array: Resistivity values</span>
+<span class="sd">        ScalarOrArray: Calculated bulk resistivity (ρ) [ohm·m]. Returns a scalar if inputs</span>
+<span class="sd">                       are scalar, otherwise a NumPy array.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If `rhos` is zero or negative.</span>
+<span class="sd">        ZeroDivisionError: If calculated conductivity `sigma` is zero.</span>
+<span class="sd">                           (Note: `1.0 / sigma` can also produce `inf`).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Calculate saturation</span>
-    <span class="n">saturation</span> <span class="o">=</span> <span class="n">water_content</span> <span class="o">/</span> <span class="n">porosity</span>
+    <span class="k">if</span> <span class="n">rhos</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;rhos (fully saturated resistivity) must be positive.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># Potential Issue: Porosity should be within (0, 1]. Zero porosity is problematic.</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Porosity values are not within the typical range (0, 1].&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Ensure inputs are NumPy arrays for vectorized operations</span>
+    <span class="n">wc_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">water_content</span><span class="p">)</span>
+    <span class="n">por_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span>
+
+    <span class="c1"># Calculate water saturation (S = θ/φ)</span>
+    <span class="c1"># Avoid division by zero if porosity is zero; result in NaN or Inf handled by clip.</span>
+    <span class="c1"># Or, handle porosity = 0 explicitly: if porosity is 0, saturation is undefined or 0.</span>
+    <span class="c1"># Let&#39;s assume if porosity is 0, saturation is 0 (if wc is also 0) or undefined (NaN).</span>
+    <span class="c1"># np.divide handles this by producing nan for 0/0 and inf for x/0 (with warnings).</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">wc_arr</span><span class="p">,</span> <span class="n">por_arr</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">wc_arr</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">),</span> <span class="n">where</span><span class="o">=</span><span class="n">por_arr</span><span class="o">!=</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="c1"># Clip saturation to physically meaningful range [0, 1].</span>
+    <span class="c1"># Handles cases where wc &gt; porosity due to measurement errors or wc &lt; 0.</span>
     <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">saturation</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
     
-    <span class="c1"># Calculate conductivity using Waxman-Smits model</span>
+    <span class="c1"># Calculate conductivity of the rock fully saturated with water (σ_sat = 1/rhos)</span>
     <span class="n">sigma_sat</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">rhos</span>
-    <span class="n">sigma</span> <span class="o">=</span> <span class="n">sigma_sat</span> <span class="o">*</span> <span class="n">saturation</span><span class="o">**</span><span class="n">n</span> <span class="o">+</span> <span class="n">sigma_sur</span> <span class="o">*</span> <span class="n">saturation</span><span class="o">**</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
     
-    <span class="c1"># Convert conductivity to resistivity</span>
-    <span class="n">resistivity</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">sigma</span>
+    <span class="c1"># Calculate bulk conductivity (σ) using the Waxman-Smits type equation:</span>
+    <span class="c1"># σ = σ_sat * S^n + σ_sur * S^(n-1)</span>
+    <span class="c1"># Potential Issue: If S=0 and n-1 &lt; 0 (i.e., n &lt; 1), S^(n-1) term is undefined (division by zero).</span>
+    <span class="c1"># Standard Archie/Waxman-Smits typically assumes n &gt;= 1 (often n approx 2).</span>
+    <span class="c1"># If n=1, S^(n-1) = S^0 = 1 (for S&gt;0). If S=0 and n=1, 0^0 is usually 1 in this context.</span>
+    <span class="c1"># If S=0 and n&gt;1, S^(n-1) = 0.</span>
+    <span class="c1"># If S=0 and n&lt;1, S^(n-1) -&gt; inf.</span>
+    <span class="c1"># Let&#39;s handle S=0 for the surface term carefully.</span>
     
+    <span class="n">sigma_bulk_part</span> <span class="o">=</span> <span class="n">sigma_sat</span> <span class="o">*</span> <span class="p">(</span><span class="n">saturation</span> <span class="o">**</span> <span class="n">n</span><span class="p">)</span>
+    
+    <span class="n">sigma_surface_part</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">saturation</span><span class="p">)</span>
+    <span class="c1"># Only calculate surface term if sigma_sur is non-zero and saturation &gt; 0,</span>
+    <span class="c1"># or if n=1 (then S^0 = 1, so it contributes sigma_sur).</span>
+    <span class="c1"># This avoids 0^(negative number) issues.</span>
+    <span class="k">if</span> <span class="n">sigma_sur</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># S^(n-1) = S^0 = 1 for S &gt; 0. For S = 0, 0^0 is context-dependent, often 1.</span>
+            <span class="c1"># If we assume 0^0 = 0 for physical reasons (no surface cond. if no water film):</span>
+            <span class="c1"># sigma_surface_part[saturation &gt; 0] = sigma_sur</span>
+            <span class="c1"># However, power function np.power(0,0) is 1. Let&#39;s rely on that default.</span>
+            <span class="n">sigma_surface_part</span> <span class="o">=</span> <span class="n">sigma_sur</span> <span class="o">*</span> <span class="p">(</span><span class="n">saturation</span> <span class="o">**</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span> <span class="c1"># This will be sigma_sur * 1.0</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># n != 1</span>
+            <span class="c1"># Calculate S^(n-1) only where S &gt; 0 to avoid 0^(negative) if n &lt; 1.</span>
+            <span class="c1"># If n &gt; 1, 0^(n-1) is 0, which is fine.</span>
+            <span class="c1"># If n &lt; 1, S^(n-1) can be problematic at S=0.</span>
+            <span class="c1"># However, saturation is clipped to [0,1]. If S=0, term is 0 unless n-1 is negative.</span>
+            <span class="c1"># For typical n values (e.g., n=2), n-1=1, so S^(n-1) = S.</span>
+            <span class="c1"># The term sigma_sur * S^(n-1)</span>
+            <span class="c1"># If S is 0, and n-1 is positive, this term is 0.</span>
+            <span class="c1"># If S is 0, and n-1 is 0 (n=1), this term is sigma_sur. (Handled above)</span>
+            <span class="c1"># If S is 0, and n-1 is negative (n&lt;1), this term is Inf. This should be avoided or means model is misapplied.</span>
+            <span class="c1"># Assuming n &gt;= 1 for physical validity of this simplified form.</span>
+            <span class="c1"># If S is very small but non-zero, and n-1 &lt; 0, S^(n-1) can be very large.</span>
+            <span class="c1"># This is a known behavior of the model for low S if n is not chosen carefully or if sigma_sur is large.</span>
+            
+            <span class="c1"># To prevent issues with 0^(negative power) if n &lt; 1, we can mask:</span>
+            <span class="n">non_zero_satur</span> <span class="o">=</span> <span class="n">saturation</span> <span class="o">&gt;</span> <span class="mf">1e-9</span> <span class="c1"># Threshold to avoid numerical issues with very small S</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># n-1 is negative</span>
+                 <span class="n">sigma_surface_part</span><span class="p">[</span><span class="n">non_zero_satur</span><span class="p">]</span> <span class="o">=</span> <span class="n">sigma_sur</span> <span class="o">*</span> <span class="p">(</span><span class="n">saturation</span><span class="p">[</span><span class="n">non_zero_satur</span><span class="p">]</span> <span class="o">**</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+                 <span class="c1"># For S=0, this term would be infinite. It&#39;s left as 0 here assuming no surface path.</span>
+                 <span class="c1"># This implies that if n&lt;1, the model might not be well-behaved at S-&gt;0 with sigma_sur &gt; 0.</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c1"># n &gt; 1 (n-1 &gt; 0) or n=1 (handled by np.power(0,0)=1)</span>
+                 <span class="n">sigma_surface_part</span> <span class="o">=</span> <span class="n">sigma_sur</span> <span class="o">*</span> <span class="p">(</span><span class="n">saturation</span> <span class="o">**</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+
+
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">sigma_bulk_part</span> <span class="o">+</span> <span class="n">sigma_surface_part</span>
+    
+    <span class="c1"># Convert bulk conductivity to bulk resistivity (ρ = 1/σ)</span>
+    <span class="c1"># Handle potential division by zero if sigma is zero (e.g., if water_content and sigma_sur are both zero).</span>
+    <span class="c1"># np.divide will produce inf if sigma is 0, which might be desired (infinite resistivity).</span>
+    <span class="n">resistivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span> <span class="c1"># Default to infinite resistivity</span>
+    <span class="n">non_zero_sigma</span> <span class="o">=</span> <span class="n">sigma</span> <span class="o">!=</span> <span class="mi">0</span>
+    <span class="n">resistivity</span><span class="p">[</span><span class="n">non_zero_sigma</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">sigma</span><span class="p">[</span><span class="n">non_zero_sigma</span><span class="p">]</span>
+    
+    <span class="c1"># If original input was scalar, return scalar</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">water_content</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">porosity</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">resistivity</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">resistivity</span></div>
 
 
-
-<div class="viewcode-block" id="resistivity_to_water_content">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.petrophysics.resistivity_models.resistivity_to_water_content">[docs]</a>
-<span class="k">def</span> <span class="nf">resistivity_to_water_content</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="n">rhos</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">porosity</span><span class="p">,</span> <span class="n">sigma_sur</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="resistivity_to_water_content"><a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.petrophysics.resistivity_models.resistivity_to_water_content">[docs]</a><span class="k">def</span> <span class="nf">resistivity_to_water_content</span><span class="p">(</span><span class="n">resistivity</span><span class="p">:</span> <span class="n">ScalarOrArray</span><span class="p">,</span>
+                                 <span class="n">rhos</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                                 <span class="n">n</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                                 <span class="n">porosity</span><span class="p">:</span> <span class="n">ScalarOrArray</span><span class="p">,</span>
+                                 <span class="n">sigma_sur</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScalarOrArray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Convert resistivity to water content using Waxman-Smits model.</span>
-<span class="sd">    </span>
+<span class="sd">    Convert bulk resistivity to volumetric water content using the simplified Waxman-Smits model.</span>
+
+<span class="sd">    This function first converts resistivity to saturation using `resistivity_to_saturation`,</span>
+<span class="sd">    and then calculates water content as saturation multiplied by porosity.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        resistivity (array): Resistivity values</span>
-<span class="sd">        rhos (float): Saturated resistivity without surface effects</span>
-<span class="sd">        n (float): Saturation exponent</span>
-<span class="sd">        porosity (array): Porosity values</span>
-<span class="sd">        sigma_sur (float): Surface conductivity. Default is 0 (no surface effects).</span>
-<span class="sd">    </span>
+<span class="sd">        resistivity (ScalarOrArray): Bulk resistivity (ρ) [ohm·m].</span>
+<span class="sd">        rhos (float): Resistivity of the rock when fully saturated (1/σ_sat) [ohm·m].</span>
+<span class="sd">        n (float): Saturation exponent (dimensionless).</span>
+<span class="sd">        porosity (ScalarOrArray): Porosity (φ) of the rock [m³/m³].</span>
+<span class="sd">        sigma_sur (float, optional): Surface conductivity term (σs) [S/m]. Defaults to 0.0.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        array: Volumetric water content values</span>
+<span class="sd">        ScalarOrArray: Calculated volumetric water content (θ) [m³/m³].</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Calculate saturation</span>
+    <span class="c1"># Calculate saturation (S) from resistivity</span>
     <span class="n">saturation</span> <span class="o">=</span> <span class="n">resistivity_to_saturation</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="n">rhos</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">sigma_sur</span><span class="p">)</span>
     
-    <span class="c1"># Convert saturation to water content</span>
-    <span class="n">water_content</span> <span class="o">=</span> <span class="n">saturation</span> <span class="o">*</span> <span class="n">porosity</span>
+    <span class="c1"># Ensure porosity is a NumPy array for vectorized multiplication</span>
+    <span class="n">por_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span>
+    <span class="n">sat_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">saturation</span><span class="p">)</span> <span class="c1"># resistivity_to_saturation should return array if input is array</span>
+
+    <span class="c1"># Calculate water content (θ = S * φ)</span>
+    <span class="n">water_content</span> <span class="o">=</span> <span class="n">sat_arr</span> <span class="o">*</span> <span class="n">por_arr</span> <span class="c1"># Broadcasting should handle if shapes are compatible</span>
+                                     <span class="c1"># e.g. saturation (N,) and porosity (scalar) or porosity (N,)</span>
     
+    <span class="c1"># Match output type (scalar/array) to resistivity input type for consistency,</span>
+    <span class="c1"># assuming porosity might be scalar.</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)</span> <span class="ow">and</span> <span class="n">water_content</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">water_content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">water_content</span></div>
 
 
-
-<div class="viewcode-block" id="resistivity_to_saturation">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.petrophysics.resistivity_models.resistivity_to_saturation">[docs]</a>
-<span class="k">def</span> <span class="nf">resistivity_to_saturation</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="n">rhos</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">sigma_sur</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="resistivity_to_saturation"><a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.petrophysics.resistivity_models.resistivity_to_saturation">[docs]</a><span class="k">def</span> <span class="nf">resistivity_to_saturation</span><span class="p">(</span><span class="n">resistivity</span><span class="p">:</span> <span class="n">ScalarOrArray</span><span class="p">,</span>
+                              <span class="n">rhos</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                              <span class="n">n</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="c1"># n can be array here</span>
+                              <span class="n">sigma_sur</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="c1"># sigma_sur can be array</span>
+                             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScalarOrArray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Convert resistivity to saturation using Waxman-Smits model.</span>
-<span class="sd">    </span>
+<span class="sd">    Convert bulk resistivity to water saturation using the simplified Waxman-Smits model.</span>
+
+<span class="sd">    The relationship is given by: 1/ρ = (1/rhos) * S^n + σ_sur * S^(n-1).</span>
+<span class="sd">    This equation is solved numerically for S using `scipy.optimize.fsolve`.</span>
+<span class="sd">    If `sigma_sur` is zero, the equation simplifies to Archie&#39;s Law for saturation.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        resistivity (array): Resistivity values</span>
-<span class="sd">        rhos (float): Saturated resistivity without surface effects</span>
-<span class="sd">        n (float): Saturation exponent</span>
-<span class="sd">        sigma_sur (float): Surface conductivity. Default is 0 (no surface effects).</span>
-<span class="sd">    </span>
+<span class="sd">        resistivity (ScalarOrArray): Bulk resistivity (ρ) [ohm·m].</span>
+<span class="sd">        rhos (float): Resistivity of the rock when fully saturated (1/σ_sat) [ohm·m].</span>
+<span class="sd">        n (Union[float, np.ndarray]): Saturation exponent (dimensionless). Can be scalar or array</span>
+<span class="sd">                                      broadcastable with resistivity.</span>
+<span class="sd">        sigma_sur (Union[float, np.ndarray], optional): Surface conductivity term (σs) [S/m].</span>
+<span class="sd">                                                        Can be scalar or array. Defaults to 0.0.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        array: Saturation values</span>
+<span class="sd">        ScalarOrArray: Calculated water saturation (S) [m³/m³], clipped to [0, 1].</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If `rhos` is non-positive or if numerical solution fails for any point.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Convert inputs to arrays</span>
-    <span class="n">resistivity_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)</span>
-    <span class="n">sigma_sur_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">sigma_sur</span><span class="p">)</span>
-    <span class="n">n_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rhos</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;rhos (fully saturated resistivity) must be positive.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Ensure inputs are NumPy arrays for consistent processing and broadcasting.</span>
+    <span class="c1"># `np.atleast_1d` converts scalars to 1-element arrays.</span>
+    <span class="n">resistivity_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)</span>
+    <span class="n">sigma_sur_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">sigma_sur</span><span class="p">)</span>
+    <span class="n">n_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
     
-    <span class="c1"># Ensure all arrays have compatible shapes</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sigma_sur_array</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">sigma_sur_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">,</span> <span class="n">sigma_sur_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_array</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">n_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">,</span> <span class="n">n_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-    
-    <span class="c1"># Calculate sigma_sat</span>
+    <span class="c1"># Broadcast sigma_sur and n to match the shape of resistivity_array if they are scalar</span>
+    <span class="c1"># This simplifies element-wise operations in the loop.</span>
+    <span class="k">if</span> <span class="n">sigma_sur_arr</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">resistivity_arr</span><span class="o">.</span><span class="n">shape</span> <span class="ow">and</span> <span class="n">sigma_sur_arr</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">sigma_sur_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">resistivity_arr</span><span class="p">,</span> <span class="n">sigma_sur_arr</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_arr</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">resistivity_arr</span><span class="o">.</span><span class="n">shape</span> <span class="ow">and</span> <span class="n">n_arr</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">n_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">resistivity_arr</span><span class="p">,</span> <span class="n">n_arr</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+    <span class="c1"># Check for shape compatibility after attempting broadcast</span>
+    <span class="k">if</span> <span class="n">sigma_sur_arr</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">resistivity_arr</span><span class="o">.</span><span class="n">shape</span> <span class="ow">or</span> <span class="n">n_arr</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">resistivity_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Shapes of resistivity, n, and sigma_sur must be compatible for broadcasting or be identical.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Calculate conductivity of the rock fully saturated with water (σ_sat = 1/rhos)</span>
     <span class="n">sigma_sat</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">rhos</span>
     
-    <span class="c1"># First calculate saturation without surface conductivity (Archie&#39;s law)</span>
-    <span class="c1"># This provides an initial guess for numerical solution</span>
-    <span class="n">S_initial</span> <span class="o">=</span> <span class="p">(</span><span class="n">rhos</span> <span class="o">/</span> <span class="n">resistivity_array</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">n_array</span><span class="p">)</span>
-    <span class="n">S_initial</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">S_initial</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="c1"># Initial guess for saturation (S_initial) using Archie&#39;s Law (ignoring sigma_sur).</span>
+    <span class="c1"># This is robust when sigma_sur is small or zero.</span>
+    <span class="c1"># S_initial = (σ_bulk / σ_sat)^(1/n) = ( (1/ρ_bulk) / (1/ρ_sat) )^(1/n) = (ρ_sat / ρ_bulk)^(1/n)</span>
+    <span class="c1"># Handle potential division by zero or negative results from resistivity_arr if it contains non-positive values.</span>
+    <span class="c1"># Resistivity should be positive. If resistivity_arr can be zero or negative, it implies an issue.</span>
+    <span class="c1"># For Archie&#39;s, if resistivity_arr &lt; rhos, S_initial &gt; 1. If resistivity_arr is very large, S_initial -&gt; 0.</span>
+    <span class="c1"># Clipping S_initial to [0.01, 1.0] provides a bounded starting point for fsolve.</span>
+    <span class="c1"># (0.01 instead of 0.0 to avoid issues if n-1 &lt; 0 in the full equation at S=0).</span>
     
-    <span class="c1"># Initialize saturation array</span>
-    <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)</span>
+    <span class="c1"># Suppress warnings for invalid operations (e.g., division by zero if resistivity_arr contains 0)</span>
+    <span class="c1"># These will result in inf/nan which are handled by clipping or fsolve.</span>
+    <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
+        <span class="n">s_initial_guess</span> <span class="o">=</span> <span class="p">(</span><span class="n">rhos</span> <span class="o">/</span> <span class="n">resistivity_arr</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_arr</span><span class="p">)</span>
     
-    <span class="c1"># Solve for each resistivity value</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)):</span>
-        <span class="k">if</span> <span class="n">sigma_sur_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="c1"># If no surface conductivity, use Archie&#39;s law</span>
-            <span class="n">saturation</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">S_initial</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># With surface conductivity, solve numerically</span>
-            <span class="n">n_val</span> <span class="o">=</span> <span class="n">n_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            
-            <span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">S</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">sigma_sat</span> <span class="o">*</span> <span class="n">S</span><span class="o">**</span><span class="n">n_val</span> <span class="o">+</span> <span class="n">sigma_sur_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">S</span><span class="o">**</span><span class="p">(</span><span class="n">n_val</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">resistivity_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            
-            <span class="n">solution</span> <span class="o">=</span> <span class="n">fsolve</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">S_initial</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-            <span class="n">saturation</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">solution</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">s_initial_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">s_initial_guess</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="c1"># Clip initial guess</span>
+    <span class="c1"># For elements where resistivity_arr was non-positive, s_initial_guess might be NaN.</span>
+    <span class="c1"># Replace NaNs in initial guess with a sensible default (e.g., 0.5 or 0.01).</span>
+    <span class="n">s_initial_guess</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">s_initial_guess</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">0.01</span>
     
-    <span class="c1"># Ensure saturation is physically meaningful</span>
-    <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">saturation</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="c1"># Initialize output saturation array</span>
+    <span class="n">saturation_result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">resistivity_arr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     
-    <span class="c1"># Return scalar if input was scalar</span>
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">resistivity</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">saturation</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-    
-    <span class="k">return</span> <span class="n">saturation</span></div>
+    <span class="c1"># Iterate and solve for saturation for each element if inputs are arrays.</span>
+    <span class="c1"># np.nditer could be used for more complex broadcasting, but direct indexing is fine if shapes match.</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">resistivity_arr</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+        <span class="c1"># Current values for this element</span>
+        <span class="n">current_resistivity</span> <span class="o">=</span> <span class="n">resistivity_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">current_sigma_sur</span> <span class="o">=</span> <span class="n">sigma_sur_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">current_n</span> <span class="o">=</span> <span class="n">n_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">current_s_initial</span> <span class="o">=</span> <span class="n">s_initial_guess</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
+        <span class="c1"># If resistivity is non-physical (e.g., zero or negative), result is ill-defined.</span>
+        <span class="c1"># We can assign NaN or a boundary value (0 or 1). Let&#39;s try NaN, then clip later.</span>
+        <span class="k">if</span> <span class="n">current_resistivity</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">saturation_result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="c1"># Non-physical resistivity</span>
+            <span class="k">continue</span>
+
+        <span class="n">target_conductivity</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">current_resistivity</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">current_sigma_sur</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">):</span>
+            <span class="c1"># Simplified case: Archie&#39;s Law (sigma_sur = 0)</span>
+            <span class="c1"># S^n = (target_conductivity / sigma_sat)</span>
+            <span class="c1"># Handle cases where target_conductivity/sigma_sat might be negative (non-physical)</span>
+            <span class="c1"># or where sigma_sat is zero (should not happen if rhos &gt; 0).</span>
+            <span class="n">ratio</span> <span class="o">=</span> <span class="n">target_conductivity</span> <span class="o">/</span> <span class="n">sigma_sat</span>
+            <span class="k">if</span> <span class="n">ratio</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Non-physical</span>
+                <span class="n">saturation_result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> 
+            <span class="k">elif</span> <span class="n">current_n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Avoid 0th root; S^0 = 1 implies ratio must be 1.</span>
+                 <span class="n">saturation_result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span><span class="mf">1.0</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="c1"># Or 0.0 if ratio is 0? Undefined.</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">saturation_result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ratio</span> <span class="o">**</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">current_n</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Full Waxman-Smits form, requires numerical solution for S:</span>
+            <span class="c1"># sigma_sat * S^n + sigma_sur * S^(n-1) - target_conductivity = 0</span>
+            <span class="c1"># Potential Issue: fsolve might fail or find non-physical roots if parameters are extreme</span>
+            <span class="c1"># or if the initial guess is poor. The function must be well-behaved.</span>
+            <span class="c1"># The term S^(n-1) can cause issues if S=0 and n-1 is negative (n&lt;1).</span>
+            <span class="c1"># We clipped S_initial to be &gt;0.</span>
+            
+            <span class="k">def</span> <span class="nf">waxman_smits_func</span><span class="p">(</span><span class="n">S_var</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+                <span class="c1"># S_var is the variable (saturation) we are solving for.</span>
+                <span class="c1"># Clip S_var within [0,1] during function evaluation for stability, though fsolve might go outside.</span>
+                <span class="n">S_eval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">S_var</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> 
+                
+                <span class="n">term1</span> <span class="o">=</span> <span class="n">sigma_sat</span> <span class="o">*</span> <span class="p">(</span><span class="n">S_eval</span> <span class="o">**</span> <span class="n">current_n</span><span class="p">)</span>
+                <span class="n">term2</span> <span class="o">=</span> <span class="mf">0.0</span>
+                <span class="c1"># Handle S^(n-1) carefully for S=0 cases</span>
+                <span class="k">if</span> <span class="n">S_eval</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">current_n</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># n-1 &gt; 0</span>
+                        <span class="n">term2</span> <span class="o">=</span> <span class="mf">0.0</span>
+                    <span class="k">elif</span> <span class="n">current_n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># n-1 = 0, S^0 = 1 (conventionally for S&gt;0, 0^0=1 in numpy)</span>
+                        <span class="n">term2</span> <span class="o">=</span> <span class="n">current_sigma_sur</span> <span class="c1"># sigma_sur * 1.0</span>
+                    <span class="k">else</span><span class="p">:</span> <span class="c1"># n &lt; 1, n-1 &lt; 0. 0 to a negative power is problematic (inf).</span>
+                          <span class="c1"># This indicates an issue with model applicability or parameters.</span>
+                          <span class="c1"># Return a large number to steer fsolve away if it tries S=0.</span>
+                          <span class="c1"># However, S_eval is already clipped, so S_eval=0 means S_var was &lt;=0.</span>
+                          <span class="c1"># If fsolve provides S_var=0, and n&lt;1, this implies infinite conductivity from surface term.</span>
+                          <span class="c1"># This case should be rare with typical n values (&gt;=1).</span>
+                          <span class="c1"># If S_eval is truly 0 from clipping, this term is problematic.</span>
+                          <span class="c1"># Let&#39;s assume n &gt;= 1 based on typical usage.</span>
+                          <span class="c1"># If n &lt; 1 and S_eval=0, this term should contribute massively if current_sigma_sur &gt; 0.</span>
+                          <span class="c1"># For fsolve, better to ensure function is defined.</span>
+                          <span class="c1"># If we expect S to be very small, S^(n-1) can be huge if n-1&lt;0.</span>
+                          <span class="c1"># Let&#39;s assume n &gt;= 1 for physical formulation of this simplified model.</span>
+                           <span class="k">pass</span> <span class="c1"># term2 remains 0, or handle as error if n&lt;1 is expected.</span>
+                <span class="k">else</span><span class="p">:</span> <span class="c1"># S_eval &gt; 0</span>
+                    <span class="n">term2</span> <span class="o">=</span> <span class="n">current_sigma_sur</span> <span class="o">*</span> <span class="p">(</span><span class="n">S_eval</span> <span class="o">**</span> <span class="p">(</span><span class="n">current_n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+                    
+                <span class="k">return</span> <span class="n">term1</span> <span class="o">+</span> <span class="n">term2</span> <span class="o">-</span> <span class="n">target_conductivity</span>
+            
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># `fsolve` attempts to find roots of `waxman_smits_func`.</span>
+                <span class="c1"># `xtol` can be adjusted for precision; `full_output=False` for only solution.</span>
+                <span class="n">solution_array</span><span class="p">,</span> <span class="n">infodict</span><span class="p">,</span> <span class="n">ier</span><span class="p">,</span> <span class="n">mesg</span> <span class="o">=</span> <span class="n">fsolve</span><span class="p">(</span><span class="n">waxman_smits_func</span><span class="p">,</span> <span class="n">current_s_initial</span><span class="p">,</span> <span class="n">xtol</span><span class="o">=</span><span class="mf">1.49012e-8</span><span class="p">,</span> <span class="n">full_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">ier</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># ier=1 means solution converged.</span>
+                    <span class="n">saturation_result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">solution_array</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Solution did not converge.</span>
+                    <span class="c1"># print(f&quot;Warning: Saturation solver did not converge for resistivity {current_resistivity} (index {i}). Message: {mesg}&quot;)</span>
+                    <span class="c1"># Fallback: use initial Archie guess, or set to NaN. Using NaN is safer.</span>
+                    <span class="n">saturation_result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="c1"># Catch any other errors during fsolve.</span>
+                <span class="c1"># print(f&quot;Error during fsolve for resistivity {current_resistivity} (index {i}): {e}&quot;)</span>
+                <span class="n">saturation_result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    
+    <span class="c1"># Final clip to ensure all computed/fallback values are within physical bounds [0, 1].</span>
+    <span class="c1"># NaNs will remain NaNs.</span>
+    <span class="n">saturation_final</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">saturation_result</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    
+    <span class="c1"># Return scalar if the original resistivity input was scalar.</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">resistivity</span><span class="p">):</span>
+        <span class="c1"># Cast to standard float if it&#39;s a 0-dim array scalar.</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">saturation_final</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">if</span> <span class="n">saturation_final</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">saturation_final</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">saturation_final</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="k">return</span> <span class="n">saturation_final</span></div>
 
 </pre></div>
 

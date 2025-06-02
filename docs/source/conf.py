@@ -6,12 +6,11 @@ import unittest.mock as mock
 import logging
 logging.getLogger().setLevel(logging.WARNING)
 
-
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath('../../'))
 sys.path.insert(0, os.path.abspath('../../PyHydroGeophysX'))
 
-# Mock problematic imports
+# Mock problematic imports for building docs
 mock_modules = [
     'pygimli', 'pygimli.physics', 'pygimli.physics.ert', 
     'pygimli.physics.traveltime', 'pygimli.meshtools',
@@ -44,7 +43,7 @@ extensions = [
     'sphinx_gallery.gen_gallery',
 ]
 
-# Napoleon settings for Google/NumPy style docstrings
+# Napoleon settings
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
@@ -66,13 +65,10 @@ autodoc_default_options = {
     'exclude-members': '__weakref__'
 }
 
-# Suppress warnings for missing references
 autodoc_mock_imports = mock_modules
-
-# Allow notebook errors to not break the build
 nbsphinx_allow_errors = True
 
-# Sphinx Gallery configuration with error handling
+# Sphinx Gallery configuration
 sphinx_gallery_conf = {
     'examples_dirs': '../../examples',
     'gallery_dirs': 'auto_examples',
@@ -84,14 +80,11 @@ sphinx_gallery_conf = {
     'capture_repr': (),
     'abort_on_example_error': False,
     'run_stale_examples': False,
-    'abort_on_example_error': False,  # Don't abort on error
 }
 
-# Templates path
 templates_path = ['_templates']
 exclude_patterns = []
 
-# Source file suffixes
 source_suffix = {
     '.rst': None,
     '.md': 'myst_parser',
@@ -100,8 +93,12 @@ source_suffix = {
 # -- Options for HTML output -------------------------------------------------
 html_theme = 'sphinx_rtd_theme'
 
+# REPLACE 'YOUR_GITHUB_USERNAME' with your actual GitHub username
+html_baseurl = 'https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/'
+html_title = 'PyHydroGeophysX Documentation'
+
 html_theme_options = {
-    'canonical_url': '',
+    'canonical_url': 'https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/',
     'logo_only': False,
     'display_version': True,
     'prev_next_buttons_location': 'bottom',
@@ -111,6 +108,15 @@ html_theme_options = {
     'navigation_depth': 4,
     'includehidden': True,
     'titles_only': False
+}
+
+# GitHub integration - REPLACE 'YOUR_GITHUB_USERNAME' with your actual username
+html_context = {
+    "display_github": True,
+    "github_user": "YOUR_GITHUB_USERNAME",
+    "github_repo": "PyHydroGeophysX",
+    "github_version": "main",
+    "conf_py_path": "/docs/source/",
 }
 
 html_static_path = ['_static']

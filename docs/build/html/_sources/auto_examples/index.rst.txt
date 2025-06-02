@@ -34,11 +34,10 @@ Each example includes detailed comments and demonstrates best practices for wate
 
     <div class="sphx-glr-thumbnails">
 
-.. thumbnail-parent-div-open
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load and process outputs from different  hydrological models using PyHydroGeophysX. We show examples for both  ParFlow and MODFLOW models.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load and process outputs from different  hydrological models u...">
 
 .. only:: html
 
@@ -55,7 +54,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example combines structural constraints with time-lapse ERT inversion to monitor water content changes in layered geological media.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example combines structural constraints with time-lapse ERT inversion to monitor water con...">
 
 .. only:: html
 
@@ -72,7 +71,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates different approaches for time-lapse electrical  resistivity tomography (ERT) inversion using PyHydroGeophysX.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates different approaches for time-lapse electrical  resistivity tomograph...">
 
 .. only:: html
 
@@ -89,7 +88,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to incorporate structural information from  seismic velocity models into ERT inversion for improved subsurface imaging.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to incorporate structural information from  seismic velocity mode...">
 
 .. only:: html
 
@@ -106,7 +105,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates Monte Carlo uncertainty quantification for  converting ERT resistivity models to water content estimates.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates Monte Carlo uncertainty quantification for  converting ERT resistivit...">
 
 .. only:: html
 
@@ -123,7 +122,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates seismic refraction tomography forward modeling for watershed structure characterization using PyHydroGeophysX.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates seismic refraction tomography forward modeling for watershed structur...">
 
 .. only:: html
 
@@ -140,7 +139,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to create synthetic time-lapse electrical  resistivity tomography (ERT) measurements for watershed monitoring applications.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to create synthetic time-lapse electrical  resistivity tomography...">
 
 .. only:: html
 
@@ -157,7 +156,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for integrating hydrological  model outputs with geophysical forward modeling and inversion using PyHydroGeophysX.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for integrating hydrological  model outputs wit...">
 
 .. only:: html
 
@@ -171,8 +170,6 @@ Each example includes detailed comments and demonstrates best practices for wate
       <div class="sphx-glr-thumbnail-title">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</div>
     </div>
 
-
-.. thumbnail-parent-div-close
 
 .. raw:: html
 

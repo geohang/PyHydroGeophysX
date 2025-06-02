@@ -1,28 +1,29 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../../../">
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PyHydroGeophysX.model_output.water_content &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
-
+  <title>PyHydroGeophysX.model_output.water_content &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/model_output/water_content.html" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../../../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
@@ -87,275 +88,408 @@
              
   <h1>Source code for PyHydroGeophysX.model_output.water_content</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Module for handling MODFLOW water content data.</span>
+<span class="sd">Module for handling MODFLOW Unsaturated-Zone Flow (UZF) package water content data.</span>
+
+<span class="sd">This module provides a class `MODFLOWWaterContent` (which seems to be a duplicate</span>
+<span class="sd">or very similar to the one in `modflow_output.py` but focused here) for reading</span>
+<span class="sd">binary &#39;WaterContent&#39; files produced by MODFLOW&#39;s UZF package. It also includes</span>
+<span class="sd">a utility for calculating saturation.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Any</span> <span class="c1"># Added Any for file_obj in binaryread</span>
 
 
-<div class="viewcode-block" id="binaryread">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.water_content.binaryread">[docs]</a>
-<span class="k">def</span> <span class="nf">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,),</span> <span class="n">charlen</span><span class="o">=</span><span class="mi">16</span><span class="p">):</span>
+<span class="c1"># This binaryread function is identical to the one in modflow_output.py.</span>
+<span class="c1"># To avoid duplication, it would typically be in a shared utility module.</span>
+<span class="c1"># For this exercise, it&#39;s documented here as per the file context.</span>
+<div class="viewcode-block" id="binaryread"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.water_content.binaryread">[docs]</a><span class="k">def</span> <span class="nf">binaryread</span><span class="p">(</span><span class="n">file_obj</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="c1"># Should be BinaryIO</span>
+               <span class="n">vartype</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">type</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]],</span>
+               <span class="n">shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,),</span>
+               <span class="n">charlen</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">void</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Uses numpy to read from binary file. This was found to be faster than the</span>
-<span class="sd">    struct approach and is used as the default.</span>
+<span class="sd">    Reads data from an open binary file using numpy.fromfile or file.read.</span>
+
+<span class="sd">    Designed for MODFLOW binary output files, handling various data types.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        file: Open file object in binary read mode</span>
-<span class="sd">        vartype: Variable type to read</span>
-<span class="sd">        shape: Shape of the data to read (default: (1,))</span>
-<span class="sd">        charlen: Length of character strings (default: 16)</span>
+<span class="sd">        file_obj: Open file object in binary read mode.</span>
+<span class="sd">        vartype: Variable type to read (e.g., np.float64, str, or structured dtype list).</span>
+<span class="sd">        shape (Tuple[int, ...], optional): Desired output shape for standard numpy dtypes. Defaults to (1,).</span>
+<span class="sd">        charlen (int, optional): Length for string types if `vartype` is `str`. Defaults to 16.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        The read data</span>
+<span class="sd">        Union[bytes, np.ndarray, np.void]: Data read from file. `bytes` for `str` type,</span>
+<span class="sd">                                           `np.ndarray` for standard dtypes, `np.void` for structured.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        EOFError: If EOF is reached unexpectedly while reading data for standard dtypes.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Read a string variable of length charlen</span>
     <span class="k">if</span> <span class="n">vartype</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">charlen</span> <span class="o">*</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># Find the number of values</span>
-        <span class="n">nval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">,</span> <span class="n">nval</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">nval</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span>  <span class="c1"># [0]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">result</span></div>
+        <span class="c1"># Reads `charlen` bytes. Does not decode.</span>
+        <span class="c1"># Potential Improvement: Add optional decoding and stripping of null chars.</span>
+        <span class="k">return</span> <span class="n">file_obj</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">charlen</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vartype</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span> <span class="c1"># Assuming structured dtype list</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">vartype</span><span class="p">)</span>
+        <span class="c1"># Reads one item of the structured type.</span>
+        <span class="c1"># `count=1` ensures it tries to read exactly one full record.</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">file_obj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dt</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Check if anything was read</span>
+            <span class="k">raise</span> <span class="ne">EOFError</span><span class="p">(</span><span class="s2">&quot;Attempted to read a structured record but reached EOF.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">record</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># Return the single structured void/scalar</span>
+    <span class="k">else</span><span class="p">:</span> <span class="c1"># Standard numpy dtype</span>
+        <span class="n">num_values_to_read</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">shape</span><span class="p">))</span> <span class="c1"># Ensure integer for count</span>
+        <span class="n">data_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">file_obj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">vartype</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="n">num_values_to_read</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">data_array</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="n">num_values_to_read</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">EOFError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Attempted to read </span><span class="si">{</span><span class="n">num_values_to_read</span><span class="si">}</span><span class="s2"> values of type </span><span class="si">{</span><span class="n">vartype</span><span class="si">}</span><span class="s2">, &quot;</span>
+                           <span class="sa">f</span><span class="s2">&quot;but only found </span><span class="si">{</span><span class="n">data_array</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> values (EOF reached).&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Original code had `result = result` for nval == 1.</span>
+        <span class="c1"># `np.fromfile` already returns an array. Reshaping is appropriate.</span>
+        <span class="c1"># If a scalar is specifically desired for shape (1,), the caller should extract it via data_array[0].</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">data_array</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="MODFLOWWaterContent"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent">[docs]</a><span class="k">class</span> <span class="nc">MODFLOWWaterContent</span><span class="p">:</span> <span class="c1"># Renamed to avoid direct conflict if imported alongside the other one.</span>
+                           <span class="c1"># Or, this is the primary one if water_content.py is the intended module.</span>
+                           <span class="c1"># Assuming this is the version to be documented from water_content.py.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Processes water content data from MODFLOW&#39;s UZF (Unsaturated-Zone Flow) package.</span>
 
-<div class="viewcode-block" id="MODFLOWWaterContent">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent">[docs]</a>
-<span class="k">class</span> <span class="nc">MODFLOWWaterContent</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for processing water content data from MODFLOW simulations.&quot;&quot;&quot;</span>
+<span class="sd">    This class reads the binary &#39;WaterContent&#39; file output by MODFLOW when the UZF</span>
+<span class="sd">    package is active and output is requested. It maps the 1D array of UZF cell</span>
+<span class="sd">    water contents back to a 2D or 3D grid based on the provided `idomain`.</span>
+<span class="sd">    It also includes a method to calculate saturation from water content and porosity.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        sim_ws (str): Path to the simulation workspace.</span>
+<span class="sd">        idomain (np.ndarray): The 2D idomain array used for mapping UZF cells.</span>
+<span class="sd">        nrows (int): Number of rows in the model grid.</span>
+<span class="sd">        ncols (int): Number of columns in the model grid.</span>
+<span class="sd">        iuzno_dict_rev (Dict[int, Tuple[int,int]]): Reverse lookup dictionary mapping</span>
+<span class="sd">                                                    sequential UZF cell number to (row, col) index.</span>
+<span class="sd">        nuzfcells_2d (int): Number of active UZF cells in the 2D plane (derived from idomain).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="MODFLOWWaterContent.__init__">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sim_ws</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">idomain</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<div class="viewcode-block" id="MODFLOWWaterContent.__init__"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sim_ws</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">idomain</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize MODFLOWWaterContent processor.</span>
-<span class="sd">        </span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            sim_ws: Path to simulation workspace</span>
-<span class="sd">            idomain: Domain array indicating active cells</span>
+<span class="sd">            sim_ws (str): Path to the MODFLOW simulation workspace (directory containing</span>
+<span class="sd">                          the &#39;WaterContent&#39; output file).</span>
+<span class="sd">            idomain (np.ndarray): A 2D or 3D integer NumPy array indicating active model cells</span>
+<span class="sd">                                  (typically, &gt;0 for active, 0 for inactive). If 3D, the</span>
+<span class="sd">                                  first layer (index 0) is used for UZF cell mapping, as UZF</span>
+<span class="sd">                                  is typically associated with the top model layer.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            TypeError: If `idomain` is not a NumPy array.</span>
+<span class="sd">            ValueError: If the effective `idomain` (after potentially taking the first slice) is not 2D.</span>
+<span class="sd">            FileNotFoundError: If `sim_ws` directory does not exist.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">sim_ws</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Simulation workspace directory not found: </span><span class="si">{</span><span class="n">sim_ws</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sim_ws</span> <span class="o">=</span> <span class="n">sim_ws</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">idomain</span> <span class="o">=</span> <span class="n">idomain</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span> <span class="o">=</span> <span class="n">idomain</span><span class="o">.</span><span class="n">shape</span>
-        
-        <span class="c1"># Build reverse lookup dictionary (only for first layer as in original code)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">iuzno</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">idomain</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span><span class="p">[</span><span class="n">iuzno</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
-                    <span class="n">iuzno</span> <span class="o">+=</span> <span class="mi">1</span>
-        
-        <span class="c1"># Store number of UZ flow cells</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span><span class="p">)</span></div>
 
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">idomain</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;idomain must be a NumPy array.&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># UZF cells are typically related to the top active layer of the model.</span>
+        <span class="c1"># If a 3D idomain is provided, use its first layer (slice).</span>
+        <span class="n">current_idomain_slice</span> <span class="o">=</span> <span class="n">idomain</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="k">if</span> <span class="n">idomain</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">idomain</span>
+        <span class="k">if</span> <span class="n">current_idomain_slice</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The effective idomain for UZF mapping must be a 2D array.&quot;</span><span class="p">)</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">idomain</span> <span class="o">=</span> <span class="n">current_idomain_slice</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">idomain</span><span class="o">.</span><span class="n">shape</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">iuzno_counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">r_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">c_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">idomain</span><span class="p">[</span><span class="n">r_idx</span><span class="p">,</span> <span class="n">c_idx</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Active cells where UZF is applied</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span><span class="p">[</span><span class="n">iuzno_counter</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">r_idx</span><span class="p">,</span> <span class="n">c_idx</span><span class="p">)</span>
+                    <span class="n">iuzno_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells_2d</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span><span class="p">)</span> <span class="c1"># Number of active UZF cells in the 2D grid plane</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells_2d</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: No active UZF cells found based on the provided idomain (all idomain values &lt;= 0 in the mapping slice).&quot;</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="MODFLOWWaterContent.load_timestep">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.load_timestep">[docs]</a>
-    <span class="k">def</span> <span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">nlay</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="MODFLOWWaterContent.load_timestep"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.load_timestep">[docs]</a>    <span class="k">def</span> <span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">nlay_uzf</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Load water content for a specific timestep.</span>
-<span class="sd">        </span>
+<span class="sd">        Load water content data for a single, specific timestep.</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            timestep_idx: Index of the timestep to load</span>
-<span class="sd">            nlay: Number of layers in the model</span>
-<span class="sd">            </span>
+<span class="sd">            timestep_idx (int): The zero-based index of the timestep to load from the &#39;WaterContent&#39; file.</span>
+<span class="sd">            nlay_uzf (int, optional): The number of unsaturated zone layers simulated in UZF,</span>
+<span class="sd">                                   which determines how many values are stored per (row, col) UZF cell.</span>
+<span class="sd">                                   Defaults to 3. This must match the UZF package configuration.</span>
+
 <span class="sd">        Returns:</span>
-<span class="sd">            Water content array with shape (nlay, nrows, ncols)</span>
+<span class="sd">            np.ndarray: A 3D NumPy array of water content values with shape (nlay_uzf, nrows, ncols).</span>
+<span class="sd">                        Values for inactive grid cells (where idomain &lt;= 0) will be NaN.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            IndexError: If `timestep_idx` results in no data being loaded (e.g., out of bounds).</span>
+<span class="sd">            RuntimeError: If data loading for the specific timestep fails unexpectedly.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_time_range</span><span class="p">(</span><span class="n">timestep_idx</span><span class="p">,</span> <span class="n">timestep_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nlay</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+        <span class="c1"># This is a convenience method that calls load_time_range for a single timestep.</span>
+        <span class="c1"># Potential Improvement: Could be optimized to avoid creating a 4D array if performance is critical.</span>
+        <span class="n">data_4d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_time_range</span><span class="p">(</span><span class="n">start_idx</span><span class="o">=</span><span class="n">timestep_idx</span><span class="p">,</span> <span class="n">end_idx</span><span class="o">=</span><span class="n">timestep_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">nlay_uzf</span><span class="o">=</span><span class="n">nlay_uzf</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data_4d</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">data_4d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># Extract the single 3D array</span>
+        <span class="k">elif</span> <span class="n">data_4d</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+             <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Timestep index </span><span class="si">{</span><span class="n">timestep_idx</span><span class="si">}</span><span class="s2"> resulted in no data being loaded. It might be out of range or the file might be empty/corrupt.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># Should not happen if end_idx = start_idx + 1</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected data shape </span><span class="si">{</span><span class="n">data_4d</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> when loading single timestep </span><span class="si">{</span><span class="n">timestep_idx</span><span class="si">}</span><span class="s2">. Expected 1 timestep.&quot;</span><span class="p">)</span></div>
 
     
-<div class="viewcode-block" id="MODFLOWWaterContent.load_time_range">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.load_time_range">[docs]</a>
-    <span class="k">def</span> <span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
-                      <span class="n">nlay</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="MODFLOWWaterContent.load_time_range"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.load_time_range">[docs]</a>    <span class="k">def</span> <span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                      <span class="n">nlay_uzf</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Load water content for a range of timesteps.</span>
-<span class="sd">        </span>
-<span class="sd">        Args:</span>
-<span class="sd">            start_idx: Starting timestep index (default: 0)</span>
-<span class="sd">            end_idx: Ending timestep index (exclusive, default: None loads all)</span>
-<span class="sd">            nlay: Number of layers in the model (default: 3)</span>
-<span class="sd">            </span>
-<span class="sd">        Returns:</span>
-<span class="sd">            Water content array with shape (timesteps, nlay, nrows, ncols)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Calculate total UZ flow cells</span>
-        <span class="n">nuzfcells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells</span> <span class="o">*</span> <span class="n">nlay</span>
-        
-        <span class="c1"># Open water content file</span>
-        <span class="n">fpth</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_ws</span><span class="p">,</span> <span class="s2">&quot;WaterContent&quot;</span><span class="p">)</span>
-        <span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fpth</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span>
-        
-        <span class="n">WC_tot</span> <span class="o">=</span> <span class="p">[]</span>
-        
-        <span class="c1"># Skip to starting timestep</span>
-        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start_idx</span><span class="p">):</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="c1"># Read header</span>
-                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="p">(</span><span class="s2">&quot;kstp&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;kper&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> 
-                    <span class="p">(</span><span class="s2">&quot;pertim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;totim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;S16&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;maxbound&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;11&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                <span class="p">]</span>
-                <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span>
-                
-                <span class="c1"># Skip data for this timestep</span>
-                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">)]</span>
-                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nuzfcells</span><span class="p">):</span>
-                    <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error skipping to timestep </span><span class="si">{</span><span class="n">start_idx</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">WC_tot</span><span class="p">)</span>
-        
-        <span class="c1"># Read timesteps</span>
-        <span class="n">timestep</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="c1"># Break if we&#39;ve read the requested number of timesteps</span>
-            <span class="k">if</span> <span class="n">end_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">timestep</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="n">end_idx</span> <span class="o">-</span> <span class="n">start_idx</span><span class="p">):</span>
-                <span class="k">break</span>
-                
-            <span class="k">try</span><span class="p">:</span>
-                <span class="c1"># Read header information</span>
-                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="p">(</span><span class="s2">&quot;kstp&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;kper&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> 
-                    <span class="p">(</span><span class="s2">&quot;pertim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;totim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;S16&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;maxbound&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;11&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                <span class="p">]</span>
-                <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span>
-                
-                <span class="c1"># Initialize water content array for this timestep</span>
-                <span class="n">WC_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nlay</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
-                
-                <span class="c1"># Read water content data</span>
-                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">)]</span>
-                
-                <span class="c1"># Read data for each layer and cell</span>
-                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nlay</span><span class="p">):</span>
-                    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells</span><span class="p">):</span>
-                        <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
-                        <span class="n">WC_arr</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
-                
-                <span class="n">WC_tot</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">WC_arr</span><span class="p">)</span>
-                <span class="n">timestep</span> <span class="o">+=</span> <span class="mi">1</span>
-                
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Reached end of file or error at timestep </span><span class="si">{</span><span class="n">timestep</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="k">break</span>
-        
-        <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">WC_tot</span><span class="p">)</span></div>
+<span class="sd">        Load water content data for a specified range of timesteps from the &#39;WaterContent&#39; file.</span>
 
+<span class="sd">        Args:</span>
+<span class="sd">            start_idx (int, optional): Zero-based starting timestep index. Defaults to 0.</span>
+<span class="sd">            end_idx (Optional[int], optional): Zero-based ending timestep index (exclusive).</span>
+<span class="sd">                                               If None, loads all timesteps from `start_idx` to</span>
+<span class="sd">                                               the end of the file. Defaults to None.</span>
+<span class="sd">            nlay_uzf (int, optional): The number of unsaturated zone layers in the UZF model.</span>
+<span class="sd">                                   This dictates how many data values are read per active UZF cell</span>
+<span class="sd">                                   at each timestep. Defaults to 3.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: A 4D NumPy array of water content values, with shape</span>
+<span class="sd">                        (num_timesteps_loaded, nlay_uzf, nrows, ncols).</span>
+<span class="sd">                        Returns an empty 4D array (shape (0, nlay_uzf, nrows, ncols))</span>
+<span class="sd">                        if no timesteps are loaded or if an error occurs during initial file access.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells_2d</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: No active UZF cells defined by idomain; returning empty array for water content.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">nlay_uzf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">))</span>
+
+        <span class="c1"># Total number of data points per full timestep record in the binary file</span>
+        <span class="n">total_uzf_data_points_per_record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells_2d</span> <span class="o">*</span> <span class="n">nlay_uzf</span>
+        
+        <span class="n">wc_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_ws</span><span class="p">,</span> <span class="s2">&quot;WaterContent&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">wc_file_path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;WaterContent&#39; file not found in simulation workspace: </span><span class="si">{</span><span class="n">wc_file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">all_timesteps_data_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="c1"># Define the structured dtype for reading the MODFLOW binary file header.</span>
+        <span class="n">header_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">([</span>
+            <span class="p">(</span><span class="s2">&quot;kstp&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;kper&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;pertim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;totim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;S16&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;maxbound&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;aux1&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;aux2&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+        <span class="p">])</span>
+        <span class="c1"># Define dtype for reading a single water content data point.</span>
+        <span class="n">data_point_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">([(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">)])</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">wc_file_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="c1"># Skip records to reach the start_idx</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start_idx</span><span class="p">):</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">_</span> <span class="o">=</span> <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">header_dtype</span><span class="p">)</span> <span class="c1"># Read and discard header</span>
+                        <span class="c1"># Skip the data block based on total_uzf_data_points_per_record</span>
+                        <span class="n">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">total_uzf_data_points_per_record</span> <span class="o">*</span> <span class="n">data_point_dtype</span><span class="o">.</span><span class="n">itemsize</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_CUR</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span> 
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: EOF reached while skipping to start_idx </span><span class="si">{</span><span class="n">start_idx</span><span class="si">}</span><span class="s2">. No data will be loaded.&quot;</span><span class="p">)</span>
+                        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">nlay_uzf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">))</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> 
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error while skipping to timestep </span><span class="si">{</span><span class="n">start_idx</span><span class="si">}</span><span class="s2"> in &#39;WaterContent&#39; file: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">nlay_uzf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">))</span>
+                
+                <span class="c1"># Read the requested range of timesteps</span>
+                <span class="n">timesteps_read_count</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="c1"># Check if end_idx is met</span>
+                    <span class="k">if</span> <span class="n">end_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">timesteps_read_count</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="n">end_idx</span> <span class="o">-</span> <span class="n">start_idx</span><span class="p">):</span>
+                        <span class="k">break</span>
+                        
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">header_data</span> <span class="o">=</span> <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">header_dtype</span><span class="p">)</span> <span class="c1"># Read one header record</span>
+                        
+                        <span class="c1"># Validate &#39;maxbound&#39; from header if necessary.</span>
+                        <span class="c1"># maxbound_from_header = header_data[&#39;maxbound&#39;]</span>
+                        <span class="c1"># if maxbound_from_header != total_uzf_data_points_per_record:</span>
+                        <span class="c1">#     print(f&quot;Warning: Mismatch in expected UZF data points. Header: {maxbound_from_header}, Expected: {total_uzf_data_points_per_record}. May indicate incorrect nlay_uzf.&quot;)</span>
+                        <span class="c1">#     break # Stop further processing due to inconsistency</span>
+
+                        <span class="c1"># Initialize a 3D array for the current timestep&#39;s water content data</span>
+                        <span class="n">current_wc_3d_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">nlay_uzf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+                        
+                        <span class="c1"># Read water content data for each UZF layer and each active 2D UZF cell</span>
+                        <span class="k">for</span> <span class="n">k_layer_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nlay_uzf</span><span class="p">):</span>
+                            <span class="k">for</span> <span class="n">iuzno_2d_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells_2d</span><span class="p">):</span>
+                                <span class="n">wc_value_struct</span> <span class="o">=</span> <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">data_point_dtype</span><span class="p">)</span> <span class="c1"># Read one data point</span>
+                                <span class="n">wc_value</span> <span class="o">=</span> <span class="n">wc_value_struct</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span> <span class="c1"># Extract float from the structured scalar</span>
+                                
+                                <span class="n">r_idx</span><span class="p">,</span> <span class="n">c_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iuzno_dict_rev</span><span class="p">[</span><span class="n">iuzno_2d_idx</span><span class="p">]</span> <span class="c1"># Map to grid cell</span>
+                                <span class="n">current_wc_3d_array</span><span class="p">[</span><span class="n">k_layer_idx</span><span class="p">,</span> <span class="n">r_idx</span><span class="p">,</span> <span class="n">c_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">wc_value</span>
+                        
+                        <span class="n">all_timesteps_data_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current_wc_3d_array</span><span class="p">)</span>
+                        <span class="n">timesteps_read_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                        
+                    <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span> <span class="c1"># Expected way to finish if end_idx is None (read till end)</span>
+                        <span class="c1"># print(&quot;Info: Reached end of &#39;WaterContent&#39; file.&quot;)</span>
+                        <span class="k">break</span> 
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> 
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error reading data at loaded timestep count </span><span class="si">{</span><span class="n">timesteps_read_count</span><span class="si">}</span><span class="s2"> (file index </span><span class="si">{</span><span class="n">start_idx</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">timesteps_read_count</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="k">break</span> 
+        
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span> <span class="c1"># Should be caught by initial check, but defense-in-depth</span>
+            <span class="k">raise</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> <span class="c1"># Catch other errors like permission issues for open()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to open or process &#39;WaterContent&#39; file at &#39;</span><span class="si">{</span><span class="n">wc_file_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">nlay_uzf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">all_timesteps_data_list</span><span class="p">:</span>
+            <span class="c1"># print(&quot;Warning: No data loaded. The specified range might be empty or past EOF.&quot;)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">nlay_uzf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncols</span><span class="p">))</span>
+            
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_timesteps_data_list</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="MODFLOWWaterContent.calculate_saturation">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.calculate_saturation">[docs]</a>
-    <span class="k">def</span> <span class="nf">calculate_saturation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">water_content</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+<div class="viewcode-block" id="MODFLOWWaterContent.calculate_saturation"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.calculate_saturation">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_saturation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">water_content</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
                            <span class="n">porosity</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Calculate saturation from water content and porosity.</span>
-<span class="sd">        </span>
+<span class="sd">        Calculate volumetric saturation from water content and porosity.</span>
+
+<span class="sd">        Saturation (S) is computed as S = water_content / porosity.</span>
+<span class="sd">        The result is clipped to the range [0.0, 1.0].</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            water_content: Water content array</span>
-<span class="sd">            porosity: Porosity value(s)</span>
-<span class="sd">            </span>
+<span class="sd">            water_content (np.ndarray): NumPy array of water content values. Can be</span>
+<span class="sd">                                        for a single timestep (e.g., [nlay, nrow, ncol])</span>
+<span class="sd">                                        or multiple timesteps (e.g., [time, nlay, nrow, ncol]).</span>
+<span class="sd">            porosity (Union[float, np.ndarray]): Porosity of the medium. Can be a scalar</span>
+<span class="sd">                                                 (uniform porosity) or a NumPy array. If an array,</span>
+<span class="sd">                                                 its dimensions must be compatible with `water_content`</span>
+<span class="sd">                                                 (e.g., matching spatial dimensions for broadcasting</span>
+<span class="sd">                                                 across time if needed).</span>
+
 <span class="sd">        Returns:</span>
-<span class="sd">            Saturation array with same shape as water_content</span>
+<span class="sd">            np.ndarray: NumPy array of calculated saturation values, same shape as `water_content`,</span>
+<span class="sd">                        with values clipped between 0 and 1.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If `porosity` is an array and its dimensions are incompatible</span>
+<span class="sd">                        with `water_content` for element-wise division.</span>
+<span class="sd">            TypeError: If inputs are not of expected types (NumPy arrays, float).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Handle scalar porosity</span>
+        <span class="c1"># This method is identical to the one in HydroModelOutput base class.</span>
+        <span class="c1"># It&#39;s included here if this class might be used standalone or if specific</span>
+        <span class="c1"># MODFLOW context for saturation calculation becomes necessary later.</span>
+        <span class="c1"># For now, it could delegate to super().calculate_saturation if part of a class hierarchy.</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">water_content</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;water_content must be a NumPy array.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">porosity</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)):</span> <span class="c1"># Allow int as scalar porosity</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;porosity must be a float, int, or NumPy array.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Warning for non-positive porosity values</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">porosity</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">porosity</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Porosity array contains zero or negative values. Saturation calculation may result in NaNs or Infs.&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">porosity</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="ow">and</span> <span class="n">porosity</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Scalar porosity is zero or negative. Saturation calculation may result in NaNs or Infs.&quot;</span><span class="p">)</span>
+
+        <span class="n">saturation_result</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">porosity</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
-            <span class="n">saturation</span> <span class="o">=</span> <span class="n">water_content</span> <span class="o">/</span> <span class="n">porosity</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Make sure porosity has compatible dimensions</span>
+            <span class="c1"># Ensure float division, handle porosity = 0 to avoid runtime warning for 0/0 or x/0 if possible</span>
+            <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="c1"># If porosity is zero, saturation is undefined (NaN) unless water content is also zero (then 0).</span>
+                <span class="c1"># np.divide handles 0/0 as nan, x/0 as inf correctly by default with warnings.</span>
+                <span class="c1"># Let result be NaN/inf and then clip.</span>
+                <span class="n">saturation_result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">water_content</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">porosity</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">saturation_result</span> <span class="o">=</span> <span class="n">water_content</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># porosity is a NumPy array</span>
             <span class="k">if</span> <span class="n">porosity</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="n">water_content</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">porosity</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="n">water_content</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="c1"># Expand porosity for multiple timesteps</span>
-                    <span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span>
-                        <span class="n">porosity</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> 
-                        <span class="n">water_content</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> 
-                        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
-                    <span class="p">)</span>
+                <span class="c1"># Attempt to broadcast if porosity is static (e.g., 3D) and water_content is timed (e.g., 4D)</span>
+                <span class="k">if</span> <span class="n">porosity</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="n">water_content</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">water_content</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">==</span> <span class="n">porosity</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                    <span class="c1"># Add time axis to porosity for broadcasting: (1, nlay, nrow, ncol)</span>
+                    <span class="n">porosity_expanded</span> <span class="o">=</span> <span class="n">porosity</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> 
+                    <span class="n">saturation_result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">water_content</span><span class="p">,</span> <span class="n">porosity_expanded</span><span class="p">)</span> <span class="c1"># Handles porosity_expanded possibly containing 0</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Porosity dimensions not compatible with water content&quot;</span><span class="p">)</span>
-            
-            <span class="n">saturation</span> <span class="o">=</span> <span class="n">water_content</span> <span class="o">/</span> <span class="n">porosity</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Porosity array dimensions (</span><span class="si">{</span><span class="n">porosity</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">) are not directly compatible &quot;</span>
+                                     <span class="sa">f</span><span class="s2">&quot;with water_content dimensions (</span><span class="si">{</span><span class="n">water_content</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">) for broadcasting. &quot;</span>
+                                     <span class="sa">f</span><span class="s2">&quot;WC shape: </span><span class="si">{</span><span class="n">water_content</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, Porosity shape: </span><span class="si">{</span><span class="n">porosity</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c1"># Dimensions are the same</span>
+                 <span class="c1"># Element-wise division, handles cases where porosity might have zeros.</span>
+                <span class="n">saturation_result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">water_content</span><span class="p">,</span> <span class="n">porosity</span><span class="p">)</span>
         
-        <span class="c1"># Ensure saturation is between 0 and 1</span>
-        <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">saturation</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="c1"># Clip saturation to the physical range [0, 1].</span>
+        <span class="c1"># np.nan_to_num can be used if NaNs/Infs from division by zero need to be specific values before clipping.</span>
+        <span class="c1"># For example, np.nan_to_num(saturation_result, nan=0.0, posinf=1.0, neginf=0.0) could be an option.</span>
+        <span class="c1"># However, simple clipping is often sufficient if subsequent use handles NaNs from 0/0 correctly.</span>
+        <span class="c1"># If porosity is 0 and WC &gt; 0, result is inf, clipped to 1. This might mask issues.</span>
+        <span class="c1"># If porosity is 0 and WC = 0, result is nan, clipped to 0. (np.divide(0,0)=nan)</span>
+        <span class="n">saturation_final</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">saturation_result</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
         
-        <span class="k">return</span> <span class="n">saturation</span></div>
-
+        <span class="k">return</span> <span class="n">saturation_final</span></div>
     
-<div class="viewcode-block" id="MODFLOWWaterContent.get_timestep_info">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.get_timestep_info">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<div class="viewcode-block" id="MODFLOWWaterContent.get_timestep_info"><a class="viewcode-back" href="../../../api/model_output.html#PyHydroGeophysX.model_output.water_content.MODFLOWWaterContent.get_timestep_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get information about each timestep in the WaterContent file.</span>
-<span class="sd">        </span>
-<span class="sd">        Returns:</span>
-<span class="sd">            List of tuples (kstp, kper, pertim, totim) for each timestep</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Open water content file</span>
-        <span class="n">fpth</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_ws</span><span class="p">,</span> <span class="s2">&quot;WaterContent&quot;</span><span class="p">)</span>
-        <span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fpth</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span>
-        
-        <span class="n">timestep_info</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">nuzfcells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nuzfcells</span> <span class="o">*</span> <span class="mi">3</span>  <span class="c1"># Assuming 3 layers</span>
-        
-        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="c1"># Read header information</span>
-                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="p">(</span><span class="s2">&quot;kstp&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;kper&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> 
-                    <span class="p">(</span><span class="s2">&quot;pertim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;totim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;S16&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;maxbound&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                    <span class="p">(</span><span class="s2">&quot;11&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
-                <span class="p">]</span>
-                <span class="n">header</span> <span class="o">=</span> <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span>
-                
-                <span class="c1"># Extract timestep info</span>
-                <span class="n">kstp</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-                <span class="n">kper</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
-                <span class="n">pertim</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
-                <span class="n">totim</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span>
-                
-                <span class="n">timestep_info</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">kstp</span><span class="p">,</span> <span class="n">kper</span><span class="p">,</span> <span class="n">pertim</span><span class="p">,</span> <span class="n">totim</span><span class="p">))</span>
-                
-                <span class="c1"># Skip data for this timestep</span>
-                <span class="n">vartype</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">)]</span>
-                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nuzfcells</span><span class="p">):</span>
-                    <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">vartype</span><span class="p">)</span>
-                    
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="k">break</span>
-        
-        <span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">timestep_info</span></div>
-</div>
+<span class="sd">        Reads the &#39;WaterContent&#39; file to extract header information for each timestep.</span>
 
+<span class="sd">        Returns:</span>
+<span class="sd">            List[Tuple[int, int, float, float]]: A list of tuples, where each tuple</span>
+<span class="sd">                                                 contains (kstp, kper, pertim, totim)</span>
+<span class="sd">                                                 for a timestep:</span>
+<span class="sd">                                                 - kstp (int): Timestep number within the stress period.</span>
+<span class="sd">                                                 - kper (int): Stress period number.</span>
+<span class="sd">                                                 - pertim (float): Time within the current stress period.</span>
+<span class="sd">                                                 - totim (float): Total simulation time.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># This method is identical to the one in the other MODFLOWWaterContent class.</span>
+        <span class="c1"># Assuming it&#39;s correctly implemented there, it&#39;s replicated here.</span>
+        <span class="c1"># A default nlay_uzf might be needed for skipping if not stored or passed.</span>
+        <span class="n">default_nlay_uzf_for_skip</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># Must match how data blocks are sized.</span>
+                                     <span class="c1"># More robust: use maxbound from header to skip.</span>
+        
+        <span class="n">wc_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_ws</span><span class="p">,</span> <span class="s2">&quot;WaterContent&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">wc_file_path</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: &#39;WaterContent&#39; file not found at </span><span class="si">{</span><span class="n">wc_file_path</span><span class="si">}</span><span class="s2">. Cannot get timestep info.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="n">timestep_info_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">header_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">([</span>
+            <span class="p">(</span><span class="s2">&quot;kstp&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;kper&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;pertim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;totim&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;f8&quot;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;S16&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;maxbound&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;aux1&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;aux2&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;i4&quot;</span><span class="p">),</span>
+        <span class="p">])</span>
+        <span class="c1"># Assuming data points are float64 (8 bytes) for skipping.</span>
+        <span class="n">data_point_itemsize</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s2">&quot;&lt;f8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">itemsize</span> 
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">wc_file_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">header_data</span> <span class="o">=</span> <span class="n">binaryread</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">header_dtype</span><span class="p">)</span> <span class="c1"># Read one header record</span>
+                        
+                        <span class="n">kstp</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">header_data</span><span class="p">[</span><span class="s1">&#39;kstp&#39;</span><span class="p">])</span>
+                        <span class="n">kper</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">header_data</span><span class="p">[</span><span class="s1">&#39;kper&#39;</span><span class="p">])</span>
+                        <span class="n">pertim</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">header_data</span><span class="p">[</span><span class="s1">&#39;pertim&#39;</span><span class="p">])</span>
+                        <span class="n">totim</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">header_data</span><span class="p">[</span><span class="s1">&#39;totim&#39;</span><span class="p">])</span>
+                        <span class="n">maxbound_in_header</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">header_data</span><span class="p">[</span><span class="s1">&#39;maxbound&#39;</span><span class="p">])</span> <span class="c1"># Number of data points in the following block</span>
+
+                        <span class="n">timestep_info_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">kstp</span><span class="p">,</span> <span class="n">kper</span><span class="p">,</span> <span class="n">pertim</span><span class="p">,</span> <span class="n">totim</span><span class="p">))</span>
+                        
+                        <span class="c1"># Skip the data block using maxbound_in_header for accuracy</span>
+                        <span class="n">bytes_to_skip</span> <span class="o">=</span> <span class="n">maxbound_in_header</span> <span class="o">*</span> <span class="n">data_point_itemsize</span>
+                        <span class="n">file</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">bytes_to_skip</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_CUR</span><span class="p">)</span>
+                            
+                    <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span> 
+                        <span class="k">break</span> <span class="c1"># End of file reached cleanly</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> 
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error reading timestep info or skipping data in &#39;WaterContent&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="k">break</span> 
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to open or process &#39;WaterContent&#39; for timestep info: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span> 
+
+        <span class="k">return</span> <span class="n">timestep_info_list</span></div></div>
 </pre></div>
 
            </div>

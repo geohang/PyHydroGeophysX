@@ -1,28 +1,29 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../../../">
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PyHydroGeophysX.core.mesh_utils &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
-
+  <title>PyHydroGeophysX.core.mesh_utils &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/core/mesh_utils.html" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../../../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
@@ -87,7 +88,11 @@
              
   <h1>Source code for PyHydroGeophysX.core.mesh_utils</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Mesh utilities for geophysical modeling and inversion.</span>
+<span class="sd">Mesh utilities for geophysical modeling and inversion using PyGIMLi.</span>
+
+<span class="sd">This module provides functions and a class for creating and manipulating</span>
+<span class="sd">2D meshes, particularly for incorporating geological layer information or</span>
+<span class="sd">velocity interfaces into the mesh structure.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
@@ -96,92 +101,122 @@
 <span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">interp1d</span>
 <span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">savgol_filter</span>
 
-<div class="viewcode-block" id="create_mesh_from_layers">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.create_mesh_from_layers">[docs]</a>
-<span class="k">def</span> <span class="nf">create_mesh_from_layers</span><span class="p">(</span><span class="n">surface</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">line1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">line2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">bottom_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>
-                          <span class="n">quality</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">28</span><span class="p">,</span>
-                          <span class="n">area</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">40</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<div class="viewcode-block" id="create_mesh_from_layers"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.create_mesh_from_layers">[docs]</a><span class="k">def</span> <span class="nf">create_mesh_from_layers</span><span class="p">(</span><span class="n">surface</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                          <span class="n">line1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="c1"># Coordinates of the first subsurface layer boundary</span>
+                          <span class="n">line2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="c1"># Coordinates of the second subsurface layer boundary</span>
+                          <span class="n">bottom_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span> <span class="c1"># Absolute depth for the bottom of the mesh</span>
+                          <span class="n">quality</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">28</span><span class="p">,</span> <span class="c1"># Mesh quality (higher for finer mesh, affects triangle quality)</span>
+                          <span class="n">area</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">40</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">Polygon</span><span class="p">]:</span> <span class="c1"># Added geom to return</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create mesh from layer boundaries and get cell centers and markers.</span>
-<span class="sd">    </span>
+<span class="sd">    Create a 2D PyGIMLi mesh from three defined layer boundaries (surface, line1, line2).</span>
+
+<span class="sd">    This function constructs a mesh suitable for geophysical modeling where distinct</span>
+<span class="sd">    geological layers need to be represented with different markers. It creates</span>
+<span class="sd">    polygons for each layer and then meshes the combined geometry.</span>
+
+<span class="sd">    The markers are typically assigned as:</span>
+<span class="sd">    - Marker 2: Top layer (surface to line1) and bottom layer (below line2 to mesh bottom)</span>
+<span class="sd">    - Marker 3: Middle layer (between line1 and line2)</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        surface: Surface coordinates [[x,z],...] </span>
-<span class="sd">        line1: First layer boundary coordinates </span>
-<span class="sd">        line2: Second layer boundary coordinates </span>
-<span class="sd">        bottom_depth: Depth below surface minimum for mesh bottom</span>
-<span class="sd">        quality: Mesh quality parameter</span>
-<span class="sd">        area: Maximum cell area</span>
-<span class="sd">        </span>
+<span class="sd">        surface: Numpy array of (x, z) coordinates defining the ground surface.</span>
+<span class="sd">                 Shape: (N_surface_points, 2).</span>
+<span class="sd">        line1: Numpy array of (x, z) coordinates for the first subsurface boundary.</span>
+<span class="sd">               Shape: (N_line1_points, 2).</span>
+<span class="sd">        line2: Numpy array of (x, z) coordinates for the second subsurface boundary.</span>
+<span class="sd">               Shape: (N_line2_points, 2).</span>
+<span class="sd">        bottom_depth: The absolute z-coordinate for the bottom of the mesh.</span>
+<span class="sd">                      Note: The original comment &quot;Depth below surface minimum&quot; seems</span>
+<span class="sd">                      inconsistent with its usage `bottom_elev = bottom_depth`.</span>
+<span class="sd">                      Assuming `bottom_depth` is an absolute elevation for the bottom.</span>
+<span class="sd">                      If relative, `min_surface_elev - bottom_depth` would be used.</span>
+<span class="sd">        quality: PyGIMLi mesh quality parameter. Controls the minimum angle of triangles.</span>
+<span class="sd">                 Typical values are 20-35. Higher values mean better quality but more nodes.</span>
+<span class="sd">        area: Maximum desired area for mesh cells. Smaller values lead to a finer mesh.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        mesh: PyGIMLI mesh</span>
-<span class="sd">        mesh_centers: Array of cell center coordinates</span>
-<span class="sd">        markers: Array of cell markers</span>
+<span class="sd">        Tuple containing:</span>
+<span class="sd">            - mesh (pg.Mesh): The generated PyGIMLi mesh object.</span>
+<span class="sd">            - mesh_centers (np.ndarray): Array of (x,y) coordinates for each cell center.</span>
+<span class="sd">            - markers (np.ndarray): Array of integer markers for each cell in the mesh.</span>
+<span class="sd">            - geom (pg.meshtools.geom.Polygon): The geometry object used to create the mesh.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Calculate bottom elevation from normalized surface</span>
-    <span class="n">min_surface_elev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">surface</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span>
-    <span class="n">bottom_elev</span> <span class="o">=</span> <span class="n">bottom_depth</span> <span class="c1">#min_surface_elev - bottom_depth</span>
-    
-    <span class="c1"># Create reversed lines for polygon creation</span>
+    <span class="c1"># Determine bottom elevation for the mesh.</span>
+    <span class="c1"># Original logic: bottom_elev = bottom_depth. This implies bottom_depth is an absolute elevation.</span>
+    <span class="c1"># If bottom_depth was intended to be relative to min_surface_elev:</span>
+    <span class="c1"># min_surface_elev = np.nanmin(surface[:,1])</span>
+    <span class="c1"># bottom_elev = min_surface_elev - bottom_depth</span>
+    <span class="n">bottom_elev</span> <span class="o">=</span> <span class="n">bottom_depth</span> <span class="c1"># Assuming absolute depth for mesh bottom</span>
+
+    <span class="c1"># Create reversed versions of line1 and line2 for constructing closed polygons.</span>
+    <span class="c1"># This is necessary because createPolygon often requires points in a specific order (e.g., clockwise)</span>
+    <span class="c1"># to define the inside/outside of a polygon, especially for `isClosed=True`.</span>
     <span class="n">line1r</span> <span class="o">=</span> <span class="n">line1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="n">line1r</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">line1</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
-    <span class="n">line1r</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">line1</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span>
-    
+    <span class="n">line1r</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">line1</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="c1"># Reverse x-coordinates</span>
+    <span class="n">line1r</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">line1</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span> <span class="c1"># Reverse z-coordinates</span>
+
     <span class="n">line2r</span> <span class="o">=</span> <span class="n">line2</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="n">line2r</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
-    <span class="n">line2r</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span>
-    
-    <span class="c1"># Create surface layer</span>
-    <span class="n">layer1</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span>
-                             <span class="n">isClosed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
-                             <span class="n">marker</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> 
-                             <span class="n">boundaryMarker</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
-                             <span class="n">interpolate</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> 
-                             <span class="n">area</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
-    
-    <span class="c1"># Create middle layer</span>
-    <span class="n">Gline1</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2r</span><span class="p">)),</span>
-                             <span class="n">isClosed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
-                             <span class="n">marker</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> 
-                             <span class="n">boundaryMarker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                             <span class="n">interpolate</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> 
-                             <span class="n">area</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    
-    <span class="c1"># Create bottom boundary</span>
-    <span class="n">Gline2</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">([[</span><span class="n">surface</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">surface</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]],</span>
-                              <span class="p">[</span><span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">bottom_elev</span><span class="p">],</span>
-                              <span class="p">[</span><span class="n">line2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">bottom_elev</span><span class="p">],</span>
-                              <span class="p">[</span><span class="n">surface</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">surface</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]]],</span>
-                             <span class="n">isClosed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
-                             <span class="n">marker</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> 
-                             <span class="n">boundaryMarker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                             <span class="n">interpolate</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> 
-                             <span class="n">area</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-    
-    <span class="c1"># Create bottom layer</span>
-    <span class="n">layer2</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">line2r</span><span class="p">,</span>
-                                        <span class="p">[[</span><span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]],</span>
-                                         <span class="p">[</span><span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">bottom_elev</span><span class="p">],</span>
-                                         <span class="p">[</span><span class="n">line2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">bottom_elev</span><span class="p">],</span>
-                                         <span class="p">[</span><span class="n">line2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">line2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]]])),</span>
-                             <span class="n">isClosed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
-                             <span class="n">marker</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> 
-                             <span class="n">area</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> 
-                             <span class="n">boundaryMarker</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    
-    <span class="c1"># Combine all geometries</span>
+    <span class="n">line2r</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">line2r</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+
+    <span class="c1"># Define the geometry components as per the original implementation.</span>
+    <span class="c1"># 1. `layer1`: An open polyline representing the surface.</span>
+    <span class="c1">#    Marker 2, area=0.1 (suggests refinement near surface).</span>
+    <span class="n">layer1</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="n">isClosed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">boundaryMarker</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">interpolate</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+
+    <span class="c1"># 2. `Gline1`: A closed polygon for the middle layer (between line1 and line2r).</span>
+    <span class="c1">#    Marker 3. This defines the middle region.</span>
+    <span class="n">Gline1</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2r</span><span class="p">)),</span> <span class="n">isClosed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">boundaryMarker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">interpolate</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># 3. `Gline2`: An open polyline. Defines part of the outer boundary or an internal one.</span>
+    <span class="c1">#    Points: [surface_start, point_under_line2_start, point_under_line2_end, surface_end].</span>
+    <span class="c1">#    Marker 2, area=2.</span>
+    <span class="c1">#    This polyline seems to define the &quot;floor&quot; and parts of the &quot;walls&quot; of the model domain.</span>
+    <span class="n">gline2_points</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="n">surface</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">surface</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]],</span>      <span class="c1"># Surface start point</span>
+        <span class="p">[</span><span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">bottom_elev</span><span class="p">],</span>         <span class="c1"># Point below line2 start at bottom_elev</span>
+        <span class="p">[</span><span class="n">line2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">bottom_elev</span><span class="p">],</span>        <span class="c1"># Point below line2 end at bottom_elev</span>
+        <span class="p">[</span><span class="n">surface</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">surface</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]],</span>    <span class="c1"># Surface end point</span>
+    <span class="p">]</span>
+    <span class="n">Gline2</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">gline2_points</span><span class="p">,</span> <span class="n">isClosed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">boundaryMarker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">interpolate</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># 4. `layer2`: A closed polygon for the bottom layer (below line2).</span>
+    <span class="c1">#    Marker 2, area=2.</span>
+    <span class="c1">#    The points define the region: along line2r (reversed line2), then connecting</span>
+    <span class="c1">#    the ends of line2r down to bottom_elev, across at bottom_elev, and back up.</span>
+    <span class="n">layer2_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span>
+        <span class="n">line2r</span><span class="p">,</span>                             <span class="c1"># Path along reversed line2 (e.g., right to left)</span>
+        <span class="p">[[</span><span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]]],</span>         <span class="c1"># Connects end of line2r back to start of line2 (closes along line2)</span>
+                                            <span class="c1"># This point is line2_left_end. line2r ends at line2_left_end.</span>
+                                            <span class="c1"># This makes the path trace line2.</span>
+        <span class="p">[[</span><span class="n">line2</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">bottom_elev</span><span class="p">]],</span>        <span class="c1"># From line2_left_end down to bottom_elev</span>
+        <span class="p">[[</span><span class="n">line2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">bottom_elev</span><span class="p">]],</span>       <span class="c1"># Across at bottom_elev to a point under line2_right_end</span>
+        <span class="p">[[</span><span class="n">line2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">line2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]]]</span>        <span class="c1"># Up from bottom_elev to line2_right_end</span>
+                                            <span class="c1"># Polygon closes by connecting this to start of line2r (line2_right_end).</span>
+    <span class="p">))</span>
+    <span class="c1"># Potential issue: If line2 is not perfectly aligned (e.g. x-coordinates) with surface or line1,</span>
+    <span class="c1"># the polygons might have gaps or overlaps that could complicate meshing or marker assignment.</span>
+    <span class="c1"># The construction of layer2_points assumes line2r provides a path that, when combined with the</span>
+    <span class="c1"># vertical and bottom segments, forms a well-defined closed region.</span>
+    <span class="n">layer2</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">layer2_points</span><span class="p">,</span> <span class="n">isClosed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">boundaryMarker</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Combine all geometry components into a single PLC (Piecewise Linear Complex).</span>
+    <span class="c1"># The order of addition can sometimes matter for how PyGIMLi resolves overlapping features</span>
+    <span class="c1"># or assigns properties, though typically it handles merging appropriately.</span>
     <span class="n">geom</span> <span class="o">=</span> <span class="n">layer1</span> <span class="o">+</span> <span class="n">layer2</span> <span class="o">+</span> <span class="n">Gline1</span> <span class="o">+</span> <span class="n">Gline2</span>
-    
-    <span class="c1"># Create mesh</span>
+    <span class="c1"># Note: The top layer (surface down to line1) is not defined as an explicit *closed* polygon</span>
+    <span class="c1"># in this sum. It&#39;s expected to be formed implicitly by the mesher using `layer1` (surface polyline)</span>
+    <span class="c1"># as its top and the upper edge of `Gline1` (which is line1) as its bottom.</span>
+    <span class="c1"># The marker for this implicit top region will likely be determined by the marker of `layer1` (surface polyline), which is 2.</span>
+
+    <span class="c1"># Create the mesh from the composite geometry PLC.</span>
     <span class="n">mesh</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="n">quality</span><span class="p">,</span> <span class="n">area</span><span class="o">=</span><span class="n">area</span><span class="p">)</span>
-    
-    <span class="c1"># Get cell centers and markers</span>
-    <span class="n">mesh_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
-    <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
-    
-    <span class="k">return</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">mesh_centers</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span><span class="n">geom</span></div>
+
+    <span class="c1"># Extract cell centers and markers from the generated mesh.</span>
+    <span class="n">mesh_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span> <span class="c1"># Nx2 array of (x, z) for 2D meshes</span>
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>      <span class="c1"># 1D array of integer markers for each cell</span>
+
+    <span class="k">return</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">mesh_centers</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span> <span class="n">geom</span> <span class="c1"># Return geom for potential inspection or debugging</span></div>
 
 
 
@@ -189,24 +224,192 @@
 
 
 
-
-<div class="viewcode-block" id="extract_velocity_interface">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.extract_velocity_interface">[docs]</a>
-<span class="k">def</span> <span class="nf">extract_velocity_interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_data</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="mf">4.0</span><span class="p">):</span>
+<div class="viewcode-block" id="extract_velocity_interface"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.extract_velocity_interface">[docs]</a><span class="k">def</span> <span class="nf">extract_velocity_interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span>
+                               <span class="n">velocity_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                               <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1200.0</span><span class="p">,</span>
+                               <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">4.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Extract the interface where velocity equals the threshold value.</span>
-<span class="sd">    </span>
+<span class="sd">    Extract an interface (e.g., bedrock) from velocity data on a mesh.</span>
+
+<span class="sd">    The function identifies points where the cell velocity values cross a given</span>
+<span class="sd">    threshold. It bins cells by their x-coordinates, finds the depth of the</span>
+<span class="sd">    threshold crossing within each bin via linear interpolation, and then</span>
+<span class="sd">    smooths the resulting interface line using cubic interpolation and a</span>
+<span class="sd">    Savitzky-Golay filter.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        mesh: The PyGIMLi mesh</span>
-<span class="sd">        velocity_data: The velocity values</span>
-<span class="sd">        threshold: The velocity value defining the interface (default: 1200)</span>
-<span class="sd">        interval: Spacing between x-coordinate points (default: 4.0)</span>
-<span class="sd">        </span>
+<span class="sd">        mesh: PyGIMLi mesh object containing the cells.</span>
+<span class="sd">        velocity_data: 1D numpy array of velocity values, one per cell in `mesh`.</span>
+<span class="sd">                       Order must correspond to mesh.cellIDs().</span>
+<span class="sd">        threshold: The velocity value that defines the interface (e.g., velocity of bedrock).</span>
+<span class="sd">        interval: The width of x-coordinate bins used to sample the interface.</span>
+<span class="sd">                  Smaller intervals give more detail but may be noisier.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        x_dense, z_dense: Arrays with x and z coordinates of the smooth interface</span>
+<span class="sd">        Tuple (x_dense, z_dense):</span>
+<span class="sd">            - x_dense (np.ndarray): 1D array of x-coordinates for the smoothed interface.</span>
+<span class="sd">            - z_dense (np.ndarray): 1D array of z-coordinates (depths) for the smoothed interface.</span>
+<span class="sd">              Coordinate system (e.g. depth positive down, or elevation positive up) should</span>
+<span class="sd">              be consistent with the input mesh&#39;s coordinate system.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Get cell centers</span>
-    <span class="n">cell_centers</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">()</span>
+    <span class="c1"># Get cell center coordinates (x, z)</span>
+    <span class="c1"># PyGIMLi&#39;s 2D meshes use x and y coordinates. For profile views, y is often depth.</span>
+    <span class="k">if</span> <span class="n">mesh</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mesh must be 2D. Got dimension: </span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="n">cell_centers_tuples</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">()</span> <span class="c1"># Returns list of RVector3 like objects for pg.Mesh</span>
+                                         <span class="c1"># For 2D mesh, z component is often 0 or unused.</span>
+                                         <span class="c1"># We assume x is horizontal, y is vertical (depth/elevation).</span>
+    
+    <span class="c1"># Convert to numpy array for easier slicing. Assuming we need x and y (depth).</span>
+    <span class="c1"># If mesh.cell(0).center() returns (x,y,z), then use [c.x(), c.y()] or [c.x(), c.z()]</span>
+    <span class="c1"># depending on mesh orientation. Standard for 2D pg.Mesh is x,y.</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Attempt to get x,y assuming centers are directly convertible or attributes</span>
+        <span class="n">x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">c</span><span class="o">.</span><span class="n">x</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cell_centers_tuples</span><span class="p">])</span>
+        <span class="n">z_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">c</span><span class="o">.</span><span class="n">y</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cell_centers_tuples</span><span class="p">])</span> <span class="c1"># y-coordinate treated as depth/elevation</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="c1"># Fallback if .x() / .y() not present (e.g. if cell_centers was already an array from a specific source)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cell_centers_tuples</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">cell_centers_tuples</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">x_coords</span> <span class="o">=</span> <span class="n">cell_centers_tuples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">z_coords</span> <span class="o">=</span> <span class="n">cell_centers_tuples</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Could not extract x, z coordinates from mesh.cellCenters().&quot;</span><span class="p">)</span>
+
+
+    <span class="k">if</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">velocity_data</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Length of velocity_data must match the number of cells in the mesh.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Determine the horizontal range of the mesh for binning</span>
+    <span class="n">x_min_mesh</span><span class="p">,</span> <span class="n">x_max_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">x_coords</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">x_coords</span><span class="p">)</span>
+
+    <span class="c1"># Create bins across the horizontal extent of the mesh</span>
+    <span class="n">x_bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">x_min_mesh</span><span class="p">,</span> <span class="n">x_max_mesh</span> <span class="o">+</span> <span class="n">interval</span><span class="p">,</span> <span class="n">interval</span><span class="p">)</span>
+
+    <span class="n">interface_x_raw</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">interface_z_raw</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Iterate through each bin to find where velocity crosses the threshold</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_bins</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">bin_cell_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">x_coords</span> <span class="o">&gt;=</span> <span class="n">x_bins</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x_coords</span> <span class="o">&lt;</span> <span class="n">x_bins</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]))[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bin_cell_indices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">bin_velocities</span> <span class="o">=</span> <span class="n">velocity_data</span><span class="p">[</span><span class="n">bin_cell_indices</span><span class="p">]</span>
+            <span class="n">bin_depths</span> <span class="o">=</span> <span class="n">z_coords</span><span class="p">[</span><span class="n">bin_cell_indices</span><span class="p">]</span>
+
+            <span class="c1"># Sort cells in the bin by depth to allow systematic search for threshold crossing</span>
+            <span class="c1"># This assumes z_coords represent depth where increasing value means deeper.</span>
+            <span class="c1"># If z_coords is elevation (increasing upwards), sorting might need to be reversed</span>
+            <span class="c1"># or the logic for &quot;above/below&quot; adapted.</span>
+            <span class="n">sort_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">bin_depths</span><span class="p">)</span> 
+            <span class="n">bin_velocities_sorted</span> <span class="o">=</span> <span class="n">bin_velocities</span><span class="p">[</span><span class="n">sort_indices</span><span class="p">]</span>
+            <span class="n">bin_depths_sorted</span> <span class="o">=</span> <span class="n">bin_depths</span><span class="p">[</span><span class="n">sort_indices</span><span class="p">]</span>
+
+            <span class="n">found_in_bin</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">bin_velocities_sorted</span><span class="p">)):</span>
+                <span class="n">v_prev</span><span class="p">,</span> <span class="n">z_prev</span> <span class="o">=</span> <span class="n">bin_velocities_sorted</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">bin_depths_sorted</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">v_curr</span><span class="p">,</span> <span class="n">z_curr</span> <span class="o">=</span> <span class="n">bin_velocities_sorted</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">bin_depths_sorted</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="p">(</span><span class="n">v_prev</span> <span class="o">&lt;</span> <span class="n">threshold</span> <span class="o">&lt;=</span> <span class="n">v_curr</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">v_prev</span> <span class="o">&gt;=</span> <span class="n">threshold</span> <span class="o">&gt;</span> <span class="n">v_curr</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">v_curr</span> <span class="o">==</span> <span class="n">v_prev</span><span class="p">:</span> 
+                        <span class="n">interpolated_depth</span> <span class="o">=</span> <span class="n">z_prev</span> <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">threshold</span> <span class="o">-</span> <span class="n">v_prev</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">threshold</span> <span class="o">-</span> <span class="n">v_curr</span><span class="p">)</span> <span class="k">else</span> <span class="n">z_curr</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">ratio</span> <span class="o">=</span> <span class="p">(</span><span class="n">threshold</span> <span class="o">-</span> <span class="n">v_prev</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">v_curr</span> <span class="o">-</span> <span class="n">v_prev</span><span class="p">)</span>
+                        <span class="n">interpolated_depth</span> <span class="o">=</span> <span class="n">z_prev</span> <span class="o">+</span> <span class="n">ratio</span> <span class="o">*</span> <span class="p">(</span><span class="n">z_curr</span> <span class="o">-</span> <span class="n">z_prev</span><span class="p">)</span>
+                    
+                    <span class="n">interface_x_raw</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x_bins</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">x_bins</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> 
+                    <span class="n">interface_z_raw</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">interpolated_depth</span><span class="p">)</span>
+                    <span class="n">found_in_bin</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span> 
+            
+    <span class="n">interface_x_raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">interface_x_raw</span><span class="p">)</span>
+    <span class="n">interface_z_raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">interface_z_raw</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x_raw</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="c1"># print(&quot;Warning: Less than 2 raw interface points found. Cannot interpolate reliably.&quot;)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span> <span class="c1"># Return empty if not enough points</span>
+
+    <span class="c1"># Extrapolation logic (from original code)</span>
+    <span class="c1"># Check if first found x is significantly after mesh start</span>
+    <span class="c1"># A small tolerance (e.g. interval/100) added to avoid floating point issues in comparison</span>
+    <span class="k">if</span> <span class="n">interface_x_raw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">x_min_mesh</span> <span class="o">+</span> <span class="n">interval</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">+</span> <span class="mf">1e-9</span> <span class="p">:</span> 
+        <span class="n">extrap_x_start</span> <span class="o">=</span> <span class="n">x_min_mesh</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x_raw</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span> 
+            <span class="c1"># Avoid division by zero if x-coordinates are identical</span>
+            <span class="n">dx_start</span> <span class="o">=</span> <span class="n">interface_x_raw</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">interface_x_raw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">slope_start</span> <span class="o">=</span> <span class="p">(</span><span class="n">interface_z_raw</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">interface_z_raw</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="n">dx_start</span> <span class="k">if</span> <span class="n">dx_start</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="n">extrap_z_start</span> <span class="o">=</span> <span class="n">interface_z_raw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">slope_start</span> <span class="o">*</span> <span class="p">(</span><span class="n">interface_x_raw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_min_mesh</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="n">extrap_z_start</span> <span class="o">=</span> <span class="n">interface_z_raw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">interface_x_raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">interface_x_raw</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">extrap_x_start</span><span class="p">)</span>
+        <span class="n">interface_z_raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">interface_z_raw</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">extrap_z_start</span><span class="p">)</span>
+
+    <span class="c1"># Check if last found x is significantly before mesh end</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x_raw</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">interface_x_raw</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">x_max_mesh</span> <span class="o">-</span> <span class="n">interval</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">-</span> <span class="mf">1e-9</span><span class="p">:</span>
+        <span class="n">extrap_x_end</span> <span class="o">=</span> <span class="n">x_max_mesh</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x_raw</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span> 
+            <span class="n">dx_end</span> <span class="o">=</span> <span class="n">interface_x_raw</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">interface_x_raw</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">slope_end</span> <span class="o">=</span> <span class="p">(</span><span class="n">interface_z_raw</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">interface_z_raw</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="n">dx_end</span> <span class="k">if</span> <span class="n">dx_end</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="n">extrap_z_end</span> <span class="o">=</span> <span class="n">interface_z_raw</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">slope_end</span> <span class="o">*</span> <span class="p">(</span><span class="n">x_max_mesh</span> <span class="o">-</span> <span class="n">interface_x_raw</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="n">extrap_z_end</span> <span class="o">=</span> <span class="n">interface_z_raw</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">interface_x_raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">interface_x_raw</span><span class="p">,</span> <span class="n">extrap_x_end</span><span class="p">)</span>
+        <span class="n">interface_z_raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">interface_z_raw</span><span class="p">,</span> <span class="n">extrap_z_end</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x_raw</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span> 
+        <span class="c1"># print(&quot;Warning: Still less than 2 interface points after extrapolation.&quot;)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([]),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+
+    <span class="n">x_dense</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">x_min_mesh</span><span class="p">,</span> <span class="n">x_max_mesh</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
+    <span class="n">z_smooth_dense</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span> <span class="c1"># Initialize to ensure it&#39;s defined</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">sort_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">interface_x_raw</span><span class="p">)</span>
+        <span class="n">interface_x_sorted</span> <span class="o">=</span> <span class="n">interface_x_raw</span><span class="p">[</span><span class="n">sort_idx</span><span class="p">]</span>
+        <span class="n">interface_z_sorted</span> <span class="o">=</span> <span class="n">interface_z_raw</span><span class="p">[</span><span class="n">sort_idx</span><span class="p">]</span>
+
+        <span class="n">unique_x</span><span class="p">,</span> <span class="n">unique_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">interface_x_sorted</span><span class="p">,</span> <span class="n">return_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">interface_x_unique</span> <span class="o">=</span> <span class="n">interface_x_sorted</span><span class="p">[</span><span class="n">unique_idx</span><span class="p">]</span>
+        <span class="n">interface_z_unique</span> <span class="o">=</span> <span class="n">interface_z_sorted</span><span class="p">[</span><span class="n">unique_idx</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x_unique</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="p">:</span>
+             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Not enough unique x-points for interpolation after processing duplicates.&quot;</span><span class="p">)</span>
+
+        <span class="n">interp_kind</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x_unique</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span><span class="p">:</span> <span class="c1"># Cubic interpolation needs at least 4 unique points</span>
+            <span class="n">interp_kind</span> <span class="o">=</span> <span class="s1">&#39;cubic&#39;</span>
+        
+        <span class="n">interp_func</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">interface_x_unique</span><span class="p">,</span> <span class="n">interface_z_unique</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="n">interp_kind</span><span class="p">,</span>
+                               <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="s2">&quot;extrapolate&quot;</span><span class="p">)</span>
+        <span class="n">z_interp_dense</span> <span class="o">=</span> <span class="n">interp_func</span><span class="p">(</span><span class="n">x_dense</span><span class="p">)</span>
+
+        <span class="c1"># Savitzky-Golay filter conditions</span>
+        <span class="c1"># Window length must be odd, &gt; polyorder, and &lt;= number of data points.</span>
+        <span class="n">window_len</span> <span class="o">=</span> <span class="mi">31</span>
+        <span class="n">poly_order</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="k">if</span> <span class="n">interp_kind</span> <span class="o">==</span> <span class="s1">&#39;cubic&#39;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">z_interp_dense</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">window_len</span> <span class="p">:</span> 
+            <span class="n">z_smooth_dense</span> <span class="o">=</span> <span class="n">savgol_filter</span><span class="p">(</span><span class="n">z_interp_dense</span><span class="p">,</span> <span class="n">window_length</span><span class="o">=</span><span class="n">window_len</span><span class="p">,</span> <span class="n">polyorder</span><span class="o">=</span><span class="n">poly_order</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">z_smooth_dense</span> <span class="o">=</span> <span class="n">z_interp_dense</span>
+            
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># print(f&quot;Interpolation or smoothing failed: {e}. Attempting fallback or returning empty.&quot;)</span>
+        <span class="c1"># Fallback to linear if cubic failed and enough points for linear</span>
+        <span class="k">if</span> <span class="n">interp_kind</span> <span class="o">==</span> <span class="s1">&#39;cubic&#39;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x_unique</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">interp_func_linear</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">interface_x_unique</span><span class="p">,</span> <span class="n">interface_z_unique</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span>
+                                              <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="s2">&quot;extrapolate&quot;</span><span class="p">)</span>
+                <span class="n">z_smooth_dense</span> <span class="o">=</span> <span class="n">interp_func_linear</span><span class="p">(</span><span class="n">x_dense</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span> <span class="c1"># Final fallback if linear also fails</span>
+                 <span class="k">pass</span> <span class="c1"># z_smooth_dense remains empty</span>
+        <span class="c1"># If linear was primary, or if already tried linear as fallback, z_smooth_dense might still be empty or contain previous result</span>
+        <span class="k">elif</span> <span class="s1">&#39;z_interp_dense&#39;</span> <span class="ow">in</span> <span class="nb">locals</span><span class="p">()</span> <span class="ow">and</span> <span class="n">z_interp_dense</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">:</span> <span class="c1"># Check if z_interp_dense was calculated</span>
+             <span class="n">z_smooth_dense</span> <span class="o">=</span> <span class="n">z_interp_dense</span>
+
+    <span class="k">if</span> <span class="n">z_smooth_dense</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">x_dense</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span> <span class="c1"># Ensure x_dense is also empty for consistency</span>
+
+    <span class="k">return</span> <span class="n">x_dense</span><span class="p">,</span> <span class="n">z_smooth_dense</span>
     <span class="n">x_coords</span> <span class="o">=</span> <span class="n">cell_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">z_coords</span> <span class="o">=</span> <span class="n">cell_centers</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>
     
@@ -300,40 +503,156 @@
     <span class="k">return</span> <span class="n">x_dense</span><span class="p">,</span> <span class="n">z_dense</span></div>
 
 
-
-<div class="viewcode-block" id="add_velocity_interface">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.add_velocity_interface">[docs]</a>
-<span class="k">def</span> <span class="nf">add_velocity_interface</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">,</span> <span class="n">paraBoundary</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<div class="viewcode-block" id="add_velocity_interface"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.add_velocity_interface">[docs]</a><span class="k">def</span> <span class="nf">add_velocity_interface</span><span class="p">(</span><span class="n">ertData</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">,</span>
+                               <span class="n">smooth_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="c1"># X-coordinates of the interface</span>
+                               <span class="n">smooth_z</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="c1"># Z-coordinates of the interface</span>
+                               <span class="n">paraBoundary_ext</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span> <span class="c1"># How much to extend interface beyond sensor range</span>
+                               <span class="n">default_marker_outside</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                               <span class="n">marker_above_interface</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span> <span class="c1"># Swapped from original comment based on typical visualization</span>
+                               <span class="n">marker_below_interface</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># Swapped from original comment</span>
+                               <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Add a velocity interface line to the geometry and create a mesh with different markers:</span>
-<span class="sd">    - Outside survey area: marker = 1</span>
-<span class="sd">    - Inside survey area, above velocity line: marker = 2</span>
-<span class="sd">    - Inside survey area, below velocity line: marker = 3</span>
-<span class="sd">    </span>
+<span class="sd">    Incorporate a smoothed velocity interface into a mesh generated for ERT data.</span>
+
+<span class="sd">    This function first creates a standard ERT parameter mesh using PyGIMLi&#39;s</span>
+<span class="sd">    `createParaMeshPLC`. It then adds the provided `smooth_x, smooth_z` interface</span>
+<span class="sd">    as a polyline to this geometry. Finally, it re-meshes and assigns markers</span>
+<span class="sd">    to cells based on their position relative to this interface within the main</span>
+<span class="sd">    survey area.</span>
+
+<span class="sd">    The definition of &quot;survey area&quot; and &quot;above/below&quot; depends on coordinate system conventions.</span>
+<span class="sd">    Typically, for PyGIMLi 2D meshes, Y increases downwards (depth).</span>
+<span class="sd">    - `marker_above_interface` (e.g., 3): Cells physically shallower than the interface.</span>
+<span class="sd">    - `marker_below_interface` (e.g., 2): Cells physically deeper than or on the interface.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        ertData: ERT data with sensor positions</span>
-<span class="sd">        smooth_x, smooth_z: Arrays with x and z coordinates of the velocity interface</span>
-<span class="sd">        paraBoundary: Parameter boundary size (default: 2)</span>
-<span class="sd">        boundary: Boundary marker (default: 1)</span>
-<span class="sd">        </span>
+<span class="sd">        ertData: PyGIMLi data container (e.g., `pg.DataContainer`). Must have sensor positions.</span>
+<span class="sd">        smooth_x: 1D numpy array of x-coordinates for the smoothed interface line.</span>
+<span class="sd">        smooth_z: 1D numpy array of z-coordinates for the smoothed interface line.</span>
+<span class="sd">                  The y-coordinate from PyGIMLi mesh cells (depth) will be compared against these.</span>
+<span class="sd">        paraBoundary_ext: Extension distance for the interface line beyond the</span>
+<span class="sd">                          x-range of ERT sensors. Also used by `createParaMeshPLC` for defining</span>
+<span class="sd">                          the outer, less refined mesh region. Default is 2.0 units.</span>
+<span class="sd">        default_marker_outside: Marker for cells considered outside the primary survey/parametric region. Default is 1.</span>
+<span class="sd">        marker_above_interface: Marker for cells inside survey region, physically above (shallower than) the interface. Default is 3.</span>
+<span class="sd">        marker_below_interface: Marker for cells inside survey region, on or below (deeper than) the interface. Default is 2.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        markers: Array with cell markers</span>
-<span class="sd">        meshafter: The created mesh with updated markers</span>
+<span class="sd">        Tuple (markers, meshafter):</span>
+<span class="sd">            - markers (np.ndarray): 1D array of final cell markers for `meshafter`.</span>
+<span class="sd">            - meshafter (pg.Mesh): The new PyGIMLi mesh with the interface incorporated</span>
+<span class="sd">                                   and cell markers assigned.</span>
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If `smooth_x` or `smooth_z` are not 1D arrays of the same length,</span>
+<span class="sd">                    or if they have fewer than 2 points.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Create the initial parameter mesh</span>
-    <span class="n">geo</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createParaMeshPLC</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
-                               <span class="n">paraBoundary</span><span class="o">=</span><span class="n">paraBoundary</span><span class="p">,</span> <span class="n">paraDepth</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span>
-                               <span class="n">boundaryMaxCellSize</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">smooth_x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">smooth_z</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span>
+            <span class="n">smooth_x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">smooth_z</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">smooth_x</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">smooth_z</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;smooth_x and smooth_z must be 1D numpy arrays of the same length.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">smooth_x</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Interface (smooth_x, smooth_z) must have at least 2 points to define a line.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create an initial mesh geometry based on ERT sensor positions.</span>
+    <span class="c1"># Parameters like quality, paraMaxCellSize, paraDepth, boundaryMaxCellSize are set to typical values.</span>
+    <span class="c1"># These could be exposed as arguments to this function for more flexibility.</span>
+    <span class="n">geo_base</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createParaMeshPLC</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+                                    <span class="n">paraBoundary</span><span class="o">=</span><span class="n">paraBoundary_ext</span><span class="p">,</span> <span class="n">paraDepth</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span>
+                                    <span class="n">boundaryMaxCellSize</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+
+    <span class="c1"># Prepare the interface points. Stack to get (N, 2) array of [x, z] points.</span>
+    <span class="c1"># The z-coordinates here are from `smooth_z` and represent the interface&#39;s depth/elevation.</span>
+    <span class="n">interface_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="c1"># Extend the interface line using interpolation to ensure it spans wider than the sensor coverage,</span>
+    <span class="c1"># including the `paraBoundary_ext` region, so it properly cuts through the entire mesh.</span>
+    <span class="n">sensor_x_positions</span> <span class="o">=</span> <span class="n">ertData</span><span class="o">.</span><span class="n">sensorPositions</span><span class="p">()[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="c1"># Assuming 2D or 3D positions from DataContainer</span>
+    <span class="n">min_sensor_x</span><span class="p">,</span> <span class="n">max_sensor_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">sensor_x_positions</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">sensor_x_positions</span><span class="p">)</span>
+
+    <span class="c1"># Sort the input interface line by x-coordinate for reliable interpolation</span>
+    <span class="n">sort_indices_interface</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">interface_coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">interface_coords_sorted</span> <span class="o">=</span> <span class="n">interface_coords</span><span class="p">[</span><span class="n">sort_indices_interface</span><span class="p">,</span> <span class="p">:]</span>
     
-    <span class="c1"># Stack x and z coordinates for the interface</span>
-    <span class="n">interface_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+    <span class="c1"># Create an interpolator for the interface line, allowing extrapolation if needed.</span>
+    <span class="n">f_interp_interface</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">interface_coords_sorted</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">interface_coords_sorted</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                  <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="s2">&quot;extrapolate&quot;</span><span class="p">)</span>
     
-    <span class="c1"># Extend the interface line beyond the data range by paraBoundary</span>
-    <span class="n">input_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">interface_points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">paraBoundary</span><span class="p">,</span> <span class="n">interface_points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]]]),</span>
-        <span class="n">interface_points</span><span class="p">,</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">interface_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">paraBoundary</span><span class="p">,</span> <span class="n">interface_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]]])</span>
-    <span class="p">))</span>
+    <span class="c1"># Define the x-range for the polyline to be added to the geometry.</span>
+    <span class="c1"># It should span from (min_sensor_x - paraBoundary_ext) to (max_sensor_x + paraBoundary_ext).</span>
+    <span class="c1"># Add a small safety margin to ensure it fully cuts the PLC boundary.</span>
+    <span class="n">safety_margin</span> <span class="o">=</span> <span class="n">paraBoundary_ext</span> <span class="o">*</span> <span class="mf">0.05</span> <span class="c1"># e.g., 5% of paraBoundary_ext</span>
+    <span class="n">extended_line_x_start</span> <span class="o">=</span> <span class="n">min_sensor_x</span> <span class="o">-</span> <span class="n">paraBoundary_ext</span> <span class="o">-</span> <span class="n">safety_margin</span>
+    <span class="n">extended_line_x_end</span> <span class="o">=</span> <span class="n">max_sensor_x</span> <span class="o">+</span> <span class="n">paraBoundary_ext</span> <span class="o">+</span> <span class="n">safety_margin</span>
+    
+    <span class="c1"># Create points for the extended polyline.</span>
+    <span class="c1"># Use original interface points that fall within this new extended range, plus the new endpoints.</span>
+    <span class="n">relevant_points_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">interface_coords_sorted</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">extended_line_x_start</span><span class="p">)</span> <span class="o">&amp;</span> \
+                           <span class="p">(</span><span class="n">interface_coords_sorted</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">extended_line_x_end</span><span class="p">)</span>
+    <span class="n">x_for_poly</span> <span class="o">=</span> <span class="n">interface_coords_sorted</span><span class="p">[</span><span class="n">relevant_points_mask</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">z_for_poly</span> <span class="o">=</span> <span class="n">interface_coords_sorted</span><span class="p">[</span><span class="n">relevant_points_mask</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># Prepend the new start point if it&#39;s not already covered.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">x_for_poly</span><span class="o">.</span><span class="n">size</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">x_for_poly</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">extended_line_x_start</span><span class="p">):</span>
+        <span class="n">x_for_poly</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">x_for_poly</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">extended_line_x_start</span><span class="p">)</span>
+        <span class="n">z_for_poly</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">z_for_poly</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">f_interp_interface</span><span class="p">(</span><span class="n">extended_line_x_start</span><span class="p">))</span>
+        
+    <span class="c1"># Append the new end point if it&#39;s not already covered.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">x_for_poly</span><span class="o">.</span><span class="n">size</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">x_for_poly</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">extended_line_x_end</span><span class="p">):</span> <span class="c1"># Check size again in case it was empty</span>
+        <span class="n">x_for_poly</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_for_poly</span><span class="p">,</span> <span class="n">extended_line_x_end</span><span class="p">)</span>
+        <span class="n">z_for_poly</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z_for_poly</span><span class="p">,</span> <span class="n">f_interp_interface</span><span class="p">(</span><span class="n">extended_line_x_end</span><span class="p">))</span>
+        
+    <span class="c1"># Remove duplicate x-points that might have arisen from prepending/appending if original line was short</span>
+    <span class="n">unique_x_poly</span><span class="p">,</span> <span class="n">unique_indices_poly</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">x_for_poly</span><span class="p">,</span> <span class="n">return_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">extended_interface_polyline_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">unique_x_poly</span><span class="p">,</span> <span class="n">z_for_poly</span><span class="p">[</span><span class="n">unique_indices_poly</span><span class="p">]))</span><span class="o">.</span><span class="n">T</span>
+    
+    <span class="c1"># Create a PyGIMLi polyline from these extended interface coordinates.</span>
+    <span class="c1"># Marker 99 is arbitrary, just to identify this line in the PLC if needed during debugging.</span>
+    <span class="n">interface_as_polyline</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">extended_interface_polyline_coords</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+                                             <span class="n">isClosed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">interpolate</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">99</span><span class="p">)</span>
+
+    <span class="c1"># Add the interface polyline to the base ERT geometry. This acts as an internal boundary.</span>
+    <span class="n">geo_combined</span> <span class="o">=</span> <span class="n">geo_base</span> <span class="o">+</span> <span class="n">interface_as_polyline</span>
+
+    <span class="c1"># Create a new mesh from the combined geometry. Quality 28 is an example value.</span>
+    <span class="n">meshafter</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">geo_combined</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">28</span><span class="p">)</span> <span class="c1"># Area constraint could be added.</span>
+
+    <span class="c1"># Initialize cell markers for the new mesh.</span>
+    <span class="n">final_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">meshafter</span><span class="o">.</span><span class="n">cellCount</span><span class="p">(),</span> <span class="n">default_marker_outside</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    
+    <span class="c1"># Define the horizontal limits of the &quot;survey area&quot; where detailed marking based on interface occurs.</span>
+    <span class="c1"># This area corresponds to the region extended by `paraBoundary_ext` around sensors.</span>
+    <span class="n">survey_region_x_min</span> <span class="o">=</span> <span class="n">min_sensor_x</span> <span class="o">-</span> <span class="n">paraBoundary_ext</span>
+    <span class="n">survey_region_x_max</span> <span class="o">=</span> <span class="n">max_sensor_x</span> <span class="o">+</span> <span class="n">paraBoundary_ext</span>
+
+    <span class="c1"># Iterate over each cell in the new mesh to assign markers.</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cell</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">meshafter</span><span class="o">.</span><span class="n">cells</span><span class="p">()):</span> <span class="c1"># Iterate through cells</span>
+        <span class="n">cell_center_x</span> <span class="o">=</span> <span class="n">cell</span><span class="o">.</span><span class="n">center</span><span class="p">()</span><span class="o">.</span><span class="n">x</span><span class="p">()</span>
+        <span class="n">cell_center_y_depth</span> <span class="o">=</span> <span class="n">cell</span><span class="o">.</span><span class="n">center</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span> <span class="c1"># PyGIMLi&#39;s y-coordinate, typically depth (increases downwards)</span>
+
+        <span class="c1"># Check if the cell center is within the defined horizontal survey region.</span>
+        <span class="k">if</span> <span class="n">survey_region_x_min</span> <span class="o">&lt;=</span> <span class="n">cell_center_x</span> <span class="o">&lt;=</span> <span class="n">survey_region_x_max</span><span class="p">:</span>
+            <span class="c1"># Interpolate the z-coordinate (depth) of the interface at the cell&#39;s x-center.</span>
+            <span class="c1"># Use `extended_interface_polyline_coords` for this interpolation.</span>
+            <span class="n">interface_z_at_cell_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">cell_center_x</span><span class="p">,</span>
+                                              <span class="n">extended_interface_polyline_coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="c1"># X values</span>
+                                              <span class="n">extended_interface_polyline_coords</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>  <span class="c1"># Z values (depths)</span>
+            
+            <span class="c1"># Compare cell center depth with interface depth.</span>
+            <span class="c1"># Assuming PyGIMLi&#39;s y-coordinate for 2D mesh increases downwards (depth convention):</span>
+            <span class="c1"># - Cell is &quot;above&quot; (shallower) if its y_depth is LESS than interface_z_at_cell_x.</span>
+            <span class="c1"># - Cell is &quot;below&quot; (deeper) if its y_depth is GREATER than interface_z_at_cell_x.</span>
+            <span class="c1"># The original code&#39;s `abs(cell_y) &lt; abs(interface_y)` for &quot;below&quot; was potentially confusing</span>
+            <span class="c1"># if z-values could be positive/negative (elevations).</span>
+            <span class="c1"># With depth convention (Y positive downwards):</span>
+            <span class="k">if</span> <span class="n">cell_center_y_depth</span> <span class="o">&lt;</span> <span class="n">interface_z_at_cell_x</span><span class="p">:</span> <span class="c1"># Cell is shallower than the interface</span>
+                <span class="n">final_markers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker_above_interface</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c1"># Cell is deeper than or on the interface</span>
+                <span class="n">final_markers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker_below_interface</span>
+        <span class="c1"># else: cell is outside survey_region_x_min/max, keeps `default_marker_outside` assigned initially.</span>
+
+    <span class="c1"># Apply the calculated markers to the mesh.</span>
+    <span class="n">meshafter</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">final_markers</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">final_markers</span><span class="p">,</span> <span class="n">meshafter</span>
     
     <span class="c1"># Create a polygon line for the interface</span>
     <span class="n">interface_line</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">input_points</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">isClosed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
@@ -380,95 +699,172 @@
 
 
 
-
-<div class="viewcode-block" id="MeshCreator">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.MeshCreator">[docs]</a>
-<span class="k">class</span> <span class="nc">MeshCreator</span><span class="p">:</span>
+<div class="viewcode-block" id="MeshCreator"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.MeshCreator">[docs]</a><span class="k">class</span> <span class="nc">MeshCreator</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for creating and managing meshes for geophysical inversion.&quot;&quot;&quot;</span>
-    
-<div class="viewcode-block" id="MeshCreator.__init__">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.MeshCreator.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quality</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">28</span><span class="p">,</span> <span class="n">area</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">40</span><span class="p">):</span>
+<span class="w">    </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A utility class for creating PyGIMLi meshes, particularly for layered models</span>
+<span class="sd">    or standard ERT surveys.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="MeshCreator.__init__"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.MeshCreator.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quality</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span> <span class="n">area</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize MeshCreator with quality and area parameters.</span>
-<span class="sd">        </span>
+<span class="sd">        Initialize MeshCreator.</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            quality: Mesh quality parameter (higher is better)</span>
-<span class="sd">            area: Maximum cell area</span>
+<span class="sd">            quality: Default mesh quality parameter for `mt.createMesh`.</span>
+<span class="sd">                     Higher values (e.g., 30-35) generally result in better-shaped</span>
+<span class="sd">                     triangles but can increase node count. Default is 30.0.</span>
+<span class="sd">            area: Default maximum cell area constraint for `mt.createMesh`.</span>
+<span class="sd">                  If None, no specific area constraint is applied by default, allowing</span>
+<span class="sd">                  quality to primarily dictate cell sizes. Can be overridden in methods.</span>
+<span class="sd">                  A smaller value leads to a finer mesh in the specified region.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">quality</span> <span class="o">=</span> <span class="n">quality</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">area</span> <span class="o">=</span> <span class="n">area</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">area</span> <span class="o">=</span> <span class="n">area</span> </div>
 
-    
-<div class="viewcode-block" id="MeshCreator.create_from_layers">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.MeshCreator.create_from_layers">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_from_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">surface</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
-                          <span class="n">layers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
-                          <span class="n">bottom_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>
-                          <span class="n">markers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">:</span>
+<div class="viewcode-block" id="MeshCreator.create_from_layers"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.MeshCreator.create_from_layers">[docs]</a>    <span class="k">def</span> <span class="nf">create_from_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">surface</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                           <span class="n">layers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> 
+                           <span class="n">bottom_depth</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> 
+                           <span class="n">layer_markers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># Note: Not used by current underlying call</span>
+                           <span class="n">quality</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">area</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> 
+                           <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">Polygon</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create a mesh from surface and layer boundaries.</span>
-<span class="sd">        </span>
+<span class="sd">        Create a 2D PyGIMLi mesh from a surface polyline and a list of subsurface layer boundary polylines.</span>
+
+<span class="sd">        This method constructs a mesh where regions between the provided surface and</span>
+<span class="sd">        layer boundaries are assigned specific markers. It&#39;s designed for models</span>
+<span class="sd">        with a defined number of horizontal-like layers.</span>
+
+<span class="sd">        Currently, this implementation specifically calls the global `create_mesh_from_layers`</span>
+<span class="sd">        function, which is hardcoded for exactly two subsurface layers (i.e., three regions total:</span>
+<span class="sd">        surface-to-layer1, layer1-to-layer2, layer2-to-bottom).</span>
+<span class="sd">        The `layer_markers` argument here is NOT used by the current underlying global function call.</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            surface: Surface coordinates [[x,z],...]</span>
-<span class="sd">            layers: List of layer boundary coordinates</span>
-<span class="sd">            bottom_depth: Depth below surface minimum for mesh bottom</span>
-<span class="sd">            markers: List of markers for each layer (default: [2, 3, 2, ...])</span>
-<span class="sd">            </span>
+<span class="sd">            surface: Numpy array of (x, z) coordinates for the ground surface. (N_surface, 2).</span>
+<span class="sd">                     Z is typically elevation or depth, ensure consistency with `layers` and `bottom_depth`.</span>
+<span class="sd">            layers: List of numpy arrays. Each array contains (x, z) coordinates</span>
+<span class="sd">                    for a subsurface layer boundary. E.g., `[layer1_coords, layer2_coords]`.</span>
+<span class="sd">            bottom_depth: Absolute z-coordinate for the bottom of the entire mesh.</span>
+<span class="sd">                          Convention (e.g., elevation positive up, depth positive down) must be consistent.</span>
+<span class="sd">            layer_markers: Optional list of integer markers. Intended for future use if this</span>
+<span class="sd">                           method implements generic multi-layer meshing. Currently not passed through.</span>
+<span class="sd">            quality: Mesh quality parameter. Overrides class default `self.quality` if provided.</span>
+<span class="sd">            area: Maximum cell area for the mesh. Overrides class default `self.area` if provided.</span>
+<span class="sd">                  If None, uses class default. If class default is also None, PyGIMLi&#39;s default (often 0, no constraint) is used.</span>
+
 <span class="sd">        Returns:</span>
-<span class="sd">            PyGIMLI mesh</span>
+<span class="sd">            Tuple (pg.Mesh, pg.meshtools.geom.Polygon):</span>
+<span class="sd">                - mesh: The generated PyGIMLi mesh.</span>
+<span class="sd">                - geom: The PLC geometry used to create the mesh.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            NotImplementedError: If the number of layers in the `layers` list is not 2.</span>
+<span class="sd">            ValueError: If `layers` list is empty.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;At least one layer boundary is required&quot;</span><span class="p">)</span>
-            
-        <span class="c1"># Create default markers if not provided</span>
-        <span class="k">if</span> <span class="n">markers</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">markers</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">markers</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># Middle layer</span>
-        
-        <span class="c1"># Normalize elevation by maximum elevation</span>
-        <span class="n">max_ele</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">surface</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span>
-        <span class="n">surface_norm</span> <span class="o">=</span> <span class="n">surface</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">surface_norm</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">surface_norm</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>  <span class="c1">#- max_ele</span>
-        
-        <span class="n">layers_norm</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">:</span>
-            <span class="n">layer_norm</span> <span class="o">=</span> <span class="n">layer</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-            <span class="n">layer_norm</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer_norm</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># - max_ele</span>
-            <span class="n">layers_norm</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_norm</span><span class="p">)</span>
-        
-        <span class="c1"># Create mesh using specific implementation</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">layers</span><span class="p">:</span> 
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The &#39;layers&#39; list must contain at least one layer boundary.&quot;</span><span class="p">)</span>
+
+        <span class="n">current_quality</span> <span class="o">=</span> <span class="n">quality</span> <span class="k">if</span> <span class="n">quality</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">quality</span>
+        <span class="c1"># `mt.createMesh` expects area constraint as a float. If None, pass 0.0 (no constraint).</span>
+        <span class="n">current_area_val</span> <span class="o">=</span> <span class="n">area</span> <span class="k">if</span> <span class="n">area</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">area</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">)</span>
+
+        <span class="c1"># Normalization of coordinates (e.g., subtracting max_ele) was present in the original</span>
+        <span class="c1"># class method but is omitted here. The global `create_mesh_from_layers` function</span>
+        <span class="c1"># expects absolute coordinates. If normalization is required, it should be performed</span>
+        <span class="c1"># by the user before calling this method, ensuring `surface`, `layers`, and `bottom_depth`</span>
+        <span class="c1"># are all in a consistent coordinate system.</span>
+
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">mesh</span><span class="p">,</span> <span class="n">centers</span><span class="p">,</span> <span class="n">markers_array</span><span class="p">,</span><span class="n">geom</span> <span class="o">=</span> <span class="n">create_mesh_from_layers</span><span class="p">(</span>
-                <span class="n">surface_norm</span><span class="p">,</span> <span class="n">layers_norm</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">layers_norm</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
-                <span class="n">bottom_depth</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">quality</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">area</span>
+            <span class="c1"># This calls the global function `create_mesh_from_layers`.</span>
+            <span class="c1"># That function has its own hardcoded marker logic (marker 2 for top/bottom, 3 for middle).</span>
+            <span class="c1"># The `layer_markers` argument of this class method is not used by the global function.</span>
+            <span class="n">mesh</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">geom</span> <span class="o">=</span> <span class="n">create_mesh_from_layers</span><span class="p">(</span> <span class="c1"># mesh, mesh_centers, cell_markers, geom_plc</span>
+                <span class="n">surface</span><span class="p">,</span> <span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">layers</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                <span class="n">bottom_depth</span><span class="o">=</span><span class="n">bottom_depth</span><span class="p">,</span>    
+                <span class="n">quality</span><span class="o">=</span><span class="n">current_quality</span><span class="p">,</span>
+                <span class="n">area</span><span class="o">=</span><span class="n">current_area_val</span> 
             <span class="p">)</span>
-            <span class="k">return</span> <span class="n">mesh</span><span class="p">,</span><span class="n">geom</span>
+            <span class="c1"># Future enhancement: If `layer_markers` is provided, and a generic multi-layer scheme is implemented,</span>
+            <span class="c1"># those markers should be used to set cell markers in the mesh.</span>
+            <span class="k">return</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">geom</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Implement custom mesh creation for different number of layers</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Currently only 2-layer mesh creation is implemented&quot;</span><span class="p">)</span></div>
+            <span class="c1"># This part would require a more generalized PLC construction:</span>
+            <span class="c1"># 1. Define an outer boundary polygon for the entire domain.</span>
+            <span class="c1"># 2. Add each layer from `layers` as an internal polyline interface.</span>
+            <span class="c1"># 3. Create a PLC from these components.</span>
+            <span class="c1"># 4. Mesh the PLC.</span>
+            <span class="c1"># 5. Assign cell markers based on which region (defined by interfaces) each cell center falls into.</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+                <span class="s2">&quot;Mesh creation for a number of layers other than 2 (i.e., surface + two subsurface boundaries) &quot;</span>
+                <span class="s2">&quot;is not yet implemented in this version of `create_from_layers`. &quot;</span>
+                <span class="s2">&quot;The current implementation is specific to a 3-region model via the global function.&quot;</span>
+            <span class="p">)</span></div>
 
-    
-<div class="viewcode-block" id="MeshCreator.create_from_ert_data">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.MeshCreator.create_from_ert_data">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_from_ert_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">max_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span> <span class="n">quality</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">34</span><span class="p">):</span>
+<div class="viewcode-block" id="MeshCreator.create_from_ert_data"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.MeshCreator.create_from_ert_data">[docs]</a>    <span class="k">def</span> <span class="nf">create_from_ert_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                             <span class="n">data</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">,</span> 
+                             <span class="n">max_depth</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                             <span class="n">quality</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                             <span class="n">paraMaxCellSize</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                             <span class="n">paraBoundary</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                             <span class="n">boundaryMaxCellSize</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> 
+                             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create a mesh suitable for ERT inversion from ERT data.</span>
-<span class="sd">        </span>
-<span class="sd">        Args:</span>
-<span class="sd">            data: PyGIMLI ERT data object</span>
-<span class="sd">            max_depth: Maximum depth of the mesh</span>
-<span class="sd">            quality: Mesh quality parameter</span>
-<span class="sd">            </span>
-<span class="sd">        Returns:</span>
-<span class="sd">            PyGIMLI mesh for ERT inversion</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
-        <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="n">quality</span><span class="p">)</span></div>
-</div>
+<span class="sd">        Create a mesh suitable for ERT (Electrical Resistivity Tomography) inversion.</span>
 
+<span class="sd">        This method utilizes PyGIMLi&#39;s `ERTManager` to generate a mesh tailored to</span>
+<span class="sd">        the sensor configuration found in the `data` object. It allows customization</span>
+<span class="sd">        of various meshing parameters relevant to ERT.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: PyGIMLi DataContainer object. Must contain sensor positions.</span>
+<span class="sd">            max_depth: Maximum depth of the parametric (inversion) domain. (Corresponds to `paraDepth` in ERTManager).</span>
+<span class="sd">                       If None, `ERTManager` might use a default or auto-calculate.</span>
+<span class="sd">            quality: Mesh quality parameter. Overrides class default `self.quality` if provided.</span>
+<span class="sd">            paraMaxCellSize: Maximum cell size in the parametric domain (central region with data sensitivity).</span>
+<span class="sd">            paraBoundary: Width of the less refined boundary region surrounding the parametric domain.</span>
+<span class="sd">            boundaryMaxCellSize: Maximum cell size in this outer boundary region.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pg.Mesh: The generated PyGIMLi mesh, suitable for ERT forward modeling and inversion.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            ImportError: If `pygimli.physics.ert` cannot be imported.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span> <span class="c1"># Local import for ERT-specific functionality</span>
+        <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;Module `pygimli.physics.ert` is required for `create_from_ert_data` &quot;</span>
+                              <span class="s2">&quot;but could not be imported. Please ensure PyGIMLi is fully installed.&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
+
+        <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># verbose=False to suppress console output</span>
+
+        <span class="c1"># Prepare dictionary of arguments for ERTManager&#39;s createMesh method.</span>
+        <span class="c1"># Only include arguments if they are explicitly provided or set in class defaults.</span>
+        <span class="n">mesh_args</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="n">current_quality</span> <span class="o">=</span> <span class="n">quality</span> <span class="k">if</span> <span class="n">quality</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">quality</span>
+        <span class="k">if</span> <span class="n">current_quality</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="c1"># Ensure quality is not None before adding</span>
+            <span class="n">mesh_args</span><span class="p">[</span><span class="s1">&#39;quality&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">current_quality</span>
+        
+        <span class="k">if</span> <span class="n">max_depth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span> 
+            <span class="n">mesh_args</span><span class="p">[</span><span class="s1">&#39;paraDepth&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_depth</span> <span class="c1"># ERTManager uses &#39;paraDepth&#39;</span>
+        
+        <span class="k">if</span> <span class="n">paraMaxCellSize</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mesh_args</span><span class="p">[</span><span class="s1">&#39;paraMaxCellSize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">paraMaxCellSize</span>
+            
+        <span class="k">if</span> <span class="n">paraBoundary</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mesh_args</span><span class="p">[</span><span class="s1">&#39;paraBoundary&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">paraBoundary</span>
+
+        <span class="k">if</span> <span class="n">boundaryMaxCellSize</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mesh_args</span><span class="p">[</span><span class="s1">&#39;boundaryMaxCellSize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">boundaryMaxCellSize</span>
+        
+        <span class="c1"># Generate the mesh using ERTManager.</span>
+        <span class="n">created_mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">mesh_args</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">created_mesh</span></div></div>
 </pre></div>
 
            </div>

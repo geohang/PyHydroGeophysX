@@ -1,32 +1,30 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
-      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
-
+  <title>Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/auto_examples/02_workflow.html" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -71,29 +69,7 @@
 <li class="toctree-l2"><a class="reference internal" href="08_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="05_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="03_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#Step-by-Step-approach">Step by Step approach</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#Loading-domain-information...">Loading domain information…</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Loading-MODFLOW-water-content-data..">Loading MODFLOW water content data..</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Set-up-profile-for-2D-section">Set up profile for 2D section</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Interpolating-data-to-profile">Interpolating data to profile</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Creating-mesh">Creating mesh</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Interpolating-data-to-mesh">Interpolating data to mesh</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Calculating-saturation">Calculating saturation</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Converting-to-resistivity">Converting to resistivity</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Converting-to-P-wave-velocity">Converting to P wave velocity</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#ERT-forward-modeling-simulation">ERT forward modeling simulation</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Run-ERT-inversion-on-synthetic-data">Run ERT inversion on synthetic data</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#Using-Pygimili-default-to-the-inversion">Using Pygimili default to the inversion</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#One-step-approach">One step approach</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#ERT-one-step-from-HM-to-GM">ERT one step from HM to GM</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#SRT-one-step-from-HM-to-GM">SRT one step from HM to GM</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 </ul>
 </li>
 </ul>
@@ -115,7 +91,7 @@
           <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
       <li class="breadcrumb-item active">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/auto_examples/02_workflow.ipynb.txt" rel="nofollow"> View page source</a>
+              <a href="https://github.com/YOUR_GITHUB_USERNAME/PyHydroGeophysX/blob/main/docs/source/auto_examples/02_workflow.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -123,25 +99,26 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="Ex-2.-Complete-Workflow:-From-Hydrological-Models-to-Geophysical-Inversion">
-<h1>Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion<a class="headerlink" href="#Ex-2.-Complete-Workflow:-From-Hydrological-Models-to-Geophysical-Inversion" title="Link to this heading"></a></h1>
-<p>This example demonstrates the complete workflow for integrating hydrological model outputs with geophysical forward modeling and inversion using PyHydroGeophysX.</p>
-<p>The workflow includes:</p>
-<ol class="arabic simple">
-<li><p>Loading MODFLOW water content data</p></li>
-<li><p>Setting up 2D profile interpolation from 3D model data</p></li>
-<li><p>Creating meshes with geological layer structure</p></li>
-<li><p>Converting water content to resistivity using petrophysical relationships</p></li>
-<li><p>Converting water content to seismic velocity using rock physics models</p></li>
-<li><p>Forward modeling to create synthetic ERT and seismic data</p></li>
-<li><p>Performing ERT inversion to recover resistivity models</p></li>
-</ol>
-<p>This example serves as a comprehensive tutorial showing the integration of hydrological and geophysical modeling for watershed monitoring applications.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
-</pre></div>
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-02-workflow-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<section class="sphx-glr-example-title" id="ex-2-complete-workflow-from-hydrological-models-to-geophysical-inversion">
+<span id="sphx-glr-auto-examples-02-workflow-py"></span><h1>Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion<a class="headerlink" href="#ex-2-complete-workflow-from-hydrological-models-to-geophysical-inversion" title="Permalink to this heading"></a></h1>
+<p>This example demonstrates the complete workflow for integrating hydrological
+model outputs with geophysical forward modeling and inversion using PyHydroGeophysX.</p>
+<p>The workflow includes:
+1. Loading MODFLOW water content data
+2. Setting up 2D profile interpolation from 3D model data
+3. Creating meshes with geological layer structure
+4. Converting water content to resistivity using petrophysical relationships
+5. Converting water content to seismic velocity using rock physics models
+6. Forward modeling to create synthetic ERT and seismic data
+7. Performing ERT inversion to recover resistivity models</p>
+<p>This example serves as a comprehensive tutorial showing the integration
+of hydrological and geophysical modeling for watershed monitoring applications.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
@@ -174,26 +151,14 @@
 <span class="kn">from</span> <span class="nn">PyHydroGeophysX.Hydro_modular</span> <span class="kn">import</span> <span class="n">hydro_to_ert</span>
 </pre></div>
 </div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example&quot;</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example&quot;</span>
 <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<section id="Step-by-Step-approach">
-<h2>Step by Step approach<a class="headerlink" href="#Step-by-Step-approach" title="Link to this heading"></a></h2>
-<section id="Loading-domain-information...">
-<h3>Loading domain information…<a class="headerlink" href="#Loading-domain-information..." title="Link to this heading"></a></h3>
+<p>## Step by Step approach</p>
+<p>### Loading domain information…</p>
 <p>These would be your actual data files</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/&quot;</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/&quot;</span>
 <span class="n">modflow_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;modflow&quot;</span><span class="p">)</span>
 
 <span class="c1"># Load domain information from files</span>
@@ -203,16 +168,9 @@
 <span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;Porosity.npy&quot;</span><span class="p">))</span>
 </pre></div>
 </div>
-</div>
-</section>
-<section id="Loading-MODFLOW-water-content-data..">
-<h3>Loading MODFLOW water content data..<a class="headerlink" href="#Loading-MODFLOW-water-content-data.." title="Link to this heading"></a></h3>
+<p>### Loading MODFLOW water content data..</p>
 <p>Step 2: Exmaple of loading MODFLOW water content data</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Note that to save the loading time, we only use a low resoluation model load for the example</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Note that to save the loading time, we only use a low resoluation model load for the example</span>
 <span class="c1"># In a real-world application, you would load the full resolution data</span>
 <span class="c1"># here we will load the npy file for the water content to save time</span>
 
@@ -224,24 +182,9 @@
 <span class="nb">print</span><span class="p">(</span><span class="n">water_content</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-(14, 194, 157)
-</pre></div></div>
-</div>
-</section>
-<section id="Set-up-profile-for-2D-section">
-<h3>Set up profile for 2D section<a class="headerlink" href="#Set-up-profile-for-2D-section" title="Link to this heading"></a></h3>
+<p>### Set up profile for 2D section</p>
 <p>Step 3: Set up profile for 2D section</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 3: Setting up profile...&quot;</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 3: Setting up profile...&quot;</span><span class="p">)</span>
 
 <span class="c1"># Define profile endpoints</span>
 <span class="n">point1</span> <span class="o">=</span> <span class="p">[</span><span class="mi">115</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span>  <span class="c1"># [col, row]</span>
@@ -260,39 +203,17 @@
 <span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Step 3: Setting up profile...
-</pre></div></div>
-</div>
-</section>
-<section id="Interpolating-data-to-profile">
-<h3>Interpolating data to profile<a class="headerlink" href="#Interpolating-data-to-profile" title="Link to this heading"></a></h3>
+<p>### Interpolating data to profile</p>
 <p>Step 4: Interpolate data to profile</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Interpolate water content to profile</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Interpolate water content to profile</span>
 <span class="n">water_content_profile</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">water_content</span><span class="p">)</span>
 
 <span class="c1"># Interpolate porosity to profile</span>
 <span class="n">porosity_profile</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</section>
-<section id="Creating-mesh">
-<h3>Creating mesh<a class="headerlink" href="#Creating-mesh" title="Link to this heading"></a></h3>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load structure layers</span>
+<p>### Creating mesh</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load structure layers</span>
 <span class="n">bot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;bot.npy&quot;</span><span class="p">))</span>
 
 <span class="c1"># Process layers to get structure</span>
@@ -323,22 +244,8 @@ Step 3: Setting up profile...
 <span class="n">mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;mesh.bms&quot;</span><span class="p">))</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-1
-</pre></div></div>
-</div>
 <p>Visualize the result</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
 <span class="n">top</span><span class="p">[</span><span class="n">idomain</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>  <span class="c1"># Mask out the inactive cells in the top layer</span>
@@ -363,23 +270,9 @@ Step 3: Setting up profile...
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_02_workflow_19_0.png" src="../_images/auto_examples_02_workflow_19_0.png" />
-</div>
-</div>
-</section>
-<section id="Interpolating-data-to-mesh">
-<h3>Interpolating data to mesh<a class="headerlink" href="#Interpolating-data-to-mesh" title="Link to this heading"></a></h3>
+<p>### Interpolating data to mesh</p>
 <p>Step 6: Interpolate data to mesh</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ID1</span> <span class="o">=</span> <span class="n">porosity_profile</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ID1</span> <span class="o">=</span> <span class="n">porosity_profile</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="n">ID1</span><span class="p">[:</span><span class="n">mid_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1">#regolith</span>
 <span class="n">ID1</span><span class="p">[</span><span class="n">mid_idx</span><span class="p">:</span><span class="n">bot_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># fractured bedrock</span>
 <span class="n">ID1</span><span class="p">[</span><span class="n">bot_idx</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># fresh bedrock</span>
@@ -413,35 +306,10 @@ Step 3: Setting up profile...
 <span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ID1</span>
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ID1</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-array([[0., 0., 0., ..., 0., 0., 0.],
-       [0., 0., 0., ..., 0., 0., 0.],
-       [0., 0., 0., ..., 0., 0., 0.],
-       ...,
-       [3., 3., 3., ..., 3., 3., 3.],
-       [2., 2., 2., ..., 2., 2., 2.],
-       [2., 2., 2., ..., 2., 2., 2.]])
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="nn">mpl</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
@@ -512,61 +380,18 @@ array([[0., 0., 0., ..., 0., 0., 0.],
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">(</span><span class="n">pad</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_02_workflow_24_0.png" src="../_images/auto_examples_02_workflow_24_0.png" />
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-&lt;Figure size 960x720 with 0 Axes&gt;
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Water Content min/max:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Water Content min/max:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Saturation min/max:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">saturation</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">saturation</span><span class="p">))</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Water Content min/max: 0.04999999999999998 0.27217677063432144
-Saturation min/max: 0.26787257055093544 1.0
-</pre></div></div>
-</div>
-</section>
-<section id="Calculating-saturation">
-<h3>Calculating saturation<a class="headerlink" href="#Calculating-saturation" title="Link to this heading"></a></h3>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Ensure porosity is not zero to avoid division by zero</span>
+<p>### Calculating saturation</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Ensure porosity is not zero to avoid division by zero</span>
 <span class="n">porosity_safe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">porosity_mesh</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
 <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">wc_mesh</span> <span class="o">/</span> <span class="n">porosity_safe</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</section>
-<section id="Converting-to-resistivity">
-<h3>Converting to resistivity<a class="headerlink" href="#Converting-to-resistivity" title="Link to this heading"></a></h3>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Step 8: Convert to resistivity using petrophysical model</span>
+<p>### Converting to resistivity</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Step 8: Convert to resistivity using petrophysical model</span>
 
 
 <span class="n">marker_labels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="c1"># top. mid, bottom layers (example values)</span>
@@ -609,36 +434,14 @@ Saturation min/max: 0.26787257055093544 1.0
 <span class="n">res_models</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">bot_res</span>
 </pre></div>
 </div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">top_res</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">top_res</span><span class="p">))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">top_res</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">top_res</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">mid_res</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">mid_res</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">bot_res</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">bot_res</span><span class="p">))</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-350.63114674639996 1038.385274355005
-500.0 2863.5857671555473
-2400.0 2400.0
-</pre></div></div>
-</div>
-</section>
-<section id="Converting-to-P-wave-velocity">
-<h3>Converting to P wave velocity<a class="headerlink" href="#Converting-to-P-wave-velocity" title="Link to this heading"></a></h3>
+<p>### Converting to P wave velocity</p>
 <p>Step 9: Convert to P wave velocity using petrophysical model</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize velocity models</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize velocity models</span>
 <span class="n">hm_model</span> <span class="o">=</span> <span class="n">HertzMindlinModel</span><span class="p">(</span><span class="n">critical_porosity</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">coordination_number</span><span class="o">=</span><span class="mf">6.0</span><span class="p">)</span>
 <span class="n">dem_model</span> <span class="o">=</span> <span class="n">DEMModel</span><span class="p">()</span>
 
@@ -707,32 +510,12 @@ Saturation min/max: 0.26787257055093544 1.0
 <span class="n">velocity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">Vp</span>
 </pre></div>
 </div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]))</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">]))</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">]))</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-530.5407111481036 1171.922856081107
-1316.9929234300878 4138.234174753382
-4541.876108086146 5264.711328313164
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
 <span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
 
 
@@ -762,30 +545,8 @@ Saturation min/max: 0.26787257055093544 1.0
 <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;res_vel.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Velocity range: 530.5407111481036 5264.711328313164
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_02_workflow_35_1.png" src="../_images/auto_examples_02_workflow_35_1.png" />
-</div>
-</div>
-</section>
-<section id="ERT-forward-modeling-simulation">
-<h3>ERT forward modeling simulation<a class="headerlink" href="#ERT-forward-modeling-simulation" title="Link to this heading"></a></h3>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">xpos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="o">+</span><span class="mi">72</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span><span class="mi">72</span><span class="p">)</span>
+<p>### ERT forward modeling simulation</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">xpos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="o">+</span><span class="mi">72</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span><span class="mi">72</span><span class="p">)</span>
 <span class="n">ypos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">xpos</span><span class="p">,</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span><span class="n">interpolator</span><span class="o">.</span><span class="n">surface_profile</span><span class="p">)</span>
 <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">xpos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="n">ypos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
 
@@ -813,85 +574,8 @@ Velocity range: 530.5407111481036 5264.711328313164
 <span class="n">ert</span><span class="o">.</span><span class="n">showData</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span>  <span class="n">logscale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:21:56 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:21:56 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:21:56 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:21:56 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:21:57 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:21:57 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:21:58 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 37828 Cells: 74804 Boundaries: 56528
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-(&lt;Axes: &gt;, &lt;matplotlib.colorbar.Colorbar at 0x1f6f1d24b50&gt;)
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_02_workflow_37_8.png" src="../_images/auto_examples_02_workflow_37_8.png" />
-</div>
-</div>
-<p>Seismic data</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 11: Creating seismic survey design...&quot;</span><span class="p">)</span>
+<p>################# Seismic data #####################</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 11: Creating seismic survey design...&quot;</span><span class="p">)</span>
 
 <span class="n">numberGeophones</span> <span class="o">=</span> <span class="mi">72</span>
 <span class="n">shotDistance</span> <span class="o">=</span> <span class="mi">5</span>
@@ -918,40 +602,7 @@ Velocity range: 530.5407111481036 5264.711328313164
                     <span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-C:\Users\HChen8\AppData\Local\Temp\ipykernel_56596\4098333056.py:15: DeprecationWarning: Conversion of an array with ndim &gt; 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
-  pos[i, 0] = new_x
-C:\Users\HChen8\AppData\Local\Temp\ipykernel_56596\4098333056.py:16: DeprecationWarning: Conversion of an array with ndim &gt; 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
-  pos[i, 1] = new_y
-24/05/25 - 21:25:16 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (secnodes: 2) to solve forward task.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Step 11: Creating seismic survey design...
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-min/max t: 0.0015063468542891626 0.05156406269601664
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">tt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plotva</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">tt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plotva</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot first arrivals as lines.</span>
 
 <span class="sd">    Parameters</span>
@@ -1028,28 +679,7 @@ min/max t: 0.0015063468542891626 0.05156406269601664
 <span class="n">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">datasrt</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-&lt;Axes: xlabel=&#39;Distance (m)&#39;, ylabel=&#39;Traveltime (s)&#39;&gt;
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_02_workflow_40_1.png" src="../_images/auto_examples_02_workflow_40_1.png" />
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
 
@@ -1102,39 +732,8 @@ min/max t: 0.0015063468542891626 0.05156406269601664
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Velocity range: 530.5407111481036 5264.711328313164
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-C:\Users\HChen8\AppData\Local\Temp\ipykernel_56596\3109362271.py:51: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
-  plt.tight_layout()
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_02_workflow_41_2.png" src="../_images/auto_examples_02_workflow_41_2.png" />
-</div>
-</div>
-</section>
-<section id="Run-ERT-inversion-on-synthetic-data">
-<h3>Run ERT inversion on synthetic data<a class="headerlink" href="#Run-ERT-inversion-on-synthetic-data" title="Link to this heading"></a></h3>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># using my code to the inversion</span>
+<p>### Run ERT inversion on synthetic data</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># using my code to the inversion</span>
 
 <span class="c1"># Create ERT inversion object</span>
 <span class="n">inversion</span> <span class="o">=</span> <span class="n">ERTInversion</span><span class="p">(</span>
@@ -1148,262 +747,12 @@ C:\Users\HChen8\AppData\Local\Temp\ipykernel_56596\3109362271.py:51: UserWarning
 <span class="n">inversion_result</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:38 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 4193 Cells: 7984 Boundaries: 6188
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
--------------------Iteration: 0 ---------------------------
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-chi2: [[31.96002247]]
-dPhi: 1.0
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
--------------------Iteration: 1 ---------------------------
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-chi2: [[2.69620898]]
-dPhi: [[0.91563808]]
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
--------------------Iteration: 2 ---------------------------
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-chi2: [[1.0897884]]
-dPhi: [[0.59580715]]
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-End of inversion
-</pre></div></div>
-</div>
-</section>
-<section id="Using-Pygimili-default-to-the-inversion">
-<h3>Using Pygimili default to the inversion<a class="headerlink" href="#Using-Pygimili-default-to-the-inversion" title="Link to this heading"></a></h3>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mgr</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synthetic_data.dat&quot;</span><span class="p">))</span>
+<p>### Using Pygimili default to the inversion</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mgr</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synthetic_data.dat&quot;</span><span class="p">))</span>
 <span class="n">inv</span> <span class="o">=</span> <span class="n">mgr</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">lam</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 4193 Cells: 7984 Boundaries: 6188
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Use median(data values)=1093.73179826467
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Created startmodel from forward operator: 1438, min/max=1093.731798/1093.731798
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:25:59 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Starting inversion.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-fop: &lt;pygimli.physics.ert.ertModelling.ERTModelling object at 0x000001F815416020&gt;
-Data transformation: &lt;pgcore._pygimli_.RTransLogLU object at 0x000001F815416570&gt;
-Model transformation: &lt;pgcore._pygimli_.RTransLog object at 0x000001F815416390&gt;
-min/max (data): 467/2183
-min/max (error): 5%/5%
-min/max (start model): 1094/1094
---------------------------------------------------------------------------------
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-inv.iter 0 ... chi² =   30.43
---------------------------------------------------------------------------------
-inv.iter 1 ... chi² =    2.56 (dPhi = 90.79%) lam: 10.0
---------------------------------------------------------------------------------
-inv.iter 2 ...
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-chi² =    1.06 (dPhi = 52.15%) lam: 10.0
---------------------------------------------------------------------------------
-inv.iter 3 ... chi² =    1.02 (dPhi = 2.74%) lam: 10.0
---------------------------------------------------------------------------------
-inv.iter 4 ... chi² =    0.99 (dPhi = 1.31%) lam: 10.0
-
-
-################################################################################
-#                  Abort criterion reached: chi² &lt;= 1 (0.99)                   #
-################################################################################
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">12</span><span class="p">))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">12</span><span class="p">))</span>
 
 <span class="c1"># True resistivity model</span>
 <span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -1430,26 +779,10 @@ inv.iter 4 ... chi² =    0.99 (dPhi = 1.31%) lam: 10.0
 <span class="c1"># the difference is that the chi2 value for stop inversion is not the same, we chose 1.5 while Pygimli is 1.0</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_02_workflow_46_0.png" src="../_images/auto_examples_02_workflow_46_0.png" />
-</div>
-</div>
-</section>
-</section>
-<section id="One-step-approach">
-<h2>One step approach<a class="headerlink" href="#One-step-approach" title="Link to this heading"></a></h2>
-<section id="ERT-one-step-from-HM-to-GM">
-<h3>ERT one step from HM to GM<a class="headerlink" href="#ERT-one-step-from-HM-to-GM" title="Link to this heading"></a></h3>
+<p>## One step approach</p>
+<p>### ERT one step from HM to GM</p>
 <p>Set up directories</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/hydro_to_ert_example&quot;</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/hydro_to_ert_example&quot;</span>
 <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="c1"># Load your data</span>
@@ -1533,102 +866,8 @@ inv.iter 4 ... chi² =    0.99 (dPhi = 1.31%) lam: 10.0
 <span class="n">ert</span><span class="o">.</span><span class="n">showData</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span>  <span class="n">logscale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-[[0. 0. 0. ... 0. 0. 0.]
- [0. 0. 0. ... 0. 0. 0.]
- [0. 0. 0. ... 0. 0. 0.]
- ...
- [3. 3. 3. ... 3. 3. 3.]
- [2. 2. 2. ... 2. 2. 2.]
- [2. 2. 2. ... 2. 2. 2.]]
-Resistivity range: 350.63114674639996 - 2863.5857671555473 Ohm-m
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:26:44 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:26:44 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:26:44 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Found 2 regions.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:26:44 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - (ERTModelling) Region with smallest marker (1) set to background.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:26:44 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating forward mesh from region infos.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:26:45 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (H2) to solve forward task.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:26:45 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Mesh for forward task: Mesh: Nodes: 37828 Cells: 74804 Boundaries: 56528
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-(&lt;Axes: &gt;, &lt;matplotlib.colorbar.Colorbar at 0x1f7787f6510&gt;)
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_02_workflow_50_9.png" src="../_images/auto_examples_02_workflow_50_9.png" />
-</div>
-</div>
-</section>
-<section id="SRT-one-step-from-HM-to-GM">
-<h3>SRT one step from HM to GM<a class="headerlink" href="#SRT-one-step-from-HM-to-GM" title="Link to this heading"></a></h3>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<p>### SRT one step from HM to GM</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
@@ -1749,61 +988,16 @@ Resistivity range: 350.63114674639996 - 2863.5857671555473 Ohm-m
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </pre></div>
 </div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.000 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-02-workflow-py">
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/7dc12d09753680fa5f9e9e1f3ce2d263/02_workflow.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">02_workflow.py</span></code></a></p>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-[[0. 0. 0. ... 0. 0. 0.]
- [0. 0. 0. ... 0. 0. 0.]
- [0. 0. 0. ... 0. 0. 0.]
- ...
- [3. 3. 3. ... 3. 3. 3.]
- [2. 2. 2. ... 2. 2. 2.]
- [2. 2. 2. ... 2. 2. 2.]]
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-24/05/25 - 21:30:26 - pyGIMLi - <span class="ansi-green-fg">INFO</span> - Creating refined mesh (secnodes: 2) to solve forward task.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Velocity range: 530.5407111481036 - 5264.711328313164 m/s
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-min/max t: 0.0015063468542891626 0.05156406269601664
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_02_workflow_52_4.png" src="../_images/auto_examples_02_workflow_52_4.png" />
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/89f27e7575d7c4220b40821bba0ed30f/02_workflow.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">02_workflow.ipynb</span></code></a></p>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_02_workflow_52_5.png" src="../_images/auto_examples_02_workflow_52_5.png" />
-</div>
-</div>
-</section>
-</section>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
 </section>
 
 

@@ -1,28 +1,29 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../../../">
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PyHydroGeophysX.inversion.ert_inversion &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
-
+  <title>PyHydroGeophysX.inversion.ert_inversion &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/inversion/ert_inversion.html" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../../../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
@@ -87,298 +88,583 @@
              
   <h1>Source code for PyHydroGeophysX.inversion.ert_inversion</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Single-time ERT inversion functionality.</span>
+<span class="sd">Single-time Electrical Resistivity Tomography (ERT) inversion functionality.</span>
+
+<span class="sd">This module provides the `ERTInversion` class, which performs a standard</span>
+<span class="sd">single-time ERT inversion using PyGIMLi. It handles data loading, mesh creation</span>
+<span class="sd">(if not provided), forward modeling, Jacobian computation, and an iterative</span>
+<span class="sd">Gauss-Newton like optimization scheme with regularization and model constraints.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span> <span class="c1"># For checking file existence in __init__</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
-<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
-<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="kn">import</span> <span class="n">diags</span>
-<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span> <span class="c1"># For ERT specific functionalities like ert.load, ERTManager, ERTModelling</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="kn">import</span> <span class="n">diags</span> <span class="c1"># For creating diagonal matrices efficiently</span>
+<span class="kn">import</span> <span class="nn">sys</span> <span class="c1"># For flushing print statements, useful in some environments</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Tuple</span>
 
-<span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="n">InversionBase</span><span class="p">,</span> <span class="n">InversionResult</span>
+<span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="n">InversionBase</span><span class="p">,</span> <span class="n">InversionResult</span> <span class="c1"># Base classes for inversion structure</span>
+<span class="c1"># ertforward2 and ertforandjac2 are helper functions for forward modeling and Jacobian calculation,</span>
+<span class="c1"># likely handling log-transformations.</span>
 <span class="kn">from</span> <span class="nn">..forward.ert_forward</span> <span class="kn">import</span> <span class="n">ertforward2</span><span class="p">,</span> <span class="n">ertforandjac2</span>
-<span class="kn">from</span> <span class="nn">..solvers.linear_solvers</span> <span class="kn">import</span> <span class="n">generalized_solver</span>
+<span class="c1"># generalized_solver is a custom or wrapped linear system solver.</span>
+<span class="kn">from</span> <span class="nn">..solvers.linear_solvers</span> <span class="kn">import</span> <span class="n">generalized_solver</span> <span class="c1"># Corrected relative import path</span>
 
 
-<div class="viewcode-block" id="ERTInversion">
-<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.ERTInversion">[docs]</a>
-<span class="k">class</span> <span class="nc">ERTInversion</span><span class="p">(</span><span class="n">InversionBase</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Single-time ERT inversion class.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="ERTInversion"><a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.ERTInversion">[docs]</a><span class="k">class</span> <span class="nc">ERTInversion</span><span class="p">(</span><span class="n">InversionBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs a single-time Electrical Resistivity Tomography (ERT) inversion.</span>
+
+<span class="sd">    This class inherits from `InversionBase` and implements the specific steps</span>
+<span class="sd">    for ERT inversion, including setting up PyGIMLi&#39;s ERT forward operator,</span>
+<span class="sd">    data weighting, model regularization, and an iterative inversion loop.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="ERTInversion.__init__">
-<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.ERTInversion.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="ERTInversion.__init__"><a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.ERTInversion.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize ERT inversion.</span>
-<span class="sd">        </span>
-<span class="sd">        Args:</span>
-<span class="sd">            data_file: Path to ERT data file</span>
-<span class="sd">            mesh: Mesh for inversion (created if None)</span>
-<span class="sd">            **kwargs: Additional parameters including:</span>
-<span class="sd">                - lambda_val: Regularization parameter</span>
-<span class="sd">                - method: Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
-<span class="sd">                - model_constraints: (min, max) model parameter bounds</span>
-<span class="sd">                - max_iterations: Maximum iterations</span>
-<span class="sd">                - absoluteUError: Absolute data error</span>
-<span class="sd">                - relativeError: Relative data error</span>
-<span class="sd">                - lambda_rate: Lambda reduction rate</span>
-<span class="sd">                - lambda_min: Minimum lambda value</span>
-<span class="sd">                - use_gpu: Whether to use GPU acceleration (requires CuPy)</span>
-<span class="sd">                - parallel: Whether to use parallel CPU computation</span>
-<span class="sd">                - n_jobs: Number of parallel jobs (-1 for all cores)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Load ERT data</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_file</span><span class="p">)</span>
-        
-        <span class="c1"># Call parent initializer</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        
-        <span class="c1"># Set ERT-specific default parameters</span>
+<span class="sd">        Initialize the ERTInversion class.</span>
 
-        <span class="n">ert_defaults</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s1">&#39;lambda_val&#39;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>
-            <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="s1">&#39;cgls&#39;</span><span class="p">,</span>
-            <span class="s1">&#39;absoluteUError&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
-            <span class="s1">&#39;relativeError&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
-            <span class="s1">&#39;lambda_rate&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
-            <span class="s1">&#39;lambda_min&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
-            <span class="s1">&#39;use_gpu&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>      <span class="c1"># Add GPU acceleration option</span>
-            <span class="s1">&#39;parallel&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>     <span class="c1"># Add parallel computation option</span>
-            <span class="s1">&#39;n_jobs&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span>           <span class="c1"># Number of parallel jobs (-1 means all available cores)</span>
+<span class="sd">        Args:</span>
+<span class="sd">            data_file (str): Path to the ERT data file (readable by `pygimli.ert.load`).</span>
+<span class="sd">            mesh (Optional[pg.Mesh], optional): A pre-defined PyGIMLi mesh for the inversion.</span>
+<span class="sd">                                                If None, a mesh will be automatically created</span>
+<span class="sd">                                                based on the data during the `setup()` phase.</span>
+<span class="sd">                                                Defaults to None.</span>
+<span class="sd">            **kwargs (Any): Additional keyword arguments to override default inversion parameters.</span>
+<span class="sd">                            See `InversionBase` and ERT-specific defaults below. Common parameters include:</span>
+<span class="sd">                            - `lambda_val` (float): Initial regularization parameter.</span>
+<span class="sd">                            - `method` (str): Solver method for the linear system (e.g., &#39;cgls&#39;, &#39;lsqr&#39;).</span>
+<span class="sd">                            - `model_constraints` (Tuple[float, float]): Min and max bounds for resistivity [ohm·m].</span>
+<span class="sd">                            - `max_iterations` (int): Maximum number of inversion iterations.</span>
+<span class="sd">                            - `absoluteUError` (float): Absolute error in voltage (U) for data error estimation [V].</span>
+<span class="sd">                            - `relativeError` (float): Relative error percentage for data error estimation (e.g., 0.05 for 5%).</span>
+<span class="sd">                            - `lambda_rate` (float): Factor to reduce lambda at each iteration if chi^2 improves.</span>
+<span class="sd">                            - `lambda_min` (float): Minimum value for lambda.</span>
+<span class="sd">                            - `use_gpu` (bool): Whether to attempt GPU acceleration (requires CuPy and compatible solver).</span>
+<span class="sd">                            - `parallel` (bool): Whether to use parallel CPU computation for certain solver steps.</span>
+<span class="sd">                            - `n_jobs` (int): Number of CPU jobs for parallel execution.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            FileNotFoundError: If the `data_file` does not exist.</span>
+<span class="sd">            Exception: If `pygimli.ert.load` fails to load the data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">data_file</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERT data file not found: </span><span class="si">{</span><span class="n">data_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_file</span><span class="p">)</span> <span class="c1"># Load ERT data using PyGIMLi</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to load ERT data from &#39;</span><span class="si">{</span><span class="n">data_file</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Call the parent class&#39;s initializer (InversionBase)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1"># data and mesh are stored in self.data and self.mesh</span>
+        
+        <span class="c1"># Define ERT-specific default parameters that can be overridden by kwargs</span>
+        <span class="n">ert_specific_defaults</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;lambda_val&#39;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>        <span class="c1"># Initial regularization strength</span>
+            <span class="s1">&#39;method&#39;</span><span class="p">:</span> <span class="s1">&#39;cgls&#39;</span><span class="p">,</span>          <span class="c1"># Default linear solver method</span>
+            <span class="s1">&#39;absoluteUError&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>     <span class="c1"># Absolute voltage error for error model (if err not in data)</span>
+            <span class="s1">&#39;relativeError&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>     <span class="c1"># Relative error for error model (if err not in data)</span>
+            <span class="s1">&#39;lambda_rate&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>        <span class="c1"># Factor to multiply lambda by (typically &lt;=1 to reduce lambda)</span>
+                                       <span class="c1"># A value of 1.0 means lambda is not changed by this rate.</span>
+                                       <span class="c1"># Should be &lt; 1 for lambda reduction strategies (e.g. 0.8).</span>
+            <span class="s1">&#39;lambda_min&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>         <span class="c1"># Minimum lambda value to prevent it from becoming too small.</span>
+            <span class="s1">&#39;use_gpu&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>          <span class="c1"># GPU acceleration for solver (if supported)</span>
+            <span class="s1">&#39;parallel&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>         <span class="c1"># Parallel CPU computation for solver (if supported)</span>
+            <span class="s1">&#39;n_jobs&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span>               <span class="c1"># Number of CPU jobs for parallel execution</span>
         <span class="p">}</span>
         
-        <span class="c1"># Update parameters with ERT defaults</span>
-        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">ert_defaults</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="c1"># Update self.parameters with ERT-specific defaults if not already provided by user in kwargs</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">default_value</span> <span class="ow">in</span> <span class="n">ert_specific_defaults</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_value</span>
         
-        <span class="c1"># Initialize internal variables</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Wdert</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Data weighting matrix</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">=</span> <span class="kc">None</span>   <span class="c1"># Model weighting matrix</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rhos1</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Log-transformed apparent resistivities</span></div>
+        <span class="c1"># Initialize attributes specific to ERT inversion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># PyGIMLi forward operator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Wd</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">diags</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Data weighting matrix ( Wd.T * Wd = Cd^-1 ), can be sparse</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">matrix</span><span class="o">.</span><span class="n">RSparseMatrix</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>   <span class="c1"># Model regularization/weighting matrix (spatial constraints)</span>
+                                                                                 <span class="c1"># Often denoted as W_m or R in literature. Kept as sparse.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_rhoa_obs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Log-transformed observed apparent resistivities</span>
+        
+        <span class="c1"># Ensure the InversionResult object is initialized for this specific inversion type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">InversionResult</span><span class="p">()</span> <span class="c1"># Base result type is sufficient for single-time ERT</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;inversion_type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;ERTStandard&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;data_file&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span> <span class="c1"># Store all used parameters</span></div>
 
-    
-<div class="viewcode-block" id="ERTInversion.setup">
-<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.ERTInversion.setup">[docs]</a>
-    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set up ERT inversion (create operators, matrices, etc.)&quot;&quot;&quot;</span>
-        <span class="c1"># Create mesh if not provided</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
-        
-        <span class="c1"># Initialize forward operator</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span>
-        
-        <span class="c1"># Prepare data</span>
-        <span class="n">rhos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;rhoa&#39;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rhos1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">rhos</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rhos1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhos1</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhos1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
-        
-        <span class="c1"># Data error matrix</span>
-        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">])</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
-            <span class="c1"># If data has error values, use them</span>
-            <span class="n">Delta_rhoa_rhoa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Otherwise, estimate error</span>
-            <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-            <span class="n">Delta_rhoa_rhoa</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">estimateError</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
-                <span class="n">absoluteUError</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;absoluteUError&#39;</span><span class="p">],</span>
-                <span class="n">relativeError</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;relativeError&#39;</span><span class="p">]</span>
-            <span class="p">)</span>
-        
-        <span class="c1"># Create data weighting matrix</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Wdert</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">Delta_rhoa_rhoa</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
-        
-        <span class="c1"># Create model regularization matrix</span>
-        <span class="n">rm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">regionManager</span><span class="p">()</span>
-        <span class="n">Ctmp</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">matrix</span><span class="o">.</span><span class="n">RSparseMapMatrix</span><span class="p">()</span>
-        
-        <span class="n">rm</span><span class="o">.</span><span class="n">setConstraintType</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">rm</span><span class="o">.</span><span class="n">fillConstraints</span><span class="p">(</span><span class="n">Ctmp</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">sparseMatrix2coo</span><span class="p">(</span><span class="n">Ctmp</span><span class="p">)</span>
-        <span class="n">cw</span> <span class="o">=</span> <span class="n">rm</span><span class="o">.</span><span class="n">constraintWeights</span><span class="p">()</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">=</span> <span class="n">diags</span><span class="p">(</span><span class="n">cw</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span></div>
-
-    
-<div class="viewcode-block" id="ERTInversion.run">
-<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.ERTInversion.run">[docs]</a>
-    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InversionResult</span><span class="p">:</span>
+<div class="viewcode-block" id="ERTInversion.setup"><a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.ERTInversion.setup">[docs]</a>    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Run ERT inversion.</span>
-<span class="sd">        </span>
-<span class="sd">        Args:</span>
-<span class="sd">            initial_model: Initial model parameters (if None, a homogeneous model is used)</span>
-<span class="sd">            </span>
-<span class="sd">        Returns:</span>
-<span class="sd">            InversionResult with inversion results</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Make sure setup has been called</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
-        
-        <span class="c1"># Initialize result object</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">InversionResult</span><span class="p">()</span>
-        
-        <span class="c1"># Set up initial model if not provided</span>
-        <span class="k">if</span> <span class="n">initial_model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">rhomodel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhos1</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">paraDomain</span><span class="o">.</span><span class="n">cellCount</span><span class="p">(),</span> <span class="mi">1</span><span class="p">))</span>
-            <span class="n">mr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">rhomodel</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">initial_model</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">initial_model</span> <span class="o">=</span> <span class="n">initial_model</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">initial_model</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="c1"># Assume linear model values, convert to log</span>
-                <span class="n">mr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">initial_model</span> <span class="o">+</span> <span class="mf">1e-6</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">mr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">initial_model</span><span class="p">)</span>
-        
-        <span class="c1"># Reference model is the initial model</span>
-        <span class="n">mr_R</span> <span class="o">=</span> <span class="n">mr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        
-        <span class="c1"># Regularization parameter</span>
-        <span class="n">L_mr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;lambda_val&#39;</span><span class="p">])</span>
-        
-        <span class="c1"># Model constraints</span>
-        <span class="n">min_mr</span><span class="p">,</span> <span class="n">max_mr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;model_constraints&#39;</span><span class="p">]</span>
-        <span class="n">min_mr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">min_mr</span><span class="p">)</span>
-        <span class="n">max_mr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">max_mr</span><span class="p">)</span>
-        
-        <span class="c1"># Initial setup for the inversion</span>
-        <span class="n">delta_mr</span> <span class="o">=</span> <span class="p">(</span><span class="n">mr</span> <span class="o">-</span> <span class="n">mr_R</span><span class="p">)</span>
-        <span class="n">chi2_ert</span> <span class="o">=</span> <span class="mi">1</span>
-        
-        <span class="c1"># Main inversion loop</span>
-        <span class="k">for</span> <span class="n">nn</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;max_iterations&#39;</span><span class="p">]):</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;-------------------Iteration: </span><span class="si">{</span><span class="n">nn</span><span class="si">}</span><span class="s1"> ---------------------------&#39;</span><span class="p">)</span>
-            
-            <span class="c1"># Forward modeling and Jacobian computation</span>
-            <span class="n">dr</span><span class="p">,</span> <span class="n">Jr</span> <span class="o">=</span> <span class="n">ertforandjac2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="p">,</span> <span class="n">mr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span>
-            <span class="n">dr</span> <span class="o">=</span> <span class="n">dr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
-            
-            <span class="c1"># Data misfit calculation</span>
-            <span class="n">dataerror_ert</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhos1</span> <span class="o">-</span> <span class="n">dr</span>
-            <span class="n">fdert</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wdert</span><span class="p">,</span> <span class="n">dataerror_ert</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wdert</span><span class="p">,</span> <span class="n">dataerror_ert</span><span class="p">))</span>
-            
-            <span class="c1"># Model regularization term</span>
-            <span class="n">fmert</span> <span class="o">=</span> <span class="p">(</span><span class="n">L_mr</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">*</span> <span class="p">(</span><span class="n">mr</span> <span class="o">-</span> <span class="n">mr_R</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">*</span> <span class="p">(</span><span class="n">mr</span> <span class="o">-</span> <span class="n">mr_R</span><span class="p">))</span>
-            
-            <span class="c1"># Total objective function</span>
-            <span class="n">fc_r</span> <span class="o">=</span> <span class="n">fdert</span> <span class="o">+</span> <span class="n">fmert</span>
-            
-            <span class="c1"># Compute chi-squared and check convergence</span>
-            <span class="n">old_chi2</span> <span class="o">=</span> <span class="n">chi2_ert</span>
-            <span class="n">chi2_ert</span> <span class="o">=</span> <span class="n">fdert</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">dr</span><span class="p">)</span>
-            <span class="n">dPhi</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">chi2_ert</span> <span class="o">-</span> <span class="n">old_chi2</span><span class="p">)</span> <span class="o">/</span> <span class="n">old_chi2</span> <span class="k">if</span> <span class="n">nn</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">1.0</span>
-            
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;chi2: </span><span class="si">{</span><span class="n">chi2_ert</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;dPhi: </span><span class="si">{</span><span class="n">dPhi</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-            
-            <span class="c1"># Store iterations data</span>
-            <span class="n">result</span><span class="o">.</span><span class="n">iteration_models</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">mr</span><span class="o">.</span><span class="n">ravel</span><span class="p">()))</span>
-            <span class="n">result</span><span class="o">.</span><span class="n">iteration_chi2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chi2_ert</span><span class="p">)</span>
-            <span class="n">result</span><span class="o">.</span><span class="n">iteration_data_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dataerror_ert</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
-            
-            <span class="c1"># Check for convergence</span>
-            <span class="k">if</span> <span class="n">chi2_ert</span> <span class="o">&lt;</span> <span class="mf">1.5</span> <span class="ow">or</span> <span class="n">dPhi</span> <span class="o">&lt;</span> <span class="mf">0.01</span><span class="p">:</span>
-                <span class="k">break</span>
-            
-            <span class="c1"># System matrix and gradient</span>
-            <span class="n">gc_r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">Wdert</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">dr</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhos1</span><span class="p">),</span> <span class="n">L_mr</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">delta_mr</span><span class="p">)))</span>
-            <span class="n">N11_R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">Wdert</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Jr</span><span class="p">),</span> <span class="n">L_mr</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="p">))</span>
-            
-            <span class="n">gc_r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">gc_r</span><span class="p">)</span>
-            <span class="n">gc_r</span> <span class="o">=</span> <span class="n">gc_r</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            
-            <span class="c1"># Alternative gradient formulation</span>
-            <span class="n">gc_r1</span> <span class="o">=</span> <span class="n">Jr</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wdert</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wdert</span><span class="p">))</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">dr</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhos1</span><span class="p">)</span> <span class="o">+</span> \
-                   <span class="p">(</span><span class="n">L_mr</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">delta_mr</span><span class="p">)</span>
-            
-            <span class="c1"># Solve normal equations for update</span>
-            <span class="n">d_mr</span> <span class="o">=</span> <span class="n">generalized_solver</span><span class="p">(</span>
-                <span class="n">N11_R</span><span class="p">,</span> <span class="o">-</span><span class="n">gc_r</span><span class="p">,</span> 
-                <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">],</span>
-                <span class="n">use_gpu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;use_gpu&#39;</span><span class="p">],</span>
-                <span class="n">parallel</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;parallel&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
-                <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n_jobs&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-            <span class="p">)</span>
-            
-            <span class="c1"># Line search</span>
-            <span class="n">mu_LS</span> <span class="o">=</span> <span class="mi">1</span>
-            <span class="n">iarm</span> <span class="o">=</span> <span class="mi">1</span>
-            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">mr1</span> <span class="o">=</span> <span class="n">mr</span> <span class="o">+</span> <span class="n">mu_LS</span> <span class="o">*</span> <span class="n">d_mr</span>
-                <span class="n">dr</span> <span class="o">=</span> <span class="n">ertforward2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="p">,</span> <span class="n">mr1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span>
-                <span class="n">dr</span> <span class="o">=</span> <span class="n">dr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
-                
-                <span class="n">dataerror_ert</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhos1</span> <span class="o">-</span> <span class="n">dr</span>
-                <span class="n">fdert</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wdert</span><span class="p">,</span> <span class="n">dataerror_ert</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wdert</span><span class="p">,</span> <span class="n">dataerror_ert</span><span class="p">))</span>
-                <span class="n">fmert</span> <span class="o">=</span> <span class="p">(</span><span class="n">L_mr</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">*</span> <span class="p">(</span><span class="n">mr1</span> <span class="o">-</span> <span class="n">mr_R</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">*</span> <span class="p">(</span><span class="n">mr1</span> <span class="o">-</span> <span class="n">mr_R</span><span class="p">))</span>
-                
-                <span class="n">ft_r</span> <span class="o">=</span> <span class="n">fdert</span> <span class="o">+</span> <span class="n">fmert</span>
-                
-                <span class="n">fgoal</span> <span class="o">=</span> <span class="n">fc_r</span> <span class="o">-</span> <span class="mf">1e-4</span> <span class="o">*</span> <span class="n">mu_LS</span> <span class="o">*</span> <span class="p">(</span><span class="n">d_mr</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">gc_r1</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">gc_r1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)))</span>
-                <span class="c1">#print(f&#39;ft_r: {ft_r}, fgoal: {fgoal}&#39;)</span>
-                
-                <span class="k">if</span> <span class="n">ft_r</span> <span class="o">&lt;</span> <span class="n">fgoal</span><span class="p">:</span>
-                    <span class="k">break</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">iarm</span> <span class="o">=</span> <span class="n">iarm</span> <span class="o">+</span> <span class="mi">1</span>
-                    <span class="n">mu_LS</span> <span class="o">=</span> <span class="n">mu_LS</span> <span class="o">/</span> <span class="mi">2</span>
-                
-                <span class="k">if</span> <span class="n">iarm</span> <span class="o">&gt;</span> <span class="mi">20</span><span class="p">:</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Line search FAIL EXIT&#39;</span><span class="p">)</span>
-                    <span class="k">break</span>
-            
-            <span class="c1"># Update model</span>
-            <span class="n">mr</span> <span class="o">=</span> <span class="n">mr1</span>
-            
-            <span class="c1"># Apply model constraints</span>
-            <span class="n">mr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">mr</span><span class="p">,</span> <span class="n">min_mr</span><span class="p">,</span> <span class="n">max_mr</span><span class="p">)</span>
-            
-            <span class="c1"># Update lambda</span>
-            <span class="n">lambda_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;lambda_min&#39;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">L_mr</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">lambda_min</span><span class="p">):</span>
-                <span class="n">L_mr</span> <span class="o">=</span> <span class="n">L_mr</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;lambda_rate&#39;</span><span class="p">]</span>
-        
-        <span class="c1"># Process final model</span>
-        <span class="n">final_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">mr</span><span class="p">)</span>
-        
-        <span class="c1"># Compute final forward response</span>
-        <span class="n">dr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">final_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">()))</span>
-        
-        <span class="c1"># Compute coverage</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">final_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">()))</span>
-        <span class="n">covTrans</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">coverageDCtrans</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(),</span>
-            <span class="mf">1.0</span> <span class="o">/</span> <span class="n">dr</span><span class="p">,</span>
-            <span class="mf">1.0</span> <span class="o">/</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">final_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
-        <span class="p">)</span>
-        
-        <span class="n">paramSizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">final_model</span><span class="p">))</span>
-        <span class="n">mesh2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">paraDomain</span>
-        
-        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">mesh2</span><span class="o">.</span><span class="n">cells</span><span class="p">():</span>
-            <span class="n">paramSizes</span><span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">marker</span><span class="p">()]</span> <span class="o">+=</span> <span class="n">c</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
-            
-        <span class="n">FinalJ</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">covTrans</span> <span class="o">/</span> <span class="n">paramSizes</span><span class="p">)</span>
-        
-        <span class="c1"># Store results</span>
-        <span class="n">result</span><span class="o">.</span><span class="n">final_model</span> <span class="o">=</span> <span class="n">final_model</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-        <span class="n">result</span><span class="o">.</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">FinalJ</span>
-        <span class="n">result</span><span class="o">.</span><span class="n">predicted_data</span> <span class="o">=</span> <span class="n">dr</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
-        <span class="n">result</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh2</span>
-        
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;End of inversion&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">result</span></div>
-</div>
+<span class="sd">        Set up the ERT inversion environment.</span>
 
+<span class="sd">        This involves:</span>
+<span class="sd">        - Creating an inversion mesh if not already provided.</span>
+<span class="sd">        - Initializing the PyGIMLi `ERTModelling` forward operator.</span>
+<span class="sd">        - Preparing observed data (log-transforming apparent resistivities).</span>
+<span class="sd">        - Calculating data error weighting matrix (`self.Wd`).</span>
+<span class="sd">        - Creating the model regularization matrix (`self.Wm_r`).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span> <span class="c1"># Calls InversionBase.setup() which handles basic mesh storage in self.result.meta</span>
+
+        <span class="c1"># Create an inversion mesh if one wasn&#39;t provided during initialization.</span>
+        <span class="c1"># `ert.ERTManager` can create a suitable mesh based on electrode configurations.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Potential Issue: `ERTManager` needs data with sensor positions.</span>
+            <span class="c1"># `self.data` should have been loaded in __init__.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="c1"># Should not happen if __init__ succeeded.</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Data container is not available for automatic mesh creation.&quot;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="c1"># Quality 34 is a common value for ERT meshes.</span>
+                <span class="c1"># `paraDepth` could be a parameter if more control is needed.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">quality</span><span class="o">=</span><span class="mf">34.0</span><span class="p">)</span> 
+                <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="c1"># Update mesh in result object</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion mesh automatically created based on data.&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to automatically create inversion mesh: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Initialize the PyGIMLi ERT forward modeling operator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="c1"># Set the measurement scheme</span>
+        <span class="c1"># Associate the mesh with the forward operator.</span>
+        <span class="c1"># This mesh should have cell markers if region-based regularization or parameterization is used.</span>
+        <span class="c1"># The paraDomain is the part of the mesh where parameters are defined (usually all cells).</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="n">ignoreRegionManager</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># ignoreRegionManager might be needed if mesh has no regions defined</span>
+                                                                    <span class="c1"># or if we handle regions manually.</span>
+                                                                    <span class="c1"># Default behavior usually works.</span>
+        
+        <span class="c1"># Prepare observed data: log-transform apparent resistivities (rhoa)</span>
+        <span class="c1"># Inversion often works better with log-transformed data and model parameters for ERT</span>
+        <span class="c1"># due to the wide range of resistivity values.</span>
+        <span class="k">if</span> <span class="s1">&#39;rhoa&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Data container must contain &#39;rhoa&#39; (apparent resistivity) values.&quot;</span><span class="p">)</span>
+        
+        <span class="n">observed_rhoa_linear</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;rhoa&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">array</span><span class="p">()</span> <span class="c1"># Get rhoa as NumPy array</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">observed_rhoa_linear</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="c1"># Non-positive apparent resistivities are non-physical and problematic for log transform.</span>
+            <span class="c1"># This might indicate issues with data or geometric factors.</span>
+            <span class="c1"># Consider filtering these data points or raising a more critical error.</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Observed apparent resistivities contain non-positive values. These will become -inf or NaN after log transform.&quot;</span><span class="p">)</span>
+        
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span> <span class="c1"># Suppress log(0) warnings</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log_rhoa_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">observed_rhoa_linear</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_rhoa_obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_rhoa_obs</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># Ensure it&#39;s a column vector</span>
+        
+        <span class="c1"># Data error weighting matrix (Wd)</span>
+        <span class="c1"># Wd is typically diagonal, with elements 1/error_i or 1/(log_error_i) if data is logged.</span>
+        <span class="c1"># If &#39;err&#39; field (relative error) is present in data, use it. Otherwise, estimate.</span>
+        <span class="k">if</span> <span class="s1">&#39;err&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">array</span><span class="p">()</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">):</span> <span class="c1"># Check if &#39;err&#39; exists and is not all zero</span>
+            <span class="c1"># Assuming self.data[&#39;err&#39;] stores relative errors (e.g., 0.05 for 5%)</span>
+            <span class="n">relative_errors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+            <span class="c1"># Absolute error in log space: error_log_d approx error_relative_d for small errors.</span>
+            <span class="c1"># So, weight = 1 / error_relative_d</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">relative_errors</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="c1"># This would lead to non-positive weights or division by zero.</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Data &#39;err&#39; field contains non-positive relative errors, which is invalid for weighting.&quot;</span><span class="p">)</span>
+            <span class="n">data_weights</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">relative_errors</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Estimate errors if not present or all zero</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Estimating data errors using &#39;absoluteUError&#39; and &#39;relativeError&#39; parameters, as &#39;err&#39; field in data is zero or missing.&quot;</span><span class="p">)</span>
+            <span class="n">ert_mng</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">()</span> <span class="c1"># Temporary manager for error estimation utility</span>
+            <span class="c1"># `estimateError` calculates absolute error in ohm-m based on U/I and relative error.</span>
+            <span class="c1"># If data is `rhoa`, it assumes this `rhoa` was derived from R and k.</span>
+            <span class="c1"># The error is typically: err_abs = sqrt((abs_U_err/I)^2 * k^2 + (rel_err * R)^2 * k^2)</span>
+            <span class="c1"># Or more simply, if error is on rhoa: err_abs_rhoa = abs_rhoa_err + rel_err_rhoa * rhoa</span>
+            <span class="c1"># The original code used: `np.log(Delta_rhoa_rhoa + 1)` for the denominator of weights.</span>
+            <span class="c1"># If `Delta_rhoa_rhoa` is a relative error (e.g., 0.05 from parameters), this weight is `1/log(1.05)`.</span>
+            <span class="c1"># This is approximately `1/0.05` for small relative errors (since log(1+x) ~ x).</span>
+            <span class="c1"># So, this implies the weights are `1 / relativeErrorParameter`.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;relativeError&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Parameter &#39;relativeError&#39; is non-positive. Using identity weights for data (no specific error weighting).&quot;</span><span class="p">)</span>
+                <span class="n">data_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">(),</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;relativeError&#39;</span><span class="p">])</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">Wd</span> <span class="o">=</span> <span class="n">diags</span><span class="p">(</span><span class="n">data_weights</span><span class="p">)</span> <span class="c1"># Sparse diagonal matrix for data weighting</span>
+        
+        <span class="c1"># Model regularization matrix (Wm_r or R)</span>
+        <span class="c1"># This matrix imposes smoothness or other constraints on the model.</span>
+        <span class="c1"># `RegionManager` from PyGIMLi can create standard smoothness constraints.</span>
+        <span class="n">rm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">regionManager</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">rm</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;RegionManager not initialized in ERTModelling operator. Ensure mesh is set correctly.&quot;</span><span class="p">)</span>
+        
+        <span class="n">constraint_matrix_sparse</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">matrix</span><span class="o">.</span><span class="n">RSparseMapMatrix</span><span class="p">()</span> <span class="c1"># Empty sparse matrix</span>
+        <span class="n">rm</span><span class="o">.</span><span class="n">setConstraintType</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># First-order smoothness constraints (small differences between adjacent cells)</span>
+        <span class="n">rm</span><span class="o">.</span><span class="n">fillConstraints</span><span class="p">(</span><span class="n">constraint_matrix_sparse</span><span class="p">)</span> <span class="c1"># Fill with constraints based on mesh connectivity</span>
+        
+        <span class="c1"># Convert to SciPy COO sparse matrix format</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">sparseMatrix2coo</span><span class="p">(</span><span class="n">constraint_matrix_sparse</span><span class="p">)</span>
+        
+        <span class="c1"># Apply constraint weights if defined in regions (e.g., for different geological units)</span>
+        <span class="n">constraint_weights_pg</span> <span class="o">=</span> <span class="n">rm</span><span class="o">.</span><span class="n">constraintWeights</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">constraint_weights_pg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">constraint_weights_pg</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">constraint_weights_np</span> <span class="o">=</span> <span class="n">constraint_weights_pg</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+            <span class="c1"># Ensure correct application of weights. If Wm_r is (nConstraints, nModelCells),</span>
+            <span class="c1"># weights are typically per constraint row.</span>
+            <span class="k">if</span> <span class="n">constraint_weights_np</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                 <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">=</span> <span class="n">diags</span><span class="p">(</span><span class="n">constraint_weights_np</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c1"># Mismatch in size</span>
+                 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Constraint weights size (</span><span class="si">{</span><span class="n">constraint_weights_np</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2">) does not match &quot;</span>
+                       <span class="sa">f</span><span class="s2">&quot;number of constraints (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">). Not applying constraint weights.&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Keep as CSR sparse matrix for efficiency in products like Wm_r.T @ Wm_r</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span> 
+        <span class="c1"># Original code converted to dense: self.Wm_r = self.Wm_r.todense()</span>
+        <span class="c1"># This can be very memory intensive for large meshes. Sparse is preferred.</span>
+        
+        <span class="c1"># Store setup parameters in result meta for record-keeping</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;mesh_cell_count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;data_point_count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">()</span></div>
+        <span class="c1"># Note: self.parameters are already stored in self.result.meta by InversionBase.__init__</span>
+    
+<div class="viewcode-block" id="ERTInversion.run"><a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.ERTInversion.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_model_linear</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InversionResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run the ERT inversion using an iterative Gauss-Newton like approach.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            initial_model_linear (Optional[np.ndarray], optional):</span>
+<span class="sd">                Initial guess for the resistivity model [ohm·m] (linear scale).</span>
+<span class="sd">                If None, a homogeneous model based on the median of observed apparent</span>
+<span class="sd">                resistivities is used. Should be a 1D array or a 2D column vector.</span>
+<span class="sd">                Defaults to None.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            InversionResult: An object containing all results of the inversion process.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            RuntimeError: If `setup()` has not been called successfully.</span>
+<span class="sd">            ValueError: If initial model dimensions are incorrect.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Ensure setup has been completed (operators and matrices are ready)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wd</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_rhoa_obs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion setup not complete. Calling setup()...&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
+            <span class="c1"># Re-check after setup, as setup itself could fail if data/mesh is problematic.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wd</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_rhoa_obs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                 <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Setup failed to initialize necessary components for inversion.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Initialize the model (mr is log-transformed resistivity: log(ρ))</span>
+        <span class="n">mr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="c1"># Type hint for log-model</span>
+        <span class="n">num_model_cells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">paraDomain</span><span class="p">()</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">initial_model_linear</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Default initial model: homogeneous, based on median of log-transformed data</span>
+            <span class="c1"># Convert median(exp(log_rhoa_obs)) back to log for mr</span>
+            <span class="n">median_rhoa_linear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_rhoa_obs</span><span class="p">))</span>
+            <span class="c1"># Handle cases where median_rhoa_linear might be non-positive due to data issues</span>
+            <span class="k">if</span> <span class="n">median_rhoa_linear</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Median apparent resistivity (</span><span class="si">{</span><span class="n">median_rhoa_linear</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">) is non-positive. &quot;</span>
+                      <span class="s2">&quot;Using default initial model of 100 ohm·m.&quot;</span><span class="p">)</span>
+                <span class="n">median_rhoa_linear</span> <span class="o">=</span> <span class="mf">100.0</span>
+            
+            <span class="n">initial_model_log</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">num_model_cells</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">median_rhoa_linear</span><span class="p">))</span>
+            <span class="n">mr</span> <span class="o">=</span> <span class="n">initial_model_log</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Use user-provided initial model</span>
+            <span class="n">initial_model_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">initial_model_linear</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="c1"># Ensure 1D</span>
+            <span class="k">if</span> <span class="n">initial_model_np</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">num_model_cells</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initial model size (</span><span class="si">{</span><span class="n">initial_model_np</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">) does not match &quot;</span>
+                                 <span class="sa">f</span><span class="s2">&quot;mesh cell count (</span><span class="si">{</span><span class="n">num_model_cells</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">initial_model_np</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="c1"># If provided model is linear but has non-positive values, it&#39;s problematic for log.</span>
+                <span class="c1"># Add small epsilon, or require user to provide log-model if they want to start from very low resistivities.</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Provided initial_model_linear contains non-positive values. Adding epsilon (1e-6) before log transform.&quot;</span><span class="p">)</span>
+                <span class="n">mr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">initial_model_np</span> <span class="o">+</span> <span class="mf">1e-6</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">initial_model_np</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        
+        <span class="c1"># Reference model (m_ref) for regularization is the initial model (in log space)</span>
+        <span class="n">mr_ref</span> <span class="o">=</span> <span class="n">mr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        
+        <span class="c1"># Regularization parameter (lambda)</span>
+        <span class="n">current_lambda_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;lambda_val&#39;</span><span class="p">]</span> <span class="c1"># This is λ</span>
+        
+        <span class="c1"># Model parameter constraints (min/max resistivity, converted to log space)</span>
+        <span class="n">min_resistivity_constraint</span><span class="p">,</span> <span class="n">max_resistivity_constraint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;model_constraints&#39;</span><span class="p">]</span>
+        <span class="c1"># Ensure constraints are positive before log transform</span>
+        <span class="k">if</span> <span class="n">min_resistivity_constraint</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">max_resistivity_constraint</span> <span class="o">&lt;=</span><span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Model constraints (min/max resistivity) must be positive.&quot;</span><span class="p">)</span>
+        <span class="n">log_min_rho_constraint</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">min_resistivity_constraint</span><span class="p">)</span>
+        <span class="n">log_max_rho_constraint</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">max_resistivity_constraint</span><span class="p">)</span>
+        
+        <span class="c1"># Initial chi-squared value (can be set to a large number or calculated)</span>
+        <span class="n">chi2_current</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span> <span class="c1"># Initialize with a large value</span>
+        
+        <span class="c1"># Store parameters used in this run in the result object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;inversion_run_params&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;initial_lambda&#39;</span><span class="p">:</span> <span class="n">current_lambda_val</span><span class="p">,</span>
+            <span class="s1">&#39;lambda_reduction_rate&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;lambda_rate&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;min_lambda&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;lambda_min&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;solver_method&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;max_iterations&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;max_iterations&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;target_chi_squared&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;min_chi2&#39;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="c1"># target_chi_squared from InversionBase defaults</span>
+            <span class="s1">&#39;convergence_tolerance_dPhi&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tolerance&#39;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span> <span class="c1"># from InversionBase defaults</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Main inversion iteration loop</span>
+        <span class="k">for</span> <span class="n">iter_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;max_iterations&#39;</span><span class="p">]):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;--- ERT Inversion Iteration: </span><span class="si">{</span><span class="n">iter_num</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> --- Lambda: </span><span class="si">{</span><span class="n">current_lambda_val</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2"> ---&quot;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span> <span class="c1"># Ensure print output appears in some environments</span>
+            
+            <span class="c1"># Forward modeling (d_pred = f(m)) and Jacobian (J) computation</span>
+            <span class="c1"># ertforandjac2 expects log-model (mr) and returns log-data (log_dr_pred) and J_loglog.</span>
+            <span class="c1"># J_loglog = (ρ/d) * (∂d/∂ρ) = ∂log(d)/∂log(ρ)</span>
+            <span class="n">log_dr_pred</span><span class="p">,</span> <span class="n">J_loglog</span> <span class="o">=</span> <span class="n">ertforandjac2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="p">,</span> <span class="n">mr</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span> <span class="c1"># mr must be 1D for this func</span>
+            <span class="n">log_dr_pred</span> <span class="o">=</span> <span class="n">log_dr_pred</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># Ensure column vector</span>
+            
+            <span class="c1"># Data misfit calculation (in log space)</span>
+            <span class="c1"># residual_log_data = log_d_obs - log_d_pred</span>
+            <span class="n">residual_log_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_rhoa_obs</span> <span class="o">-</span> <span class="n">log_dr_pred</span>
+            
+            <span class="c1"># Weighted data misfit term: || Wd * (log_d_obs - log_d_pred) ||^2</span>
+            <span class="n">weighted_residual_log_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wd</span> <span class="o">@</span> <span class="n">residual_log_data</span> <span class="c1"># Wd is sparse diagonal</span>
+            <span class="n">data_misfit_term</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weighted_residual_log_data</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="c1"># Model regularization term: lambda * || Wm_r * (m - m_ref) ||^2</span>
+            <span class="c1"># (where m and m_ref are log-resistivities)</span>
+            <span class="n">model_difference_log</span> <span class="o">=</span> <span class="n">mr</span> <span class="o">-</span> <span class="n">mr_ref</span>
+            <span class="c1"># Wm_r is CSR sparse matrix. Product with dense vector (mr - mr_ref) results in dense vector.</span>
+            <span class="n">weighted_model_diff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">@</span> <span class="n">model_difference_log</span> 
+            <span class="n">model_reg_term</span> <span class="o">=</span> <span class="n">current_lambda_val</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weighted_model_diff</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            
+            <span class="c1"># Total objective function value</span>
+            <span class="n">objective_func_val</span> <span class="o">=</span> <span class="n">data_misfit_term</span> <span class="o">+</span> <span class="n">model_reg_term</span>
+            
+            <span class="c1"># Compute chi-squared (χ²) data misfit normalized by number of data points</span>
+            <span class="c1"># χ² = (1/N) * Σ ( (d_obs_i - d_pred_i) / error_i )^2</span>
+            <span class="c1"># If Wd_ii = 1/error_log_i, then data_misfit_term is already sum of squared weighted residuals.</span>
+            <span class="n">chi2_new</span> <span class="o">=</span> <span class="n">data_misfit_term</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_rhoa_obs</span><span class="p">)</span> <span class="c1"># This is (Phi_d / N)</span>
+            
+            <span class="c1"># Relative change in chi-squared (dPhi)</span>
+            <span class="c1"># Avoid division by zero if chi2_current is 0 (or very small if it was previous chi2_new).</span>
+            <span class="n">dPhi</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">chi2_new</span> <span class="o">-</span> <span class="n">chi2_current</span><span class="p">)</span> <span class="o">/</span> <span class="n">chi2_current</span> <span class="k">if</span> <span class="n">iter_num</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">chi2_current</span> <span class="o">&gt;</span> <span class="mf">1e-9</span> <span class="k">else</span> <span class="mf">1.0</span>
+            
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Objective Function: </span><span class="si">{</span><span class="n">objective_func_val</span><span class="si">:</span><span class="s2">.4e</span><span class="si">}</span><span class="s2">, Data Misfit Term: </span><span class="si">{</span><span class="n">data_misfit_term</span><span class="si">:</span><span class="s2">.4e</span><span class="si">}</span><span class="s2">, Model Reg Term: </span><span class="si">{</span><span class="n">model_reg_term</span><span class="si">:</span><span class="s2">.4e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Chi-squared (χ²): </span><span class="si">{</span><span class="n">chi2_new</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, Relative χ² change (dPhi): </span><span class="si">{</span><span class="n">dPhi</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+            <span class="c1"># Store iteration results</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">iteration_models</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">mr</span><span class="o">.</span><span class="n">ravel</span><span class="p">()))</span> <span class="c1"># Store model in linear scale</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">iteration_chi2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chi2_new</span><span class="p">)</span>
+            <span class="c1"># Store log-space residuals, or could convert to linear space if preferred</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">iteration_data_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">residual_log_data</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span> 
+            
+            <span class="c1"># Check convergence criteria</span>
+            <span class="n">target_chi_sq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;min_chi2&#39;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="c1"># min_chi2 is target_chi_squared</span>
+            <span class="n">conv_tolerance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tolerance&#39;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">chi2_new</span> <span class="o">&lt;</span> <span class="n">target_chi_sq</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Convergence achieved: Chi-squared (</span><span class="si">{</span><span class="n">chi2_new</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">) is below target (</span><span class="si">{</span><span class="n">target_chi_sq</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="n">dPhi</span> <span class="o">&lt;</span> <span class="n">conv_tolerance</span> <span class="ow">and</span> <span class="n">iter_num</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Ensure dPhi is meaningful (not first iter)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Convergence achieved: Relative Chi-squared change (</span><span class="si">{</span><span class="n">dPhi</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">) is below tolerance (</span><span class="si">{</span><span class="n">conv_tolerance</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="n">iter_num</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;max_iterations&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># Reached max iterations</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Maximum number of iterations reached.&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+
+            <span class="n">chi2_current</span> <span class="o">=</span> <span class="n">chi2_new</span> <span class="c1"># Update chi-squared for next iteration&#39;s dPhi calculation</span>
+            
+            <span class="c1"># System matrix for Gauss-Newton step: H = J_loglog^T @ Wd^T @ Wd @ J_loglog + lambda * Wm_r^T @ Wm_r</span>
+            <span class="c1"># Gradient: grad = -J_loglog^T @ Wd^T @ Wd @ residual_log_data + lambda * Wm_r^T @ Wm_r @ model_difference_log</span>
+            
+            <span class="c1"># Left-hand side (Hessian approximation)</span>
+            <span class="c1"># H = Jr.T @ Wd^T @ Wd @ Jr + lambda * Wm_r^T @ Wm_r</span>
+            <span class="c1"># Note: J_loglog is (n_data, n_model), Wd is (n_data, n_data) diagonal (sparse)</span>
+            <span class="c1"># Wm_r is (n_constraints, n_model) (sparse)</span>
+            <span class="n">WdT_Wd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wd</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wd</span> <span class="c1"># This is diag(1/err_log_i^2) (sparse)</span>
+            <span class="n">H_data_part</span> <span class="o">=</span> <span class="n">J_loglog</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">WdT_Wd</span> <span class="o">@</span> <span class="n">J_loglog</span> <span class="c1"># Result can be dense or sparse depending on J_loglog</span>
+            
+            <span class="c1"># Term2: lambda * Wm_r.T @ Wm_r</span>
+            <span class="n">H_model_part</span> <span class="o">=</span> <span class="n">current_lambda_val</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="p">)</span> <span class="c1"># Sparse product</span>
+            
+            <span class="n">Hessian_approx</span> <span class="o">=</span> <span class="n">H_data_part</span> <span class="o">+</span> <span class="n">H_model_part</span> <span class="c1"># Can be sparse or dense</span>
+            
+            <span class="c1"># Right-hand side (negative gradient of objective function)</span>
+            <span class="c1"># grad_data = -J_loglog.T @ Wd^T @ Wd @ residual_log_data</span>
+            <span class="n">grad_data_part</span> <span class="o">=</span> <span class="o">-</span> <span class="p">(</span><span class="n">J_loglog</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">WdT_Wd</span> <span class="o">@</span> <span class="n">residual_log_data</span><span class="p">)</span>
+            <span class="c1"># grad_model_reg = -lambda * Wm_r^T @ Wm_r @ model_difference_log</span>
+            <span class="n">grad_model_reg_part</span> <span class="o">=</span> <span class="o">-</span> <span class="p">(</span><span class="n">current_lambda_val</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">@</span> <span class="n">model_difference_log</span><span class="p">))</span>
+            
+            <span class="n">neg_gradient</span> <span class="o">=</span> <span class="n">grad_data_part</span> <span class="o">+</span> <span class="n">grad_model_reg_part</span>
+            <span class="n">neg_gradient</span> <span class="o">=</span> <span class="n">neg_gradient</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Ensure column vector</span>
+            
+            <span class="c1"># Solve the linear system H * d_mr = -grad for model update d_mr</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">model_update_log</span> <span class="o">=</span> <span class="n">generalized_solver</span><span class="p">(</span>
+                    <span class="n">Hessian_approx</span><span class="p">,</span> <span class="n">neg_gradient</span><span class="p">,</span> 
+                    <span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">],</span>
+                    <span class="n">use_gpu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_gpu&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> 
+                    <span class="n">parallel</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;parallel&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> 
+                    <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n_jobs&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>    
+                <span class="p">)</span>
+                <span class="n">model_update_log</span> <span class="o">=</span> <span class="n">model_update_log</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Ensure column vector</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Linear solver failed at iteration </span><span class="si">{</span><span class="n">iter_num</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Stopping inversion.&quot;</span><span class="p">)</span>
+                <span class="k">break</span>
+
+            <span class="c1"># Line search to find optimal step size (mu_LS)</span>
+            <span class="n">mu_LS</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="c1"># Initial step length</span>
+            <span class="n">num_line_search_max_steps</span> <span class="o">=</span> <span class="mi">20</span> <span class="c1"># Max attempts for line search</span>
+            <span class="n">armijo_c1</span> <span class="o">=</span> <span class="mf">1e-4</span> <span class="c1"># Constant for Armijo condition</span>
+            
+            <span class="c1"># Gradient term for Armijo: grad_phi^T @ p_k</span>
+            <span class="c1"># Here, gradient_phi = -neg_gradient, p_k = model_update_log</span>
+            <span class="c1"># So, term is (-neg_gradient)^T @ model_update_log</span>
+            <span class="c1"># This should be negative for a descent direction if model_update_log is from H*p = -g</span>
+            <span class="c1"># Original code: fgoal = fc_r - 1e-4 * mu_LS * (d_mr.T @ gc_r1_col)</span>
+            <span class="c1"># where gc_r1 was an alternative gradient. d_mr was model_update.</span>
+            <span class="c1"># If model_update_log is the search direction p, and full_gradient = -neg_gradient,</span>
+            <span class="c1"># then directional_derivative = full_gradient.T @ model_update_log.</span>
+            <span class="c1"># This should be negative if p is a descent direction.</span>
+            <span class="n">directional_derivative</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">neg_gradient</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">model_update_log</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            
+            <span class="n">mr_next</span> <span class="o">=</span> <span class="n">mr</span> <span class="c1"># Default to current model if line search fails</span>
+            <span class="n">line_search_succeeded</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">ls_iter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_line_search_max_steps</span><span class="p">):</span>
+                <span class="n">mr_trial</span> <span class="o">=</span> <span class="n">mr</span> <span class="o">+</span> <span class="n">mu_LS</span> <span class="o">*</span> <span class="n">model_update_log</span>
+                <span class="n">mr_trial</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">mr_trial</span><span class="p">,</span> <span class="n">log_min_rho_constraint</span><span class="p">,</span> <span class="n">log_max_rho_constraint</span><span class="p">)</span> <span class="c1"># Apply constraints</span>
+                
+                <span class="c1"># Recalculate objective function with mr_trial</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">log_dr_trial</span> <span class="o">=</span> <span class="n">ertforward2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="p">,</span> <span class="n">mr_trial</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">res_log_trial</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_rhoa_obs</span> <span class="o">-</span> <span class="n">log_dr_trial</span>
+                    <span class="n">weighted_res_log_trial</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wd</span> <span class="o">@</span> <span class="n">res_log_trial</span>
+                    <span class="n">data_misfit_trial</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weighted_res_log_trial</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+                    
+                    <span class="n">model_diff_log_trial</span> <span class="o">=</span> <span class="n">mr_trial</span> <span class="o">-</span> <span class="n">mr_ref</span>
+                    <span class="n">weighted_model_diff_trial</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Wm_r</span> <span class="o">@</span> <span class="n">model_diff_log_trial</span>
+                    <span class="n">model_reg_trial</span> <span class="o">=</span> <span class="n">current_lambda_val</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weighted_model_diff_trial</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+                    
+                    <span class="n">obj_func_trial</span> <span class="o">=</span> <span class="n">data_misfit_trial</span> <span class="o">+</span> <span class="n">model_reg_trial</span>
+
+                    <span class="c1"># Armijo condition: f(x + mu*p) &lt;= f(x) + c1 * mu * (grad_f(x)^T * p)</span>
+                    <span class="c1"># Here, grad_f(x)^T * p = directional_derivative (which should be &lt; 0 for minimization)</span>
+                    <span class="k">if</span> <span class="n">obj_func_trial</span> <span class="o">&lt;=</span> <span class="n">objective_func_val</span> <span class="o">+</span> <span class="n">armijo_c1</span> <span class="o">*</span> <span class="n">mu_LS</span> <span class="o">*</span> <span class="n">directional_derivative</span><span class="p">:</span>
+                        <span class="n">mr_next</span> <span class="o">=</span> <span class="n">mr_trial</span>
+                        <span class="n">line_search_succeeded</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="c1"># print(f&quot;Line search success: mu_LS={mu_LS:.2e}, New ObjF={obj_func_trial:.4e} (Old: {objective_func_val:.4e})&quot;)</span>
+                        <span class="k">break</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">mu_LS</span> <span class="o">*=</span> <span class="mf">0.5</span> <span class="c1"># Reduce step size</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error during line search (iter </span><span class="si">{</span><span class="n">ls_iter</span><span class="si">}</span><span class="s2">, mu_LS </span><span class="si">{</span><span class="n">mu_LS</span><span class="si">:</span><span class="s2">.1e</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Trying smaller step.&quot;</span><span class="p">)</span>
+                    <span class="n">mu_LS</span> <span class="o">*=</span> <span class="mf">0.5</span> <span class="c1"># Reduce step size on error too</span>
+                
+                <span class="k">if</span> <span class="n">mu_LS</span> <span class="o">&lt;</span> <span class="mf">1e-4</span><span class="p">:</span> <span class="c1"># Minimum step size to prevent infinite loop</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">line_search_succeeded</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Line search: Step size too small, using previous model state.&#39;</span><span class="p">)</span>
+                    <span class="k">break</span> 
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">line_search_succeeded</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Line search failed to find sufficient decrease. Model not updated in this iteration.&quot;</span><span class="p">)</span>
+                <span class="c1"># Optionally, could decide to stop inversion or try different strategy if LS fails repeatedly.</span>
+                <span class="c1"># For now, mr remains unchanged from previous iteration.</span>
+            <span class="k">else</span><span class="p">:</span>
+                 <span class="n">mr</span> <span class="o">=</span> <span class="n">mr_next</span> <span class="c1"># Update model only if line search succeeded</span>
+
+            <span class="c1"># Update lambda (regularization parameter)</span>
+            <span class="c1"># Reduce lambda if chi2 is decreasing and getting close to target, or if dPhi is small.</span>
+            <span class="c1"># Increase lambda if chi2 is too high or increasing (not implemented here, simple reduction).</span>
+            <span class="n">lambda_update_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;lambda_rate&#39;</span><span class="p">]</span>
+            <span class="n">min_lambda_allowed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">&#39;lambda_min&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">current_lambda_val</span> <span class="o">&gt;</span> <span class="n">min_lambda_allowed</span> <span class="ow">and</span> <span class="n">lambda_update_rate</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">:</span> <span class="c1"># Only if rate is for reduction</span>
+                <span class="c1"># Example strategy: reduce if chi2 is good or improvement is slow</span>
+                <span class="k">if</span> <span class="n">chi2_new</span> <span class="o">&lt;</span> <span class="n">target_chi_sq</span> <span class="o">*</span> <span class="mf">1.5</span> <span class="ow">or</span> <span class="n">dPhi</span> <span class="o">&lt;</span> <span class="mf">0.05</span> <span class="p">:</span> 
+                    <span class="n">current_lambda_val</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">current_lambda_val</span> <span class="o">*</span> <span class="n">lambda_update_rate</span><span class="p">,</span> <span class="n">min_lambda_allowed</span><span class="p">)</span>
+        
+        <span class="c1"># After loop finishes (convergence or max_iterations)</span>
+        <span class="c1"># Store final model and related results</span>
+        <span class="n">final_model_linear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">mr</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span> <span class="c1"># Convert final log-model to linear scale</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">final_model</span> <span class="o">=</span> <span class="n">final_model_linear</span>
+        
+        <span class="c1"># Compute final predicted data using the final linear model</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">final_response_pg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">final_model_linear</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">predicted_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">final_response_pg</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not compute final predicted data: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">predicted_data</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="c1"># Compute and store final coverage</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Pass the log-transformed model `mr` to get_coverage if it expects log model</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">coverage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_coverage</span><span class="p">(</span><span class="n">model_for_coverage</span><span class="o">=</span><span class="n">mr</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">is_log_model</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not compute final coverage: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">coverage</span> <span class="o">=</span> <span class="kc">None</span> 
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="c1"># Ensure mesh is in results (already done in InversionBase.setup)</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;ERT inversion finished after </span><span class="si">{</span><span class="n">iter_num</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1"> iterations. Final Chi-squared: </span><span class="si">{</span><span class="n">chi2_new</span><span class="si">:</span><span class="s1">.4f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span></div>
+
+    <span class="c1"># Helper method to get coverage, adapted from ERTForwardModeling class, using instance&#39;s fwd_operator</span>
+<div class="viewcode-block" id="ERTInversion.get_coverage"><a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.ERTInversion.get_coverage">[docs]</a>    <span class="k">def</span> <span class="nf">get_coverage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_for_coverage</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">is_log_model</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes coverage (sensitivity/resolution proxy) for the current forward operator setup and a given model.</span>
+<span class="sd">        This method is similar to `ERTForwardModeling.get_coverage` but uses the instance&#39;s attributes.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            model_for_coverage (np.ndarray): The model parameters (1D array, typically log-transformed resistivity</span>
+<span class="sd">                                             if `is_log_model` is True) for which to calculate coverage.</span>
+<span class="sd">            is_log_model (bool): If True, `model_for_coverage` is assumed to be log-transformed (natural log)</span>
+<span class="sd">                                 and will be exponentiated before use.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Optional[np.ndarray]: An array of log10-transformed coverage values for each cell,</span>
+<span class="sd">                                  or None if calculation fails.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">paraDomain</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Forward operator or its parameter domain (mesh) not set up. Cannot calculate coverage.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        
+        <span class="n">actual_resistivity_pg</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span>
+        <span class="k">if</span> <span class="n">is_log_model</span><span class="p">:</span>
+            <span class="n">actual_resistivity_pg</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">model_for_coverage</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">actual_resistivity_pg</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="n">model_for_coverage</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response_pg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">actual_resistivity_pg</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">createJacobian</span><span class="p">(</span><span class="n">actual_resistivity_pg</span><span class="p">)</span>
+            <span class="n">jacobian_gmat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">jacobian</span><span class="p">()</span>
+
+            <span class="c1"># Prepare weights for coverageDCtrans: 1/response and 1/model (actual resistivity)</span>
+            <span class="n">response_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">response_pg</span><span class="p">)</span>
+            <span class="n">response_arr_safe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">response_arr</span> <span class="o">&gt;</span> <span class="mf">1e-12</span><span class="p">,</span> <span class="n">response_arr</span><span class="p">,</span> <span class="mf">1e-12</span><span class="p">)</span> <span class="c1"># Avoid division by zero/small</span>
+            
+            <span class="n">model_arr_safe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">actual_resistivity_pg</span><span class="p">)</span>
+            <span class="n">model_arr_safe</span><span class="p">[</span><span class="n">model_arr_safe</span> <span class="o">&lt;=</span> <span class="mf">1e-12</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span>
+
+            <span class="c1"># pg.core.coverageDCtrans(GIMatrix J, RVector dataErrorWeights, RVector modelParameterWeights)</span>
+            <span class="c1"># Here, dataErrorWeights = 1.0 / response_arr_safe (weights inversely proportional to data magnitude)</span>
+            <span class="c1"># modelParameterWeights = 1.0 / model_arr_safe (weights inversely proportional to model parameter magnitude)</span>
+            <span class="c1"># This calculates sum_i (J_ij * (1/d_i))^2 * (1/m_j)^2 or similar, which is different from original class.</span>
+            <span class="c1"># Original ERTForwardModeling.get_coverage used:</span>
+            <span class="c1"># covTrans = pg.core.coverageDCtrans(jacobian, 1.0 / response, 1.0 / model)</span>
+            <span class="c1"># This implies dataError = 1/response and modelWeight = 1/model.</span>
+            <span class="c1"># Let&#39;s stick to that for consistency with the example.</span>
+            <span class="n">coverage_values_pg</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">coverageDCtrans</span><span class="p">(</span><span class="n">jacobian_gmat</span><span class="p">,</span> 
+                                                       <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">response_arr_safe</span><span class="p">),</span> 
+                                                       <span class="n">pg</span><span class="o">.</span><span class="n">Vector</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">model_arr_safe</span><span class="p">))</span>
+            <span class="n">coverage_values_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coverage_values_pg</span><span class="p">)</span>
+            
+            <span class="n">parameter_mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">paraDomain</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">parameter_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coverage_values_np</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Coverage vector length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">coverage_values_np</span><span class="p">)</span><span class="si">}</span><span class="s2">) does not match &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;parameter mesh cell count (</span><span class="si">{</span><span class="n">parameter_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2">). &quot;</span>
+                      <span class="s2">&quot;Cell size normalization might be incorrect/skipped.&quot;</span><span class="p">)</span>
+                <span class="n">normalized_coverage</span> <span class="o">=</span> <span class="n">coverage_values_np</span> <span class="c1"># No normalization if counts mismatch</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cell_sizes_for_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cell</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">parameter_mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">()])</span>
+                <span class="n">cell_sizes_for_norm</span><span class="p">[</span><span class="n">cell_sizes_for_norm</span> <span class="o">&lt;=</span> <span class="mf">1e-12</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-12</span> <span class="c1"># Avoid division by zero</span>
+                <span class="n">normalized_coverage</span> <span class="o">=</span> <span class="n">coverage_values_np</span> <span class="o">/</span> <span class="n">cell_sizes_for_norm</span>
+            
+            <span class="c1"># Log10 transform, handling non-positive values</span>
+            <span class="n">valid_cov_mask</span> <span class="o">=</span> <span class="n">normalized_coverage</span> <span class="o">&gt;</span> <span class="mf">1e-12</span> <span class="c1"># Threshold for log10</span>
+            <span class="n">final_coverage_log10</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">normalized_coverage</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span> <span class="c1"># Init with NaN</span>
+            <span class="n">final_coverage_log10</span><span class="p">[</span><span class="n">valid_cov_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">normalized_coverage</span><span class="p">[</span><span class="n">valid_cov_mask</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">final_coverage_log10</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error during coverage calculation in ERTInversion: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span></div></div>
 </pre></div>
 
            </div>

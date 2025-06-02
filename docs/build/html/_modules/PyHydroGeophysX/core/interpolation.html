@@ -1,28 +1,29 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../../../">
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PyHydroGeophysX.core.interpolation &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
-
+  <title>PyHydroGeophysX.core.interpolation &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://YOUR_GITHUB_USERNAME.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/core/interpolation.html" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../../../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" /> 
@@ -88,47 +89,62 @@
   <h1>Source code for PyHydroGeophysX.core.interpolation</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Interpolation utilities for geophysical data processing.</span>
+
+<span class="sd">This module provides functions and a class for interpolating geophysical data,</span>
+<span class="sd">primarily for creating 2D profiles from 3D datasets and for interpolating</span>
+<span class="sd">profile data onto a 2D mesh.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">griddata</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
 
-<div class="viewcode-block" id="interpolate_to_profile">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.interpolate_to_profile">[docs]</a>
-<span class="k">def</span> <span class="nf">interpolate_to_profile</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
-                         <span class="n">X_grid</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+<div class="viewcode-block" id="interpolate_to_profile"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.interpolate_to_profile">[docs]</a><span class="k">def</span> <span class="nf">interpolate_to_profile</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+                         <span class="n">X_grid</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                          <span class="n">Y_grid</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                         <span class="n">X_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+                         <span class="n">X_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                          <span class="n">Y_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                          <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Interpolate 2D data onto a profile line</span>
-<span class="sd">    </span>
+<span class="sd">    Interpolate 2D gridded data onto a specified profile line.</span>
+
+<span class="sd">    This function takes 2D gridded data and interpolates it to a series of</span>
+<span class="sd">    points defining a profile line. It uses `scipy.interpolate.griddata`</span>
+<span class="sd">    for the interpolation.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        data: 2D array of values to interpolate</span>
-<span class="sd">        X_grid: X coordinates of original grid (meshgrid)</span>
-<span class="sd">        Y_grid: Y coordinates of original grid (meshgrid)</span>
-<span class="sd">        X_pro: X coordinates of profile points</span>
-<span class="sd">        Y_pro: Y coordinates of profile points</span>
-<span class="sd">        method: Interpolation method (&#39;linear&#39; or &#39;nearest&#39;)</span>
-<span class="sd">        </span>
+<span class="sd">        data: 2D numpy array of values to interpolate.</span>
+<span class="sd">        X_grid: 2D numpy array of X coordinates of the original grid (e.g., from np.meshgrid).</span>
+<span class="sd">        Y_grid: 2D numpy array of Y coordinates of the original grid (e.g., from np.meshgrid).</span>
+<span class="sd">        X_pro: 1D numpy array of X coordinates of the profile points.</span>
+<span class="sd">        Y_pro: 1D numpy array of Y coordinates of the profile points.</span>
+<span class="sd">        method: Interpolation method to use. Options are &#39;linear&#39;, &#39;nearest&#39;, &#39;cubic&#39;.</span>
+<span class="sd">                Defaults to &#39;linear&#39;.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        Interpolated values along profile</span>
+<span class="sd">        1D numpy array of interpolated values along the profile.</span>
+<span class="sd">        Returns an array of NaNs if interpolation fails for some points.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+    <span class="c1"># Ravel the grid coordinates and data to 1D arrays for griddata</span>
     <span class="n">X_new</span> <span class="o">=</span> <span class="n">X_grid</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
     <span class="n">Y_new</span> <span class="o">=</span> <span class="n">Y_grid</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-    
-    <span class="k">return</span> <span class="n">griddata</span><span class="p">((</span><span class="n">X_new</span><span class="p">,</span> <span class="n">Y_new</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span>
-                   <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">X_pro</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Y_pro</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span>
-                   <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span></div>
+    <span class="n">data_ravel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="c1"># Ensure data is a numpy array</span>
+
+    <span class="c1"># Ravel profile coordinates</span>
+    <span class="n">X_pro_ravel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">X_pro</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">Y_pro_ravel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Y_pro</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="c1"># Perform interpolation</span>
+    <span class="c1"># Potential issue: If X_pro, Y_pro are outside the convex hull of X_grid, Y_grid,</span>
+    <span class="c1"># &#39;linear&#39; and &#39;cubic&#39; methods will result in NaNs for those points.</span>
+    <span class="c1"># &#39;nearest&#39; will extrapolate, which might be desired or not depending on the use case.</span>
+    <span class="n">interpolated_values</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">((</span><span class="n">X_new</span><span class="p">,</span> <span class="n">Y_new</span><span class="p">),</span> <span class="n">data_ravel</span><span class="p">,</span>
+                                   <span class="p">(</span><span class="n">X_pro_ravel</span><span class="p">,</span> <span class="n">Y_pro_ravel</span><span class="p">),</span>
+                                   <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">interpolated_values</span></div>
 
 
-
-<div class="viewcode-block" id="setup_profile_coordinates">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.setup_profile_coordinates">[docs]</a>
-<span class="k">def</span> <span class="nf">setup_profile_coordinates</span><span class="p">(</span><span class="n">point1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> 
+<div class="viewcode-block" id="setup_profile_coordinates"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.setup_profile_coordinates">[docs]</a><span class="k">def</span> <span class="nf">setup_profile_coordinates</span><span class="p">(</span><span class="n">point1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                             <span class="n">point2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                             <span class="n">surface_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                             <span class="n">origin_x</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
@@ -137,328 +153,598 @@
                             <span class="n">pixel_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
                             <span class="n">num_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Set up profile coordinates based on surface elevation data between two points</span>
-<span class="sd">    </span>
+<span class="sd">    Set up profile coordinates based on surface elevation data between two points.</span>
+
+<span class="sd">    This function defines a profile line between two points (specified by their</span>
+<span class="sd">    indices in the `surface_data` grid) and generates coordinates along this</span>
+<span class="sd">    profile. It also returns the meshgrid coordinates for the entire surface.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        point1: Starting point indices [col, row]</span>
-<span class="sd">        point2: Ending point indices [col, row]</span>
-<span class="sd">        surface_data: 2D array of surface elevation data</span>
-<span class="sd">        origin_x: X coordinate of origin</span>
-<span class="sd">        origin_y: Y coordinate of origin</span>
-<span class="sd">        pixel_width: Width of each pixel</span>
-<span class="sd">        pixel_height: Height of each pixel (negative for top-down)</span>
-<span class="sd">        num_points: Number of points along profile</span>
-<span class="sd">        </span>
+<span class="sd">        point1: List or tuple of [column_index, row_index] for the starting point of the profile.</span>
+<span class="sd">        point2: List or tuple of [column_index, row_index] for the ending point of the profile.</span>
+<span class="sd">        surface_data: 2D numpy array of surface elevation data. Used to determine grid dimensions.</span>
+<span class="sd">        origin_x: X coordinate of the origin (bottom-left corner) of the grid. Defaults to 0.0.</span>
+<span class="sd">        origin_y: Y coordinate of the origin (bottom-left corner) of the grid. Defaults to 0.0.</span>
+<span class="sd">        pixel_width: Width of each pixel/cell in the grid. Defaults to 1.0.</span>
+<span class="sd">        pixel_height: Height of each pixel/cell in the grid.</span>
+<span class="sd">                      Defaults to -1.0 (assuming image-like coordinates where Y increases downwards).</span>
+<span class="sd">                      If Y increases upwards, this should be positive.</span>
+<span class="sd">        num_points: Number of points to generate along the profile line. Defaults to 200.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        X_pro: X coordinates along profile</span>
-<span class="sd">        Y_pro: Y coordinates along profile</span>
-<span class="sd">        L_profile: Distances along profile</span>
-<span class="sd">        XX: X coordinate grid</span>
-<span class="sd">        YY: Y coordinate grid</span>
+<span class="sd">        Tuple containing:</span>
+<span class="sd">            - X_pro (np.ndarray): 1D array of X coordinates along the profile.</span>
+<span class="sd">            - Y_pro (np.ndarray): 1D array of Y coordinates along the profile.</span>
+<span class="sd">            - L_profile (np.ndarray): 1D array of distances along the profile from the start point.</span>
+<span class="sd">            - XX (np.ndarray): 2D array of X coordinates for the entire grid (meshgrid).</span>
+<span class="sd">            - YY (np.ndarray): 2D array of Y coordinates for the entire grid (meshgrid).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Create coordinate grids</span>
+    <span class="c1"># Create 1D coordinate arrays for the grid axes</span>
+    <span class="c1"># Potential improvement: Ensure surface_data.shape[1] and surface_data.shape[0] are at least 1</span>
+    <span class="c1"># to avoid issues with np.arange if a dimension is 0.</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">origin_x</span> <span class="o">+</span> <span class="n">pixel_width</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">surface_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
     <span class="n">y</span> <span class="o">=</span> <span class="n">origin_y</span> <span class="o">+</span> <span class="n">pixel_height</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">surface_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-    <span class="n">XX</span><span class="p">,</span> <span class="n">YY</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-    
-    <span class="c1"># Handle no-data values</span>
-    <span class="n">surface_data</span> <span class="o">=</span> <span class="n">surface_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="n">surface_data</span><span class="p">[</span><span class="n">surface_data</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
-    
-    <span class="c1"># Calculate start and end positions</span>
-    <span class="n">P1_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">y</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">]]])</span>
-    <span class="n">P2_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">y</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">]]])</span>
-    
-    <span class="c1"># Calculate total distance</span>
+    <span class="n">XX</span><span class="p">,</span> <span class="n">YY</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="c1"># Create 2D coordinate grids</span>
+
+    <span class="c1"># Handle no-data values in surface_data if necessary (currently not used by this function</span>
+    <span class="c1"># but good practice if surface_data itself were being interpolated here).</span>
+    <span class="c1"># surface_data_copy = surface_data.copy()</span>
+    <span class="c1"># surface_data_copy[surface_data_copy == 0] = np.nan # Assuming 0 represents no-data</span>
+
+    <span class="c1"># Calculate the actual Cartesian coordinates of the start and end points of the profile</span>
+    <span class="c1"># Potential issue: point1 and point2 indices should be validated to be within the bounds of x and y arrays.</span>
+    <span class="c1"># For example, point1[0] &lt; len(x) and point1[1] &lt; len(y).</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">P1_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">y</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">]]])</span>
+        <span class="n">P2_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">y</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">]]])</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="c1"># Potential bug: If point indices are out of bounds, this will raise an IndexError.</span>
+        <span class="c1"># Consider adding error handling or pre-validation.</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;point1 or point2 indices are out of bounds for the given surface_data dimensions.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Calculate the total Euclidean distance between P1 and P2</span>
     <span class="n">dis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">P1_pos</span> <span class="o">-</span> <span class="n">P2_pos</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
-    
-    <span class="c1"># Generate profile coordinates</span>
-    <span class="n">X_pro</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span><span class="o">/</span><span class="n">dis</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dis</span><span class="p">,</span> <span class="n">num_points</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
-    <span class="n">Y_pro</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">/</span><span class="n">dis</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dis</span><span class="p">,</span> <span class="n">num_points</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
-    
-    <span class="c1"># Calculate profile distances</span>
-    <span class="n">L_profile</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">X_pro</span> <span class="o">-</span> <span class="n">X_pro</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">Y_pro</span> <span class="o">-</span> <span class="n">Y_pro</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
-    
+    <span class="k">if</span> <span class="n">dis</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># Handle the case where point1 and point2 are the same</span>
+        <span class="c1"># Potential issue: if dis is zero, division by zero will occur.</span>
+        <span class="c1"># If num_points is 1, linspace(0,0,1) is [0.]. If num_points &gt; 1, linspace(0,0,N) is [0., 0., ...].</span>
+        <span class="c1"># The `[:-1]` slice might lead to an empty array if num_points is 1.</span>
+        <span class="k">if</span> <span class="n">num_points</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">X_pro</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">]]])</span>
+            <span class="n">Y_pro</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">y</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">]]])</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># Create num_points identical points</span>
+            <span class="n">X_pro</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">num_points</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+            <span class="n">Y_pro</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">num_points</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Generate evenly spaced points along the profile line</span>
+        <span class="c1"># The `[:-1]` at the end of linspace was likely a bug or specific requirement.</span>
+        <span class="c1"># Typically, you&#39;d want all `num_points`. If `num_points` truly means segments,</span>
+        <span class="c1"># then `num_points+1` points are needed. Assuming `num_points` means points.</span>
+        <span class="c1"># Corrected to generate `num_points` along the line.</span>
+        <span class="c1"># Original code: `np.linspace(0, dis, num_points)[:-1]`</span>
+        <span class="c1"># This would generate `num_points-1` points if num_points &gt; 0.</span>
+        <span class="c1"># If the intention was to exclude the end point for some reason, this should be documented.</span>
+        <span class="c1"># Assuming we want `num_points` including start and end:</span>
+        <span class="n">line_space</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dis</span><span class="p">,</span> <span class="n">num_points</span><span class="p">)</span>
+        <span class="n">X_pro</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span> <span class="o">/</span> <span class="n">dis</span> <span class="o">*</span> <span class="n">line_space</span> <span class="o">+</span> <span class="n">x</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">Y_pro</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span> <span class="o">/</span> <span class="n">dis</span> <span class="o">*</span> <span class="n">line_space</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="c1"># The original formulation for X_pro and Y_pro was a bit unusual.</span>
+        <span class="c1"># A more standard way to parameterize a line segment from P2 to P1:</span>
+        <span class="c1"># P(t) = P2 + t * (P1 - P2) for t in [0, 1]</span>
+        <span class="c1"># X_pro = P2_pos[0] + (P1_pos[0] - P2_pos[0]) * np.linspace(0, 1, num_points)</span>
+        <span class="c1"># Y_pro = P2_pos[1] + (P1_pos[1] - P2_pos[1]) * np.linspace(0, 1, num_points)</span>
+        <span class="c1"># The original code seems to go from P1 towards P2, but the factors are from P1.</span>
+        <span class="c1"># Let&#39;s re-verify the original logic:</span>
+        <span class="c1"># X_pro = x_P1 - (x_P1 - x_P2)/dis * linspace_val</span>
+        <span class="c1"># Y_pro = y_P1 - (y_P1 - y_P2)/dis * linspace_val</span>
+        <span class="c1"># This means at linspace_val = 0, X_pro = x_P1. At linspace_val = dis, X_pro = x_P2.</span>
+        <span class="c1"># So the profile goes from P1 to P2.</span>
+        <span class="c1"># The original calculation:</span>
+        <span class="c1"># X_pro = (x[point1[0]] - x[point2[0]])/dis * np.linspace(0, dis, num_points)[:-1] + x[point2[0]]</span>
+        <span class="c1"># If num_points = 1, linspace(0,dis,1)[:-1] is empty. This is a bug.</span>
+        <span class="c1"># If num_points = 0, linspace(0,dis,0) is empty. Also problematic.</span>
+        <span class="c1"># Let&#39;s assume num_points &gt;= 1.</span>
+        <span class="c1"># If num_points = 1, it should return just point1.</span>
+        <span class="k">if</span> <span class="n">num_points</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+             <span class="n">X_pro</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+             <span class="n">Y_pro</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+        <span class="k">elif</span> <span class="n">num_points</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+             <span class="n">X_pro</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">]]])</span>
+             <span class="n">Y_pro</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">y</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">]]])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># The original code `... * np.linspace(0, dis, num_points)[:-1] + x[point2[0]]`</span>
+            <span class="c1"># seems to intend to generate points from point1 towards point2, but the last point is excluded.</span>
+            <span class="c1"># And the reference point added is x[point2[0]]. This logic is confusing.</span>
+            <span class="c1"># Let P_start = (x[point1[0]], y[point1[1]]) and P_end = (x[point2[0]], y[point2[1]])</span>
+            <span class="c1"># Vector V = P_end - P_start</span>
+            <span class="c1"># Points X_p = x_P_start + t * V_x, Y_p = y_P_start + t * V_y, where t from 0 to 1 over num_points steps</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num_points</span><span class="p">)</span>
+            <span class="n">X_pro</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+            <span class="n">Y_pro</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">point2</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="n">point1</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+
+
+    <span class="c1"># Calculate cumulative distances along the profile from the starting point</span>
+    <span class="k">if</span> <span class="n">num_points</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">L_profile</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">X_pro</span> <span class="o">-</span> <span class="n">X_pro</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">Y_pro</span> <span class="o">-</span> <span class="n">Y_pro</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">L_profile</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+
     <span class="k">return</span> <span class="n">X_pro</span><span class="p">,</span> <span class="n">Y_pro</span><span class="p">,</span> <span class="n">L_profile</span><span class="p">,</span> <span class="n">XX</span><span class="p">,</span> <span class="n">YY</span></div>
 
 
-
-<div class="viewcode-block" id="interpolate_structure_to_profile">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.interpolate_structure_to_profile">[docs]</a>
-<span class="k">def</span> <span class="nf">interpolate_structure_to_profile</span><span class="p">(</span><span class="n">structure_data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+<div class="viewcode-block" id="interpolate_structure_to_profile"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.interpolate_structure_to_profile">[docs]</a><span class="k">def</span> <span class="nf">interpolate_structure_to_profile</span><span class="p">(</span><span class="n">structure_data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
                                    <span class="n">X_grid</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                                    <span class="n">Y_grid</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                                    <span class="n">X_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                                   <span class="n">Y_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+                                   <span class="n">Y_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                                   <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Interpolate multiple structure layers onto profile</span>
-<span class="sd">    </span>
+<span class="sd">    Interpolate multiple structure layers (2D grids) onto a defined profile.</span>
+
+<span class="sd">    This function iterates through a list of 2D arrays, each representing a</span>
+<span class="sd">    geological layer or structure, and interpolates each onto the given profile</span>
+<span class="sd">    coordinates.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        structure_data: List of 2D arrays for each layer</span>
-<span class="sd">        X_grid: X coordinates of original grid</span>
-<span class="sd">        Y_grid: Y coordinates of original grid</span>
-<span class="sd">        X_pro: X coordinates of profile points</span>
-<span class="sd">        Y_pro: Y coordinates of profile points</span>
-<span class="sd">        </span>
+<span class="sd">        structure_data: List of 2D numpy arrays. Each array is a grid of values</span>
+<span class="sd">                        representing a layer.</span>
+<span class="sd">        X_grid: 2D numpy array of X coordinates of the original grid (meshgrid).</span>
+<span class="sd">        Y_grid: 2D numpy array of Y coordinates of the original grid (meshgrid).</span>
+<span class="sd">        X_pro: 1D numpy array of X coordinates of the profile points.</span>
+<span class="sd">        Y_pro: 1D numpy array of Y coordinates of the profile points.</span>
+<span class="sd">        method: Interpolation method to use (e.g., &#39;linear&#39;, &#39;nearest&#39;).</span>
+<span class="sd">                Passed to `interpolate_to_profile`. Defaults to &#39;linear&#39;.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        Array of interpolated values with shape (n_layers, n_points)</span>
+<span class="sd">        2D numpy array of interpolated values. Shape is (n_layers, n_profile_points).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">structure</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">structure_data</span><span class="p">:</span>
-        <span class="n">interpolated</span> <span class="o">=</span> <span class="n">interpolate_to_profile</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">X_grid</span><span class="p">,</span> <span class="n">Y_grid</span><span class="p">,</span>
-                                           <span class="n">X_pro</span><span class="p">,</span> <span class="n">Y_pro</span><span class="p">)</span>
-        <span class="n">structure</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">interpolated</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">structure</span><span class="p">)</span></div>
+    <span class="n">structure_on_profile</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">layer_data</span> <span class="ow">in</span> <span class="n">structure_data</span><span class="p">:</span>
+        <span class="c1"># For each layer, interpolate its data onto the profile</span>
+        <span class="n">interpolated_layer</span> <span class="o">=</span> <span class="n">interpolate_to_profile</span><span class="p">(</span><span class="n">layer_data</span><span class="p">,</span> <span class="n">X_grid</span><span class="p">,</span> <span class="n">Y_grid</span><span class="p">,</span>
+                                                    <span class="n">X_pro</span><span class="p">,</span> <span class="n">Y_pro</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
+        <span class="n">structure_on_profile</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">interpolated_layer</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">structure_on_profile</span><span class="p">)</span></div>
 
 
-
-<div class="viewcode-block" id="prepare_2D_profile_data">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.prepare_2D_profile_data">[docs]</a>
-<span class="k">def</span> <span class="nf">prepare_2D_profile_data</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
-                          <span class="n">XX</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+<div class="viewcode-block" id="prepare_2D_profile_data"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.prepare_2D_profile_data">[docs]</a><span class="k">def</span> <span class="nf">prepare_2D_profile_data</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                          <span class="n">XX</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                           <span class="n">YY</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                           <span class="n">X_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">Y_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+                          <span class="n">Y_pro</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                          <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Interpolate multiple 2D gridded data layers onto a profile line.</span>
-<span class="sd">    </span>
+<span class="sd">    Interpolate multiple 2D gridded data layers (from a 3D array) onto a profile line.</span>
+
+<span class="sd">    This function is similar to `interpolate_structure_to_profile` but takes a single</span>
+<span class="sd">    3D numpy array where the first dimension represents different layers.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        data: 3D array of gridded data (n_layers, ny, nx)</span>
-<span class="sd">        XX, YY: Coordinate grids from meshgrid</span>
-<span class="sd">        X_pro, Y_pro: Profile line coordinates</span>
-<span class="sd">        </span>
+<span class="sd">        data: 3D numpy array of gridded data with shape (n_layers, ny, nx).</span>
+<span class="sd">        XX: 2D numpy array of X coordinates of the original grid (meshgrid from input grid dimensions).</span>
+<span class="sd">        YY: 2D numpy array of Y coordinates of the original grid (meshgrid from input grid dimensions).</span>
+<span class="sd">        X_pro: 1D numpy array of X coordinates of the profile points.</span>
+<span class="sd">        Y_pro: 1D numpy array of Y coordinates of the profile points.</span>
+<span class="sd">        method: Interpolation method to use for `griddata`. Defaults to &#39;linear&#39;.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        Interpolated values along profile (n_layers, n_profile_points)</span>
+<span class="sd">        2D numpy array of interpolated values along the profile.</span>
+<span class="sd">        Shape: (n_layers, n_profile_points).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Input &#39;data&#39; must be a 3D array (n_layers, ny, nx), got </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2"> dimensions.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">XX</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">YY</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Input &#39;XX&#39; and &#39;YY&#39; must be 2D arrays, got </span><span class="si">{</span><span class="n">XX</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">YY</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2"> dimensions.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">X_pro</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">Y_pro</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Input &#39;X_pro&#39; and &#39;Y_pro&#39; must be 1D arrays, got </span><span class="si">{</span><span class="n">X_pro</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">Y_pro</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2"> dimensions.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">X_pro</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">Y_pro</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;X_pro and Y_pro must have the same number of points, got </span><span class="si">{</span><span class="n">X_pro</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">Y_pro</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+
     <span class="n">n_layers</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">profile_values</span> <span class="o">=</span> <span class="p">[]</span>
-    
-    <span class="n">X_new</span> <span class="o">=</span> <span class="n">XX</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-    <span class="n">Y_new</span> <span class="o">=</span> <span class="n">YY</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
-    
+
+    <span class="c1"># Ravel the grid coordinates once</span>
+    <span class="n">X_grid_ravel</span> <span class="o">=</span> <span class="n">XX</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">Y_grid_ravel</span> <span class="o">=</span> <span class="n">YY</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="c1"># Ravel profile coordinates once</span>
+    <span class="n">X_pro_ravel</span> <span class="o">=</span> <span class="n">X_pro</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="c1"># Should already be 1D, but ravel handles it.</span>
+    <span class="n">Y_pro_ravel</span> <span class="o">=</span> <span class="n">Y_pro</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_layers</span><span class="p">):</span>
-        <span class="n">layer_values</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">((</span><span class="n">X_new</span><span class="p">,</span> <span class="n">Y_new</span><span class="p">),</span> 
-                              <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> 
-                              <span class="p">(</span><span class="n">X_pro</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">Y_pro</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span> 
-                              <span class="n">method</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span>
-        <span class="n">profile_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_values</span><span class="p">)</span>
-    
+        <span class="c1"># Extract the current layer&#39;s data and ravel it</span>
+        <span class="n">layer_data_ravel</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="c1"># Perform interpolation for the current layer</span>
+        <span class="c1"># Potential issue: Behavior for points outside convex hull (NaNs for &#39;linear&#39;/&#39;cubic&#39;).</span>
+        <span class="n">layer_interpolated_values</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">((</span><span class="n">X_grid_ravel</span><span class="p">,</span> <span class="n">Y_grid_ravel</span><span class="p">),</span>
+                                             <span class="n">layer_data_ravel</span><span class="p">,</span>
+                                             <span class="p">(</span><span class="n">X_pro_ravel</span><span class="p">,</span> <span class="n">Y_pro_ravel</span><span class="p">),</span>
+                                             <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span>
+        <span class="n">profile_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer_interpolated_values</span><span class="p">)</span>
+
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">profile_values</span><span class="p">)</span></div>
 
 
-
-<div class="viewcode-block" id="interpolate_to_mesh">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.interpolate_to_mesh">[docs]</a>
-<span class="k">def</span> <span class="nf">interpolate_to_mesh</span><span class="p">(</span><span class="n">property_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<div class="viewcode-block" id="interpolate_to_mesh"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.interpolate_to_mesh">[docs]</a><span class="k">def</span> <span class="nf">interpolate_to_mesh</span><span class="p">(</span><span class="n">property_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                        <span class="n">profile_distance</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                        <span class="n">depth_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                        <span class="n">mesh_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                        <span class="n">mesh_y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                        <span class="n">mesh_markers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                       <span class="n">ID</span><span class="p">,</span>
-                       <span class="n">layer_markers</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+                       <span class="n">ID</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="c1"># Changed from any to np.ndarray for clarity</span>
+                       <span class="n">layer_markers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span> <span class="c1"># Default None</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Interpolate property values from profile to mesh with layer-specific handling.</span>
-<span class="sd">    </span>
+<span class="sd">    Interpolate property values from a 2D profile (defined by distance and depth)</span>
+<span class="sd">    onto a 2D unstructured mesh. This function handles layer-specific interpolation</span>
+<span class="sd">    based on markers.</span>
+
+<span class="sd">    The input data `property_values`, `profile_distance`, and `depth_values`</span>
+<span class="sd">    are expected to be structured in a way that they can be filtered by `ID`</span>
+<span class="sd">    which corresponds to `layer_markers` in the mesh.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        property_values: Property values array (n_points)</span>
-<span class="sd">        profile_distance: Distance along profile (n_points)</span>
-<span class="sd">        depth_values: Depth values array (n_layers, n_points)</span>
-<span class="sd">        mesh_x: X coordinates of mesh cells</span>
-<span class="sd">        mesh_y: Y coordinates of mesh cells</span>
-<span class="sd">        mesh_markers: Markers indicating different layers in mesh</span>
-<span class="sd">        layer_markers: List of marker values for each layer</span>
-<span class="sd">    </span>
+<span class="sd">        property_values: 1D or 2D numpy array of property values.</span>
+<span class="sd">                         If 2D, assumed shape (n_layers_in_profile_data, n_points_along_profile).</span>
+<span class="sd">                         If 1D, it&#39;s treated as a single layer or must be indexable by `ID`.</span>
+<span class="sd">        profile_distance: 1D numpy array of distances along the profile.</span>
+<span class="sd">                          It&#39;s repeated to match dimensions if `property_values` is 2D.</span>
+<span class="sd">        depth_values: 2D numpy array of depth values, typically (n_layers_in_profile_data, n_points_along_profile).</span>
+<span class="sd">                      The slice `depth_values[:14]` suggests a fixed number of depth layers expected.</span>
+<span class="sd">                      This should be clarified or made more flexible.</span>
+<span class="sd">        mesh_x: 1D numpy array of X coordinates of the mesh cell centers.</span>
+<span class="sd">        mesh_y: 1D numpy array of Y coordinates of the mesh cell centers (typically depths).</span>
+<span class="sd">        mesh_markers: 1D numpy array of integer markers for each mesh cell, indicating its layer/region.</span>
+<span class="sd">        ID: 1D or 2D numpy array used for filtering `property_values`, `profile_distance`, and `depth_values`</span>
+<span class="sd">            to match specific `layer_markers`. Its shape should be compatible with `property_values`.</span>
+<span class="sd">            This `ID` array seems to map points in `property_values` to specific layers.</span>
+<span class="sd">        layer_markers: List of integer marker values present in `mesh_markers` for which</span>
+<span class="sd">                       interpolation should be performed. If None, it defaults to [3, 0, 2].</span>
+<span class="sd">                       It&#39;s recommended to derive this from `np.unique(mesh_markers)` if appropriate.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        Interpolated values for mesh cells</span>
+<span class="sd">        1D numpy array of interpolated values for each mesh cell, preserving the order of `mesh_x`/`mesh_y`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Initialize output array</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">mesh_markers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">layer_markers</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">layer_markers</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="c1"># Default layer markers</span>
 
-    <span class="c1"># print(profile_distance.shape)</span>
-    <span class="c1"># print(depth_values.shape)</span>
-    <span class="c1"># print(property_values.shape)</span>
-    <span class="n">L_profile_new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">profile_distance</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="n">property_values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="c1"># Initialize output array for mesh cell properties</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">mesh_markers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="c1"># mesh_markers defines the shape of the mesh</span>
 
-    <span class="n">Depth</span> <span class="o">=</span> <span class="n">depth_values</span><span class="p">[:</span><span class="mi">14</span><span class="p">]</span>
+    <span class="c1"># Prepare L_profile_new:</span>
+    <span class="c1"># This repeats profile_distance for each &quot;layer&quot; in property_values.</span>
+    <span class="c1"># This assumes property_values might be (n_prop_layers, n_profile_points).</span>
+    <span class="c1"># If property_values is 1D, property_values.shape[0] would be the number of points,</span>
+    <span class="c1"># which makes np.repeat act differently. This logic seems fragile.</span>
+    <span class="c1"># Let&#39;s assume property_values is (n_data_layers, n_profile_points)</span>
+    <span class="c1"># and profile_distance is (n_profile_points).</span>
+    <span class="k">if</span> <span class="n">property_values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># If property_values is 1D, it implies a single set of values along the profile.</span>
+        <span class="c1"># ID must then be 1D and of the same length.</span>
+        <span class="k">if</span> <span class="n">ID</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">ID</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">property_values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;If property_values is 1D, ID must be 1D and match its length.&quot;</span><span class="p">)</span>
+        <span class="n">L_profile_new</span> <span class="o">=</span> <span class="n">profile_distance</span> <span class="c1"># No repeat needed, will be filtered by ID directly</span>
+        <span class="n">Depth_for_interp</span> <span class="o">=</span> <span class="n">depth_values</span> <span class="c1"># Assumes depth_values is (n_data_layers, n_profile_points)</span>
+                                        <span class="c1"># or compatible with ID indexing.</span>
+        <span class="n">prop_values_for_interp</span> <span class="o">=</span> <span class="n">property_values</span>
+    <span class="k">elif</span> <span class="n">property_values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">ID</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">ID</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">property_values</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;If property_values is 2D, ID must be 2D and match its shape.&quot;</span><span class="p">)</span>
+        <span class="c1"># This repeats each profile_distance value for property_values.shape[0] times.</span>
+        <span class="c1"># Example: if profile_distance is (100,) and property_values is (3, 100),</span>
+        <span class="c1"># L_profile_new becomes (3, 100) where each row is profile_distance.</span>
+        <span class="n">L_profile_new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">profile_distance</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">property_values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">Depth_for_interp</span> <span class="o">=</span> <span class="n">depth_values</span> <span class="c1"># Assumed (n_data_layers, n_profile_points)</span>
+        <span class="n">prop_values_for_interp</span> <span class="o">=</span> <span class="n">property_values</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;property_values must be 1D or 2D, got </span><span class="si">{</span><span class="n">property_values</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2"> dimensions.&quot;</span><span class="p">)</span>
 
-    <span class="n">maxele</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># set 0 here</span>
 
-    <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="n">layer_markers</span><span class="p">:</span>
-        <span class="c1"># For each layer marker, interpolate property values to mesh grid</span>
-        <span class="c1"># Note: ID is used to identify which layer to interpolate for</span>
-        <span class="c1"># Interpolate property values to mesh grid for each layer</span>
-        <span class="n">grid_z1</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">((</span><span class="n">L_profile_new</span><span class="p">[</span><span class="n">ID</span><span class="o">==</span><span class="n">marker</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span><span class="n">Depth</span><span class="p">[</span><span class="n">ID</span><span class="o">==</span><span class="n">marker</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">-</span> <span class="n">maxele</span><span class="p">),</span> <span class="n">property_values</span><span class="p">[</span><span class="n">ID</span><span class="o">==</span><span class="n">marker</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="p">(</span><span class="n">mesh_x</span><span class="p">[</span><span class="n">mesh_markers</span><span class="o">==</span><span class="n">marker</span><span class="p">],</span> <span class="n">mesh_y</span><span class="p">[</span><span class="n">mesh_markers</span><span class="o">==</span><span class="n">marker</span><span class="p">]),</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span>
-        <span class="n">temp_ID</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">grid_z1</span><span class="p">)</span>
-        <span class="n">grid_z2</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">((</span><span class="n">L_profile_new</span><span class="p">[</span><span class="n">ID</span><span class="o">==</span><span class="n">marker</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span><span class="n">Depth</span><span class="p">[</span><span class="n">ID</span><span class="o">==</span><span class="n">marker</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">-</span> <span class="n">maxele</span><span class="p">),</span> <span class="n">property_values</span><span class="p">[</span><span class="n">ID</span><span class="o">==</span><span class="n">marker</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="p">(</span><span class="n">mesh_x</span><span class="p">[</span><span class="n">mesh_markers</span><span class="o">==</span><span class="n">marker</span><span class="p">],</span> <span class="n">mesh_y</span><span class="p">[</span><span class="n">mesh_markers</span><span class="o">==</span><span class="n">marker</span><span class="p">]),</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
-        <span class="n">grid_z1</span><span class="p">[</span><span class="n">temp_ID</span><span class="p">]</span> <span class="o">=</span> <span class="n">grid_z2</span><span class="p">[</span><span class="n">temp_ID</span><span class="p">]</span>
-        <span class="n">result</span><span class="p">[</span><span class="n">mesh_markers</span><span class="o">==</span><span class="n">marker</span><span class="p">]</span> <span class="o">=</span> <span class="n">grid_z1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="c1"># Potential issue: Hardcoded slice `depth_values[:14]`.</span>
+    <span class="c1"># This implies `depth_values` always has at least 14 layers, or that only these are relevant.</span>
+    <span class="c1"># This should be a parameter or derived. For now, let&#39;s call it `Depth_subset`.</span>
+    <span class="c1"># Depth = depth_values[:14] # Original line. This is risky.</span>
+    <span class="c1"># Assuming Depth_for_interp is correctly shaped now.</span>
+    <span class="c1"># If depth_values itself is supposed to be (num_actual_depth_layers, n_profile_points),</span>
+    <span class="c1"># then the slicing by ID should handle which depths are used.</span>
+    <span class="c1"># The `[:14]` might be an artifact or a specific domain constraint not generalized.</span>
 
-    <span class="c1"># # Interpolate property values to mesh grid for each layer</span>
-    <span class="c1"># grid_z1 = griddata((L_profile_new[ID==0].ravel(),Depth[ID==0].ravel()- maxele), property_values[ID==0].ravel(), (mesh_x[mesh_markers==0], mesh_y[mesh_markers==0]), method=&#39;linear&#39;)</span>
-    <span class="c1"># temp_ID = np.isnan(grid_z1)</span>
-    <span class="c1"># grid_z2 = griddata((L_profile_new[ID==0].ravel(),Depth[ID==0].ravel()- maxele), property_values[ID==0].ravel(), (mesh_x[mesh_markers==0], mesh_y[mesh_markers==0]), method=&#39;nearest&#39;)</span>
-    <span class="c1"># grid_z1[temp_ID] = grid_z2[temp_ID]</span>
-    <span class="c1"># result[mesh_markers==0] = grid_z1.copy()</span>
+    <span class="n">maxele</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># This variable is named &#39;maxele&#39; (max elevation?) but set to 0.</span>
+                <span class="c1"># If this is for normalization, it should be calculated or passed.</span>
+                <span class="c1"># Comment says &quot;set 0 here&quot;, implying it&#39;s intentional for this context.</span>
 
+    <span class="k">for</span> <span class="n">marker_val</span> <span class="ow">in</span> <span class="n">layer_markers</span><span class="p">:</span>
+        <span class="c1"># Create a boolean mask for the current layer in the mesh</span>
+        <span class="n">mesh_layer_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_val</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mesh_layer_mask</span><span class="p">):</span>
+            <span class="c1"># print(f&quot;Warning: No mesh cells found for marker {marker_val}. Skipping.&quot;)</span>
+            <span class="k">continue</span>
 
+        <span class="c1"># Create a boolean mask for the current layer in the profile data using ID</span>
+        <span class="c1"># ID should have the same shape as property_values and depth_values for this to work element-wise.</span>
+        <span class="n">profile_data_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">ID</span> <span class="o">==</span> <span class="n">marker_val</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">profile_data_mask</span><span class="p">):</span>
+            <span class="c1"># print(f&quot;Warning: No profile data found for ID {marker_val} corresponding to mesh marker. Skipping interpolation for this marker.&quot;)</span>
+            <span class="k">continue</span>
 
-    <span class="c1">#result =  griddata((L_profile_new.ravel(),depth_values[:14].ravel()), property_values.ravel(), (mesh_x, mesh_y), method=&#39;nearest&#39;)</span>
+        <span class="c1"># Select data points for interpolation:</span>
+        <span class="c1"># Source points: (L_profile_new[profile_data_mask].ravel(), Depth_for_interp[profile_data_mask].ravel() - maxele)</span>
+        <span class="c1"># Source values: prop_values_for_interp[profile_data_mask].ravel()</span>
+        <span class="c1"># Target points: (mesh_x[mesh_layer_mask], mesh_y[mesh_layer_mask])</span>
 
+        <span class="n">source_x</span> <span class="o">=</span> <span class="n">L_profile_new</span><span class="p">[</span><span class="n">profile_data_mask</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">source_y</span> <span class="o">=</span> <span class="n">Depth_for_interp</span><span class="p">[</span><span class="n">profile_data_mask</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">-</span> <span class="n">maxele</span> <span class="c1"># Apply maxele offset</span>
+        <span class="n">source_vals</span> <span class="o">=</span> <span class="n">prop_values_for_interp</span><span class="p">[</span><span class="n">profile_data_mask</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
 
-    
+        <span class="k">if</span> <span class="n">source_x</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">source_vals</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span>
+            <span class="c1"># print(f&quot;Warning: No valid source data points for marker {marker_val} after filtering. Skipping.&quot;)</span>
+            <span class="c1"># result[mesh_layer_mask] will remain 0 or NaN if initialized that way.</span>
+            <span class="c1"># Or fill with a specific no-data value.</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">mesh_layer_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="c1"># Or some other fill_value</span>
+            <span class="k">continue</span>
+        
+        <span class="n">target_x</span> <span class="o">=</span> <span class="n">mesh_x</span><span class="p">[</span><span class="n">mesh_layer_mask</span><span class="p">]</span>
+        <span class="n">target_y</span> <span class="o">=</span> <span class="n">mesh_y</span><span class="p">[</span><span class="n">mesh_layer_mask</span><span class="p">]</span>
+
+        <span class="c1"># Perform linear interpolation</span>
+        <span class="c1"># Potential issue: If source points are collinear or too few, griddata can be slow or fail.</span>
+        <span class="n">interpolated_linear</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">source_x</span><span class="p">,</span> <span class="n">source_y</span><span class="p">),</span> <span class="n">source_vals</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">target_x</span><span class="p">,</span> <span class="n">target_y</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Identify NaNs from linear interpolation (points outside convex hull)</span>
+        <span class="n">nan_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">interpolated_linear</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">nan_mask</span><span class="p">):</span>
+            <span class="c1"># Perform nearest neighbor interpolation for points where linear failed</span>
+            <span class="c1"># Potential improvement: Check if source_x for nearest is non-empty.</span>
+            <span class="n">interpolated_nearest</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">source_x</span><span class="p">,</span> <span class="n">source_y</span><span class="p">),</span> <span class="n">source_vals</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">target_x</span><span class="p">[</span><span class="n">nan_mask</span><span class="p">],</span> <span class="n">target_y</span><span class="p">[</span><span class="n">nan_mask</span><span class="p">]),</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span>
+            <span class="p">)</span>
+            <span class="n">interpolated_linear</span><span class="p">[</span><span class="n">nan_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">interpolated_nearest</span>
+        
+        <span class="c1"># Assign interpolated values to the corresponding part of the result array</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">mesh_layer_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">interpolated_linear</span>
+
+    <span class="c1"># Commented out sections from original code:</span>
+    <span class="c1"># The original code had a loop and then a specific block for marker 0.</span>
+    <span class="c1"># The loop should handle all markers in layer_markers. If marker 0 needs</span>
+    <span class="c1"># special handling, it should be explicit. The current loop is generic.</span>
+    <span class="c1"># Example of the commented block:</span>
+    <span class="c1"># # grid_z1 = griddata((L_profile_new[ID==0]..., Depth[ID==0]...), property_values[ID==0]..., (mesh_x[mesh_markers==0]...), method=&#39;linear&#39;)</span>
+    <span class="c1"># # ...</span>
+    <span class="c1"># # result[mesh_markers==0] = grid_z1.copy()</span>
+
+    <span class="c1"># The final commented line seems like an attempt at global interpolation without layers:</span>
+    <span class="c1"># #result =  griddata((L_profile_new.ravel(),depth_values[:14].ravel()), property_values.ravel(), (mesh_x, mesh_y), method=&#39;nearest&#39;)</span>
+    <span class="c1"># This would ignore the layer_markers logic.</span>
+
     <span class="k">return</span> <span class="n">result</span></div>
 
 
+<div class="viewcode-block" id="ProfileInterpolator"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.ProfileInterpolator">[docs]</a><span class="k">class</span> <span class="nc">ProfileInterpolator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class to simplify the process of interpolating various types of geophysical data</span>
+<span class="sd">    onto a defined 2D profile.</span>
 
-<div class="viewcode-block" id="ProfileInterpolator">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.ProfileInterpolator">[docs]</a>
-<span class="k">class</span> <span class="nc">ProfileInterpolator</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for handling interpolation of data to/from profiles.&quot;&quot;&quot;</span>
-    
-<div class="viewcode-block" id="ProfileInterpolator.__init__">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.ProfileInterpolator.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">point2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> 
+<span class="sd">    The class handles the setup of profile coordinates and provides methods</span>
+<span class="sd">    to interpolate surface data, layered structures, and 3D gridded data onto</span>
+<span class="sd">    this profile. It can also interpolate from the profile data to a 2D mesh.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ProfileInterpolator.__init__"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.ProfileInterpolator.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">point1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">point2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                 <span class="n">surface_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                 <span class="n">origin_x</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">origin_y</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-                <span class="n">pixel_width</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">pixel_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+                <span class="n">pixel_width</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">pixel_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="c1"># Typically negative if Y is row index</span>
                 <span class="n">num_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize profile interpolator with reference points and surface data.</span>
-<span class="sd">        </span>
+<span class="sd">        Initialize the ProfileInterpolator.</span>
+
+<span class="sd">        This involves setting up the profile coordinates based on two points</span>
+<span class="sd">        on a surface grid and calculating the surface elevation along this profile.</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            point1: Starting point indices [col, row]</span>
-<span class="sd">            point2: Ending point indices [col, row]</span>
-<span class="sd">            surface_data: 2D array of surface elevation data</span>
-<span class="sd">            origin_x, origin_y: Coordinates of origin</span>
-<span class="sd">            pixel_width, pixel_height: Pixel dimensions</span>
-<span class="sd">            num_points: Number of points along profile</span>
+<span class="sd">            point1: List or tuple [col_idx, row_idx] for the starting grid cell of the profile.</span>
+<span class="sd">            point2: List or tuple [col_idx, row_idx] for the ending grid cell of the profile.</span>
+<span class="sd">            surface_data: 2D numpy array representing surface elevation or another key surface.</span>
+<span class="sd">                          Used for defining grid dimensions and for optional surface profile interpolation.</span>
+<span class="sd">            origin_x: X-coordinate of the grid&#39;s origin (e.g., bottom-left corner).</span>
+<span class="sd">            origin_y: Y-coordinate of the grid&#39;s origin.</span>
+<span class="sd">            pixel_width: The width of a single cell in the grid in Cartesian units.</span>
+<span class="sd">            pixel_height: The height of a single cell in the grid in Cartesian units.</span>
+<span class="sd">                          Often negative if row index increases downwards but Y-coordinate increases upwards.</span>
+<span class="sd">            num_points: Number of points to discretize the profile into.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">point1</span> <span class="o">=</span> <span class="n">point1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">point2</span> <span class="o">=</span> <span class="n">point2</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">surface_data</span> <span class="o">=</span> <span class="n">surface_data</span>
+        <span class="c1"># Store parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">surface_data_grid</span> <span class="o">=</span> <span class="n">surface_data</span> <span class="c1"># Store the original grid data</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">origin_x</span> <span class="o">=</span> <span class="n">origin_x</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">origin_y</span> <span class="o">=</span> <span class="n">origin_y</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pixel_width</span> <span class="o">=</span> <span class="n">pixel_width</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pixel_height</span> <span class="o">=</span> <span class="n">pixel_height</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_points</span> <span class="o">=</span> <span class="n">num_points</span>
-        
-        <span class="c1"># Set up profile coordinates</span>
+
+        <span class="c1"># Set up profile coordinates (X, Y positions and distance along profile)</span>
+        <span class="c1"># Also get the meshgrid (XX, YY) for the entire input surface_data domain</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">XX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">YY</span> <span class="o">=</span> <span class="n">setup_profile_coordinates</span><span class="p">(</span>
-            <span class="n">point1</span><span class="p">,</span> <span class="n">point2</span><span class="p">,</span> <span class="n">surface_data</span><span class="p">,</span> <span class="n">origin_x</span><span class="p">,</span> <span class="n">origin_y</span><span class="p">,</span> 
+            <span class="n">point1</span><span class="p">,</span> <span class="n">point2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">surface_data_grid</span><span class="p">,</span>
+            <span class="n">origin_x</span><span class="p">,</span> <span class="n">origin_y</span><span class="p">,</span>
             <span class="n">pixel_width</span><span class="p">,</span> <span class="n">pixel_height</span><span class="p">,</span> <span class="n">num_points</span>
         <span class="p">)</span>
-        
-        <span class="c1"># Get surface profile</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">surface_profile</span> <span class="o">=</span> <span class="n">interpolate_to_profile</span><span class="p">(</span>
-            <span class="n">surface_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">XX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">YY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span>
-        <span class="p">)</span></div>
 
-    
-<div class="viewcode-block" id="ProfileInterpolator.interpolate_layer_data">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.ProfileInterpolator.interpolate_layer_data">[docs]</a>
-    <span class="k">def</span> <span class="nf">interpolate_layer_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer_data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="c1"># Interpolate the provided surface_data onto the profile line</span>
+        <span class="c1"># This gives the elevation (or other gridded value) along the profile path.</span>
+        <span class="c1"># Potential issue: if X_pro, Y_pro are empty (e.g. num_points=0), this might fail.</span>
+        <span class="c1"># setup_profile_coordinates should handle num_points=0 returning empty arrays.</span>
+        <span class="c1"># interpolate_to_profile should ideally handle empty X_pro, Y_pro gracefully.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">surface_profile</span> <span class="o">=</span> <span class="n">interpolate_to_profile</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">surface_data_grid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">XX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">YY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span> <span class="c1"># Default linear</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">surface_profile</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span> <span class="c1"># Empty profile if no points</span></div>
+
+<div class="viewcode-block" id="ProfileInterpolator.interpolate_layer_data"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.ProfileInterpolator.interpolate_layer_data">[docs]</a>    <span class="k">def</span> <span class="nf">interpolate_layer_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer_data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Interpolate multiple layer data to profile.</span>
-<span class="sd">        </span>
+<span class="sd">        Interpolate multiple layers of 2D gridded data onto the defined profile.</span>
+
+<span class="sd">        Each layer is a 2D numpy array with the same dimensions as the initial</span>
+<span class="sd">        `surface_data` grid.</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            layer_data: List of 2D arrays for each layer</span>
-<span class="sd">            </span>
+<span class="sd">            layer_data: A list of 2D numpy arrays. Each array represents a layer&#39;s</span>
+<span class="sd">                        data on the original grid.</span>
+<span class="sd">            method: Interpolation method (&#39;linear&#39;, &#39;nearest&#39;, &#39;cubic&#39;) to be used by</span>
+<span class="sd">                    `interpolate_structure_to_profile`. Defaults to &#39;linear&#39;.</span>
+
 <span class="sd">        Returns:</span>
-<span class="sd">            Array of interpolated values (n_layers, n_profile_points)</span>
+<span class="sd">            A 2D numpy array containing the interpolated values for each layer along</span>
+<span class="sd">            the profile. Shape: (n_layers, n_profile_points).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Or check self.num_points &gt; 0</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">layer_data</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="c1"># Return empty array with correct first dim</span>
+
         <span class="k">return</span> <span class="n">interpolate_structure_to_profile</span><span class="p">(</span>
-            <span class="n">layer_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">XX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">YY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span>
+            <span class="n">layer_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">XX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">YY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span>
         <span class="p">)</span></div>
 
-    
-<div class="viewcode-block" id="ProfileInterpolator.interpolate_3d_data">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.ProfileInterpolator.interpolate_3d_data">[docs]</a>
-    <span class="k">def</span> <span class="nf">interpolate_3d_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ProfileInterpolator.interpolate_3d_data"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.ProfileInterpolator.interpolate_3d_data">[docs]</a>    <span class="k">def</span> <span class="nf">interpolate_3d_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_3d</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Interpolate 3D data (n_layers, ny, nx) to profile.</span>
-<span class="sd">        </span>
+<span class="sd">        Interpolate 3D gridded data onto the defined profile.</span>
+
+<span class="sd">        The 3D data is expected to be an array of shape (n_layers, ny, nx),</span>
+<span class="sd">        where (ny, nx) are the dimensions of the original `surface_data` grid.</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            data: 3D array of values</span>
-<span class="sd">            </span>
+<span class="sd">            data_3d: A 3D numpy array of data to interpolate.</span>
+<span class="sd">                     Shape: (n_layers, ny, nx).</span>
+<span class="sd">            method: Interpolation method (&#39;linear&#39;, &#39;nearest&#39;, &#39;cubic&#39;) to be used by</span>
+<span class="sd">                    `prepare_2D_profile_data`. Defaults to &#39;linear&#39;.</span>
+
+
 <span class="sd">        Returns:</span>
-<span class="sd">            Array of interpolated values (n_layers, n_profile_points)</span>
+<span class="sd">            A 2D numpy array containing the interpolated values for each layer of</span>
+<span class="sd">            the 3D data along the profile. Shape: (n_layers, n_profile_points).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Or check self.num_points &gt; 0</span>
+             <span class="c1"># Return empty array with correct first dimension if data_3d is not empty</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">data_3d</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">data_3d</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">data_3d</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+
         <span class="k">return</span> <span class="n">prepare_2D_profile_data</span><span class="p">(</span>
-            <span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">XX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">YY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span>
+            <span class="n">data_3d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">XX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">YY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_pro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_pro</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span>
         <span class="p">)</span></div>
 
-    
-<div class="viewcode-block" id="ProfileInterpolator.interpolate_to_mesh">
-<a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.ProfileInterpolator.interpolate_to_mesh">[docs]</a>
-    <span class="k">def</span> <span class="nf">interpolate_to_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">property_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">depth_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">mesh_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">mesh_y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">mesh_markers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">ID</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">layer_markers</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ProfileInterpolator.interpolate_to_mesh"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.ProfileInterpolator.interpolate_to_mesh">[docs]</a>    <span class="k">def</span> <span class="nf">interpolate_to_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                          <span class="n">property_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                          <span class="n">depth_values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="c1"># Depths corresponding to property_values along profile</span>
+                          <span class="n">mesh_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>       <span class="c1"># Mesh cell X coordinates</span>
+                          <span class="n">mesh_y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>       <span class="c1"># Mesh cell Y coordinates (depths)</span>
+                          <span class="n">mesh_markers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="c1"># Mesh cell layer markers</span>
+                          <span class="n">ID</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>           <span class="c1"># Profile data layer/ID markers</span>
+                          <span class="n">layer_markers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Interpolate property values from profile to mesh with layer-specific handling.</span>
-<span class="sd">        </span>
+<span class="sd">        Interpolate property values from the profile representation (distance vs. depth)</span>
+<span class="sd">        to a 2D unstructured mesh, using layer-specific interpolation.</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            property_values: Property values array (n_points or n_layers, n_points)</span>
-<span class="sd">            depth_values: Depth values array (n_layers, n_points)</span>
-<span class="sd">            mesh_x, mesh_y: Coordinates of mesh cells</span>
-<span class="sd">            mesh_markers: Markers indicating different layers in mesh</span>
-<span class="sd">            layer_markers: List of marker values for each layer</span>
-<span class="sd">        </span>
+<span class="sd">            property_values: 1D or 2D numpy array of property values along the profile.</span>
+<span class="sd">                             These values are associated with `self.L_profile` (distance)</span>
+<span class="sd">                             and `depth_values`.</span>
+<span class="sd">            depth_values: 2D numpy array (n_profile_layers, n_profile_points) of depth coordinates</span>
+<span class="sd">                          for the `property_values` along the profile.</span>
+<span class="sd">            mesh_x: 1D numpy array of X-coordinates for mesh cell centers.</span>
+<span class="sd">                    For profile-to-mesh, this is often equivalent to distance along profile.</span>
+<span class="sd">            mesh_y: 1D numpy array of Y-coordinates (depths) for mesh cell centers.</span>
+<span class="sd">            mesh_markers: 1D numpy array of integer markers for each mesh cell,</span>
+<span class="sd">                          indicating its geological layer or region.</span>
+<span class="sd">            ID: 1D or 2D numpy array that maps points in `property_values` and `depth_values`</span>
+<span class="sd">                to specific layers, aligning them with `layer_markers` in the mesh.</span>
+<span class="sd">                Shape should be compatible with `property_values`.</span>
+<span class="sd">            layer_markers: Optional list of integer marker values in `mesh_markers`</span>
+<span class="sd">                           to perform interpolation for. Defaults to [3, 0, 2] if None.</span>
+
 <span class="sd">        Returns:</span>
-<span class="sd">            Interpolated values for mesh cells</span>
+<span class="sd">            1D numpy array of interpolated property values for each cell in the mesh.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">L_profile</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># If profile has no points, cannot interpolate to mesh based on it.</span>
+            <span class="c1"># Return array of NaNs or zeros matching mesh size.</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">mesh_x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
         <span class="k">return</span> <span class="n">interpolate_to_mesh</span><span class="p">(</span>
             <span class="n">property_values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span> <span class="n">depth_values</span><span class="p">,</span>
-            <span class="n">mesh_x</span><span class="p">,</span> <span class="n">mesh_y</span><span class="p">,</span> <span class="n">mesh_markers</span><span class="p">,</span> <span class="n">ID</span><span class="p">,</span><span class="n">layer_markers</span>
-        <span class="p">)</span></div>
-</div>
+            <span class="n">mesh_x</span><span class="p">,</span> <span class="n">mesh_y</span><span class="p">,</span> <span class="n">mesh_markers</span><span class="p">,</span> <span class="n">ID</span><span class="p">,</span> <span class="n">layer_markers</span><span class="o">=</span><span class="n">layer_markers</span>
+        <span class="p">)</span></div></div>
 
 
-
-<div class="viewcode-block" id="create_surface_lines">
-<a class="viewcode-back" href="../../../api/PyHydroGeophysX.core.html#PyHydroGeophysX.create_surface_lines">[docs]</a>
-<span class="k">def</span> <span class="nf">create_surface_lines</span><span class="p">(</span><span class="n">L_profile</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                        <span class="n">structure</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<div class="viewcode-block" id="create_surface_lines"><a class="viewcode-back" href="../../../api/core.html#PyHydroGeophysX.create_surface_lines">[docs]</a><span class="k">def</span> <span class="nf">create_surface_lines</span><span class="p">(</span><span class="n">L_profile</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                        <span class="n">structure_on_profile</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                         <span class="n">top_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                         <span class="n">mid_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
                         <span class="n">bot_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">12</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create surface and boundary lines from structure data</span>
-<span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        L_profile: Distance along profile</span>
-<span class="sd">        structure: Interpolated structure data</span>
-<span class="sd">        top_idx: Index for top surface</span>
-<span class="sd">        mid_idx: Index for middle boundary</span>
-<span class="sd">        bot_idx: Index for bottom boundary</span>
-<span class="sd">        </span>
-<span class="sd">    Returns:</span>
-<span class="sd">        surface: Surface coordinates</span>
-<span class="sd">        line1: First boundary coordinates</span>
-<span class="sd">        line2: Second boundary coordinates</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Extract and reshape structure layers</span>
-    <span class="n">S1</span> <span class="o">=</span> <span class="n">structure</span><span class="p">[</span><span class="n">top_idx</span><span class="p">,:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">S2</span> <span class="o">=</span> <span class="n">structure</span><span class="p">[</span><span class="n">mid_idx</span><span class="p">,:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">S3</span> <span class="o">=</span> <span class="n">structure</span><span class="p">[</span><span class="n">bot_idx</span><span class="p">,:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
-    
-    <span class="c1"># Create coordinate arrays</span>
-    <span class="n">surface</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">L_profile</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">S1</span><span class="p">))</span>
-    <span class="n">line1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">L_profile</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">S2</span><span class="p">))</span>
-    <span class="n">line2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">L_profile</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">S3</span><span class="p">))</span>
-    
-    <span class="c1"># Normalize by maximum elevation</span>
-    <span class="c1">#maxele = np.nanmax(surface[:,1])</span>
-    <span class="n">surface</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">surface</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="c1">#- maxele</span>
-    <span class="n">line1</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">line1</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="c1">#- maxele</span>
-    <span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="c1">#- maxele</span>
-    
-    <span class="k">return</span> <span class="n">surface</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span></div>
+<span class="sd">    Extract specific layer boundaries from interpolated structure data along a profile</span>
+<span class="sd">    to create 2D lines (e.g., for plotting or mesh generation).</span>
 
+<span class="sd">    The function takes structure data (already interpolated onto a profile) and</span>
+<span class="sd">    extracts rows specified by indices to represent different geological surfaces</span>
+<span class="sd">    or boundaries. These are returned as (N, 2) arrays where N is the number</span>
+<span class="sd">    of points along the profile, column 0 is distance along profile, and column 1 is elevation/depth.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        L_profile: 1D numpy array of distances along the profile.</span>
+<span class="sd">        structure_on_profile: 2D numpy array (n_layers, n_profile_points) of interpolated</span>
+<span class="sd">                              values (e.g., elevations or depths) for each layer</span>
+<span class="sd">                              along the profile.</span>
+<span class="sd">        top_idx: Index of the row in `structure_on_profile` that represents the top surface.</span>
+<span class="sd">        mid_idx: Index of the row for a middle boundary/surface.</span>
+<span class="sd">        bot_idx: Index of the row for a bottom boundary/surface.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple containing three (N, 2) numpy arrays:</span>
+<span class="sd">            - surface_line: Coordinates [L_profile, S1_elevations] for the top surface.</span>
+<span class="sd">            - boundary_line1: Coordinates [L_profile, S2_elevations] for the middle boundary.</span>
+<span class="sd">            - boundary_line2: Coordinates [L_profile, S3_elevations] for the bottom boundary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Potential issue: Assumes structure_on_profile has enough layers to satisfy indices.</span>
+    <span class="c1"># Add checks for indices bounds.</span>
+    <span class="n">num_layers</span><span class="p">,</span> <span class="n">num_points</span> <span class="o">=</span> <span class="n">structure_on_profile</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">top_idx</span> <span class="o">&lt;</span> <span class="n">num_layers</span> <span class="ow">and</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">mid_idx</span> <span class="o">&lt;</span> <span class="n">num_layers</span> <span class="ow">and</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">bot_idx</span> <span class="o">&lt;</span> <span class="n">num_layers</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;One or more indices (top_idx=</span><span class="si">{</span><span class="n">top_idx</span><span class="si">}</span><span class="s2">, mid_idx=</span><span class="si">{</span><span class="n">mid_idx</span><span class="si">}</span><span class="s2">, bot_idx=</span><span class="si">{</span><span class="n">bot_idx</span><span class="si">}</span><span class="s2">) &quot;</span>
+                         <span class="sa">f</span><span class="s2">&quot;are out of bounds for structure_on_profile with </span><span class="si">{</span><span class="n">num_layers</span><span class="si">}</span><span class="s2"> layers.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">L_profile</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">num_points</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;L_profile length (</span><span class="si">{</span><span class="n">L_profile</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">) must match &quot;</span>
+                         <span class="sa">f</span><span class="s2">&quot;number of points in structure_on_profile (</span><span class="si">{</span><span class="n">num_points</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Extract specified layers (rows) from the structure data</span>
+    <span class="n">S1_elevations</span> <span class="o">=</span> <span class="n">structure_on_profile</span><span class="p">[</span><span class="n">top_idx</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">S2_elevations</span> <span class="o">=</span> <span class="n">structure_on_profile</span><span class="p">[</span><span class="n">mid_idx</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">S3_elevations</span> <span class="o">=</span> <span class="n">structure_on_profile</span><span class="p">[</span><span class="n">bot_idx</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="c1"># Reshape L_profile to (N,1) for hstack</span>
+    <span class="n">L_profile_col</span> <span class="o">=</span> <span class="n">L_profile</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Create coordinate arrays for each line: [distance_along_profile, elevation/depth]</span>
+    <span class="n">surface_line</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">L_profile_col</span><span class="p">,</span> <span class="n">S1_elevations</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+    <span class="n">boundary_line1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">L_profile_col</span><span class="p">,</span> <span class="n">S2_elevations</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+    <span class="n">boundary_line2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">L_profile_col</span><span class="p">,</span> <span class="n">S3_elevations</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+
+    <span class="c1"># Normalization section (commented out in original):</span>
+    <span class="c1"># The original code includes a commented-out normalization step.</span>
+    <span class="c1"># If normalization is intended, `maxele` should be clearly defined (e.g., np.nanmax(S1_elevations)).</span>
+    <span class="c1"># Example:</span>
+    <span class="c1"># max_elevation = np.nanmax(surface_line[:, 1]) # Or from a global reference</span>
+    <span class="c1"># surface_line[:, 1] -= max_elevation</span>
+    <span class="c1"># boundary_line1[:, 1] -= max_elevation</span>
+    <span class="c1"># boundary_line2[:, 1] -= max_elevation</span>
+    <span class="c1"># This would shift all elevations relative to this max_elevation.</span>
+    <span class="c1"># The current code does not apply any normalization as `maxele` was set to 0 and then lines commented.</span>
+
+    <span class="k">return</span> <span class="n">surface_line</span><span class="p">,</span> <span class="n">boundary_line1</span><span class="p">,</span> <span class="n">boundary_line2</span></div>
 </pre></div>
 
            </div>
