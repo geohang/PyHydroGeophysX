@@ -15,36 +15,35 @@ This is typically the first step in any workflow where you want to
 convert hydrological model outputs to geophysical data.
 """
 
+# sphinx_gallery_thumbnail_number = 2
+
 import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-# For Jupyter notebooks, use the current working directory
+# Setup paths
 try:
-    # For regular Python scripts
     current_dir = os.path.dirname(os.path.abspath(__file__))
 except NameError:
-    # For Jupyter notebooks
     current_dir = os.getcwd()
-# Add the parent directory (OPEN_ERT) to the path
+
 parent_dir = os.path.dirname(os.path.dirname(current_dir))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
 from PyHydroGeophysX.model_output.parflow_output import ParflowSaturation, ParflowPorosity
-
 from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent, MODFLOWPorosity
 
-
-
-# %% [markdown]
-# ## 1. Parflow example
-
-# %%
+###############################################################################
+# 1. ParFlow Example
+# ------------------
+# 
+# Let's start by loading ParFlow data. ParFlow is a physically-based, 
+# three-dimensional model that simulates surface and subsurface flow.
 
 # Path to your Parflow model directory
-current_dir =  os.getcwd()
+current_dir = os.getcwd()
 model_directory = os.path.join(current_dir, "data", "parflow", "test2")
 
 # Load saturation data
@@ -52,7 +51,7 @@ saturation_processor = ParflowSaturation(
     model_directory=model_directory,
     run_name="test2"
 )
-saturation = saturation_processor.load_timestep(200)  # Load first timestep
+saturation = saturation_processor.load_timestep(200)
 
 # Load porosity data
 porosity_processor = ParflowPorosity(
@@ -62,78 +61,98 @@ porosity_processor = ParflowPorosity(
 porosity = porosity_processor.load_porosity()
 
 mask = porosity_processor.load_mask()
-mask.shape
 porosity[mask==0] = np.nan
 saturation[mask==0] = np.nan
 
-# %%
 print(saturation.shape)
-# Plotting the data
+
+###############################################################################
+# Plotting the ParFlow data
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 plt.figure(figsize=(10, 4))
 plt.subplot(1, 2, 1)
 plt.imshow(porosity[19, :, :], cmap='viridis')
 plt.colorbar(label='Porosity')
 plt.gca().invert_yaxis()
+plt.title('ParFlow Porosity (Layer 19)')
+
 plt.subplot(1, 2, 2)
 plt.imshow(saturation[19, :, :], cmap='viridis')
 plt.colorbar(label='Saturation')
 plt.gca().invert_yaxis()
+plt.title('ParFlow Saturation (Layer 19)')
 
-# %% [markdown]
-# ## 2. MODFLOW example
+plt.tight_layout()
+plt.show()
 
-# %%
+###############################################################################
+# The above plot shows the porosity and saturation data from ParFlow simulation.
+# Notice how the values vary spatially across the domain. The porosity shows 
+# the void space available for fluid storage, while saturation indicates how 
+# much of that space is filled with water.
+#
+# .. image:: /auto_examples/images/Ex1_model_output_fig_01.png
+#    :align: center
+#    :width: 600px
 
+###############################################################################
+# 2. MODFLOW Example
+# ------------------
+#
+# MODFLOW is a widely-used groundwater flow model. Here we'll load water content
+# and porosity data from a MODFLOW simulation.
 
-# %%
 # These would be your actual data files
-data_dir = model_directory = os.path.join(current_dir, "data")
+data_dir = os.path.join(current_dir, "data")
 modflow_dir = os.path.join(data_dir, "modflow")
 idomain = np.loadtxt(os.path.join(modflow_dir, "id.txt"))
 
 # Initialize MODFLOW water content processor
 water_content_processor = MODFLOWWaterContent(
-    model_directory=modflow_dir,  # Changed from sim_ws
+    model_directory=modflow_dir,
     idomain=idomain
 )
 
 # Load water content for a specific timestep
 timestep = 1
 water_content = water_content_processor.load_timestep(timestep)
-
 print(water_content.shape)
 
-
-# Path to your MODFLOW model directory
-
-model_name = "TLnewtest2sfb2"  # Your model name
-
-# 1. Create an instance of the MODFLOWPorosity class
+# Load porosity data
+model_name = "TLnewtest2sfb2"
 porosity_loader = MODFLOWPorosity(
     model_directory=modflow_dir,
     model_name=model_name
 )
-# 2. Load the porosity data
 porosity_data = porosity_loader.load_porosity()
 
-# %%
-# Plotting the data
-
+###############################################################################
+# Plotting the MODFLOW data
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 porosity_data1 = porosity_data[0, :, :]
 porosity_data1[idomain==0] = np.nan
 
 plt.figure(figsize=(10, 4))
 plt.subplot(1, 2, 1)
-plt.imshow(porosity_data1[ :, :], cmap='viridis')
+plt.imshow(porosity_data1, cmap='viridis')
 plt.colorbar(label='Porosity')
+plt.title('MODFLOW Porosity')
 
 plt.subplot(1, 2, 2)
 plt.imshow(water_content[0, :, :], cmap='viridis')
 plt.colorbar(label='Water Content')
+plt.title('MODFLOW Water Content')
 
+plt.tight_layout()
+plt.show()
 
-# %%
-
-
-
+###############################################################################
+# The MODFLOW results show the comparison between porosity distribution and 
+# water content. The water content represents the volumetric water content, 
+# which is the product of porosity and saturation.
+#
+# .. image:: /auto_examples/images/Ex1_model_output_fig_02.png
+#    :align: center
+#    :width: 600px

@@ -7,7 +7,6 @@
   <title>model_output package &mdash; PyHydroGeophysX Documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
       <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
       <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
       <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
@@ -22,9 +21,6 @@
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
         <script src="../_static/doctools.js?v=888ff710"></script>
         <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-        <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
-        <script src="../_static/copybutton.js?v=f281be69"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -66,29 +62,29 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#module-model_output.modflow_output">model_output.modflow_output module</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#model_output.modflow_output.binaryread"><code class="docutils literal notranslate"><span class="pre">binaryread()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#model_output.modflow_output.MODFLOWWaterContent"><code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#model_output.modflow_output.MODFLOWPorosity"><code class="docutils literal notranslate"><span class="pre">MODFLOWPorosity</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#model_output.modflow_output.MODFLOWWaterContent"><code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#model_output.modflow_output.binaryread"><code class="docutils literal notranslate"><span class="pre">binaryread()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#module-model_output.parflow_output">model_output.parflow_output module</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#model_output.parflow_output.ParflowOutput"><code class="docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#model_output.parflow_output.ParflowSaturation"><code class="docutils literal notranslate"><span class="pre">ParflowSaturation</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#model_output.parflow_output.ParflowPorosity"><code class="docutils literal notranslate"><span class="pre">ParflowPorosity</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#model_output.parflow_output.ParflowSaturation"><code class="docutils literal notranslate"><span class="pre">ParflowSaturation</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#module-model_output.water_content">model_output.water_content module</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#model_output.water_content.binaryread"><code class="docutils literal notranslate"><span class="pre">binaryread()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#model_output.water_content.MODFLOWWaterContent"><code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#model_output.water_content.binaryread"><code class="docutils literal notranslate"><span class="pre">binaryread()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#module-model_output">Module contents</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#model_output.HydroModelOutput"><code class="docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#model_output.MODFLOWWaterContent"><code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#model_output.MODFLOWPorosity"><code class="docutils literal notranslate"><span class="pre">MODFLOWPorosity</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#model_output.binaryread"><code class="docutils literal notranslate"><span class="pre">binaryread()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#model_output.ParflowSaturation"><code class="docutils literal notranslate"><span class="pre">ParflowSaturation</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#model_output.MODFLOWWaterContent"><code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#model_output.ParflowPorosity"><code class="docutils literal notranslate"><span class="pre">ParflowPorosity</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#model_output.ParflowSaturation"><code class="docutils literal notranslate"><span class="pre">ParflowSaturation</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#model_output.binaryread"><code class="docutils literal notranslate"><span class="pre">binaryread()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -122,7 +118,7 @@
           <li class="breadcrumb-item"><a href="index.html">API Reference</a></li>
       <li class="breadcrumb-item active">model_output package</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com/geohang/PyHydroGeophysX/blob/main/docs/source/api/model_output.rst" class="fa fa-github"> Edit on GitHub</a>
+            <a href="../_sources/api/model_output.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -144,29 +140,29 @@
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
 <p>Base class for all hydrological model outputs.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.base.HydroModelOutput.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.base.HydroModelOutput.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize model output processor.</p>
+<dt class="sig sig-object py" id="model_output.base.HydroModelOutput.calculate_saturation">
+<span class="sig-name descname"><span class="pre">calculate_saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.calculate_saturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.base.HydroModelOutput.calculate_saturation" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate saturation from water content and porosity.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>model_directory</strong> – Path to model output directory</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array</p></li>
+<li><p><strong>porosity</strong> – Porosity value(s)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Saturation array</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.base.HydroModelOutput.load_timestep">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.base.HydroModelOutput.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load data for a specific timestep.</p>
+<dt class="sig sig-object py" id="model_output.base.HydroModelOutput.get_timestep_info">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.base.HydroModelOutput.get_timestep_info" title="Permalink to this definition"></a></dt>
+<dd><p>Get information about each timestep.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
-<li><p><strong>**kwargs</strong> – Additional parameters specific to the model type</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Data array for the specified timestep</p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of timestep information tuples</p>
 </dd>
 </dl>
 </dd></dl>
@@ -190,29 +186,18 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.base.HydroModelOutput.get_timestep_info">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.base.HydroModelOutput.get_timestep_info" title="Permalink to this definition"></a></dt>
-<dd><p>Get information about each timestep.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>List of timestep information tuples</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.base.HydroModelOutput.calculate_saturation">
-<span class="sig-name descname"><span class="pre">calculate_saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.calculate_saturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.base.HydroModelOutput.calculate_saturation" title="Permalink to this definition"></a></dt>
-<dd><p>Calculate saturation from water content and porosity.</p>
+<dt class="sig sig-object py" id="model_output.base.HydroModelOutput.load_timestep">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.base.HydroModelOutput.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load data for a specific timestep.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>water_content</strong> – Water content array</p></li>
-<li><p><strong>porosity</strong> – Porosity value(s)</p></li>
+<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters specific to the model type</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Saturation array</p>
+<dd class="field-even"><p>Data array for the specified timestep</p>
 </dd>
 </dl>
 </dd></dl>
@@ -223,108 +208,19 @@
 <section id="module-model_output.modflow_output">
 <span id="model-output-modflow-output-module"></span><h2>model_output.modflow_output module<a class="headerlink" href="#module-model_output.modflow_output" title="Permalink to this heading"></a></h2>
 <p>Module for processing MODFLOW model outputs.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="model_output.modflow_output.binaryread">
-<span class="sig-prename descclassname"><span class="pre">model_output.modflow_output.</span></span><span class="sig-name descname"><span class="pre">binaryread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vartype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charlen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#binaryread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.binaryread" title="Permalink to this definition"></a></dt>
-<dd><p>Uses numpy to read from binary file. This was found to be faster than the
-struct approach and is used as the default.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>file</strong> – Open file object in binary read mode</p></li>
-<li><p><strong>vartype</strong> – Variable type to read</p></li>
-<li><p><strong>shape</strong> – Shape of the data to read (default: (1,))</p></li>
-<li><p><strong>charlen</strong> – Length of character strings (default: 16)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The read data</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWWaterContent">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.modflow_output.</span></span><span class="sig-name descname"><span class="pre">MODFLOWWaterContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWWaterContent" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#model_output.base.HydroModelOutput" title="model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
-<p>Class for processing water content data from MODFLOW simulations.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWWaterContent.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWWaterContent.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize MODFLOWWaterContent processor.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_directory</strong> – Path to simulation workspace</p></li>
-<li><p><strong>idomain</strong> – Domain array indicating active cells</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWWaterContent.load_timestep">
-<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWWaterContent.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load water content for a specific timestep.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
-<li><p><strong>nlay</strong> – Number of layers in the model</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Water content array with shape (nlay, nrows, ncols)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWWaterContent.load_time_range">
-<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWWaterContent.load_time_range" title="Permalink to this definition"></a></dt>
-<dd><p>Load water content for a range of timesteps.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>start_idx</strong> – Starting timestep index (default: 0)</p></li>
-<li><p><strong>end_idx</strong> – Ending timestep index (exclusive, default: None loads all)</p></li>
-<li><p><strong>nlay</strong> – Number of layers in the model (default: 3)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Water content array with shape (timesteps, nlay, nrows, ncols)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWWaterContent.get_timestep_info">
-<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWWaterContent.get_timestep_info" title="Permalink to this definition"></a></dt>
-<dd><p>Get information about each timestep in the WaterContent file.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>List of tuples (kstp, kper, pertim, totim) for each timestep</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
 <dl class="py class">
 <dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWPorosity">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.modflow_output.</span></span><span class="sig-name descname"><span class="pre">MODFLOWPorosity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWPorosity" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#model_output.base.HydroModelOutput" title="model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
 <p>Class for processing porosity data from MODFLOW simulations.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWPorosity.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWPorosity.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize MODFLOWPorosity processor.</p>
+<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWPorosity.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWPorosity.get_timestep_info" title="Permalink to this definition"></a></dt>
+<dd><p>Get information about each timestep in the model.
+Returns a minimal placeholder since porosity doesn’t vary with time.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_directory</strong> – Path to simulation workspace</p></li>
-<li><p><strong>model_name</strong> – Name of the MODFLOW model</p></li>
-</ul>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List with single dummy timestep info</p>
 </dd>
 </dl>
 </dd></dl>
@@ -336,22 +232,6 @@ struct approach and is used as the default.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>3D array of porosity values (nlay, nrow, ncol)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWPorosity.load_timestep">
-<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWPorosity.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load porosity for a specific timestep.
-Note: For MODFLOW, porosity is typically constant over time,
-so this returns the same array regardless of timestep.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>timestep_idx</strong> – Index of the timestep (unused)</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>3D array of porosity values</p>
 </dd>
 </dl>
 </dd></dl>
@@ -375,17 +255,94 @@ Since porosity is typically constant, this returns a stack of identical arrays.<
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWPorosity.get_timestep_info">
-<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWPorosity.get_timestep_info" title="Permalink to this definition"></a></dt>
-<dd><p>Get information about each timestep in the model.
-Returns a minimal placeholder since porosity doesn’t vary with time.</p>
+<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWPorosity.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWPorosity.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load porosity for a specific timestep.
+Note: For MODFLOW, porosity is typically constant over time,
+so this returns the same array regardless of timestep.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>List with single dummy timestep info</p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timestep_idx</strong> – Index of the timestep (unused)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D array of porosity values</p>
 </dd>
 </dl>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWWaterContent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.modflow_output.</span></span><span class="sig-name descname"><span class="pre">MODFLOWWaterContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWWaterContent" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#model_output.base.HydroModelOutput" title="model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
+<p>Class for processing water content data from MODFLOW simulations.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWWaterContent.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWWaterContent.get_timestep_info" title="Permalink to this definition"></a></dt>
+<dd><p>Get information about each timestep in the WaterContent file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of tuples (kstp, kper, pertim, totim) for each timestep</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWWaterContent.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWWaterContent.load_time_range" title="Permalink to this definition"></a></dt>
+<dd><p>Load water content for a range of timesteps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index (default: 0)</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (exclusive, default: None loads all)</p></li>
+<li><p><strong>nlay</strong> – Number of layers in the model (default: 3)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Water content array with shape (timesteps, nlay, nrows, ncols)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.modflow_output.MODFLOWWaterContent.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.MODFLOWWaterContent.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load water content for a specific timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
+<li><p><strong>nlay</strong> – Number of layers in the model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Water content array with shape (nlay, nrows, ncols)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="model_output.modflow_output.binaryread">
+<span class="sig-prename descclassname"><span class="pre">model_output.modflow_output.</span></span><span class="sig-name descname"><span class="pre">binaryread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vartype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charlen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#binaryread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.modflow_output.binaryread" title="Permalink to this definition"></a></dt>
+<dd><p>Uses numpy to read from binary file. This was found to be faster than the
+struct approach and is used as the default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file</strong> – Open file object in binary read mode</p></li>
+<li><p><strong>vartype</strong> – Variable type to read</p></li>
+<li><p><strong>shape</strong> – Shape of the data to read (default: (1,))</p></li>
+<li><p><strong>charlen</strong> – Length of character strings (default: 16)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The read data</p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -404,27 +361,6 @@ It relies on the <cite>parflow</cite> Python package for PFB reading capabilitie
 identifying available timesteps and interfacing with the <cite>parflow</cite>
 Python package for reading PFB files. Specific data types (like
 saturation, porosity) should be handled by subclasses.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.parflow_output.ParflowOutput.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowOutput.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowOutput.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize ParFlow output processor.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_directory</strong> (<em>str</em>) – Path to the ParFlow simulation output directory.</p></li>
-<li><p><strong>run_name</strong> (<em>str</em>) – The base name of the ParFlow run (e.g., ‘my_run’ if
-output files are like ‘my_run.out.satur.00001.pfb’).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>ImportError</strong> – If the <cite>parflow</cite> Python package is not installed.</p></li>
-<li><p><strong>FileNotFoundError</strong> – If <cite>model_directory</cite> does not exist.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="model_output.parflow_output.ParflowOutput.get_pfb_dimensions">
 <span class="sig-name descname"><span class="pre">get_pfb_dimensions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pfb_file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowOutput.get_pfb_dimensions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowOutput.get_pfb_dimensions" title="Permalink to this definition"></a></dt>
@@ -455,105 +391,6 @@ output files are like ‘my_run.out.satur.00001.pfb’).</p></li>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="model_output.parflow_output.ParflowSaturation">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.parflow_output.</span></span><span class="sig-name descname"><span class="pre">ParflowSaturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowSaturation" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#model_output.parflow_output.ParflowOutput" title="model_output.parflow_output.ParflowOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></p>
-<p>Processes saturation data from ParFlow simulations (.out.satur.*.pfb files).</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.parflow_output.ParflowSaturation.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowSaturation.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize ParFlow saturation processor.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_directory</strong> (<em>str</em>) – Path to the ParFlow simulation output directory.</p></li>
-<li><p><strong>run_name</strong> (<em>str</em>) – The base name of the ParFlow run.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.parflow_output.ParflowSaturation.load_timestep">
-<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowSaturation.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load saturation data for a specific, zero-based timestep index.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>timestep_idx</strong> (<em>int</em>) – The zero-based index of the timestep to load from the
-list of available timesteps discovered during initialization.</p></li>
-<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used by this method).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A 3D NumPy array of saturation values (nz, ny, nx).</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If no timesteps are available or if <cite>timestep_idx</cite> is out of range.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.parflow_output.ParflowSaturation.load_time_range">
-<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowSaturation.load_time_range" title="Permalink to this definition"></a></dt>
-<dd><p>Load saturation data for a specified range of zero-based timestep indices.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>start_idx</strong> (<em>int</em><em>, </em><em>optional</em>) – Starting zero-based timestep index. Defaults to 0.</p></li>
-<li><p><strong>end_idx</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Ending zero-based timestep index (exclusive).
-If None, loads up to the last available timestep.
-Defaults to None.</p></li>
-<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>A 4D NumPy array of saturation values (num_timesteps, nz, ny, nx).</dt><dd><p>Returns an empty 4D array if the range is invalid or no data is found.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If no timesteps are available, or if the specified range is invalid
-    (e.g., <cite>start_idx</cite> out of bounds, <cite>end_idx</cite> &lt;= <cite>start_idx</cite> leading to empty range).</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.parflow_output.ParflowSaturation.get_timestep_info">
-<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowSaturation.get_timestep_info" title="Permalink to this definition"></a></dt>
-<dd><p>Provides information about available ParFlow timesteps.</p>
-<p>For ParFlow, the timestep number from the filename often directly corresponds
-to the simulation time (e.g., if output is every 1 hour, timestep 24 is 24 hours).
-This method returns a list of tuples: (timestep_number, simulation_time).
-Currently, simulation_time is simply cast from timestep_number.
-More accurate time mapping would require parsing ParFlow timing files if complex.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><dl class="simple">
-<dt>A list where each tuple is (timestep_number, time_value).</dt><dd><p>Time_value is float representation of timestep_number.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>List[Tuple[int, float]]</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
 <dt class="sig sig-object py" id="model_output.parflow_output.ParflowPorosity">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.parflow_output.</span></span><span class="sig-name descname"><span class="pre">ParflowPorosity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowPorosity" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#model_output.parflow_output.ParflowOutput" title="model_output.parflow_output.ParflowOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></p>
@@ -561,37 +398,20 @@ More accurate time mapping would require parsing ParFlow timing files if complex
 Porosity in ParFlow is typically static (time-invariant) and stored in a
 single PFB file (e.g., &lt;run_name&gt;.out.porosity.pfb or similar).</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.parflow_output.ParflowPorosity.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowPorosity.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize ParFlow porosity processor.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_directory</strong> (<em>str</em>) – Path to the ParFlow simulation output directory.</p></li>
-<li><p><strong>run_name</strong> (<em>str</em>) – The base name of the ParFlow run.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.parflow_output.ParflowPorosity.load_porosity">
-<span class="sig-name descname"><span class="pre">load_porosity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.load_porosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowPorosity.load_porosity" title="Permalink to this definition"></a></dt>
-<dd><p>Load the static porosity data from the ParFlow model.</p>
-<p>It searches for common ParFlow porosity filename patterns within the
-model directory.</p>
+<dt class="sig sig-object py" id="model_output.parflow_output.ParflowPorosity.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowPorosity.get_timestep_info" title="Permalink to this definition"></a></dt>
+<dd><p>Returns timestep information, typically based on other ParFlow outputs
+(like saturation) as porosity itself is static.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A 3D NumPy array of porosity values (nz, ny, nx).</p>
+<dd class="field-odd"><p><dl class="simple">
+<dt>A list of (timestep_number, time_value) tuples,</dt><dd><p>derived from <cite>self.available_timesteps</cite>.</p>
+</dd>
+</dl>
+</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>np.ndarray</p>
-</dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>FileNotFoundError</strong> – If no standard porosity PFB file can be found.</p></li>
-<li><p><strong>ValueError</strong> – If there’s an error reading or processing the PFB file.</p></li>
-</ul>
+<dd class="field-even"><p>List[Tuple[int, float]]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -622,22 +442,23 @@ The mask file (.out.mask.pfb) indicates active (1) and inactive (0) cells.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.parflow_output.ParflowPorosity.load_timestep">
-<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowPorosity.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load porosity data. For ParFlow, porosity is typically time-invariant.
-This method returns the static porosity array, ignoring <cite>timestep_idx</cite>.</p>
+<dt class="sig sig-object py" id="model_output.parflow_output.ParflowPorosity.load_porosity">
+<span class="sig-name descname"><span class="pre">load_porosity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.load_porosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowPorosity.load_porosity" title="Permalink to this definition"></a></dt>
+<dd><p>Load the static porosity data from the ParFlow model.</p>
+<p>It searches for common ParFlow porosity filename patterns within the
+model directory.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A 3D NumPy array of porosity values (nz, ny, nx).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>timestep_idx</strong> (<em>int</em>) – Index of the timestep (ignored, as porosity is static).</p></li>
-<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used).</p></li>
+<li><p><strong>FileNotFoundError</strong> – If no standard porosity PFB file can be found.</p></li>
+<li><p><strong>ValueError</strong> – If there’s an error reading or processing the PFB file.</p></li>
 </ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A 3D NumPy array of porosity values (nz, ny, nx).</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
 </dd>
 </dl>
 </dd></dl>
@@ -675,20 +496,107 @@ Defaults to None (use all available timesteps).</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.parflow_output.ParflowPorosity.get_timestep_info">
-<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowPorosity.get_timestep_info" title="Permalink to this definition"></a></dt>
-<dd><p>Returns timestep information, typically based on other ParFlow outputs
-(like saturation) as porosity itself is static.</p>
+<dt class="sig sig-object py" id="model_output.parflow_output.ParflowPorosity.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowPorosity.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load porosity data. For ParFlow, porosity is typically time-invariant.
+This method returns the static porosity array, ignoring <cite>timestep_idx</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> (<em>int</em>) – Index of the timestep (ignored, as porosity is static).</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 3D NumPy array of porosity values (nz, ny, nx).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="model_output.parflow_output.ParflowSaturation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.parflow_output.</span></span><span class="sig-name descname"><span class="pre">ParflowSaturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowSaturation" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#model_output.parflow_output.ParflowOutput" title="model_output.parflow_output.ParflowOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></p>
+<p>Processes saturation data from ParFlow simulations (.out.satur.*.pfb files).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.parflow_output.ParflowSaturation.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowSaturation.get_timestep_info" title="Permalink to this definition"></a></dt>
+<dd><p>Provides information about available ParFlow timesteps.</p>
+<p>For ParFlow, the timestep number from the filename often directly corresponds
+to the simulation time (e.g., if output is every 1 hour, timestep 24 is 24 hours).
+This method returns a list of tuples: (timestep_number, simulation_time).
+Currently, simulation_time is simply cast from timestep_number.
+More accurate time mapping would require parsing ParFlow timing files if complex.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p><dl class="simple">
-<dt>A list of (timestep_number, time_value) tuples,</dt><dd><p>derived from <cite>self.available_timesteps</cite>.</p>
+<dt>A list where each tuple is (timestep_number, time_value).</dt><dd><p>Time_value is float representation of timestep_number.</p>
 </dd>
 </dl>
 </p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>List[Tuple[int, float]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.parflow_output.ParflowSaturation.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowSaturation.load_time_range" title="Permalink to this definition"></a></dt>
+<dd><p>Load saturation data for a specified range of zero-based timestep indices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> (<em>int</em><em>, </em><em>optional</em>) – Starting zero-based timestep index. Defaults to 0.</p></li>
+<li><p><strong>end_idx</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Ending zero-based timestep index (exclusive).
+If None, loads up to the last available timestep.
+Defaults to None.</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A 4D NumPy array of saturation values (num_timesteps, nz, ny, nx).</dt><dd><p>Returns an empty 4D array if the range is invalid or no data is found.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If no timesteps are available, or if the specified range is invalid
+    (e.g., <cite>start_idx</cite> out of bounds, <cite>end_idx</cite> &lt;= <cite>start_idx</cite> leading to empty range).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.parflow_output.ParflowSaturation.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.parflow_output.ParflowSaturation.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load saturation data for a specific, zero-based timestep index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> (<em>int</em>) – The zero-based index of the timestep to load from the
+list of available timesteps discovered during initialization.</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used by this method).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 3D NumPy array of saturation values (nz, ny, nx).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If no timesteps are available or if <cite>timestep_idx</cite> is out of range.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -703,36 +611,6 @@ Defaults to None (use all available timesteps).</p></li>
 or very similar to the one in <cite>modflow_output.py</cite> but focused here) for reading
 binary ‘WaterContent’ files produced by MODFLOW’s UZF package. It also includes
 a utility for calculating saturation.</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="model_output.water_content.binaryread">
-<span class="sig-prename descclassname"><span class="pre">model_output.water_content.</span></span><span class="sig-name descname"><span class="pre">binaryread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vartype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">type</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(1,)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charlen</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">void</span></span></span><a class="reference internal" href="../_modules/model_output/water_content.html#binaryread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.water_content.binaryread" title="Permalink to this definition"></a></dt>
-<dd><p>Reads data from an open binary file using numpy.fromfile or file.read.</p>
-<p>Designed for MODFLOW binary output files, handling various data types.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>file_obj</strong> – Open file object in binary read mode.</p></li>
-<li><p><strong>vartype</strong> – Variable type to read (e.g., np.float64, str, or structured dtype list).</p></li>
-<li><p><strong>shape</strong> (<em>Tuple</em><em>[</em><em>int</em><em>, </em><em>...</em><em>]</em><em>, </em><em>optional</em>) – Desired output shape for standard numpy dtypes. Defaults to (1,).</p></li>
-<li><p><strong>charlen</strong> (<em>int</em><em>, </em><em>optional</em>) – Length for string types if <cite>vartype</cite> is <cite>str</cite>. Defaults to 16.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>Data read from file. <cite>bytes</cite> for <cite>str</cite> type,</dt><dd><p><cite>np.ndarray</cite> for standard dtypes, <cite>np.void</cite> for structured.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Union[bytes, np.ndarray, np.void]</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>EOFError</strong> – If EOF is reached unexpectedly while reading data for standard dtypes.</p>
-</dd>
-</dl>
-</dd></dl>
-
 <dl class="py class">
 <dt class="sig sig-object py" id="model_output.water_content.MODFLOWWaterContent">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.water_content.</span></span><span class="sig-name descname"><span class="pre">MODFLOWWaterContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sim_ws</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/water_content.html#MODFLOWWaterContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.water_content.MODFLOWWaterContent" title="Permalink to this definition"></a></dt>
@@ -810,94 +688,6 @@ sequential UZF cell number to (row, col) index.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.water_content.MODFLOWWaterContent.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sim_ws</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/water_content.html#MODFLOWWaterContent.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.water_content.MODFLOWWaterContent.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize MODFLOWWaterContent processor.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sim_ws</strong> (<em>str</em>) – Path to the MODFLOW simulation workspace (directory containing
-the ‘WaterContent’ output file).</p></li>
-<li><p><strong>idomain</strong> (<em>np.ndarray</em>) – A 2D or 3D integer NumPy array indicating active model cells
-(typically, &gt;0 for active, 0 for inactive). If 3D, the
-first layer (index 0) is used for UZF cell mapping, as UZF
-is typically associated with the top model layer.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>TypeError</strong> – If <cite>idomain</cite> is not a NumPy array.</p></li>
-<li><p><strong>ValueError</strong> – If the effective <cite>idomain</cite> (after potentially taking the first slice) is not 2D.</p></li>
-<li><p><strong>FileNotFoundError</strong> – If <cite>sim_ws</cite> directory does not exist.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.water_content.MODFLOWWaterContent.load_timestep">
-<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay_uzf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/water_content.html#MODFLOWWaterContent.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.water_content.MODFLOWWaterContent.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load water content data for a single, specific timestep.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>timestep_idx</strong> (<em>int</em>) – The zero-based index of the timestep to load from the ‘WaterContent’ file.</p></li>
-<li><p><strong>nlay_uzf</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of unsaturated zone layers simulated in UZF,
-which determines how many values are stored per (row, col) UZF cell.
-Defaults to 3. This must match the UZF package configuration.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>A 3D NumPy array of water content values with shape (nlay_uzf, nrows, ncols).</dt><dd><p>Values for inactive grid cells (where idomain &lt;= 0) will be NaN.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>IndexError</strong> – If <cite>timestep_idx</cite> results in no data being loaded (e.g., out of bounds).</p></li>
-<li><p><strong>RuntimeError</strong> – If data loading for the specific timestep fails unexpectedly.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.water_content.MODFLOWWaterContent.load_time_range">
-<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay_uzf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/water_content.html#MODFLOWWaterContent.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.water_content.MODFLOWWaterContent.load_time_range" title="Permalink to this definition"></a></dt>
-<dd><p>Load water content data for a specified range of timesteps from the ‘WaterContent’ file.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>start_idx</strong> (<em>int</em><em>, </em><em>optional</em>) – Zero-based starting timestep index. Defaults to 0.</p></li>
-<li><p><strong>end_idx</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Zero-based ending timestep index (exclusive).
-If None, loads all timesteps from <cite>start_idx</cite> to
-the end of the file. Defaults to None.</p></li>
-<li><p><strong>nlay_uzf</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of unsaturated zone layers in the UZF model.
-This dictates how many data values are read per active UZF cell
-at each timestep. Defaults to 3.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>A 4D NumPy array of water content values, with shape</dt><dd><p>(num_timesteps_loaded, nlay_uzf, nrows, ncols).
-Returns an empty 4D array (shape (0, nlay_uzf, nrows, ncols))
-if no timesteps are loaded or if an error occurs during initial file access.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="model_output.water_content.MODFLOWWaterContent.calculate_saturation">
 <span class="sig-name descname"><span class="pre">calculate_saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/water_content.html#MODFLOWWaterContent.calculate_saturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.water_content.MODFLOWWaterContent.calculate_saturation" title="Permalink to this definition"></a></dt>
 <dd><p>Calculate volumetric saturation from water content and porosity.</p>
@@ -959,6 +749,99 @@ for a timestep:
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.water_content.MODFLOWWaterContent.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay_uzf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/water_content.html#MODFLOWWaterContent.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.water_content.MODFLOWWaterContent.load_time_range" title="Permalink to this definition"></a></dt>
+<dd><p>Load water content data for a specified range of timesteps from the ‘WaterContent’ file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> (<em>int</em><em>, </em><em>optional</em>) – Zero-based starting timestep index. Defaults to 0.</p></li>
+<li><p><strong>end_idx</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Zero-based ending timestep index (exclusive).
+If None, loads all timesteps from <cite>start_idx</cite> to
+the end of the file. Defaults to None.</p></li>
+<li><p><strong>nlay_uzf</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of unsaturated zone layers in the UZF model.
+This dictates how many data values are read per active UZF cell
+at each timestep. Defaults to 3.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A 4D NumPy array of water content values, with shape</dt><dd><p>(num_timesteps_loaded, nlay_uzf, nrows, ncols).
+Returns an empty 4D array (shape (0, nlay_uzf, nrows, ncols))
+if no timesteps are loaded or if an error occurs during initial file access.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.water_content.MODFLOWWaterContent.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay_uzf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/water_content.html#MODFLOWWaterContent.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.water_content.MODFLOWWaterContent.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load water content data for a single, specific timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> (<em>int</em>) – The zero-based index of the timestep to load from the ‘WaterContent’ file.</p></li>
+<li><p><strong>nlay_uzf</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of unsaturated zone layers simulated in UZF,
+which determines how many values are stored per (row, col) UZF cell.
+Defaults to 3. This must match the UZF package configuration.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A 3D NumPy array of water content values with shape (nlay_uzf, nrows, ncols).</dt><dd><p>Values for inactive grid cells (where idomain &lt;= 0) will be NaN.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>IndexError</strong> – If <cite>timestep_idx</cite> results in no data being loaded (e.g., out of bounds).</p></li>
+<li><p><strong>RuntimeError</strong> – If data loading for the specific timestep fails unexpectedly.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="model_output.water_content.binaryread">
+<span class="sig-prename descclassname"><span class="pre">model_output.water_content.</span></span><span class="sig-name descname"><span class="pre">binaryread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vartype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">type</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(1,)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charlen</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">void</span></span></span><a class="reference internal" href="../_modules/model_output/water_content.html#binaryread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.water_content.binaryread" title="Permalink to this definition"></a></dt>
+<dd><p>Reads data from an open binary file using numpy.fromfile or file.read.</p>
+<p>Designed for MODFLOW binary output files, handling various data types.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_obj</strong> – Open file object in binary read mode.</p></li>
+<li><p><strong>vartype</strong> – Variable type to read (e.g., np.float64, str, or structured dtype list).</p></li>
+<li><p><strong>shape</strong> (<em>Tuple</em><em>[</em><em>int</em><em>, </em><em>...</em><em>]</em><em>, </em><em>optional</em>) – Desired output shape for standard numpy dtypes. Defaults to (1,).</p></li>
+<li><p><strong>charlen</strong> (<em>int</em><em>, </em><em>optional</em>) – Length for string types if <cite>vartype</cite> is <cite>str</cite>. Defaults to 16.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Data read from file. <cite>bytes</cite> for <cite>str</cite> type,</dt><dd><p><cite>np.ndarray</cite> for standard dtypes, <cite>np.void</cite> for structured.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Union[bytes, np.ndarray, np.void]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>EOFError</strong> – If EOF is reached unexpectedly while reading data for standard dtypes.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -971,29 +854,29 @@ for a timestep:
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
 <p>Base class for all hydrological model outputs.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.HydroModelOutput.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.HydroModelOutput.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize model output processor.</p>
+<dt class="sig sig-object py" id="model_output.HydroModelOutput.calculate_saturation">
+<span class="sig-name descname"><span class="pre">calculate_saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.calculate_saturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.HydroModelOutput.calculate_saturation" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate saturation from water content and porosity.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>model_directory</strong> – Path to model output directory</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array</p></li>
+<li><p><strong>porosity</strong> – Porosity value(s)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Saturation array</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.HydroModelOutput.load_timestep">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.HydroModelOutput.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load data for a specific timestep.</p>
+<dt class="sig sig-object py" id="model_output.HydroModelOutput.get_timestep_info">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.HydroModelOutput.get_timestep_info" title="Permalink to this definition"></a></dt>
+<dd><p>Get information about each timestep.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
-<li><p><strong>**kwargs</strong> – Additional parameters specific to the model type</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Data array for the specified timestep</p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of timestep information tuples</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1017,96 +900,18 @@ for a timestep:
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.HydroModelOutput.get_timestep_info">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.HydroModelOutput.get_timestep_info" title="Permalink to this definition"></a></dt>
-<dd><p>Get information about each timestep.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>List of timestep information tuples</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.HydroModelOutput.calculate_saturation">
-<span class="sig-name descname"><span class="pre">calculate_saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.calculate_saturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.HydroModelOutput.calculate_saturation" title="Permalink to this definition"></a></dt>
-<dd><p>Calculate saturation from water content and porosity.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>water_content</strong> – Water content array</p></li>
-<li><p><strong>porosity</strong> – Porosity value(s)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Saturation array</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="model_output.MODFLOWWaterContent">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.</span></span><span class="sig-name descname"><span class="pre">MODFLOWWaterContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWWaterContent" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#model_output.base.HydroModelOutput" title="model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
-<p>Class for processing water content data from MODFLOW simulations.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.MODFLOWWaterContent.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWWaterContent.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize MODFLOWWaterContent processor.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_directory</strong> – Path to simulation workspace</p></li>
-<li><p><strong>idomain</strong> – Domain array indicating active cells</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.MODFLOWWaterContent.load_timestep">
-<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWWaterContent.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load water content for a specific timestep.</p>
+<dt class="sig sig-object py" id="model_output.HydroModelOutput.load_timestep">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/base.html#HydroModelOutput.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.HydroModelOutput.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load data for a specific timestep.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
-<li><p><strong>nlay</strong> – Number of layers in the model</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters specific to the model type</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Water content array with shape (nlay, nrows, ncols)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.MODFLOWWaterContent.load_time_range">
-<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWWaterContent.load_time_range" title="Permalink to this definition"></a></dt>
-<dd><p>Load water content for a range of timesteps.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>start_idx</strong> – Starting timestep index (default: 0)</p></li>
-<li><p><strong>end_idx</strong> – Ending timestep index (exclusive, default: None loads all)</p></li>
-<li><p><strong>nlay</strong> – Number of layers in the model (default: 3)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Water content array with shape (timesteps, nlay, nrows, ncols)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.MODFLOWWaterContent.get_timestep_info">
-<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWWaterContent.get_timestep_info" title="Permalink to this definition"></a></dt>
-<dd><p>Get information about each timestep in the WaterContent file.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>List of tuples (kstp, kper, pertim, totim) for each timestep</p>
+<dd class="field-even"><p>Data array for the specified timestep</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1119,15 +924,13 @@ for a timestep:
 <dd><p>Bases: <a class="reference internal" href="#model_output.base.HydroModelOutput" title="model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
 <p>Class for processing porosity data from MODFLOW simulations.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.MODFLOWPorosity.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWPorosity.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize MODFLOWPorosity processor.</p>
+<dt class="sig sig-object py" id="model_output.MODFLOWPorosity.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWPorosity.get_timestep_info" title="Permalink to this definition"></a></dt>
+<dd><p>Get information about each timestep in the model.
+Returns a minimal placeholder since porosity doesn’t vary with time.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_directory</strong> – Path to simulation workspace</p></li>
-<li><p><strong>model_name</strong> – Name of the MODFLOW model</p></li>
-</ul>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List with single dummy timestep info</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1139,22 +942,6 @@ for a timestep:
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>3D array of porosity values (nlay, nrow, ncol)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.MODFLOWPorosity.load_timestep">
-<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWPorosity.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load porosity for a specific timestep.
-Note: For MODFLOW, porosity is typically constant over time,
-so this returns the same array regardless of timestep.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>timestep_idx</strong> – Index of the timestep (unused)</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>3D array of porosity values</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1178,132 +965,70 @@ Since porosity is typically constant, this returns a stack of identical arrays.<
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.MODFLOWPorosity.get_timestep_info">
-<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWPorosity.get_timestep_info" title="Permalink to this definition"></a></dt>
-<dd><p>Get information about each timestep in the model.
-Returns a minimal placeholder since porosity doesn’t vary with time.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>List with single dummy timestep info</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="model_output.binaryread">
-<span class="sig-prename descclassname"><span class="pre">model_output.</span></span><span class="sig-name descname"><span class="pre">binaryread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vartype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charlen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#binaryread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.binaryread" title="Permalink to this definition"></a></dt>
-<dd><p>Uses numpy to read from binary file. This was found to be faster than the
-struct approach and is used as the default.</p>
+<dt class="sig sig-object py" id="model_output.MODFLOWPorosity.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWPorosity.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load porosity for a specific timestep.
+Note: For MODFLOW, porosity is typically constant over time,
+so this returns the same array regardless of timestep.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>file</strong> – Open file object in binary read mode</p></li>
-<li><p><strong>vartype</strong> – Variable type to read</p></li>
-<li><p><strong>shape</strong> – Shape of the data to read (default: (1,))</p></li>
-<li><p><strong>charlen</strong> – Length of character strings (default: 16)</p></li>
-</ul>
+<dd class="field-odd"><p><strong>timestep_idx</strong> – Index of the timestep (unused)</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The read data</p>
+<dd class="field-even"><p>3D array of porosity values</p>
 </dd>
 </dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="model_output.ParflowSaturation">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.</span></span><span class="sig-name descname"><span class="pre">ParflowSaturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowSaturation" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#model_output.parflow_output.ParflowOutput" title="model_output.parflow_output.ParflowOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></p>
-<p>Processes saturation data from ParFlow simulations (.out.satur.*.pfb files).</p>
+<dt class="sig sig-object py" id="model_output.MODFLOWWaterContent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.</span></span><span class="sig-name descname"><span class="pre">MODFLOWWaterContent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idomain</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWWaterContent" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#model_output.base.HydroModelOutput" title="model_output.base.HydroModelOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">HydroModelOutput</span></code></a></p>
+<p>Class for processing water content data from MODFLOW simulations.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.ParflowSaturation.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowSaturation.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize ParFlow saturation processor.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_directory</strong> (<em>str</em>) – Path to the ParFlow simulation output directory.</p></li>
-<li><p><strong>run_name</strong> (<em>str</em>) – The base name of the ParFlow run.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.ParflowSaturation.load_timestep">
-<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowSaturation.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load saturation data for a specific, zero-based timestep index.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>timestep_idx</strong> (<em>int</em>) – The zero-based index of the timestep to load from the
-list of available timesteps discovered during initialization.</p></li>
-<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used by this method).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A 3D NumPy array of saturation values (nz, ny, nx).</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If no timesteps are available or if <cite>timestep_idx</cite> is out of range.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.ParflowSaturation.load_time_range">
-<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowSaturation.load_time_range" title="Permalink to this definition"></a></dt>
-<dd><p>Load saturation data for a specified range of zero-based timestep indices.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>start_idx</strong> (<em>int</em><em>, </em><em>optional</em>) – Starting zero-based timestep index. Defaults to 0.</p></li>
-<li><p><strong>end_idx</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Ending zero-based timestep index (exclusive).
-If None, loads up to the last available timestep.
-Defaults to None.</p></li>
-<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>A 4D NumPy array of saturation values (num_timesteps, nz, ny, nx).</dt><dd><p>Returns an empty 4D array if the range is invalid or no data is found.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If no timesteps are available, or if the specified range is invalid
-    (e.g., <cite>start_idx</cite> out of bounds, <cite>end_idx</cite> &lt;= <cite>start_idx</cite> leading to empty range).</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.ParflowSaturation.get_timestep_info">
-<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowSaturation.get_timestep_info" title="Permalink to this definition"></a></dt>
-<dd><p>Provides information about available ParFlow timesteps.</p>
-<p>For ParFlow, the timestep number from the filename often directly corresponds
-to the simulation time (e.g., if output is every 1 hour, timestep 24 is 24 hours).
-This method returns a list of tuples: (timestep_number, simulation_time).
-Currently, simulation_time is simply cast from timestep_number.
-More accurate time mapping would require parsing ParFlow timing files if complex.</p>
+<dt class="sig sig-object py" id="model_output.MODFLOWWaterContent.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWWaterContent.get_timestep_info" title="Permalink to this definition"></a></dt>
+<dd><p>Get information about each timestep in the WaterContent file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><dl class="simple">
-<dt>A list where each tuple is (timestep_number, time_value).</dt><dd><p>Time_value is float representation of timestep_number.</p>
+<dd class="field-odd"><p>List of tuples (kstp, kper, pertim, totim) for each timestep</p>
 </dd>
 </dl>
-</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.MODFLOWWaterContent.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWWaterContent.load_time_range" title="Permalink to this definition"></a></dt>
+<dd><p>Load water content for a range of timesteps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> – Starting timestep index (default: 0)</p></li>
+<li><p><strong>end_idx</strong> – Ending timestep index (exclusive, default: None loads all)</p></li>
+<li><p><strong>nlay</strong> – Number of layers in the model (default: 3)</p></li>
+</ul>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>List[Tuple[int, float]]</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Water content array with shape (timesteps, nlay, nrows, ncols)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.MODFLOWWaterContent.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/modflow_output.html#MODFLOWWaterContent.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.MODFLOWWaterContent.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load water content for a specific timestep.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> – Index of the timestep to load</p></li>
+<li><p><strong>nlay</strong> – Number of layers in the model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Water content array with shape (nlay, nrows, ncols)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1318,37 +1043,20 @@ More accurate time mapping would require parsing ParFlow timing files if complex
 Porosity in ParFlow is typically static (time-invariant) and stored in a
 single PFB file (e.g., &lt;run_name&gt;.out.porosity.pfb or similar).</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.ParflowPorosity.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowPorosity.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize ParFlow porosity processor.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>model_directory</strong> (<em>str</em>) – Path to the ParFlow simulation output directory.</p></li>
-<li><p><strong>run_name</strong> (<em>str</em>) – The base name of the ParFlow run.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="model_output.ParflowPorosity.load_porosity">
-<span class="sig-name descname"><span class="pre">load_porosity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.load_porosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowPorosity.load_porosity" title="Permalink to this definition"></a></dt>
-<dd><p>Load the static porosity data from the ParFlow model.</p>
-<p>It searches for common ParFlow porosity filename patterns within the
-model directory.</p>
+<dt class="sig sig-object py" id="model_output.ParflowPorosity.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowPorosity.get_timestep_info" title="Permalink to this definition"></a></dt>
+<dd><p>Returns timestep information, typically based on other ParFlow outputs
+(like saturation) as porosity itself is static.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A 3D NumPy array of porosity values (nz, ny, nx).</p>
+<dd class="field-odd"><p><dl class="simple">
+<dt>A list of (timestep_number, time_value) tuples,</dt><dd><p>derived from <cite>self.available_timesteps</cite>.</p>
+</dd>
+</dl>
+</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>np.ndarray</p>
-</dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>FileNotFoundError</strong> – If no standard porosity PFB file can be found.</p></li>
-<li><p><strong>ValueError</strong> – If there’s an error reading or processing the PFB file.</p></li>
-</ul>
+<dd class="field-even"><p>List[Tuple[int, float]]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1379,22 +1087,23 @@ The mask file (.out.mask.pfb) indicates active (1) and inactive (0) cells.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.ParflowPorosity.load_timestep">
-<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowPorosity.load_timestep" title="Permalink to this definition"></a></dt>
-<dd><p>Load porosity data. For ParFlow, porosity is typically time-invariant.
-This method returns the static porosity array, ignoring <cite>timestep_idx</cite>.</p>
+<dt class="sig sig-object py" id="model_output.ParflowPorosity.load_porosity">
+<span class="sig-name descname"><span class="pre">load_porosity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.load_porosity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowPorosity.load_porosity" title="Permalink to this definition"></a></dt>
+<dd><p>Load the static porosity data from the ParFlow model.</p>
+<p>It searches for common ParFlow porosity filename patterns within the
+model directory.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A 3D NumPy array of porosity values (nz, ny, nx).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>np.ndarray</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>timestep_idx</strong> (<em>int</em>) – Index of the timestep (ignored, as porosity is static).</p></li>
-<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used).</p></li>
+<li><p><strong>FileNotFoundError</strong> – If no standard porosity PFB file can be found.</p></li>
+<li><p><strong>ValueError</strong> – If there’s an error reading or processing the PFB file.</p></li>
 </ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A 3D NumPy array of porosity values (nz, ny, nx).</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1432,14 +1141,46 @@ Defaults to None (use all available timesteps).</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="model_output.ParflowPorosity.get_timestep_info">
-<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowPorosity.get_timestep_info" title="Permalink to this definition"></a></dt>
-<dd><p>Returns timestep information, typically based on other ParFlow outputs
-(like saturation) as porosity itself is static.</p>
+<dt class="sig sig-object py" id="model_output.ParflowPorosity.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowPorosity.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowPorosity.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load porosity data. For ParFlow, porosity is typically time-invariant.
+This method returns the static porosity array, ignoring <cite>timestep_idx</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> (<em>int</em>) – Index of the timestep (ignored, as porosity is static).</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 3D NumPy array of porosity values (nz, ny, nx).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="model_output.ParflowSaturation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">model_output.</span></span><span class="sig-name descname"><span class="pre">ParflowSaturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowSaturation" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#model_output.parflow_output.ParflowOutput" title="model_output.parflow_output.ParflowOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></p>
+<p>Processes saturation data from ParFlow simulations (.out.satur.*.pfb files).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.ParflowSaturation.get_timestep_info">
+<span class="sig-name descname"><span class="pre">get_timestep_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.get_timestep_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowSaturation.get_timestep_info" title="Permalink to this definition"></a></dt>
+<dd><p>Provides information about available ParFlow timesteps.</p>
+<p>For ParFlow, the timestep number from the filename often directly corresponds
+to the simulation time (e.g., if output is every 1 hour, timestep 24 is 24 hours).
+This method returns a list of tuples: (timestep_number, simulation_time).
+Currently, simulation_time is simply cast from timestep_number.
+More accurate time mapping would require parsing ParFlow timing files if complex.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p><dl class="simple">
-<dt>A list of (timestep_number, time_value) tuples,</dt><dd><p>derived from <cite>self.available_timesteps</cite>.</p>
+<dt>A list where each tuple is (timestep_number, time_value).</dt><dd><p>Time_value is float representation of timestep_number.</p>
 </dd>
 </dl>
 </p>
@@ -1450,6 +1191,81 @@ Defaults to None (use all available timesteps).</p></li>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.ParflowSaturation.load_time_range">
+<span class="sig-name descname"><span class="pre">load_time_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.load_time_range"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowSaturation.load_time_range" title="Permalink to this definition"></a></dt>
+<dd><p>Load saturation data for a specified range of zero-based timestep indices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_idx</strong> (<em>int</em><em>, </em><em>optional</em>) – Starting zero-based timestep index. Defaults to 0.</p></li>
+<li><p><strong>end_idx</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – Ending zero-based timestep index (exclusive).
+If None, loads up to the last available timestep.
+Defaults to None.</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A 4D NumPy array of saturation values (num_timesteps, nz, ny, nx).</dt><dd><p>Returns an empty 4D array if the range is invalid or no data is found.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If no timesteps are available, or if the specified range is invalid
+    (e.g., <cite>start_idx</cite> out of bounds, <cite>end_idx</cite> &lt;= <cite>start_idx</cite> leading to empty range).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="model_output.ParflowSaturation.load_timestep">
+<span class="sig-name descname"><span class="pre">load_timestep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timestep_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/model_output/parflow_output.html#ParflowSaturation.load_timestep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.ParflowSaturation.load_timestep" title="Permalink to this definition"></a></dt>
+<dd><p>Load saturation data for a specific, zero-based timestep index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timestep_idx</strong> (<em>int</em>) – The zero-based index of the timestep to load from the
+list of available timesteps discovered during initialization.</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional keyword arguments (not used by this method).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 3D NumPy array of saturation values (nz, ny, nx).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If no timesteps are available or if <cite>timestep_idx</cite> is out of range.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="model_output.binaryread">
+<span class="sig-prename descclassname"><span class="pre">model_output.</span></span><span class="sig-name descname"><span class="pre">binaryread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vartype</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(1,)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">charlen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/model_output/modflow_output.html#binaryread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#model_output.binaryread" title="Permalink to this definition"></a></dt>
+<dd><p>Uses numpy to read from binary file. This was found to be faster than the
+struct approach and is used as the default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file</strong> – Open file object in binary read mode</p></li>
+<li><p><strong>vartype</strong> – Variable type to read</p></li>
+<li><p><strong>shape</strong> – Shape of the data to read (default: (1,))</p></li>
+<li><p><strong>charlen</strong> – Length of character strings (default: 16)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The read data</p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>

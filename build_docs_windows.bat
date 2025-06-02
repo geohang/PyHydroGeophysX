@@ -1,66 +1,53 @@
 @echo off
 echo ========================================
-echo PyHydroGeophysX Documentation Builder
+echo Building PyHydroGeophysX Documentation
 echo ========================================
 
-REM Set environment variables
-set PYDEVD_DISABLE_FILE_VALIDATION=1
-set PYTHONFROZENMODULES=off
-set SPHINX_GALLERY_PLOT=False
+REM Install requirements
+pip install sphinx sphinx-rtd-theme sphinx-gallery
 
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo Error: Python is not installed or not in PATH
-    exit /b 1
+REM Create all necessary directories
+mkdir docs\source\_static 2>nul
+mkdir docs\build\html 2>nul
+mkdir docs\build\html\auto_examples 2>nul
+mkdir docs\build\html\auto_examples\images 2>nul
+
+REM Check for figures
+if exist docs\source\auto_examples\images\*.png (
+    echo ✅ Found figures - copying to build locations
+    
+    REM Copy to build directory (where Sphinx expects them)
+    xcopy docs\source\auto_examples\images\*.png docs\build\html\auto_examples\images\ /Y >nul 2>&1
+    
+    REM Also copy to _static for direct access
+    xcopy docs\source\auto_examples\images\*.png docs\source\_static\ /Y >nul 2>&1
+    
+    echo Figures copied successfully
+) else (
+    echo ⚠️  No figures found in docs\source\auto_examples\images\
 )
 
-echo.
-echo 1. Installing documentation requirements...
-pip install sphinx==7.1.2 sphinx-rtd-theme==1.3.0 myst-parser==2.0.0 nbsphinx==0.9.1 sphinx-copybutton==0.5.2 sphinx-gallery==0.14.0 numpy scipy matplotlib tqdm palettable
-if errorlevel 1 (
-    echo Error: Failed to install documentation requirements
-    exit /b 1
-)
-
-echo.
-echo 2. Creating required directories...
-if not exist docs\source\_static mkdir docs\source\_static
-
-echo.
-echo 3. Generating API documentation...
+REM Generate API documentation
 sphinx-apidoc -f -o docs\source\api PyHydroGeophysX
-if errorlevel 1 (
-    echo Error: Failed to generate API documentation
-    exit /b 1
-)
 
-echo.
-echo 4. Building documentation locally...
+REM Build documentation
 cd docs
-sphinx-build -b html source build\html --keep-going
-if errorlevel 1 (
-    echo Warning: Documentation build completed with some errors
-    echo Check the output above for details
-)
+sphinx-build -b html source build\html --keep-going -v
 cd ..
 
-echo.
-echo ========================================
-echo Documentation build completed!
-echo ========================================
-echo.
-echo Local preview: docs\build\html\index.html
-echo.
-
-set /p choice="Open local preview now? (y/n): "
-if /i "%choice%"=="y" (
-    start docs\build\html\index.html
+REM Copy figures again after build (in case Sphinx overwrites)
+if exist docs\source\auto_examples\images\*.png (
+    xcopy docs\source\auto_examples\images\*.png docs\build\html\auto_examples\images\ /Y >nul 2>&1
+    echo Final figure copy completed
 )
 
 echo.
-echo NEXT STEPS TO PUBLISH ONLINE:
-echo 1. Apply all the code fixes provided in the documentation
-echo 2. git add .
-echo 3. git commit -m "Fix documentation build issues"
-echo 4. git push origin main
-echo 5. Your docs will be live at: https://geohang.github.io/PyHydroGeophysX/
+echo ========================================
+echo Build Complete!
+echo ========================================
+echo.
+echo Open: docs\build\html\index.html
+echo Gallery: docs\build\html\auto_examples\index.html
+
+pause
+start docs\build\html\auto_examples\index.html

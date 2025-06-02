@@ -34,24 +34,99 @@ jobs:
         pip install nbsphinx==0.9.1
         pip install sphinx-copybutton==0.5.2
         pip install sphinx-gallery==0.14.0
-        pip install numpy scipy matplotlib tqdm palettable
+        pip install numpy scipy matplotlib tqdm palettable Pillow
         # Install package in development mode with minimal dependencies
         pip install --no-deps -e .
 
-    - name: Create _static directory
+    - name: Create required directories
       run: |
         mkdir -p docs/source/_static
+        mkdir -p docs/source/auto_examples/images
+        mkdir -p docs/source/auto_examples/images/thumb
+
+    - name: Check for pre-generated figures
+      run: |
+        echo "Checking for figures in docs/source/auto_examples/images/"
+        if ls docs/source/auto_examples/images/*.png 1> /dev/null 2>&1; then
+          echo "✅ Found pre-generated figures:"
+          ls -la docs/source/auto_examples/images/ | grep '\.png$' | head -10
+          FIGURE_COUNT=$(ls docs/source/auto_examples/images/*.png | wc -l)
+          echo "Total figures: $FIGURE_COUNT"
+          
+          echo "Checking thumbnails..."
+          if ls docs/source/auto_examples/images/thumb/*.png 1> /dev/null 2>&1; then
+            echo "✅ Found thumbnail images"
+            THUMB_COUNT=$(ls docs/source/auto_examples/images/thumb/*.png | wc -l)
+            echo "Total thumbnails: $THUMB_COUNT"
+          else
+            echo "ℹ️ No thumbnails found - will use auto-generated ones"
+          fi
+        else
+          echo "⚠️ No pre-generated figures found"
+          echo "Examples will show code only without figures"
+        fi
+
+    - name: List example files
+      run: |
+        echo "Available example files:"
+        ls -la examples/Ex*.py || echo "No example files found"
 
     - name: Build documentation
       run: |
         cd docs
-        # Generate API documentation
+        echo "Generating API documentation..."
         sphinx-apidoc -f -o source/api ../PyHydroGeophysX
-        # Build HTML documentation with warnings as errors disabled for gallery
-        sphinx-build -b html source build/html -W --keep-going
-      env:
-        # Set environment variable to disable gallery execution
-        SPHINX_GALLERY_PLOT: "False"
+        
+        echo "Building HTML documentation with Sphinx Gallery..."
+        sphinx-build -b html source build/html --keep-going -v -E
+        
+        echo "Build completed with exit code: $?"
+
+    - name: Check build results
+      run: |
+        echo "Checking build outputs..."
+        
+        if [ -f docs/build/html/index.html ]; then
+          echo "✅ Main documentation built successfully"
+        else
+          echo "❌ Main documentation not found"
+        fi
+        
+        if [ -f docs/build/html/auto_examples/index.html ]; then
+          echo "✅ Examples gallery created"
+          
+          # Count example pages
+          EXAMPLE_COUNT=$(find docs/build/html/auto_examples/ -name "Ex*.html" | wc -l)
+          echo "Example pages generated: $EXAMPLE_COUNT"
+          
+          # Check for figures in build
+          if ls docs/build/html/auto_examples/images/*.png 1> /dev/null 2>&1; then
+            BUILD_FIGURE_COUNT=$(ls docs/build/html/auto_examples/images/*.png | wc -l)
+            echo "✅ Figures included in build: $BUILD_FIGURE_COUNT"
+          else
+            echo "ℹ️ No figures in build directory"
+          fi
+        else
+          echo "⚠️ Examples gallery not found"
+        fi
+        
+        # List some key files for debugging
+        echo "Key documentation files:"
+        find docs/build/html -name "*.html" -type f | head -10
+
+    - name: Verify Sphinx Gallery output
+      run: |
+        echo "Sphinx Gallery specific checks..."
+        
+        if [ -d docs/build/html/auto_examples ]; then
+          echo "Gallery directory structure:"
+          find docs/build/html/auto_examples -type f -name "*.html" | head -5
+          
+          if [ -d docs/build/html/auto_examples/images ]; then
+            echo "Images directory exists in build"
+            ls docs/build/html/auto_examples/images/ | head -5
+          fi
+        fi
 
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -60,3 +135,10 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/build/html
         force_orphan: true
+
+    - name: Comment deployment info
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        echo "🚀 Documentation deployed to GitHub Pages"
+        echo "📖 View at: https://geohang.github.io/PyHydroGeophysX/"
+        echo "🎯 Examples: https://geohang.github.io/PyHydroGeophysX/auto_examples/"

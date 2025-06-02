@@ -7,7 +7,6 @@
   <title>petrophysics package &mdash; PyHydroGeophysX Documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
       <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
       <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
       <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
@@ -22,9 +21,6 @@
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
         <script src="../_static/doctools.js?v=888ff710"></script>
         <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-        <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
-        <script src="../_static/copybutton.js?v=f281be69"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -63,17 +59,17 @@
 <li class="toctree-l2 current"><a class="current reference internal" href="#">petrophysics package</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-petrophysics.resistivity_models">petrophysics.resistivity_models module</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#petrophysics.resistivity_models.water_content_to_resistivity"><code class="docutils literal notranslate"><span class="pre">water_content_to_resistivity()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#petrophysics.resistivity_models.resistivity_to_water_content"><code class="docutils literal notranslate"><span class="pre">resistivity_to_water_content()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#petrophysics.resistivity_models.resistivity_to_saturation"><code class="docutils literal notranslate"><span class="pre">resistivity_to_saturation()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#petrophysics.resistivity_models.resistivity_to_water_content"><code class="docutils literal notranslate"><span class="pre">resistivity_to_water_content()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#petrophysics.resistivity_models.water_content_to_resistivity"><code class="docutils literal notranslate"><span class="pre">water_content_to_resistivity()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#module-petrophysics.velocity_models">petrophysics.velocity_models module</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#petrophysics.velocity_models.BaseVelocityModel"><code class="docutils literal notranslate"><span class="pre">BaseVelocityModel</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#petrophysics.velocity_models.VRHModel"><code class="docutils literal notranslate"><span class="pre">VRHModel</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#petrophysics.velocity_models.BrieModel"><code class="docutils literal notranslate"><span class="pre">BrieModel</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#petrophysics.velocity_models.DEMModel"><code class="docutils literal notranslate"><span class="pre">DEMModel</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#petrophysics.velocity_models.HertzMindlinModel"><code class="docutils literal notranslate"><span class="pre">HertzMindlinModel</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#petrophysics.velocity_models.VRHModel"><code class="docutils literal notranslate"><span class="pre">VRHModel</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#petrophysics.velocity_models.VRH_model"><code class="docutils literal notranslate"><span class="pre">VRH_model()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#petrophysics.velocity_models.satK"><code class="docutils literal notranslate"><span class="pre">satK()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#petrophysics.velocity_models.velDEM"><code class="docutils literal notranslate"><span class="pre">velDEM()</span></code></a></li>
@@ -111,7 +107,7 @@
           <li class="breadcrumb-item"><a href="index.html">API Reference</a></li>
       <li class="breadcrumb-item active">petrophysics package</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com/geohang/PyHydroGeophysX/blob/main/docs/source/api/petrophysics.rst" class="fa fa-github"> Edit on GitHub</a>
+            <a href="../_sources/api/petrophysics.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -139,21 +135,20 @@
 - n is the saturation exponent</p>
 <p>The resistivity is the reciprocal of conductivity: ρ = 1/σ</p>
 <dl class="py function">
-<dt class="sig sig-object py" id="petrophysics.resistivity_models.water_content_to_resistivity">
-<span class="sig-prename descclassname"><span class="pre">petrophysics.resistivity_models.</span></span><span class="sig-name descname"><span class="pre">water_content_to_resistivity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_sur</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/petrophysics/resistivity_models.html#water_content_to_resistivity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.resistivity_models.water_content_to_resistivity" title="Permalink to this definition"></a></dt>
-<dd><p>Convert water content to resistivity using Waxman-Smits model.</p>
+<dt class="sig sig-object py" id="petrophysics.resistivity_models.resistivity_to_saturation">
+<span class="sig-prename descclassname"><span class="pre">petrophysics.resistivity_models.</span></span><span class="sig-name descname"><span class="pre">resistivity_to_saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resistivity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_sur</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/petrophysics/resistivity_models.html#resistivity_to_saturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.resistivity_models.resistivity_to_saturation" title="Permalink to this definition"></a></dt>
+<dd><p>Convert resistivity to saturation using Waxman-Smits model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>water_content</strong> (<em>array</em>) – Volumetric water content (θ)</p></li>
+<li><p><strong>resistivity</strong> (<em>array</em>) – Resistivity values</p></li>
 <li><p><strong>rhos</strong> (<em>float</em>) – Saturated resistivity without surface effects</p></li>
 <li><p><strong>n</strong> (<em>float</em>) – Saturation exponent</p></li>
-<li><p><strong>porosity</strong> (<em>array</em>) – Porosity values (φ)</p></li>
 <li><p><strong>sigma_sur</strong> (<em>float</em>) – Surface conductivity. Default is 0 (no surface effects).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Resistivity values</p>
+<dd class="field-even"><p>Saturation values</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>array</p>
@@ -185,20 +180,21 @@
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="petrophysics.resistivity_models.resistivity_to_saturation">
-<span class="sig-prename descclassname"><span class="pre">petrophysics.resistivity_models.</span></span><span class="sig-name descname"><span class="pre">resistivity_to_saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resistivity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_sur</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/petrophysics/resistivity_models.html#resistivity_to_saturation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.resistivity_models.resistivity_to_saturation" title="Permalink to this definition"></a></dt>
-<dd><p>Convert resistivity to saturation using Waxman-Smits model.</p>
+<dt class="sig sig-object py" id="petrophysics.resistivity_models.water_content_to_resistivity">
+<span class="sig-prename descclassname"><span class="pre">petrophysics.resistivity_models.</span></span><span class="sig-name descname"><span class="pre">water_content_to_resistivity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_sur</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/petrophysics/resistivity_models.html#water_content_to_resistivity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.resistivity_models.water_content_to_resistivity" title="Permalink to this definition"></a></dt>
+<dd><p>Convert water content to resistivity using Waxman-Smits model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>resistivity</strong> (<em>array</em>) – Resistivity values</p></li>
+<li><p><strong>water_content</strong> (<em>array</em>) – Volumetric water content (θ)</p></li>
 <li><p><strong>rhos</strong> (<em>float</em>) – Saturated resistivity without surface effects</p></li>
 <li><p><strong>n</strong> (<em>float</em>) – Saturation exponent</p></li>
+<li><p><strong>porosity</strong> (<em>array</em>) – Porosity values (φ)</p></li>
 <li><p><strong>sigma_sur</strong> (<em>float</em>) – Surface conductivity. Default is 0 (no surface effects).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Saturation values</p>
+<dd class="field-even"><p>Resistivity values</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>array</p>
@@ -216,12 +212,6 @@
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Base class for seismic velocity models.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="petrophysics.velocity_models.BaseVelocityModel.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#BaseVelocityModel.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.BaseVelocityModel.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize base velocity model.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="petrophysics.velocity_models.BaseVelocityModel.calculate_velocity">
 <span class="sig-name descname"><span class="pre">calculate_velocity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#BaseVelocityModel.calculate_velocity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.BaseVelocityModel.calculate_velocity" title="Permalink to this definition"></a></dt>
 <dd><p>Calculate seismic velocity from rock properties.</p>
@@ -238,72 +228,10 @@
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="petrophysics.velocity_models.VRHModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">petrophysics.velocity_models.</span></span><span class="sig-name descname"><span class="pre">VRHModel</span></span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#VRHModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.VRHModel" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#petrophysics.velocity_models.BaseVelocityModel" title="petrophysics.velocity_models.BaseVelocityModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseVelocityModel</span></code></a></p>
-<p>Voigt-Reuss-Hill (VRH) mixing model for effective elastic properties of composites.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="petrophysics.velocity_models.VRHModel.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#VRHModel.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.VRHModel.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize VRH model.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="petrophysics.velocity_models.VRHModel.calculate_properties">
-<span class="sig-name descname"><span class="pre">calculate_properties</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bulk_moduli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shear_moduli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">densities</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#VRHModel.calculate_properties"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.VRHModel.calculate_properties" title="Permalink to this definition"></a></dt>
-<dd><p>Calculate effective elastic properties using the VRH model.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>fractions</strong> – Volume fractions of each mineral (must sum to 1)</p></li>
-<li><p><strong>bulk_moduli</strong> – Bulk moduli of each mineral (GPa)</p></li>
-<li><p><strong>shear_moduli</strong> – Shear moduli of each mineral (GPa)</p></li>
-<li><p><strong>densities</strong> – Densities of each mineral (kg/m³)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Effective bulk modulus (GPa), effective shear modulus (GPa), and effective density (kg/m³)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="petrophysics.velocity_models.VRHModel.calculate_velocity">
-<span class="sig-name descname"><span class="pre">calculate_velocity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bulk_moduli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shear_moduli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">densities</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#VRHModel.calculate_velocity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.VRHModel.calculate_velocity" title="Permalink to this definition"></a></dt>
-<dd><p>Calculate P-wave and S-wave velocities using the VRH model.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>fractions</strong> – Volume fractions of each mineral (must sum to 1)</p></li>
-<li><p><strong>bulk_moduli</strong> – Bulk moduli of each mineral (GPa)</p></li>
-<li><p><strong>shear_moduli</strong> – Shear moduli of each mineral (GPa)</p></li>
-<li><p><strong>densities</strong> – Densities of each mineral (kg/m³)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>P-wave velocity (m/s) and S-wave velocity (m/s)</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
 <dt class="sig sig-object py" id="petrophysics.velocity_models.BrieModel">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">petrophysics.velocity_models.</span></span><span class="sig-name descname"><span class="pre">BrieModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exponent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#BrieModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.BrieModel" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Brie’s model for calculating the effective bulk modulus of a partially saturated medium.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="petrophysics.velocity_models.BrieModel.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exponent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#BrieModel.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.BrieModel.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize Brie’s model.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>exponent</strong> – Brie’s exponent (default: 3.0)</p>
-</dd>
-</dl>
-</dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="petrophysics.velocity_models.BrieModel.calculate_fluid_modulus">
 <span class="sig-name descname"><span class="pre">calculate_fluid_modulus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">saturation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">water_modulus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gas_modulus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#BrieModel.calculate_fluid_modulus"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.BrieModel.calculate_fluid_modulus" title="Permalink to this definition"></a></dt>
@@ -352,12 +280,6 @@
 <p>Differential Effective Medium (DEM) model for calculating elastic properties
 and seismic velocities of porous rocks.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="petrophysics.velocity_models.DEMModel.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#DEMModel.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.DEMModel.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize DEM model.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="petrophysics.velocity_models.DEMModel.calculate_velocity">
 <span class="sig-name descname"><span class="pre">calculate_velocity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">saturation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bulk_modulus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shear_modulus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mineral_density</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aspect_ratio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#DEMModel.calculate_velocity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.DEMModel.calculate_velocity" title="Permalink to this definition"></a></dt>
 <dd><p>Calculate P-wave velocity using the DEM model.</p>
@@ -386,20 +308,6 @@ and seismic velocities of porous rocks.</p>
 <dd><p>Bases: <a class="reference internal" href="#petrophysics.velocity_models.BaseVelocityModel" title="petrophysics.velocity_models.BaseVelocityModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseVelocityModel</span></code></a></p>
 <p>Hertz-Mindlin model and Hashin-Shtrikman bounds for seismic velocity in porous rocks.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="petrophysics.velocity_models.HertzMindlinModel.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">critical_porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordination_number</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#HertzMindlinModel.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.HertzMindlinModel.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize Hertz-Mindlin model.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>critical_porosity</strong> – Critical porosity at which the rock loses matrix connectivity</p></li>
-<li><p><strong>coordination_number</strong> – Average number of contacts per grain</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="petrophysics.velocity_models.HertzMindlinModel.calculate_velocity">
 <span class="sig-name descname"><span class="pre">calculate_velocity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">saturation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bulk_modulus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shear_modulus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mineral_density</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#HertzMindlinModel.calculate_velocity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.HertzMindlinModel.calculate_velocity" title="Permalink to this definition"></a></dt>
 <dd><p>Calculate P-wave velocity for porous rocks.</p>
@@ -416,6 +324,51 @@ and seismic velocities of porous rocks.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Tuple of high-bound P-wave velocity (m/s) and low-bound P-wave velocity (m/s)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="petrophysics.velocity_models.VRHModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">petrophysics.velocity_models.</span></span><span class="sig-name descname"><span class="pre">VRHModel</span></span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#VRHModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.VRHModel" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#petrophysics.velocity_models.BaseVelocityModel" title="petrophysics.velocity_models.BaseVelocityModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseVelocityModel</span></code></a></p>
+<p>Voigt-Reuss-Hill (VRH) mixing model for effective elastic properties of composites.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="petrophysics.velocity_models.VRHModel.calculate_properties">
+<span class="sig-name descname"><span class="pre">calculate_properties</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bulk_moduli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shear_moduli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">densities</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#VRHModel.calculate_properties"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.VRHModel.calculate_properties" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate effective elastic properties using the VRH model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractions</strong> – Volume fractions of each mineral (must sum to 1)</p></li>
+<li><p><strong>bulk_moduli</strong> – Bulk moduli of each mineral (GPa)</p></li>
+<li><p><strong>shear_moduli</strong> – Shear moduli of each mineral (GPa)</p></li>
+<li><p><strong>densities</strong> – Densities of each mineral (kg/m³)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Effective bulk modulus (GPa), effective shear modulus (GPa), and effective density (kg/m³)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="petrophysics.velocity_models.VRHModel.calculate_velocity">
+<span class="sig-name descname"><span class="pre">calculate_velocity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fractions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bulk_moduli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shear_moduli</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">densities</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/petrophysics/velocity_models.html#VRHModel.calculate_velocity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#petrophysics.velocity_models.VRHModel.calculate_velocity" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate P-wave and S-wave velocities using the VRH model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fractions</strong> – Volume fractions of each mineral (must sum to 1)</p></li>
+<li><p><strong>bulk_moduli</strong> – Bulk moduli of each mineral (GPa)</p></li>
+<li><p><strong>shear_moduli</strong> – Shear moduli of each mineral (GPa)</p></li>
+<li><p><strong>densities</strong> – Densities of each mineral (kg/m³)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>P-wave velocity (m/s) and S-wave velocity (m/s)</p>
 </dd>
 </dl>
 </dd></dl>

@@ -7,7 +7,6 @@
   <title>solvers package &mdash; PyHydroGeophysX Documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
       <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
       <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
       <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
@@ -22,9 +21,6 @@
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
         <script src="../_static/doctools.js?v=888ff710"></script>
         <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
-        <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
-        <script src="../_static/copybutton.js?v=f281be69"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -79,7 +75,7 @@
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
       <li class="breadcrumb-item active">solvers package</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com/geohang/PyHydroGeophysX/blob/main/docs/source/api/solvers.rst" class="fa fa-github"> Edit on GitHub</a>
+            <a href="../_sources/api/solvers.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -95,6 +91,143 @@
 <section id="module-solvers.linear_solvers">
 <span id="solvers-linear-solvers-module"></span><h2>solvers.linear_solvers module<a class="headerlink" href="#module-solvers.linear_solvers" title="Permalink to this heading"></a></h2>
 <p>Linear solvers for geophysical inversion.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="solvers.linear_solvers.CGLSSolver">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">CGLSSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#CGLSSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.CGLSSolver" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#solvers.linear_solvers.LinearSolver" title="solvers.linear_solvers.LinearSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearSolver</span></code></a></p>
+<p>CGLS (Conjugate Gradient Least Squares) solver.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="solvers.linear_solvers.IterativeRefinement">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">IterativeRefinement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_double_precision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#IterativeRefinement"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.IterativeRefinement" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Iterative refinement to improve accuracy of a solution to a linear system.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="solvers.linear_solvers.IterativeRefinement.refine">
+<span class="sig-name descname"><span class="pre">refine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">solver_func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#IterativeRefinement.refine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.IterativeRefinement.refine" title="Permalink to this definition"></a></dt>
+<dd><p>Perform iterative refinement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> – System matrix</p></li>
+<li><p><strong>b</strong> – Right-hand side vector</p></li>
+<li><p><strong>x0</strong> – Initial solution</p></li>
+<li><p><strong>solver_func</strong> – Function that solves A*x = b</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Improved solution</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="solvers.linear_solvers.LSQRSolver">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">LSQRSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#LSQRSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.LSQRSolver" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#solvers.linear_solvers.LinearSolver" title="solvers.linear_solvers.LinearSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearSolver</span></code></a></p>
+<p>LSQR solver for least squares problems.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="solvers.linear_solvers.LinearSolver">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">LinearSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cgls'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#LinearSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.LinearSolver" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Base class for linear system solvers.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="solvers.linear_solvers.LinearSolver.solve">
+<span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#LinearSolver.solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.LinearSolver.solve" title="Permalink to this definition"></a></dt>
+<dd><p>Solve linear system Ax = b.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> – System matrix</p></li>
+<li><p><strong>b</strong> – Right-hand side vector</p></li>
+<li><p><strong>x0</strong> – Initial guess (None for zeros)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Solution vector</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="solvers.linear_solvers.RRLSQRSolver">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">RRLSQRSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#RRLSQRSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.RRLSQRSolver" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#solvers.linear_solvers.LinearSolver" title="solvers.linear_solvers.LinearSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearSolver</span></code></a></p>
+<p>Regularized LSQR solver.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="solvers.linear_solvers.RRLSSolver">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">RRLSSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#RRLSSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.RRLSSolver" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#solvers.linear_solvers.LinearSolver" title="solvers.linear_solvers.LinearSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearSolver</span></code></a></p>
+<p>Range-Restricted Least Squares solver.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="solvers.linear_solvers.TikhonvRegularization">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">TikhonvRegularization</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">regularization_matrix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regularization_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'identity'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#TikhonvRegularization"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.TikhonvRegularization" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Tikhonov regularization for ill-posed problems.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="solvers.linear_solvers.TikhonvRegularization.apply">
+<span class="sig-name descname"><span class="pre">apply</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">solver</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#TikhonvRegularization.apply"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.TikhonvRegularization.apply" title="Permalink to this definition"></a></dt>
+<dd><p>Apply Tikhonov regularization to the linear system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> – System matrix</p></li>
+<li><p><strong>b</strong> – Right-hand side vector</p></li>
+<li><p><strong>solver</strong> – Solver to use (None for direct solver)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Regularized solution</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="solvers.linear_solvers.TikhonvRegularization.create_regularization_matrix">
+<span class="sig-name descname"><span class="pre">create_regularization_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#TikhonvRegularization.create_regularization_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.TikhonvRegularization.create_regularization_matrix" title="Permalink to this definition"></a></dt>
+<dd><p>Create regularization matrix based on the selected type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>n</strong> – Size of model vector</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Regularization matrix</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="solvers.linear_solvers.direct_solver">
+<span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">direct_solver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'lu'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#direct_solver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.direct_solver" title="Permalink to this definition"></a></dt>
+<dd><p>Solve a linear system using direct methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> – System matrix</p></li>
+<li><p><strong>b</strong> – Right-hand side vector</p></li>
+<li><p><strong>method</strong> – Direct solver method (‘lu’, ‘qr’, ‘svd’, ‘cholesky’)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters for specific methods</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Solution vector</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="solvers.linear_solvers.generalized_solver">
 <span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">generalized_solver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cgls'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxiter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#generalized_solver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.generalized_solver" title="Permalink to this definition"></a></dt>
@@ -133,269 +266,6 @@
 </dd>
 </dl>
 </section>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="solvers.linear_solvers.LinearSolver">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">LinearSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cgls'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#LinearSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.LinearSolver" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Base class for linear system solvers.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.LinearSolver.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cgls'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#LinearSolver.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.LinearSolver.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize solver with computational options.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>method</strong> – Solver method (‘cgls’, ‘lsqr’, ‘rrlsqr’, ‘rrls’)</p></li>
-<li><p><strong>max_iterations</strong> – Maximum number of iterations</p></li>
-<li><p><strong>tolerance</strong> – Convergence tolerance</p></li>
-<li><p><strong>use_gpu</strong> – Whether to use GPU acceleration</p></li>
-<li><p><strong>parallel</strong> – Whether to use parallel computation</p></li>
-<li><p><strong>n_jobs</strong> – Number of parallel jobs</p></li>
-<li><p><strong>damping</strong> – Damping parameter</p></li>
-<li><p><strong>verbose</strong> – Whether to print progress</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.LinearSolver.solve">
-<span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#LinearSolver.solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.LinearSolver.solve" title="Permalink to this definition"></a></dt>
-<dd><p>Solve linear system Ax = b.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>A</strong> – System matrix</p></li>
-<li><p><strong>b</strong> – Right-hand side vector</p></li>
-<li><p><strong>x0</strong> – Initial guess (None for zeros)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Solution vector</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="solvers.linear_solvers.CGLSSolver">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">CGLSSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#CGLSSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.CGLSSolver" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#solvers.linear_solvers.LinearSolver" title="solvers.linear_solvers.LinearSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearSolver</span></code></a></p>
-<p>CGLS (Conjugate Gradient Least Squares) solver.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.CGLSSolver.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#CGLSSolver.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.CGLSSolver.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize CGLS solver.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>max_iterations</strong> – Maximum number of iterations</p></li>
-<li><p><strong>tolerance</strong> – Convergence tolerance</p></li>
-<li><p><strong>use_gpu</strong> – Whether to use GPU acceleration</p></li>
-<li><p><strong>parallel</strong> – Whether to use parallel computation</p></li>
-<li><p><strong>n_jobs</strong> – Number of parallel jobs</p></li>
-<li><p><strong>damping</strong> – Damping parameter</p></li>
-<li><p><strong>verbose</strong> – Whether to print progress</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="solvers.linear_solvers.LSQRSolver">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">LSQRSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#LSQRSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.LSQRSolver" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#solvers.linear_solvers.LinearSolver" title="solvers.linear_solvers.LinearSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearSolver</span></code></a></p>
-<p>LSQR solver for least squares problems.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.LSQRSolver.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#LSQRSolver.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.LSQRSolver.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize LSQR solver.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>max_iterations</strong> – Maximum number of iterations</p></li>
-<li><p><strong>tolerance</strong> – Convergence tolerance</p></li>
-<li><p><strong>use_gpu</strong> – Whether to use GPU acceleration</p></li>
-<li><p><strong>parallel</strong> – Whether to use parallel computation</p></li>
-<li><p><strong>n_jobs</strong> – Number of parallel jobs</p></li>
-<li><p><strong>damping</strong> – Damping parameter</p></li>
-<li><p><strong>verbose</strong> – Whether to print progress</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="solvers.linear_solvers.RRLSQRSolver">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">RRLSQRSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#RRLSQRSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.RRLSQRSolver" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#solvers.linear_solvers.LinearSolver" title="solvers.linear_solvers.LinearSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearSolver</span></code></a></p>
-<p>Regularized LSQR solver.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.RRLSQRSolver.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#RRLSQRSolver.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.RRLSQRSolver.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize regularized LSQR solver.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>max_iterations</strong> – Maximum number of iterations</p></li>
-<li><p><strong>tolerance</strong> – Convergence tolerance</p></li>
-<li><p><strong>use_gpu</strong> – Whether to use GPU acceleration</p></li>
-<li><p><strong>parallel</strong> – Whether to use parallel computation</p></li>
-<li><p><strong>n_jobs</strong> – Number of parallel jobs</p></li>
-<li><p><strong>damping</strong> – Damping parameter (regularization strength)</p></li>
-<li><p><strong>verbose</strong> – Whether to print progress</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="solvers.linear_solvers.RRLSSolver">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">RRLSSolver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#RRLSSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.RRLSSolver" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="#solvers.linear_solvers.LinearSolver" title="solvers.linear_solvers.LinearSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">LinearSolver</span></code></a></p>
-<p>Range-Restricted Least Squares solver.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.RRLSSolver.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_jobs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#RRLSSolver.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.RRLSSolver.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize RRLS solver.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>max_iterations</strong> – Maximum number of iterations</p></li>
-<li><p><strong>tolerance</strong> – Convergence tolerance</p></li>
-<li><p><strong>use_gpu</strong> – Whether to use GPU acceleration</p></li>
-<li><p><strong>parallel</strong> – Whether to use parallel computation</p></li>
-<li><p><strong>n_jobs</strong> – Number of parallel jobs</p></li>
-<li><p><strong>damping</strong> – Damping parameter</p></li>
-<li><p><strong>verbose</strong> – Whether to print progress</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="solvers.linear_solvers.direct_solver">
-<span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">direct_solver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'lu'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#direct_solver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.direct_solver" title="Permalink to this definition"></a></dt>
-<dd><p>Solve a linear system using direct methods.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>A</strong> – System matrix</p></li>
-<li><p><strong>b</strong> – Right-hand side vector</p></li>
-<li><p><strong>method</strong> – Direct solver method (‘lu’, ‘qr’, ‘svd’, ‘cholesky’)</p></li>
-<li><p><strong>**kwargs</strong> – Additional parameters for specific methods</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Solution vector</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="solvers.linear_solvers.TikhonvRegularization">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">TikhonvRegularization</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">regularization_matrix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regularization_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'identity'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#TikhonvRegularization"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.TikhonvRegularization" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Tikhonov regularization for ill-posed problems.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.TikhonvRegularization.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">regularization_matrix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regularization_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'identity'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#TikhonvRegularization.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.TikhonvRegularization.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize Tikhonov regularization.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>regularization_matrix</strong> – Custom regularization matrix (if None, one will be generated)</p></li>
-<li><p><strong>alpha</strong> – Regularization parameter</p></li>
-<li><p><strong>regularization_type</strong> – Type of regularization (‘identity’, ‘gradient’, ‘laplacian’)</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.TikhonvRegularization.create_regularization_matrix">
-<span class="sig-name descname"><span class="pre">create_regularization_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#TikhonvRegularization.create_regularization_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.TikhonvRegularization.create_regularization_matrix" title="Permalink to this definition"></a></dt>
-<dd><p>Create regularization matrix based on the selected type.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>n</strong> – Size of model vector</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Regularization matrix</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.TikhonvRegularization.apply">
-<span class="sig-name descname"><span class="pre">apply</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">solver</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#TikhonvRegularization.apply"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.TikhonvRegularization.apply" title="Permalink to this definition"></a></dt>
-<dd><p>Apply Tikhonov regularization to the linear system.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>A</strong> – System matrix</p></li>
-<li><p><strong>b</strong> – Right-hand side vector</p></li>
-<li><p><strong>solver</strong> – Solver to use (None for direct solver)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Regularized solution</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="solvers.linear_solvers.IterativeRefinement">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">solvers.linear_solvers.</span></span><span class="sig-name descname"><span class="pre">IterativeRefinement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_double_precision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#IterativeRefinement"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.IterativeRefinement" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Iterative refinement to improve accuracy of a solution to a linear system.</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.IterativeRefinement.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_double_precision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#IterativeRefinement.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.IterativeRefinement.__init__" title="Permalink to this definition"></a></dt>
-<dd><p>Initialize iterative refinement.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>max_iterations</strong> – Maximum number of refinement iterations</p></li>
-<li><p><strong>tolerance</strong> – Convergence tolerance</p></li>
-<li><p><strong>use_double_precision</strong> – Whether to use double precision for residual</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="solvers.linear_solvers.IterativeRefinement.refine">
-<span class="sig-name descname"><span class="pre">refine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">solver_func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/solvers/linear_solvers.html#IterativeRefinement.refine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#solvers.linear_solvers.IterativeRefinement.refine" title="Permalink to this definition"></a></dt>
-<dd><p>Perform iterative refinement.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>A</strong> – System matrix</p></li>
-<li><p><strong>b</strong> – Right-hand side vector</p></li>
-<li><p><strong>x0</strong> – Initial solution</p></li>
-<li><p><strong>solver_func</strong> – Function that solves A*x = b</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Improved solution</p>
-</dd>
-</dl>
-</dd></dl>
-
 </dd></dl>
 
 <dl class="py function">
