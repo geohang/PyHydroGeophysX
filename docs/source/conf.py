@@ -101,7 +101,7 @@ html_theme_options = {
 
 html_context = {
     "display_github": True,
-    "github_user": "YOUR_GITHUB_USERNAME",
+    "github_user": "geohang",
     "github_repo": "PyHydroGeophysX",
     "github_version": "main",
     "conf_py_path": "/docs/source/",
