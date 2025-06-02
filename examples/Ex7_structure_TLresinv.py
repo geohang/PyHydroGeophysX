@@ -45,7 +45,8 @@ from PyHydroGeophysX.inversion.windowed import WindowedTimeLapseERTInversion
 
 
 
-data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres"
+data_dir = os.path.join(current_dir, "results","TL_measurements","appres")
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres"
 
 # List of ERT data files testing monthly time-lapse inversion
 ert_files = [
@@ -74,7 +75,8 @@ measurement_times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]  # Adjust based on y
 # Create a mesh for the inversion (or load an existing one)
 data = ert.load(os.path.join(data_dir, ert_files[0]))
 ert_manager = ert.ERTManager(data)
-mesh_with_interface = pg.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms")
+mesh_with_interface = pg.load(os.path.join(current_dir, "results","Structure_WC","mesh_with_interface.bms"))
+    #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms")
 
 
 # %%
@@ -120,10 +122,13 @@ result.all_coverage = np.array(result.all_coverage)
 result.all_coverage.shape
 
 # %%
-np.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy", result.final_models[result.mesh.cellMarkers(),:])
-np.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy", result.all_coverage[:,result.mesh.cellMarkers()])
-result.mesh.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms")
 
+np.save(os.path.join(current_dir, "results","Structure_WC","resmodel.npy"), result.final_models[result.mesh.cellMarkers(),:])
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy"
+np.save(os.path.join(current_dir, "results","Structure_WC","all_coverage.npy"), result.all_coverage[:,result.mesh.cellMarkers()])
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy"
+result.mesh.save(os.path.join(current_dir, "results","Structure_WC","mesh_res.bms"))
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms"
 # %%
 from palettable.lightbartlein.diverging import BlueDarkRed18_18
 import matplotlib.pyplot as plt

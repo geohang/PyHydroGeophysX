@@ -47,7 +47,8 @@ from PyHydroGeophysX.core.mesh_utils import MeshCreator
 from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
 
 # %%
-output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/seismic_example"
+output_dir = os.path.join(current_dir, "results","seismic_example") 
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/seismic_example"
 os.makedirs(output_dir, exist_ok=True)
 
 # %% [markdown]
@@ -57,7 +58,8 @@ os.makedirs(output_dir, exist_ok=True)
 print("Step 1: Follow the workflow to create the mesh and model...")
 
 # These would be your actual data files
-data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
+data_dir = os.path.join(current_dir, "data") 
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 modflow_dir = os.path.join(data_dir, "modflow")
 
 # Load domain information from files
@@ -534,7 +536,8 @@ pg.viewer.mpl.drawSensors(ax1, datasrt.sensors(), diam=0.9,
 # ## Short seismic profiles
 
 # %%
-ttData = tt.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example/synthetic_seismic_data.dat")
+ttData = tt.load(os.path.join(current_dir, "results","workflow_example","synthetic_seismic_data.dat")) 
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example/synthetic_seismic_data.dat"
 TT_short = pg.physics.traveltime.TravelTimeManager()
 mesh_inv1 = TT_short.createMesh(ttData , paraMaxCellSize=2, quality=32, paraDepth = 30.0)
 TT_short.invert(ttData , mesh = mesh_inv,lam=50,

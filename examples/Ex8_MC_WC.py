@@ -41,12 +41,12 @@ if parent_dir not in sys.path:
 from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_saturation
 
 # Extract the inverted resistivity values
-resistivity_values = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy")
-coverage = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy")
+resistivity_values = np.load(os.path.join(current_dir, "results","Structure_WC","resmodel.npy"))
+coverage = np.load(os.path.join(current_dir, "results","Structure_WC","all_coverage.npy"))
 # Extract cell markers from the mesh (to identify different geological layers)
-cell_markers = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy")
-
-mesh = pg.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms")
+cell_markers = np.load(os.path.join(current_dir, "results","Structure_WC","index_marker.npy"))
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy"
+mesh = pg.load(os.path.join(current_dir, "results","Structure_WC","mesh_res.bms"))
 
 # Number of Monte Carlo realizations
 n_realizations = 100
@@ -243,11 +243,15 @@ WC_true = []
 
 for i in np.arange(30,361,30):
     # Extract true water content values for the current timestep
-    true_values = np.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/synwcmodel/synwcmodel"+str(i)+".npy")
+
+    synwcmodel_dir = os.path.join(current_dir, "results", "TL_measurements", "synwcmodel")
+    filename = "synwcmodel" + str(i) + ".npy"
+    file_path = os.path.join(synwcmodel_dir, filename)
+    true_values = np.load(file_path)
       
     # Store the true values for this timestep
     WC_true.append(true_values)
-mesh_true = pg.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/mesh.bms")
+mesh_true = pg.load(os.path.join(current_dir, "results", "TL_measurements", "mesh.bms"))
 WC_true = np.array(WC_true)
 print(WC_true.shape)
 

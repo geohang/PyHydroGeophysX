@@ -54,7 +54,7 @@ from PyHydroGeophysX.Hydro_modular import hydro_to_ert
 
 
 # %%
-script_dir = script_dir = os.getcwd()
+script_dir =  os.getcwd()
 
 output_dir = os.path.join(script_dir, "results", "workflow_example") #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example"
 os.makedirs(output_dir, exist_ok=True)
@@ -738,11 +738,12 @@ plt.tight_layout()
 
 # %%
 # Set up directories
-output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/hydro_to_ert_example"
+output_dir = os.path.join(current_dir, "results", "hydro_to_ert_example")
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/hydro_to_ert_example"
 os.makedirs(output_dir, exist_ok=True)
 
 # Load your data
-data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
+data_dir = os.path.join(current_dir, "data") #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 idomain = np.loadtxt(os.path.join(data_dir, "id.txt"))
 top = np.loadtxt(os.path.join(data_dir, "top.txt"))
 porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
@@ -836,11 +837,11 @@ from PyHydroGeophysX.core.mesh_utils import MeshCreator
 from PyHydroGeophysX.Hydro_modular.hydro_to_srt import hydro_to_srt
 
 # 1. Set up output directory
-output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/srt_example"
+output_dir = os.path.join(current_dir, "results","srt_example") #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/srt_example"
 os.makedirs(output_dir, exist_ok=True)
 
 # Load your data
-data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
+data_dir = os.path.join(current_dir, "data")
 idomain = np.loadtxt(os.path.join(data_dir, "id.txt"))
 top = np.loadtxt(os.path.join(data_dir, "top.txt"))
 porosity = np.load(os.path.join(data_dir, "Porosity.npy"))

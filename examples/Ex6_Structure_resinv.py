@@ -52,7 +52,8 @@ pylab.rcParams.update(params)
 plt.rcParams["font.family"] = "Arial"
 
 # %%
-output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC"
+output_dir = os.path.join(current_dir, "results","Structure_WC")
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC"
 os.makedirs(output_dir, exist_ok=True)
 
 # %% [markdown]
@@ -60,9 +61,10 @@ os.makedirs(output_dir, exist_ok=True)
 
 # %%
 # load seismic data
-ttData = tt.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/workflow_example/synthetic_seismic_data.dat")
+ttData = tt.load(os.path.join(current_dir, "results","workflow_example","synthetic_seismic_data.dat"))
 # load ERT data
-ertData = ert.load("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/TL_measurements/appres/synthetic_data30.dat")
+ertData = ert.load(os.path.join(current_dir, "results","TL_measurements","appres","synthetic_data30.dat"))
+    #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/TL_measurements/appres/synthetic_data30.dat"
 
 # %%
 # ##  Using ERT data to create a mesh to take care of the boundary
@@ -383,7 +385,8 @@ ax.set_xlim([-10,120])
 ax.set_ylim([1580,1630])
 
 # %%
-mesh_with_interface.save("C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms")
+mesh_with_interface.save(os.path.join(current_dir, "results","Structure_WC","mesh_with_interface.bms"))
+#"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms")
 
 
 
