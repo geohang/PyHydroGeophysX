@@ -34,7 +34,6 @@ sphinx_gallery_conf = {
     'expected_failing_examples': [],             # No failing examples
     'image_scrapers': (),                        # Don't try to scrape images from execution
     'first_notebook_cell': '# PyHydroGeophysX Example\n# Figures are pre-generated',
-    'within_subsection_order': 'FileNameSortKey', # Sort by filename
     'show_signature': False,                     # Don't show function signatures
     'backreferences_dir': None,                  # Disable backreferences
     'doc_module': None,                          # Don't try to import modules

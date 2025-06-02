@@ -245,14 +245,15 @@ plt.title('ParFlow Saturation (Layer 19)')
 plt.tight_layout()
 plt.show()
 
-# .. figure:: /auto_examples/images/Ex1_model_output_fig_01.png
-#    :align: center
-#    :width: 80%
-#    :alt: ParFlow porosity and saturation data
+###############################################################################
+# The above plot shows the porosity and saturation data from ParFlow simulation.
+# Notice how the values vary spatially across the domain. The porosity shows 
+# the void space available for fluid storage, while saturation indicates how 
+# much of that space is filled with water.
 #
-#    **Figure 1:** ParFlow porosity (left) and saturation (right) data from layer 19.
-#    The porosity shows the void space available for fluid storage, while saturation
-#    indicates how much of that space is filled with water.
+# .. image:: /auto_examples/images/Ex1_model_output_fig_01.png
+#    :align: center
+#    :width: 600px
 
 ###############################################################################
 # 2. MODFLOW Example
@@ -316,14 +317,14 @@ plt.title('MODFLOW Water Content')
 plt.tight_layout()
 plt.show()
 
-# .. figure:: /auto_examples/images/Ex1_model_output_fig_02.png
-#    :align: center
-#    :width: 80%
-#    :alt: MODFLOW porosity and water content data
+###############################################################################
+# The MODFLOW results show the comparison between porosity distribution and 
+# water content. The water content represents the volumetric water content, 
+# which is the product of porosity and saturation.
 #
-#    **Figure 2:** MODFLOW porosity (left) and water content (right) data.
-#    The water content represents the volumetric water content, which is the
-#    product of porosity and saturation.
+# .. image:: /auto_examples/images/Ex1_model_output_fig_02.png
+#    :align: center
+#    :width: 600px
 
 ###############################################################################
 # Summary and Next Steps
