@@ -1,54 +1,38 @@
 from setuptools import setup, find_packages
 
-# Only core scientific dependencies that are always available
-core_requirements = [
-    "numpy>=1.19.0",
-    "scipy>=1.6.0", 
-    "matplotlib>=3.3.0",
-    "tqdm>=4.50.0",
-]
-
-# All geophysical packages are optional
-geophysics_requirements = [
-    "pygimli",
-    "joblib", 
-    "cupy",
-]
-
-# Documentation requirements
-docs_requirements = [
-    "sphinx>=4.0.0",
-    "sphinx-rtd-theme>=1.0.0",
-    "myst-parser>=0.17.0",
-    "nbsphinx>=0.8.0",
-    "sphinx-copybutton>=0.5.0",
-    "sphinx-gallery>=0.10.0",
-]
-
 setup(
     name="PyHydroGeophysX",
     version="0.1.0",
-    packages=find_packages(),
-    install_requires=core_requirements,  # Only core deps by default
-    extras_require={
-        'full': geophysics_requirements,
-        'geophysics': ['pygimli'],
-        'gpu': ['cupy'],
-        'parallel': ['joblib'],
-        'docs': docs_requirements,
-        'all': geophysics_requirements + docs_requirements,
-    },
     author="Hang Chen",
-    description="A comprehensive package for geophysical modeling and inversion in watershed monitoring",
+    author_email="your_email@example.com",
+    description="A Python package for hydrological-geophysical model integration and inversion.",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    url="https://github.com/geohang/PyHydroGeophysX",
+    packages=find_packages(),
     python_requires=">=3.8",
+    install_requires=[
+        "numpy>=1.19",
+        "scipy>=1.5",
+        "matplotlib>=3.2",
+        "tqdm>=4.0",
+        # Do NOT list pygimli, flopy, cupy, parflow, joblib, meshop, etc. here unless *absolutely required* at import time!
+        # If your package needs these for *optional* features, use 'extras_require' below.
+    ],
+    extras_require={
+        "geophysics": [
+            "pygimli>=1.5",   # Optional, heavy dependencies for real geophysical usage
+            "flopy",
+            "cupy",
+            "parflow",
+            "joblib",
+            "meshop",
+        ]
+    },
+    include_package_data=True,
     classifiers=[
-        "Development Status :: 3 - Alpha",
-        "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
     ],
 )

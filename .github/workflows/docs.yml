@@ -9,23 +9,23 @@ on:
 jobs:
   docs:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
-    
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y pandoc
-    
-    - name: Install only documentation dependencies
+
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install sphinx==7.1.2
@@ -35,66 +35,14 @@ jobs:
         pip install sphinx-copybutton==0.5.2
         pip install sphinx-gallery==0.14.0
         pip install numpy scipy matplotlib tqdm
-        # DO NOT install the package - just add to Python path
-    
-    - name: Add package to Python path
-      run: |
-        echo "PYTHONPATH=$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/PyHydroGeophysX:$PYTHONPATH" >> $GITHUB_ENV
-    
-    - name: Create all necessary directories and data
-      run: |
-        # Create directory structure
-        mkdir -p examples/data
-        mkdir -p examples/results/workflow_example
-        mkdir -p examples/results/TL_measurements/appres
-        mkdir -p examples/results/TL_measurements/synwcmodel
-        mkdir -p examples/results/TL_measurements/synresmodel
-        mkdir -p examples/results/seismic_example
-        mkdir -p examples/results/Structure_WC
-        
-        # Create minimal data files
-        python -c "
-import numpy as np
-import os
+        pip install --no-deps -e .
 
-print('Creating example data...')
-
-# Create basic data arrays
-np.save('examples/data/Watercontent.npy', np.random.rand(12, 3, 50, 40) * 0.3)
-np.save('examples/data/Porosity.npy', np.random.rand(3, 50, 40) * 0.4 + 0.1)
-np.savetxt('examples/data/id.txt', np.ones((50, 40)), fmt='%d')
-np.savetxt('examples/data/top.txt', np.random.rand(50, 40) * 10 + 1600)
-
-# Create bot.npy (15 layers)
-bot_data = np.random.rand(15, 50, 40) * 5 + 1590
-np.save('examples/data/bot.npy', bot_data)
-
-# Create precipitation data
-precip_data = np.random.rand(365) * 10
-np.save('examples/data/precip.npy', precip_data)
-
-# Create some result files that examples might reference
-for i in range(12):
-    np.save(f'examples/results/TL_measurements/synwcmodel/synwcmodel{i*30}.npy', 
-            np.random.rand(2000) * 0.3)
-    np.save(f'examples/results/TL_measurements/synresmodel/synresmodel{i*30}.npy', 
-            np.random.rand(2000) * 1000 + 100)
-
-print('Example data created successfully')
-"
-    
     - name: Build documentation
       run: |
         cd docs
-        # Generate API docs without importing problematic modules
-        sphinx-apidoc -f -o source/api ../PyHydroGeophysX --separate
-        
-        # Build HTML documentation
-        sphinx-build -b html source build/html -v -W --keep-going
-      env:
-        MPLBACKEND: Agg
-        PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/PyHydroGeophysX
-    
+        sphinx-apidoc -f -o source/api ../PyHydroGeophysX
+        sphinx-build -b html source build/html
+
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       uses: peaceiris/actions-gh-pages@v3

@@ -6,71 +6,29 @@ import unittest.mock as mock
 import logging
 logging.getLogger().setLevel(logging.WARNING)
 
-# Add the project root to the Python path
-project_root = os.path.abspath('../../')
-sys.path.insert(0, project_root)
-sys.path.insert(0, os.path.join(project_root, 'PyHydroGeophysX'))
+# Add project root and main package to sys.path
+sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../../PyHydroGeophysX'))
 
-print(f"Python path: {sys.path[:3]}")  # Debug info
-
-# Mock ALL problematic imports before anything else
+# List of heavy/optional modules to mock for doc build
 mock_modules = [
-    # PyGIMLI and related
-    'pygimli', 'pygimli.physics', 'pygimli.physics.ert', 
+    'pygimli', 'pygimli.physics', 'pygimli.physics.ert',
     'pygimli.physics.traveltime', 'pygimli.meshtools',
     'pygimli.viewer', 'pygimli.viewer.mpl', 'pygimli.utils',
-    'pygimli.core', 'pygimli.matrix', 'pygimli.rrng', 
-    'pygimli.rrng.randpin', 'pygimli.manager',
-    
-    # Hydrological modeling
-    'flopy', 'flopy.mf6', 'flopy.modflow', 'flopy.utils',
-    'parflow', 'parflow.tools', 'parflow.tools.io',
-    
-    # GPU and parallel computing
+    'pygimli.core', 'pygimli.matrix', 'flopy', 'parflow',
     'cupy', 'cupyx', 'cupyx.scipy', 'cupyx.scipy.sparse',
-    'joblib', 'multiprocessing',
-    
-    # Other optional dependencies
-    'meshop', 'pygeostat', 'gempy',
-    
-    # Color palettes
-    'palettable', 'palettable.lightbartlein', 
-    'palettable.lightbartlein.diverging',
-    'palettable.cartocolors', 'palettable.cartocolors.diverging',
+    'joblib', 'meshop'
 ]
-
-# Create comprehensive mocks
-class EnhancedMock(mock.MagicMock):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Return self for chained calls
-        self.__getitem__ = mock.MagicMock(return_value=self)
-        self.__setitem__ = mock.MagicMock()
-
 for mod_name in mock_modules:
-    mock_obj = EnhancedMock()
-    
-    # Add specific attributes for known modules
-    if mod_name == 'pygimli':
-        # Add all commonly used pygimli functions and classes
-        attrs = ['show', 'load', 'save', 'Mesh', 'Vector', 'DataContainer', 
-                'randn', 'x', 'y', 'z', 'utils', 'meshtools', 'core', 
-                'matrix', 'physics', 'viewer', 'rrng', 'createGrid',
-                'createData', 'meshtools']
-        for attr in attrs:
-            setattr(mock_obj, attr, EnhancedMock())
-            
-    elif 'palettable' in mod_name:
-        mock_obj.mpl_colormap = EnhancedMock()
-        
-    sys.modules[mod_name] = mock_obj
+    sys.modules[mod_name] = mock.MagicMock()
 
-# Now safe to set up Sphinx
+# -- Project information -----------------------------------------------------
 project = 'PyHydroGeophysX'
 copyright = '2025, Hang Chen'
 author = 'Hang Chen'
 release = '0.1.0'
 
+# -- General configuration ---------------------------------------------------
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
@@ -84,6 +42,10 @@ extensions = [
     'sphinx_gallery.gen_gallery',
 ]
 
+# Napoleon settings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+
 # Autodoc settings
 autodoc_default_options = {
     'members': True,
@@ -92,18 +54,19 @@ autodoc_default_options = {
     'undoc-members': True,
     'exclude-members': '__weakref__'
 }
-
 autodoc_mock_imports = mock_modules
 nbsphinx_allow_errors = True
 
-# Simplified gallery config - no execution
+# Sphinx Gallery configuration
 sphinx_gallery_conf = {
-    'examples_dirs': '../../examples',
-    'gallery_dirs': 'auto_examples',
-    'plot_gallery': False,
-    'download_all_examples': True,
+    'examples_dirs': '../../examples',         # path to your example scripts
+    'gallery_dirs': 'auto_examples',           # path to output gallery
+    'plot_gallery': False,                     # Don't run example scripts
+    'download_all_examples': False,
     'filename_pattern': '/Ex.*\.py$',
-    'ignore_pattern': '__pycache__|\.ipynb$|download_small_data\.py|create_example_data\.py',
+    'ignore_pattern': '__pycache__|\.ipynb$',
+    'expected_failing_examples': [],
+    'capture_repr': (),
     'abort_on_example_error': False,
     'run_stale_examples': False,
 }
@@ -116,11 +79,15 @@ source_suffix = {
     '.md': 'myst_parser',
 }
 
-# HTML output options
+# -- Options for HTML output -------------------------------------------------
 html_theme = 'sphinx_rtd_theme'
+
+# UPDATE these with your GitHub username!
+html_baseurl = 'https://geohang.github.io/PyHydroGeophysX/'
 html_title = 'PyHydroGeophysX Documentation'
 
 html_theme_options = {
+    'canonical_url': 'https://geohang.github.io/PyHydroGeophysX/',
     'logo_only': False,
     'display_version': True,
     'prev_next_buttons_location': 'bottom',
@@ -132,7 +99,12 @@ html_theme_options = {
     'titles_only': False
 }
 
-html_static_path = ['_static']
+html_context = {
+    "display_github": True,
+    "github_user": "YOUR_GITHUB_USERNAME",
+    "github_repo": "PyHydroGeophysX",
+    "github_version": "main",
+    "conf_py_path": "/docs/source/",
+}
 
-# Suppress warnings
-suppress_warnings = ['autodoc', 'autodoc.import_object']
+html_static_path = ['_static']
