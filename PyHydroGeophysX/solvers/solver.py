@@ -1,6 +1,6 @@
 """
 This module previously contained duplicated solver implementations.
-The authoritative implementations have been consolidated into 
+The authoritative implementations have been consolidated into
 `PyHydroGeophysX.solvers.linear_solvers`.
 
 Please import solver functions directly from `linear_solvers`. For example:

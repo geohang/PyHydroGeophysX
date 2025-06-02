@@ -7,9 +7,9 @@ The model accounts for both electrolytic conduction through pore water and
 surface conduction along grain-water interfaces.
 
 The core Waxman-Smits equation for formation conductivity (σ) is:
-    σ_formation = (1/F*) * σ_water * S^n + B * Qv * S^(n-1) / F* 
+    σ_formation = (1/F*) * σ_water * S^n + B * Qv * S^(n-1) / F*
     where F* is formation factor, σ_water is water conductivity, S is saturation,
-    n is saturation exponent, B is equivalent conductance of clay cations, 
+    n is saturation exponent, B is equivalent conductance of clay cations,
     Qv is cation exchange capacity per unit pore volume.
 
 A simplified form used here (as described in the original module docstring) is:
@@ -86,7 +86,7 @@ def water_content_to_resistivity(water_content: ScalarOrArray,
     # Let's assume if porosity is 0, saturation is 0 (if wc is also 0) or undefined (NaN).
     # np.divide handles this by producing nan for 0/0 and inf for x/0 (with warnings).
     saturation = np.divide(wc_arr, por_arr, out=np.full_like(wc_arr, np.nan), where=por_arr!=0)
-    
+
     # Clip saturation to physically meaningful range [0, 1].
     # Handles cases where wc > porosity due to measurement errors or wc < 0.
     saturation = np.clip(saturation, 0.0, 1.0)
@@ -102,9 +102,9 @@ def water_content_to_resistivity(water_content: ScalarOrArray,
     # If S=0 and n>1, S^(n-1) = 0.
     # If S=0 and n<1, S^(n-1) -> inf.
     # Let's handle S=0 for the surface term carefully.
-    
+
     sigma_bulk_part = sigma_sat * (saturation ** n)
-    
+
     sigma_surface_part = np.zeros_like(saturation)
     # Only calculate surface term if sigma_sur is non-zero and saturation > 0,
     # or if n=1 (then S^0 = 1, so it contributes sigma_sur).
@@ -129,7 +129,7 @@ def water_content_to_resistivity(water_content: ScalarOrArray,
             # Assuming n >= 1 for physical validity of this simplified form.
             # If S is very small but non-zero, and n-1 < 0, S^(n-1) can be very large.
             # This is a known behavior of the model for low S if n is not chosen carefully or if sigma_sur is large.
-            
+
             # To prevent issues with 0^(negative power) if n < 1, we can mask:
             non_zero_satur = saturation > 1e-9 # Threshold to avoid numerical issues with very small S
             if n < 1: # n-1 is negative
@@ -141,7 +141,7 @@ def water_content_to_resistivity(water_content: ScalarOrArray,
 
 
     sigma = sigma_bulk_part + sigma_surface_part
-    
+
     # Convert bulk conductivity to bulk resistivity (ρ = 1/σ)
     # Handle potential division by zero if sigma is zero (e.g., if water_content and sigma_sur are both zero).
     # np.divide will produce inf if sigma is 0, which might be desired (infinite resistivity).
@@ -228,7 +228,7 @@ def resistivity_to_saturation(resistivity: ScalarOrArray,
     resistivity_arr = np.atleast_1d(resistivity)
     sigma_sur_arr = np.atleast_1d(sigma_sur)
     n_arr = np.atleast_1d(n)
-    
+
     # Broadcast sigma_sur and n to match the shape of resistivity_array if they are scalar
     # This simplifies element-wise operations in the loop.
     if sigma_sur_arr.shape != resistivity_arr.shape and sigma_sur_arr.size == 1:
@@ -251,7 +251,7 @@ def resistivity_to_saturation(resistivity: ScalarOrArray,
     # For Archie's, if resistivity_arr < rhos, S_initial > 1. If resistivity_arr is very large, S_initial -> 0.
     # Clipping S_initial to [0.01, 1.0] provides a bounded starting point for fsolve.
     # (0.01 instead of 0.0 to avoid issues if n-1 < 0 in the full equation at S=0).
-    
+
     # Suppress warnings for invalid operations (e.g., division by zero if resistivity_arr contains 0)
     # These will result in inf/nan which are handled by clipping or fsolve.
     with np.errstate(divide='ignore', invalid='ignore'):
@@ -264,7 +264,7 @@ def resistivity_to_saturation(resistivity: ScalarOrArray,
     
     # Initialize output saturation array
     saturation_result = np.zeros_like(resistivity_arr, dtype=float)
-    
+
     # Iterate and solve for saturation for each element if inputs are arrays.
     # np.nditer could be used for more complex broadcasting, but direct indexing is fine if shapes match.
     for i in range(resistivity_arr.size):
@@ -289,7 +289,7 @@ def resistivity_to_saturation(resistivity: ScalarOrArray,
             # or where sigma_sat is zero (should not happen if rhos > 0).
             ratio = target_conductivity / sigma_sat
             if ratio < 0: # Non-physical
-                saturation_result[i] = np.nan 
+                saturation_result[i] = np.nan
             elif current_n == 0: # Avoid 0th root; S^0 = 1 implies ratio must be 1.
                  saturation_result[i] = 1.0 if np.isclose(ratio,1.0) else np.nan # Or 0.0 if ratio is 0? Undefined.
             else:
@@ -305,8 +305,8 @@ def resistivity_to_saturation(resistivity: ScalarOrArray,
             def waxman_smits_func(S_var: float) -> float:
                 # S_var is the variable (saturation) we are solving for.
                 # Clip S_var within [0,1] during function evaluation for stability, though fsolve might go outside.
-                S_eval = np.clip(S_var, 0.0, 1.0) 
-                
+                S_eval = np.clip(S_var, 0.0, 1.0)
+
                 term1 = sigma_sat * (S_eval ** current_n)
                 term2 = 0.0
                 # Handle S^(n-1) carefully for S=0 cases
@@ -330,7 +330,7 @@ def resistivity_to_saturation(resistivity: ScalarOrArray,
                            pass # term2 remains 0, or handle as error if n<1 is expected.
                 else: # S_eval > 0
                     term2 = current_sigma_sur * (S_eval ** (current_n - 1))
-                    
+
                 return term1 + term2 - target_conductivity
             
             try:

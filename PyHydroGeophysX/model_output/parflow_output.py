@@ -38,7 +38,7 @@ class ParflowOutput(HydroModelOutput):
         super().__init__(model_directory)
         if not os.path.isdir(self.model_directory):
             raise FileNotFoundError(f"Model directory not found: {self.model_directory}")
-            
+
         self.run_name = run_name
         
         try:
@@ -74,21 +74,21 @@ class ParflowOutput(HydroModelOutput):
                        Returns an empty list if no matching files are found.
         """
         timesteps_set = set() # Use a set to automatically handle duplicates if patterns overlap
-        
+
         # Common ParFlow output file patterns.
         # Files are typically named <run_name>.out.<variable_name>.<timestep_number>.pfb
         # The timestep number is often zero-padded (e.g., 00001, 00002, ...).
         # This pattern tries to capture that.
         # Example: my_run.out.satur.00001.pfb -> timestep 1
         # Example: my_run.out.press.00010.pfb -> timestep 10
-        
+
         # Define patterns to search for. Prioritize saturation files, then pressure if no saturation found.
         # This is heuristic; ParFlow output naming can be configured.
         patterns_to_check = [
             f"{self.run_name}.out.satur.", # Saturation files
             f"{self.run_name}.out.press."  # Pressure files (as fallback for timestep discovery)
         ]
-        
+
         found_primary_pattern = False
         for pattern_prefix in patterns_to_check:
             if found_primary_pattern and pattern_prefix == patterns_to_check[1]: # If already found satur, skip press for discovery
@@ -112,7 +112,7 @@ class ParflowOutput(HydroModelOutput):
                     except IndexError: # If split by '.' results in empty list (shouldn't happen with .pfb)
                         # print(f"Warning: Could not parse timestep due to unexpected filename structure: {filename}")
                         continue
-        
+
         return sorted(list(timesteps_set)) # Return sorted list of unique timesteps
     
     def get_pfb_dimensions(self, pfb_file_path: str) -> Tuple[int, int, int]:
@@ -132,14 +132,14 @@ class ParflowOutput(HydroModelOutput):
         """
         if not os.path.exists(pfb_file_path):
             raise FileNotFoundError(f"PFB file not found: {pfb_file_path}")
-        
+
         # self.read_pfb is `parflow.tools.io.read_pfb`
         # This function typically returns a NumPy array.
         data_array = self.read_pfb(pfb_file_path)
         if not isinstance(data_array, np.ndarray):
             # Should not happen if read_pfb works as expected.
             raise TypeError(f"Expected NumPy array from read_pfb, got {type(data_array)} for file {pfb_file_path}")
-        
+
         # ParFlow PFB files usually store data in (nz, ny, nx) order.
         if data_array.ndim != 3:
             # Potential Issue: If data is not 3D (e.g., 2D slice, or 1D output).
@@ -150,7 +150,7 @@ class ParflowOutput(HydroModelOutput):
             if data_array.ndim == 2: return (1, data_array.shape[0], data_array.shape[1])
             # If > 3D, this is unexpected for standard ParFlow scalar outputs.
             raise ValueError(f"PFB file '{pfb_file_path}' has unsupported data dimensionality: {data_array.ndim}")
-            
+
         return data_array.shape # Returns (nz, ny, nx)
 
 
@@ -218,7 +218,7 @@ class ParflowSaturation(ParflowOutput):
         # This seems like a reasonable fallback.
         satur_filename_padded = f"{self.run_name}.out.satur.{timestep_number:05d}.pfb"
         satur_file_path_padded = os.path.join(self.model_directory, satur_filename_padded)
-        
+
         satur_filename_unpadded = f"{self.run_name}.out.satur.{timestep_number}.pfb"
         satur_file_path_unpadded = os.path.join(self.model_directory, satur_filename_unpadded)
 
@@ -231,7 +231,7 @@ class ParflowSaturation(ParflowOutput):
             raise FileNotFoundError(
                 f"Saturation file for timestep {timestep_number} not found. "
                 f"Checked: '{satur_file_path_padded}' and '{satur_file_path_unpadded}'.")
-        
+
         try:
             saturation_data = self.read_pfb(chosen_path) # Use the instance's PFB reader
             
@@ -240,7 +240,7 @@ class ParflowSaturation(ParflowOutput):
             # The threshold -1e38 is from the original code.
             # Potential Improvement: This threshold might need to be more robust or configurable
             # if ParFlow's no-data value representation varies.
-            saturation_data[saturation_data < -1e38] = np.nan 
+            saturation_data[saturation_data < -1e38] = np.nan
             
             return saturation_data
         except Exception as e: # Catch errors from read_pfb or subsequent numpy operations
@@ -260,7 +260,7 @@ class ParflowSaturation(ParflowOutput):
         Returns:
             np.ndarray: A 4D NumPy array of saturation values (num_timesteps, nz, ny, nx).
                         Returns an empty 4D array if the range is invalid or no data is found.
-        
+
         Raises:
             ValueError: If no timesteps are available, or if the specified range is invalid
                         (e.g., `start_idx` out of bounds, `end_idx` <= `start_idx` leading to empty range).
@@ -280,7 +280,7 @@ class ParflowSaturation(ParflowOutput):
                 actual_end_idx = len(self.available_timesteps) + end_idx
             else: # Positive or zero
                 actual_end_idx = min(end_idx, len(self.available_timesteps))
-        
+
         if actual_end_idx <= start_idx:
             # print(f"Warning: Requested time range (start_idx={start_idx}, end_idx={end_idx} -> actual_end_idx={actual_end_idx}) is empty or invalid.")
             # Return empty array with expected dimensions if possible (need to know spatial dims first)
@@ -295,7 +295,7 @@ class ParflowSaturation(ParflowOutput):
 
         # Get the list of actual ParFlow timestep numbers to load based on indices
         timesteps_to_load_numbers = self.available_timesteps[start_idx:actual_end_idx]
-        
+
         if not timesteps_to_load_numbers:
             # This case should ideally be caught by actual_end_idx <= start_idx logic.
             # However, if slicing results in empty list for other reasons:
@@ -386,7 +386,7 @@ class ParflowPorosity(ParflowOutput):
             f"{self.run_name}.porosity.pfb",     # Sometimes used if input or static field
             f"{self.run_name}.pf.porosity.pfb",  # Alternative prefixing
             # Add non-pfb extensions if ParFlow might write them as plain binary without .pfb
-            f"{self.run_name}.out.porosity", 
+            f"{self.run_name}.out.porosity",
             f"{self.run_name}.pf.porosity"
         ]
         
@@ -396,16 +396,16 @@ class ParflowPorosity(ParflowOutput):
             if os.path.exists(file_path):
                 found_file_path = file_path
                 break # Found a candidate
-        
+
         if not found_file_path:
             raise FileNotFoundError(
                 f"Could not find a porosity file for run '{self.run_name}' in directory '{self.model_directory}'. "
                 f"Checked patterns like '{self.run_name}.out.porosity.pfb'.")
-        
+
         try:
             porosity_data = self.read_pfb(found_file_path)
             # Handle ParFlow's no-data values, similar to saturation.
-            porosity_data[porosity_data < -1e38] = np.nan 
+            porosity_data[porosity_data < -1e38] = np.nan
             # Potential Issue: Porosity should ideally be between 0 and 1.
             # Add validation or clipping if ParFlow might output other values for active cells.
             # e.g., np.clip(porosity_data, 0.0, 1.0) after NaNs are set.
@@ -457,7 +457,7 @@ class ParflowPorosity(ParflowOutput):
             return mask_data
         except Exception as e:
             raise ValueError(f"Error loading or processing mask data from '{found_file_path}': {str(e)}")
-        
+
     def load_timestep(self, timestep_idx: int, **kwargs: Any) -> np.ndarray:
         """
         Load porosity data. For ParFlow, porosity is typically time-invariant.
@@ -478,7 +478,7 @@ class ParflowPorosity(ParflowOutput):
         Load porosity data for a conceptual range of timesteps.
         Since porosity is time-invariant, this method returns a 4D array where
         the static 3D porosity data is repeated along the time axis.
-        
+
         The number of repetitions along the time axis (`nt`) is determined by
         the length of `self.available_timesteps` (discovered from saturation/pressure files)
         if `end_idx` is None, or by `min(end_idx - start_idx, len(available_timesteps))`.
@@ -495,7 +495,7 @@ class ParflowPorosity(ParflowOutput):
                         All slices along the time dimension are identical.
         """
         porosity_3d = self.load_porosity() # (nz, ny, nx)
-        
+
         num_timesteps_in_output: int
         if not self.available_timesteps: # No timed output files found by base class
             num_timesteps_in_output = 1 # Assume at least one "time" for static data
@@ -508,7 +508,7 @@ class ParflowPorosity(ParflowOutput):
             actual_end_idx = end_idx
             if end_idx < 0: actual_end_idx = len(self.available_timesteps) + end_idx
             actual_end_idx = min(actual_end_idx, len(self.available_timesteps))
-            
+
             # Ensure start_idx is valid
             if not (0 <= start_idx < len(self.available_timesteps)): start_idx = 0
 
