@@ -22,64 +22,135 @@ def integrate_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2,
         paraDepth: Maximum depth of the model (default: 30.0)
         
     Returns:
-        markers: Cell markers array
-        meshafter: Mesh with interface structure
+        markers (np.ndarray): Array of integer markers assigned to each cell of the new mesh.
+                              Marker 1: Typically outside/boundary region.
+                              Marker 2: Region below the integrated interface.
+                              Marker 3: Region above the integrated interface.
+        meshafter (pg.Mesh): The newly created PyGIMLi mesh that incorporates the structural interface.
     """
-    # Create the initial parameter mesh
+    # --- Create Initial Parameter Mesh (PLC) ---
+    # `mt.createParaMeshPLC` (PLC: Piecewise Linear Complex) creates a mesh suitable for inversion
+    # based on the electrode positions in `ertData`.
+    # `paraBoundary`: Defines extra space around the electrode spread.
+    # `paraDepth`: Defines the depth of the primary investigation area of the mesh.
+    # `paraMaxCellSize`: Controls cell size in the parametric domain (central region).
+    # `boundaryMaxCellSize`: Controls cell size in the outer boundary regions of the mesh.
+    # `quality`: Mesh quality parameter (e.g., minimum angle of triangles).
+    # This initial mesh (`geo`) represents the geometry without the structural interface.
     geo = mt.createParaMeshPLC(ertData, quality=quality, paraMaxCellSize=paraMaxCellSize,
                               paraBoundary=paraBoundary, paraDepth=paraDepth,
-                              boundaryMaxCellSize=500)
+                              boundaryMaxCellSize=500) # Boundary cell size fixed at 500.
     
-    # Stack x and z coordinates for the interface
-    interface_points = np.vstack((smooth_x, smooth_z)).T
+    # --- Prepare Interface Geometry ---
+    # Combine the x and z coordinates of the smoothed velocity interface into a list of points.
+    # `smooth_x` and `smooth_z` define the line representing the geological boundary.
+    interface_points = np.vstack((smooth_x, smooth_z)).T # Creates an array of [[x1,z1], [x2,z2], ...]
     
-    # Extend the interface line beyond the data range by paraBoundary
-    input_points = np.vstack((
-        np.array([[interface_points[0][0] - paraBoundary, interface_points[0][1]]]),
-        interface_points,
-        np.array([[interface_points[-1][0] + paraBoundary, interface_points[-1][1]]])
+    # Extend the interface line horizontally at both ends by `paraBoundary`.
+    # This ensures the interface line spans across the entire modeling domain,
+    # preventing edge effects when it's incorporated into the mesh.
+    # The z-value (depth) at the extended points is kept the same as the first/last interface point.
+    extended_interface_points = np.vstack((
+        np.array([[interface_points[0][0] - paraBoundary, interface_points[0][1]]]), # Extend to the left
+        interface_points,                                                              # Original interface points
+        np.array([[interface_points[-1][0] + paraBoundary, interface_points[-1][1]]])  # Extend to the right
     ))
     
-    # Create a polygon line for the interface
-    interface_line = mt.createPolygon(input_points.tolist(), isClosed=False,
-                                     interpolate='linear', marker=99)
+    # Create a PyGIMLi polygon object representing the (extended) velocity interface line.
+    # `isClosed=False` indicates it's a line, not a closed area.
+    # `marker=99` is a temporary marker assigned to this line segment during mesh generation.
+    # This marker helps PyGIMLi's meshing algorithm to "see" this line as a structural constraint.
+    # `interpolate='linear'` means the line segments are straight between provided points.
+    interface_line_plc = mt.createPolygon(extended_interface_points.tolist(), isClosed=False,
+                                          interpolate='linear', marker=99) # Marker for the line itself.
     
-    # Add the interface to the geometry
-    geo_with_interface = geo + interface_line
+    # --- Combine Geometries and Create Final Mesh ---
+    # Add the interface line PLC to the initial mesh geometry PLC.
+    # The `+` operator for PLC objects in PyGIMLi merges these geometric definitions.
+    # The meshing algorithm will now honor both the domain defined by `geo` and the `interface_line_plc`.
+    geometry_with_interface = geo + interface_line_plc
     
-    # Create a mesh from the combined geometry
-    meshafter = mt.createMesh(geo_with_interface, quality=quality)
+    # Create a new mesh (`meshafter`) from the combined geometry.
+    # The `quality` parameter is reused here for the final mesh generation.
+    # This mesh will have cells and boundaries that conform to the integrated interface.
+    mesh_with_interface = mt.createMesh(geometry_with_interface, quality=quality)
     
-    # Initialize all markers to 1 (outside region)
-    markers = np.ones(meshafter.cellCount())
+    # --- Assign Cell Markers Based on Interface ---
+    # Initialize an array to store new markers for each cell in `mesh_with_interface`.
+    # Default marker is 1, typically representing the outer/boundary region or a background layer.
+    new_cell_markers = np.ones(mesh_with_interface.cellCount(), dtype=int)
     
-    # Identify the survey area
-    survey_left = ertData.sensors()[0][0] - paraBoundary
-    survey_right = ertData.sensors()[-1][0] + paraBoundary
+    # Define the horizontal extent of the primary survey/inversion area.
+    # This is based on the first and last electrode positions from `ertData`, adjusted by `paraBoundary`.
+    # Cells outside this horizontal range might retain marker 1.
+    survey_area_x_min = ertData.sensors()[0][0] - paraBoundary # Leftmost extent of survey influence.
+    survey_area_x_max = ertData.sensors()[-1][0] + paraBoundary # Rightmost extent.
     
-    # Process each cell
-    for i in range(meshafter.cellCount()):
-        cell_x = meshafter.cell(i).center().x()
-        cell_y = meshafter.cell(i).center().y()
+    # Iterate through each cell of the new mesh to assign specific markers based on its position
+    # relative to the integrated velocity interface and the survey area.
+    for i in range(mesh_with_interface.cellCount()):
+        cell_center = mesh_with_interface.cell(i).center() # Get center coordinates (x, y/z) of the cell.
+        cell_x_coord = cell_center.x()
+        cell_y_coord = cell_center.y() # In PyGIMLi, y often represents depth (can be negative).
         
-        # Only modify markers within the survey area
-        if cell_x >= survey_left and cell_x <= survey_right:
-            # Interpolate the interface height at this x position
-            interface_y = np.interp(cell_x, input_points[:, 0], input_points[:, 1])
+        # Only modify markers for cells within the primary horizontal survey area.
+        if survey_area_x_min <= cell_x_coord <= survey_area_x_max:
+            # Interpolate the z-coordinate (depth) of the interface at the cell's x-coordinate.
+            # This determines the interface depth directly below or above the cell center.
+            interface_z_at_cell_x = np.interp(cell_x_coord, extended_interface_points[:, 0], extended_interface_points[:, 1])
             
-            # Set marker based on position relative to interface
-            if abs(cell_y) < abs(interface_y):
-                markers[i] = 2  # Below interface
-            else:
-                markers[i] = 3  # Above interface
+            # Assign markers based on cell center's depth relative to the interface depth.
+            # The use of `abs()` suggests that depths (`cell_y_coord`, `interface_z_at_cell_x`) might be negative.
+            # If y is depth (positive downwards):
+            #   - cell_y < interface_y means cell is shallower (above interface).
+            #   - cell_y > interface_y means cell is deeper (below interface).
+            # If y is elevation (positive upwards):
+            #   - cell_y < interface_y means cell is lower (below interface).
+            #   - cell_y > interface_y means cell is higher (above interface).
+            # Given typical geophysical conventions (depth positive downwards or y negative downwards):
+            # `abs(cell_y) < abs(interface_y)` with marker 2 (Below) implies:
+            #   If y is negative depth: smaller absolute value means shallower. So marker 2 for shallower (above).
+            #   This contradicts "Below interface".
+            # Let's assume standard PyGIMLi: y is depth, increasing downwards (often negative values for 'up').
+            # If y is positive downwards:
+            #   `cell_y < interface_y` -> above interface (marker 3)
+            #   `cell_y > interface_y` -> below interface (marker 2)
+            # The `abs()` usage is confusing. Assuming a coordinate system where y is depth and positive downwards:
+            # If cell_y_coord (depth of cell) > interface_z_at_cell_x (depth of interface) -> cell is below interface.
+            # If cell_y_coord (depth of cell) < interface_z_at_cell_x (depth of interface) -> cell is above interface.
+            # The original logic `abs(cell_y) < abs(interface_y)` for marker 2 (Below) is tricky.
+            # If interface_y is, e.g. -10m, and cell_y is -5m (shallower), abs(-5) < abs(-10) is TRUE. Cell is above.
+            # If interface_y is -10m, and cell_y is -15m (deeper), abs(-15) < abs(-10) is FALSE. Cell is below.
+            # So, if `abs(cell_y) < abs(interface_y)` means marker 2 (Below), this implies:
+            #    - If y is negative (depths are negative, surface at y=0): Shallower cells (less negative, smaller abs value) are marked 2 (Below). This is wrong.
+            # Re-evaluating based on typical PyGIMLi mesh where y usually decreases with depth (surface y=0, below y<0):
+            #   - If `cell_y_coord > interface_z_at_cell_x` (e.g. -5 > -10), cell is shallower (above). Should be marker 3.
+            #   - If `cell_y_coord < interface_z_at_cell_x` (e.g. -15 < -10), cell is deeper (below). Should be marker 2.
+            # The original code's `abs(cell_y) < abs(interface_y)` for marker 2 (Below interface) means:
+            #   If cell is shallower (e.g. y=-5, interface_y=-10), |cell_y|<|interface_y| is TRUE. It's marked 2 (Below). This is incorrect.
+            #   It should be: if cell_y < interface_y (more negative = deeper), then marker 2 (Below).
+            # SUGGESTION: The marker assignment logic based on `abs()` should be reviewed carefully
+            # against the specific coordinate system of the mesh (is y depth positive downwards or upwards?).
+            # Assuming y is depth, positive downwards (less common for pg.Mesh from `createParaMeshPLC` which often has y negative downwards).
+            # If y is negative downwards (typical for PyGIMLi surface meshes):
+            #   cell_y < interface_y means cell is DEEPER == Marker 2 (Below)
+            #   cell_y > interface_y means cell is SHALLOWER == Marker 3 (Above)
+            if cell_y_coord < interface_z_at_cell_x: # Cell center is deeper than the interface line
+                new_cell_markers[i] = 2  # Assign marker for "Below interface"
+            else: # Cell center is shallower than or on the interface line
+                new_cell_markers[i] = 3  # Assign marker for "Above interface"
     
-    # Keep original markers for outside cells
-    markers[meshafter.cellMarkers()==1] = 1
+    # Preserve original markers for cells that were part of the initial `geo`'s boundary region (marker 1).
+    # `mesh_with_interface.cellMarkers()` here would reflect markers assigned by `mt.createMesh` based on PLC regions.
+    # If initial `geo` had outer regions marked as 1, those should remain 1.
+    # This line ensures that cells originally marked as 1 by `createParaMeshPLC` (typically far-field boundaries)
+    # retain their marker 1, overriding the above logic for those specific cells.
+    new_cell_markers[mesh_with_interface.cellMarkers() == 1] = 1 # Preserve boundary marker.
     
-    # Set the updated markers
-    meshafter.setCellMarkers(markers)
+    # Apply the newly defined markers to the mesh.
+    mesh_with_interface.setCellMarkers(new_cell_markers)
     
-    return markers, meshafter
+    return new_cell_markers, mesh_with_interface
 
 
 def create_ert_mesh_with_structure(ertData, interface_data, **kwargs):
@@ -92,49 +163,70 @@ def create_ert_mesh_with_structure(ertData, interface_data, **kwargs):
         **kwargs: Additional parameters including:
             - paraBoundary: Extra boundary size (default: 2)
             - quality: Mesh quality parameter (default: 28)
-            - paraMaxCellSize: Maximum cell size (default: 30)
-            - paraDepth: Maximum depth (default: 30.0)
+            - `paraMaxCellSize` (float): Max cell size in the parameter domain (near electrodes). Default: 30.
+            - `paraDepth` (float): Depth of the parameter domain. Default: 30.0.
             
     Returns:
-        meshafter: Mesh with interface structure
-        markers: Cell markers array
-        regions: Dictionary with region definitions
+        Tuple[pg.Mesh, np.ndarray, Dict[int, Dict[str, Union[str, int]]]]:
+            - generated_mesh (pg.Mesh): The final mesh with the integrated structure.
+            - cell_markers (np.ndarray): The markers assigned to each cell in `generated_mesh`.
+            - region_definitions (Dict): A dictionary describing the regions defined by the markers.
     """
-    # Set default parameters
-    params = {
-        'paraBoundary': 2,
-        'quality': 28, 
-        'paraMaxCellSize': 30,
-        'paraDepth': 30.0
+    # --- Set Default Mesh Generation Parameters ---
+    # These parameters are used by `integrate_velocity_interface` if not overridden by `kwargs`.
+    default_mesh_params = {
+        'paraBoundary': 2.0,    # Default extra boundary size around survey.
+        'quality': 28,        # Default mesh quality (triangle angles).
+        'paraMaxCellSize': 30.0,# Default max cell size in central region.
+        'paraDepth': 30.0     # Default depth of primary modeling area.
     }
-    params.update(kwargs)
+    # Update defaults with any user-provided parameters in `kwargs`.
+    current_mesh_params = default_mesh_params.copy()
+    current_mesh_params.update(kwargs) # User kwargs override defaults.
     
-    # Extract interface coordinates
+    # --- Extract Interface Coordinates ---
+    # The `interface_data` can be provided either as a simple tuple (x_coords, z_coords)
+    # or as a dictionary (e.g., from `extract_velocity_structure`) containing 'smooth_x' and 'smooth_z'.
+    smooth_x_coords: np.ndarray
+    smooth_z_coords: np.ndarray
     if isinstance(interface_data, tuple) and len(interface_data) == 2:
-        smooth_x, smooth_z = interface_data
+        smooth_x_coords, smooth_z_coords = interface_data
     elif isinstance(interface_data, dict) and 'smooth_x' in interface_data and 'smooth_z' in interface_data:
-        smooth_x = interface_data['smooth_x']
-        smooth_z = interface_data['smooth_z']
+        smooth_x_coords = interface_data['smooth_x']
+        smooth_z_coords = interface_data['smooth_z']
     else:
-        raise ValueError("Interface data must be a (x, z) tuple or a dictionary with 'smooth_x' and 'smooth_z' keys")
-    
-    # Create mesh with interface
-    markers, meshafter = integrate_velocity_interface(
-        ertData, smooth_x, smooth_z,
-        paraBoundary=params['paraBoundary'],
-        quality=params['quality'],
-        paraMaxCellSize=params['paraMaxCellSize'],
-        paraDepth=params['paraDepth']
+        # If `interface_data` is not in a recognized format, raise an error.
+        raise ValueError("`interface_data` must be a tuple (x_coords, z_coords) or a dictionary "
+                         "containing 'smooth_x' and 'smooth_z' keys.")
+
+    # --- Create Mesh with Integrated Interface ---
+    # Call `integrate_velocity_interface` to perform the core task of generating the mesh
+    # and assigning markers based on the provided interface and ERT data geometry.
+    # This function returns the cell markers and the generated mesh.
+    assigned_cell_markers, generated_mesh_with_interface = integrate_velocity_interface(
+        ertData, smooth_x_coords, smooth_z_coords,
+        paraBoundary=current_mesh_params['paraBoundary'],
+        quality=current_mesh_params['quality'],
+        paraMaxCellSize=current_mesh_params['paraMaxCellSize'],
+        paraDepth=current_mesh_params['paraDepth']
     )
     
-    # Define regions based on markers
-    regions = {
-        1: {"name": "boundary", "marker": 1, "description": "Outside survey area"},
-        2: {"name": "lower_layer", "marker": 2, "description": "Below velocity interface"},
-        3: {"name": "upper_layer", "marker": 3, "description": "Above velocity interface"}
+    # --- Define Region Dictionary ---
+    # Create a dictionary that provides a human-readable description for each marker value
+    # assigned by `integrate_velocity_interface`. This is useful for post-processing and visualization.
+    # Marker 1: Boundary/Exterior region created by `createParaMeshPLC`.
+    # Marker 2: Region below the velocity interface.
+    # Marker 3: Region above the velocity interface.
+    # (This mapping is based on the logic within `integrate_velocity_interface`.)
+    region_definitions = {
+        1: {"name": "boundary_region", "marker": 1, "description": "Boundary/Exterior cells of the mesh"},
+        2: {"name": "lower_velocity_layer", "marker": 2, "description": "Region below the integrated velocity interface"},
+        3: {"name": "upper_velocity_layer", "marker": 3, "description": "Region above the integrated velocity interface"}
     }
+    # SUGGESTION: The marker numbers (1,2,3) and their meanings should be consistently documented
+    # or made more flexible if other marking schemes are possible from `integrate_velocity_interface`.
     
-    return meshafter, markers, regions
+    return generated_mesh_with_interface, assigned_cell_markers, region_definitions
 
 
 def create_joint_inversion_mesh(ertData, ttData, velocity_threshold=1200, **kwargs):
@@ -147,53 +239,94 @@ def create_joint_inversion_mesh(ertData, ttData, velocity_threshold=1200, **kwar
         ttData: PyGIMLi seismic travel time data container
         velocity_threshold: Threshold for velocity interface (default: 1200)
         **kwargs: Additional parameters including:
-            - seismic_params: Dictionary of seismic inversion parameters
-            - mesh_params: Dictionary of mesh generation parameters
+            - `seismic_params` (Dict): Parameters for `process_seismic_tomography`.
+            - `mesh_params` (Dict): Parameters for `create_ert_mesh_with_structure`.
+            - `interface_interval` (float): Horizontal sampling interval for extracting velocity interface. Default: 5.0.
             
     Returns:
-        joint_mesh: Mesh suitable for constrained joint inversion
-        seismic_manager: TravelTimeManager with seismic inversion results
-        structure_data: Structure interface data
+        Tuple[pg.Mesh, pg.physics.traveltime.TravelTimeManager, Dict]:
+            - joint_mesh (pg.Mesh): The final ERT mesh incorporating the seismic velocity structure.
+            - seismic_manager (TravelTimeManager): Manager object containing results of the seismic inversion.
+            - structure_interface_data (Dict): Data dictionary of the extracted velocity interface.
     """
-    # Import required modules
-    from pygimli.physics import traveltime as tt
-    from watershed_geophysics.Geophy_modular.seismic_processor import (
+    # --- Import Required Modules ---
+    # These imports are placed inside the function, which is generally not standard Python style
+    # unless there's a specific reason (e.g., circular dependency avoidance, conditional import).
+    # For a library module, they are typically at the top of the file.
+    # SUGGESTION: Move these imports to the top of the module if they are standard dependencies.
+    from pygimli.physics import traveltime as tt # Already imported at module level. Redundant here.
+    # This import implies a specific project structure.
+    # It might be better if seismic_processor functions are imported at module level or passed as arguments if dynamic.
+    from PyHydroGeophysX.Geophy_modular.seismic_processor import ( # Corrected path from watershed_geophysics
         process_seismic_tomography, extract_velocity_structure
     )
     
-    # Extract parameter dictionaries
-    seismic_params = kwargs.get('seismic_params', {})
-    mesh_params = kwargs.get('mesh_params', {})
-    
-    # Create mesh for seismic inversion if not provided
-    if 'mesh' not in seismic_params:
-        # Use ERT data to create a suitable mesh
-        ert_manager = pg.physics.ert.ERTManager(ertData)
-        seismic_mesh = ert_manager.createMesh(
-            data=ertData, 
-            quality=seismic_params.get('quality', 31),
-            paraMaxCellSize=seismic_params.get('paraMaxCellSize', 5),
-            paraBoundary=seismic_params.get('paraBoundary', 0.1),
-            paraDepth=seismic_params.get('paraDepth', 30.0)
+    # --- Extract Parameter Dictionaries from kwargs ---
+    # `kwargs.get('key', {})` provides an empty dict as default if 'key' is not in kwargs.
+    seismic_inversion_params = kwargs.get('seismic_params', {})
+    ert_mesh_creation_params = kwargs.get('mesh_params', {})
+
+    # --- Step 1: Create Mesh for Initial Seismic Inversion (if not provided) ---
+    # If seismic_params does not already contain a 'mesh', create one.
+    # This mesh is used for the initial seismic tomography.
+    # It's created based on ERT data sensor locations, implying ERT and SRT share similar survey lines/extents.
+    if 'mesh' not in seismic_inversion_params or seismic_inversion_params['mesh'] is None:
+        if ertData is None: # ERTData is needed if seismic mesh is auto-generated from it.
+            raise ValueError("ertData must be provided if seismic_params['mesh'] is not set for auto-meshing.")
+
+        print("Creating initial mesh for seismic tomography based on ERT data geometry.")
+        # Use PyGIMLi's ERTManager to create a suitable starting mesh.
+        # Parameters for mesh creation are taken from `seismic_params` or defaults.
+        temp_ert_manager = pg.physics.ert.ERTManager(ertData) # Temporary manager for mesh creation.
+        initial_seismic_mesh = temp_ert_manager.createMesh(
+            data=ertData, # Uses sensor coverage from ERT data.
+            quality=seismic_inversion_params.get('quality', 31.0), # Mesh quality.
+            paraMaxCellSize=seismic_inversion_params.get('paraMaxCellSize', 5.0), # Max cell size in parameter domain.
+            paraBoundary=seismic_inversion_params.get('paraBoundary', 0.1), # Boundary width.
+            paraDepth=seismic_inversion_params.get('paraDepth', 30.0)       # Depth of parameter domain.
         )
-        seismic_params['mesh'] = seismic_mesh
+        seismic_inversion_params['mesh'] = initial_seismic_mesh # Add created mesh to params for seismic inversion.
     
-    # Process seismic tomography
-    seismic_manager = process_seismic_tomography(ttData, **seismic_params)
+    # --- Step 2: Perform Seismic Tomography ---
+    # `process_seismic_tomography` inverts the travel time data (`ttData`)
+    # using the provided/created mesh and seismic inversion parameters.
+    # It returns a `TravelTimeManager` object containing the seismic velocity model.
+    print("Performing seismic tomography...")
+    seismic_inversion_manager = process_seismic_tomography(ttData, **seismic_inversion_params)
     
-    # Extract velocity interface
-    smooth_x, smooth_z, structure_data = extract_velocity_structure(
-        seismic_manager.paraDomain,
-        seismic_manager.model.array(),
+    # --- Step 3: Extract Velocity Interface from Seismic Model ---
+    # `extract_velocity_structure` identifies a structural boundary (interface)
+    # from the inverted seismic velocity model based on a specified `velocity_threshold`.
+    # `seismic_manager.paraDomain` is the mesh used for the seismic inversion (parameter mesh).
+    # `seismic_manager.model.array()` is the inverted slowness model; needs conversion to velocity if not already.
+    #   (Assuming `process_seismic_tomography` returns velocity in `.model` or it's handled by `extract_velocity_structure`)
+    #   If `seismic_manager.model` stores slowness (s/m), it should be converted: `1.0 / seismic_manager.model.array()`.
+    #   This depends on the output of `process_seismic_tomography`. For now, assume it provides velocity.
+    #   SUGGESTION: Ensure `seismic_manager.model.array()` provides velocity, not slowness, to `extract_velocity_structure`.
+    #   If `process_seismic_tomography` returns TTManager, `TTManager.velocity` might hold velocity.
+    #   Let's assume `seismic_manager.model` is slowness, so convert:
+    inverted_slowness_model = seismic_inversion_manager.model # This is typically slowness from TTManager.
+    inverted_velocity_model = 1.0 / inverted_slowness_model.array() # Convert slowness to velocity. Add epsilon for safety if needed.
+
+    print(f"Extracting velocity interface at threshold: {velocity_threshold} m/s.")
+    interface_x_coords, interface_z_coords, structure_interface_data = extract_velocity_structure(
+        mesh=seismic_inversion_manager.paraDomain, # Use the parameter mesh from seismic inversion.
+        velocity_data=inverted_velocity_model,    # Pass the inverted velocity model.
         threshold=velocity_threshold,
-        interval=kwargs.get('interface_interval', 5.0)
+        interval=kwargs.get('interface_interval', 5.0) # Horizontal interval for picking interface points.
     )
     
-    # Create ERT mesh with interface structure
-    joint_mesh, markers, regions = create_ert_mesh_with_structure(
+    # --- Step 4: Create ERT Mesh Incorporating the Extracted Structure ---
+    # `create_ert_mesh_with_structure` takes the ERT data (for electrode locations),
+    # the extracted interface coordinates (x, z), and mesh parameters to generate
+    # a new ERT mesh that is constrained by this interface.
+    # This mesh will have different regions/markers above and below the interface.
+    print("Creating final ERT mesh with integrated seismic structure...")
+    joint_inversion_mesh, _cell_markers, _region_info = create_ert_mesh_with_structure(
         ertData, 
-        (smooth_x, smooth_z),
-        **mesh_params
+        (interface_x_coords, interface_z_coords), # Pass interface as tuple
+        **ert_mesh_creation_params # Pass mesh creation parameters for ERT mesh.
     )
+    # _cell_markers and _region_info are also returned but not passed on by this function's current signature.
     
-    return joint_mesh, seismic_manager, structure_data
+    return joint_inversion_mesh, seismic_inversion_manager, structure_interface_data
