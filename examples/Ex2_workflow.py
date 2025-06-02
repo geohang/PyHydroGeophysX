@@ -54,7 +54,9 @@ from PyHydroGeophysX.Hydro_modular import hydro_to_ert
 
 
 # %%
-output_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+output_dir = os.path.join(script_dir, "results", "workflow_example") #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/workflow_example"
 os.makedirs(output_dir, exist_ok=True)
 
 # %% [markdown]
@@ -65,7 +67,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 # %%
 # These would be your actual data files
-data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
+data_dir = os.path.join(script_dir, "data") #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 modflow_dir = os.path.join(data_dir, "modflow")
 
 # Load domain information from files
@@ -89,7 +91,7 @@ porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
 
 Water_Content = np.load(os.path.join(data_dir, "Watercontent.npy"))
 
-water_content = Water_Content[50]
+water_content = Water_Content[5]
 print(water_content.shape)
 
 # %% [markdown]
@@ -744,7 +746,7 @@ data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 idomain = np.loadtxt(os.path.join(data_dir, "id.txt"))
 top = np.loadtxt(os.path.join(data_dir, "top.txt"))
 porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
-water_content = np.load(os.path.join(data_dir, "Watercontent.npy"))[50]  # Time step 50
+water_content = np.load(os.path.join(data_dir, "Watercontent.npy"))[5]  # Time step 50
 
 # Set up profile
 point1 = [115, 70]  
@@ -842,7 +844,7 @@ data_dir = "C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
 idomain = np.loadtxt(os.path.join(data_dir, "id.txt"))
 top = np.loadtxt(os.path.join(data_dir, "top.txt"))
 porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
-water_content = np.load(os.path.join(data_dir, "Watercontent.npy"))[50]  # Time step 50
+water_content = np.load(os.path.join(data_dir, "Watercontent.npy"))[5]  # Time step 50
 
 # Set up profile
 point1 = [115, 70]  
