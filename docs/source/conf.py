@@ -61,7 +61,7 @@ nbsphinx_allow_errors = True
 sphinx_gallery_conf = {
     'examples_dirs': '../../examples',         # path to your example scripts
     'gallery_dirs': 'auto_examples',           # path to output gallery
-    'plot_gallery': False,                     # Don't run example scripts
+    'plot_gallery': True,                     # Don't run example scripts
     'download_all_examples': False,
     'filename_pattern': '/Ex.*\.py$',
     'ignore_pattern': '__pycache__|\.ipynb$',
