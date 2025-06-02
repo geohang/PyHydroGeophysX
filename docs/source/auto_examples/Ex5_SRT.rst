@@ -102,7 +102,7 @@ and interpretation of ERT data.
 
     Water_Content = np.load(os.path.join(data_dir, "Watercontent.npy"))
 
-    water_content = Water_Content[50]
+    water_content = Water_Content[5]
     print(water_content.shape)
 
 

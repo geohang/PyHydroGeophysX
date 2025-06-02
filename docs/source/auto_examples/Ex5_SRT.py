@@ -70,7 +70,7 @@ porosity = np.load(os.path.join(data_dir, "Porosity.npy"))
 
 Water_Content = np.load(os.path.join(data_dir, "Watercontent.npy"))
 
-water_content = Water_Content[50]
+water_content = Water_Content[5]
 print(water_content.shape)
 
 
