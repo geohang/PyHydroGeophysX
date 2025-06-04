@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PyHydroGeophysX.Hydro_modular.hydro_to_ert &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/Hydro_modular/hydro_to_ert.html" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">PyHydroGeophysX.Hydro_modular.hydro_to_ert</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for PyHydroGeophysX.Hydro_modular.hydro_to_ert</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for converting hydrologic model output to ERT apparent resistivity.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.core.interpolation</span> <span class="kn">import</span> <span class="n">ProfileInterpolator</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span> <span class="kn">import</span> <span class="n">water_content_to_resistivity</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.forward.ert_forward</span> <span class="kn">import</span> <span class="n">ERTForwardModeling</span>
+
+
+<div class="viewcode-block" id="hydro_to_ert"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.Hydro_modular.html#PyHydroGeophysX.Hydro_modular.hydro_to_ert.hydro_to_ert">[docs]</a><span class="k">def</span> <span class="nf">hydro_to_ert</span><span class="p">(</span>
+    <span class="n">water_content</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">porosity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">mesh</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">,</span>
+    <span class="n">profile_interpolator</span><span class="p">:</span> <span class="n">ProfileInterpolator</span><span class="p">,</span>
+    <span class="n">layer_idx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+    <span class="n">structure</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">marker_labels</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+    <span class="n">rho_parameters</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">electrode_spacing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">electrode_start</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">num_electrodes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">72</span><span class="p">,</span>
+    <span class="n">scheme_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;wa&#39;</span><span class="p">,</span>
+    <span class="n">noise_level</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">abs_error</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">rel_error</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mesh_markers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert hydrologic model output to ERT apparent resistivity.</span>
+<span class="sd">    </span>
+<span class="sd">    This function performs the complete workflow from water content to synthetic ERT data:</span>
+<span class="sd">    1. Interpolates water content to mesh</span>
+<span class="sd">    2. Calculates saturation</span>
+<span class="sd">    3. Converts saturation to resistivity using petrophysical models</span>
+<span class="sd">    4. Creates electrode array along surface profile</span>
+<span class="sd">    5. Performs forward modeling to generate synthetic ERT data</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        water_content: Water content array (nlay, ny, nx) or mesh values</span>
+<span class="sd">        porosity: Porosity array (nlay, ny, nx) or mesh values</span>
+<span class="sd">        mesh: PyGIMLI mesh</span>
+<span class="sd">        profile_interpolator: ProfileInterpolator for surface interpolation</span>
+<span class="sd">        marker_labels: Layer marker labels [top, middle, bottom]</span>
+<span class="sd">        rho_parameters: Dictionary of resistivity parameters:</span>
+<span class="sd">            {</span>
+<span class="sd">                &#39;rho_sat&#39;: [100, 500, 2400],  # Saturated resistivity values</span>
+<span class="sd">                &#39;n&#39;: [2.2, 1.8, 2.5],         # Cementation exponents</span>
+<span class="sd">                &#39;sigma_s&#39;: [1/500, 0, 0]      # Surface conductivity values</span>
+<span class="sd">            }</span>
+<span class="sd">        electrode_spacing: Spacing between electrodes</span>
+<span class="sd">        electrode_start: Starting position of electrode array</span>
+<span class="sd">        num_electrodes: Number of electrodes</span>
+<span class="sd">        scheme_name: ERT scheme name (&#39;wa&#39;, &#39;dd&#39;, etc.)</span>
+<span class="sd">        noise_level: Relative noise level for synthetic data</span>
+<span class="sd">        abs_error: Absolute error for data estimation</span>
+<span class="sd">        rel_error: Relative error for data estimation</span>
+<span class="sd">        save_path: Path to save synthetic data (None = don&#39;t save)</span>
+<span class="sd">        mesh_markers: Mesh cell markers (None = get from mesh)</span>
+<span class="sd">        verbose: Whether to display verbose information</span>
+<span class="sd">        seed: Random seed for noise generation</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple of (synthetic ERT data container, resistivity model)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get mesh markers if not provided</span>
+    <span class="k">if</span> <span class="n">mesh_markers</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mesh_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
+    
+    <span class="c1"># Get mesh centers</span>
+    <span class="n">mesh_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+    
+    <span class="c1"># 1. If water_content is a 3D array (layer data), interpolate to mesh</span>
+    <span class="k">if</span> <span class="n">water_content</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">water_content</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># Get structure from profile interpolator</span>
+       
+        <span class="c1"># Step 4: Interpolate data to profile</span>
+        <span class="c1"># Initialize profile interpolator</span>
+
+        <span class="c1"># Interpolate water content to profile</span>
+        <span class="n">water_content_profile</span> <span class="o">=</span> <span class="n">profile_interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">water_content</span><span class="p">)</span>
+
+        <span class="c1"># Interpolate porosity to profile</span>
+        <span class="n">porosity_profile</span> <span class="o">=</span> <span class="n">profile_interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span>
+
+
+        <span class="c1"># Set up layer IDs based on marker labels</span>
+        <span class="n">ID_layers</span> <span class="o">=</span> <span class="n">porosity_profile</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">ID_layers</span><span class="p">[:</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Top layer</span>
+        <span class="n">ID_layers</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># Middle layer</span>
+        <span class="n">ID_layers</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]:]</span> <span class="o">=</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>  <span class="c1"># Bottom layer</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">ID_layers</span><span class="p">)</span>
+
+        <span class="c1"># Interpolate water content to mesh</span>
+        <span class="n">wc_mesh</span> <span class="o">=</span> <span class="n">profile_interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span>
+            <span class="n">property_values</span><span class="o">=</span><span class="n">water_content_profile</span><span class="p">,</span>
+            <span class="n">depth_values</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+            <span class="n">mesh_x</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="n">mesh_y</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+            <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>
+            <span class="n">ID</span><span class="o">=</span><span class="n">ID_layers</span><span class="p">,</span>
+            <span class="n">layer_markers</span><span class="o">=</span><span class="n">marker_labels</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Interpolate porosity to mesh</span>
+        <span class="n">porosity_mesh</span> <span class="o">=</span> <span class="n">profile_interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span>
+            <span class="n">property_values</span><span class="o">=</span><span class="n">porosity_profile</span><span class="p">,</span>
+            <span class="n">depth_values</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+            <span class="n">mesh_x</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="n">mesh_y</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+            <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>
+            <span class="n">ID</span><span class="o">=</span><span class="n">ID_layers</span><span class="p">,</span>
+            <span class="n">layer_markers</span><span class="o">=</span><span class="n">marker_labels</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Already mesh values</span>
+        <span class="n">wc_mesh</span> <span class="o">=</span> <span class="n">water_content</span>
+        <span class="n">porosity_mesh</span> <span class="o">=</span> <span class="n">porosity</span>
+    
+    <span class="c1"># 2. Calculate saturation</span>
+    <span class="c1"># Ensure porosity is not zero to avoid division by zero</span>
+    <span class="n">porosity_safe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">porosity_mesh</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">wc_mesh</span> <span class="o">/</span> <span class="n">porosity_safe</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    
+    <span class="c1"># 3. Convert to resistivity using petrophysical model</span>
+    <span class="n">rho_sat</span> <span class="o">=</span> <span class="n">rho_parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rho_sat&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">2400</span><span class="p">])</span>
+    <span class="n">n_values</span> <span class="o">=</span> <span class="n">rho_parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mf">2.2</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">])</span>
+    <span class="n">sigma_s</span> <span class="o">=</span> <span class="n">rho_parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sigma_s&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="o">/</span><span class="mi">500</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    
+    <span class="n">res_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">)</span>  <span class="c1"># Initialize resistivity array</span>
+    
+    <span class="c1"># Calculate resistivity for each layer based on marker labels</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">marker</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">marker_labels</span><span class="p">):</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker</span><span class="p">)</span>
+        <span class="n">layer_res</span> <span class="o">=</span> <span class="n">water_content_to_resistivity</span><span class="p">(</span>
+            <span class="n">wc_mesh</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>
+            <span class="nb">float</span><span class="p">(</span><span class="n">rho_sat</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
+            <span class="nb">float</span><span class="p">(</span><span class="n">n_values</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span>
+            <span class="n">porosity_mesh</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>
+            <span class="n">sigma_s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">res_model</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer_res</span>
+    
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Resistivity range: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">res_model</span><span class="p">)</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">res_model</span><span class="p">)</span><span class="si">}</span><span class="s2"> Ohm-m&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># 4. Create electrode positions along profile</span>
+    <span class="n">xpos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">electrode_start</span><span class="p">,</span> 
+                      <span class="n">electrode_start</span> <span class="o">+</span> <span class="p">(</span><span class="n">num_electrodes</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">electrode_spacing</span><span class="p">,</span> 
+                      <span class="n">num_electrodes</span><span class="p">)</span>
+    
+    <span class="c1"># Interpolate elevations from profile</span>
+    <span class="n">ypos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">xpos</span><span class="p">,</span> 
+                    <span class="n">profile_interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span> 
+                    <span class="n">profile_interpolator</span><span class="o">.</span><span class="n">surface_profile</span><span class="p">)</span>
+    
+    <span class="n">mesh</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                            <span class="n">xbound</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ybound</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    
+    <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">xpos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="n">ypos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+    <span class="n">schemeert</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">createData</span><span class="p">(</span><span class="n">elecs</span><span class="o">=</span><span class="n">pos</span><span class="p">,</span><span class="n">schemeName</span><span class="o">=</span><span class="n">scheme_name</span><span class="p">)</span>
+    <span class="n">fwd_operator</span> <span class="o">=</span> <span class="n">ERTForwardModeling</span><span class="p">(</span><span class="n">mesh</span><span class="o">=</span><span class="n">grid</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">schemeert</span><span class="p">)</span>
+
+
+    <span class="c1"># 5. Perform forward modeling to create synthetic ERT data</span>
+    <span class="n">synth_data</span> <span class="o">=</span> <span class="n">schemeert</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">fob</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
+    <span class="n">fob</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">schemeert</span><span class="p">)</span>
+    <span class="n">fob</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+    <span class="n">dr</span> <span class="o">=</span> <span class="n">fob</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">res_model</span><span class="p">)</span>
+
+    <span class="n">dr</span> <span class="o">*=</span> <span class="mf">1.</span> <span class="o">+</span> <span class="n">pg</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">dr</span><span class="o">.</span><span class="n">size</span><span class="p">())</span> <span class="o">*</span> <span class="mf">0.05</span>
+    <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">synth_data</span><span class="p">)</span>
+    <span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;rhoa&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dr</span>
+    <span class="n">synth_data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">estimateError</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span> <span class="n">absoluteUError</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">relativeError</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">synth_data</span><span class="p">,</span> <span class="n">res_model</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>inversion.base &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/inversion/base.html" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">inversion.base</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for inversion.base</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Base classes for geophysical inversion frameworks.</span>
+
+<span class="sd">This module defines:</span>
+
+<span class="sd">- InversionResult: A base class to store and manage common results from an inversion process,</span>
+<span class="sd">  including final model, predicted data, convergence history, and plotting utilities.</span>
+<span class="sd">- TimeLapseInversionResult: A specialized version of InversionResult for time-lapse studies,</span>
+<span class="sd">  handling multiple models over time and providing time-slice plotting and animation.</span>
+<span class="sd">- InversionBase: An abstract base class outlining the common structure and interface</span>
+<span class="sd">  for various geophysical inversion methods (e.g., ERT, SRT). It handles data, mesh,</span>
+<span class="sd">  and basic parameter management.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span> <span class="c1"># Used for plotting methods</span>
+<span class="kn">import</span> <span class="nn">os</span> <span class="c1"># For path manipulation in save/load</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Tuple</span> <span class="c1"># Dict is used in InversionResult.meta</span>
+
+
+<div class="viewcode-block" id="InversionResult"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionResult">[docs]</a><span class="k">class</span> <span class="nc">InversionResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class to store, save, load, and plot results from a geophysical inversion.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        final_model (Optional[np.ndarray]): The final inverted model parameters (e.g., resistivity, velocity).</span>
+<span class="sd">                                            Typically a 1D array corresponding to mesh cells.</span>
+<span class="sd">        predicted_data (Optional[np.ndarray]): The data predicted by the forward model using the `final_model`.</span>
+<span class="sd">        coverage (Optional[np.ndarray]): Coverage or sensitivity values for the model parameters,</span>
+<span class="sd">                                         often derived from the Jacobian or resolution matrix.</span>
+<span class="sd">        mesh (Optional[pg.Mesh]): The PyGIMLi mesh object used in the inversion.</span>
+<span class="sd">        iteration_models (List[np.ndarray]): A list storing the model parameters at each iteration of the inversion.</span>
+<span class="sd">        iteration_data_errors (List[np.ndarray]): A list storing the data misfit (e.g., residuals) at each iteration.</span>
+<span class="sd">        iteration_chi2 (List[float]): A list storing the chi-squared (χ²) value or a similar misfit metric</span>
+<span class="sd">                                      at each iteration.</span>
+<span class="sd">        meta (Dict[str, Any]): A dictionary to store any additional metadata about the inversion run</span>
+<span class="sd">                               (e.g., inversion parameters, timings, comments).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="InversionResult.__init__"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionResult.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize an empty InversionResult container.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">final_model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">predicted_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coverage</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iteration_models</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iteration_data_errors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iteration_chi2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span> <span class="c1"># For storing inversion parameters, etc.</span></div>
+    
+<div class="viewcode-block" id="InversionResult.save"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionResult.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save the inversion results to a file using Python&#39;s pickle format.</span>
+<span class="sd">        If a mesh is present, it is saved separately as a PyGIMLi binary mesh file (.bms).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filename (str): The base path (including filename without extension) to save the results.</span>
+<span class="sd">                            The main data will be saved as `filename.pkl` (or just `filename` if user includes .pkl).</span>
+<span class="sd">                            The mesh will be saved as `filename.bms` or `filename.pkl.bms`.</span>
+<span class="sd">                            It&#39;s recommended to provide `filename` without `.pkl`.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            IOError: If there&#39;s an error during file writing.</span>
+<span class="sd">            pickle.PicklingError: If an object cannot be pickled.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">pickle</span> <span class="c1"># Local import for a standard library module is fine.</span>
+
+        <span class="c1"># Ensure filename doesn&#39;t inadvertently include .pkl if we append it later.</span>
+        <span class="n">base_filename</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;.pkl&#39;</span><span class="p">:</span>
+            <span class="n">pickle_filename</span> <span class="o">=</span> <span class="n">filename</span>
+            <span class="n">mesh_save_filename_base</span> <span class="o">=</span> <span class="n">base_filename</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># No extension or different extension, assume filename is base</span>
+            <span class="n">pickle_filename</span> <span class="o">=</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.pkl&quot;</span> <span class="c1"># Standard extension for pickled files</span>
+            <span class="n">mesh_save_filename_base</span> <span class="o">=</span> <span class="n">filename</span>
+
+        <span class="n">data_to_save</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;final_model&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_model</span><span class="p">,</span>
+            <span class="s1">&#39;predicted_data&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">predicted_data</span><span class="p">,</span>
+            <span class="s1">&#39;coverage&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">coverage</span><span class="p">,</span>
+            <span class="s1">&#39;iteration_models&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">iteration_models</span><span class="p">,</span>
+            <span class="s1">&#39;iteration_data_errors&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">iteration_data_errors</span><span class="p">,</span>
+            <span class="s1">&#39;iteration_chi2&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">iteration_chi2</span><span class="p">,</span>
+            <span class="s1">&#39;meta&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+            <span class="s1">&#39;mesh_file&#39;</span><span class="p">:</span> <span class="kc">None</span> <span class="c1"># Placeholder, will be updated if mesh is saved</span>
+        <span class="p">}</span>
+        
+        <span class="c1"># Save mesh separately using PyGIMLi&#39;s binary format if it exists</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Potential Issue: Appending &#39;.bms&#39; to a filename that might already have an extension</span>
+            <span class="c1"># (e.g. &#39;results.pkl&#39;) could lead to &#39;results.pkl.bms&#39;.</span>
+            <span class="c1"># A cleaner way might be to derive mesh filename from the base filename.</span>
+            <span class="n">mesh_specific_filename</span> <span class="o">=</span> <span class="n">mesh_save_filename_base</span> <span class="o">+</span> <span class="s1">&#39;.bms&#39;</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">pg</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="n">mesh_specific_filename</span><span class="p">)</span>
+                <span class="n">data_to_save</span><span class="p">[</span><span class="s1">&#39;mesh_file&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh_specific_filename</span> <span class="c1"># Store relative path or just name</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mesh saved to: </span><span class="si">{</span><span class="n">mesh_specific_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="c1"># Log error but continue to save other data if possible</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not save mesh to &#39;</span><span class="si">{</span><span class="n">mesh_specific_filename</span><span class="si">}</span><span class="s2">&#39;. Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">data_to_save</span><span class="p">[</span><span class="s1">&#39;mesh_file&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># Ensure it&#39;s None if saving failed</span>
+
+        <span class="c1"># Save the rest of the data using pickle</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pickle_filename</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">data_to_save</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Inversion results (excluding mesh) saved to: </span><span class="si">{</span><span class="n">pickle_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">IOError</span><span class="p">,</span> <span class="n">pickle</span><span class="o">.</span><span class="n">PicklingError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Clean up mesh file if main data saving fails to avoid partial save?</span>
+            <span class="c1"># For now, just raise the error.</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to save inversion results to &#39;</span><span class="si">{</span><span class="n">pickle_filename</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="InversionResult.load"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionResult.load">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;InversionResult&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load inversion results from a file previously saved by the `save` method.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filename (str): The base path to the saved results file.</span>
+<span class="sd">                            If saved as `name.pkl` and `name.bms`, provide `name.pkl` or `name`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            InversionResult: An instance of `InversionResult` (or a subclass if called on one)</span>
+<span class="sd">                             populated with the loaded data.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            FileNotFoundError: If the main data file or associated mesh file (if referenced) is not found.</span>
+<span class="sd">            IOError: If there&#39;s an error during file reading.</span>
+<span class="sd">            pickle.UnpicklingError: If the file cannot be unpickled.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">pickle</span> <span class="c1"># Local import</span>
+        
+        <span class="c1"># Determine the pickle filename</span>
+        <span class="n">base_filename</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">pickle_filename</span> <span class="o">=</span> <span class="n">filename</span> <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;.pkl&#39;</span> <span class="k">else</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.pkl&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">pickle_filename</span><span class="p">):</span>
+            <span class="c1"># Try original filename if .pkl was added and not found</span>
+            <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;.pkl&#39;</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+                 <span class="n">pickle_filename</span> <span class="o">=</span> <span class="n">filename</span> <span class="c1"># User might have provided full name without .pkl</span>
+            <span class="k">else</span><span class="p">:</span>
+                 <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Pickle data file not found: </span><span class="si">{</span><span class="n">pickle_filename</span><span class="si">}</span><span class="s2"> (or </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Load the main data dictionary using pickle</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pickle_filename</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">loaded_data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="c1"># Create a new instance of the class (allows loading into subclasses like TimeLapseInversionResult)</span>
+        <span class="n">result_instance</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">()</span>
+
+        <span class="c1"># Assign attributes from the loaded dictionary</span>
+        <span class="c1"># Use .get() for robustness against missing keys if format changes, though direct access is fine if format is fixed.</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">final_model</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;final_model&#39;</span><span class="p">)</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">predicted_data</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;predicted_data&#39;</span><span class="p">)</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;coverage&#39;</span><span class="p">)</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">iteration_models</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;iteration_models&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">iteration_data_errors</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;iteration_data_errors&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">iteration_chi2</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;iteration_chi2&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;meta&#39;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="c1"># Load the mesh if a mesh file path is stored in the data</span>
+        <span class="n">mesh_file_path</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mesh_file&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mesh_file_path</span><span class="p">:</span>
+            <span class="c1"># Check if the path is absolute or needs to be relative to the pickle file&#39;s directory</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">mesh_file_path</span><span class="p">):</span>
+                <span class="n">pickle_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">pickle_filename</span><span class="p">))</span>
+                <span class="n">mesh_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pickle_dir</span><span class="p">,</span> <span class="n">mesh_file_path</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">mesh_file_path</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">result_instance</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mesh_file_path</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mesh loaded from: </span><span class="si">{</span><span class="n">mesh_file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not load mesh from &#39;</span><span class="si">{</span><span class="n">mesh_file_path</span><span class="si">}</span><span class="s2">&#39;. Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Mesh file &#39;</span><span class="si">{</span><span class="n">mesh_file_path</span><span class="si">}</span><span class="s2">&#39; referenced in pickle file but not found.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result_instance</span></div>
+    
+<div class="viewcode-block" id="InversionResult.plot_model"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionResult.plot_model">[docs]</a>    <span class="k">def</span> <span class="nf">plot_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;viridis&#39;</span><span class="p">,</span> <span class="c1"># Changed default cmap</span>
+                   <span class="n">coverage_threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Figure</span><span class="p">,</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot the final inverted model on its associated mesh.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ax (Optional[plt.Axes], optional): A matplotlib Axes object to plot on.</span>
+<span class="sd">                                               If None, a new figure and axes are created. Defaults to None.</span>
+<span class="sd">            cmap (str, optional): The colormap to use for visualizing model values.</span>
+<span class="sd">                                  Defaults to &#39;viridis&#39;.</span>
+<span class="sd">            coverage_threshold (Optional[float], optional):</span>
+<span class="sd">                If provided, cells with coverage values below this threshold will be masked</span>
+<span class="sd">                (made transparent or semi-transparent) in the plot. Requires `self.coverage`</span>
+<span class="sd">                to be populated. Defaults to None (no masking).</span>
+<span class="sd">            **kwargs (Any): Additional keyword arguments passed directly to `pygimli.show`</span>
+<span class="sd">                            (e.g., cMin, cMax, orientation, logScale).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[plt.Figure, plt.Axes]: The matplotlib Figure and Axes objects of the plot.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If `self.final_model` or `self.mesh` is None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_model</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot plot model: final_model or mesh is not available in InversionResult.&quot;</span><span class="p">)</span>
+        
+        <span class="n">fig</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">Figure</span>
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span> <span class="c1"># Default figure size</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fig</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">figure</span> <span class="c1"># Get figure from existing axes</span>
+        
+        <span class="n">model_to_display</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">final_model</span><span class="p">)</span> <span class="c1"># Ensure it&#39;s a NumPy array</span>
+        
+        <span class="c1"># Apply coverage masking if a threshold is provided and coverage data exists</span>
+        <span class="k">if</span> <span class="n">coverage_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">coverage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coverage</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">model_to_display</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Coverage array length does not match model length. Cannot apply coverage mask.&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Create a mask where True means &quot;mask out&quot; (i.e., coverage &lt; threshold)</span>
+                <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coverage</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">coverage_threshold</span>
+                <span class="n">model_to_display</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model_to_display</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
+
+        <span class="c1"># Use PyGIMLi&#39;s show function to plot the model on the mesh</span>
+        <span class="c1"># `pg.show` can handle masked arrays automatically.</span>
+        <span class="c1"># It returns the colorbar instance, which can be useful for customization.</span>
+        <span class="c1"># Common kwargs for pg.show: cMin, cMax, cMap (cmap), orientation, label, logScale</span>
+        <span class="c1"># Ensure cMap is passed correctly.</span>
+        <span class="n">cb</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">model_to_display</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="c1"># Example: add a colorbar label if not automatically set by pg.show or if desired</span>
+        <span class="c1"># if &#39;label&#39; not in kwargs and cb is not None:</span>
+        <span class="c1">#     cb.set_label(&quot;Model Parameter Value&quot;)</span>
+        
+        <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span></div>
+    
+<div class="viewcode-block" id="InversionResult.plot_convergence"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionResult.plot_convergence">[docs]</a>    <span class="k">def</span> <span class="nf">plot_convergence</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Figure</span><span class="p">,</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot the convergence curve (chi-squared misfit vs. iteration number).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ax (Optional[plt.Axes], optional): A matplotlib Axes object to plot on.</span>
+<span class="sd">                                               If None, a new figure and axes are created. Defaults to None.</span>
+<span class="sd">            **kwargs (Any): Additional keyword arguments passed directly to `ax.plot`</span>
+<span class="sd">                            (e.g., color, marker, linestyle).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[plt.Figure, plt.Axes]: The matplotlib Figure and Axes objects of the plot.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If `self.iteration_chi2` is empty (no convergence data).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">iteration_chi2</span><span class="p">:</span> <span class="c1"># Check if the list is empty</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No convergence data (iteration_chi2) available to plot.&quot;</span><span class="p">)</span>
+        
+        <span class="n">fig</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">Figure</span>
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span> <span class="c1"># Default figure size</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fig</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">figure</span>
+        
+        <span class="n">iterations</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iteration_chi2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># Iterations usually start from 1</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">iterations</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">iteration_chi2</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="c1"># Default style</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Iteration Number&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Chi-Squared (χ²)&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Inversion Convergence Curve&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span> <span class="c1"># Chi-squared is often plotted on a log scale for y-axis</span>
+        <span class="c1"># Optional: Set x-axis to integer ticks if many iterations</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">iterations</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_locator</span><span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">MaxNLocator</span><span class="p">(</span><span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span></div></div>
+
+
+<div class="viewcode-block" id="TimeLapseInversionResult"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.TimeLapseInversionResult">[docs]</a><span class="k">class</span> <span class="nc">TimeLapseInversionResult</span><span class="p">(</span><span class="n">InversionResult</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Specialized class to store and manage results from time-lapse inversions.</span>
+<span class="sd">    Inherits from `InversionResult` and adds attributes specific to time-lapse data.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        final_models (Optional[np.ndarray]): A 2D NumPy array where each column represents</span>
+<span class="sd">                                              the inverted model for a specific timestep</span>
+<span class="sd">                                              (shape: num_cells x num_timesteps).</span>
+<span class="sd">        timesteps (Optional[np.ndarray]): An array or list of time values (e.g., hours, days)</span>
+<span class="sd">                                          corresponding to each model slice in `final_models`.</span>
+<span class="sd">        all_coverage (List[np.ndarray]): A list where each element is the coverage array</span>
+<span class="sd">                                         for the corresponding timestep&#39;s model.</span>
+<span class="sd">        all_chi2 (List[Any]): A list where each element is a list of chi-squared values</span>
+<span class="sd">                                      per iteration for the inversion of that specific timestep or window.</span>
+<span class="sd">                                      (Note: Original was List[float], if chi2 is per window, might need adjustment)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="TimeLapseInversionResult.__init__"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.TimeLapseInversionResult.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize an empty TimeLapseInversionResult container.&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span> <span class="c1"># Initialize base class attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">final_models</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Shape: (num_cells, num_timesteps)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timesteps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>     <span class="c1"># Timestamps corresponding to model slices</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>       <span class="c1"># List of coverage arrays, one per timestep</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">all_chi2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># Could be List[List[float]] if each time step has its own convergence</span></div>
+                                      <span class="c1"># Or List[float] if it&#39;s a global chi2 for joint/sequential inversion.</span>
+                                      <span class="c1"># Original was List[float], implies one chi2 list for the whole process.</span>
+                                      <span class="c1"># If from windowed inversion, this might be a list of chi2 lists.</span>
+    
+    <span class="c1"># Potential Improvement: Override save/load to handle time-lapse specific attributes if needed,</span>
+    <span class="c1"># especially if their structure is complex or requires special handling beyond what pickle does.</span>
+    <span class="c1"># For current attributes (mostly lists of NumPy arrays), default pickle should work if they are added to data_to_save dict.</span>
+    <span class="c1"># The current save/load in InversionResult does not handle these time-lapse specific attributes.</span>
+    <span class="c1"># This needs to be overridden.</span>
+
+<div class="viewcode-block" id="TimeLapseInversionResult.save"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.TimeLapseInversionResult.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save time-lapse inversion results. Overrides base class `save`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">pickle</span>
+        <span class="n">base_filename</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">pickle_filename</span> <span class="o">=</span> <span class="n">filename</span> <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;.pkl&#39;</span> <span class="k">else</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.pkl&quot;</span>
+        <span class="n">mesh_save_filename_base</span> <span class="o">=</span> <span class="n">base_filename</span>
+
+        <span class="n">data_to_save</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="c1"># Base attributes</span>
+            <span class="s1">&#39;final_model&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_model</span><span class="p">,</span> <span class="c1"># Might be None if final_models is primary</span>
+            <span class="s1">&#39;predicted_data&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">predicted_data</span><span class="p">,</span>
+            <span class="s1">&#39;coverage&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">coverage</span><span class="p">,</span> <span class="c1"># Might be None if all_coverage is primary</span>
+            <span class="s1">&#39;iteration_models&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">iteration_models</span><span class="p">,</span>
+            <span class="s1">&#39;iteration_data_errors&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">iteration_data_errors</span><span class="p">,</span>
+            <span class="s1">&#39;iteration_chi2&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">iteration_chi2</span><span class="p">,</span>
+            <span class="s1">&#39;meta&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+            <span class="s1">&#39;mesh_file&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="c1"># Time-lapse specific attributes</span>
+            <span class="s1">&#39;final_models&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_models</span><span class="p">,</span>
+            <span class="s1">&#39;timesteps&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">timesteps</span><span class="p">,</span>
+            <span class="s1">&#39;all_coverage&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">,</span>
+            <span class="s1">&#39;all_chi2_timelapse&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_chi2</span> <span class="c1"># Renamed to avoid confusion with base iteration_chi2</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mesh_specific_filename</span> <span class="o">=</span> <span class="n">mesh_save_filename_base</span> <span class="o">+</span> <span class="s1">&#39;.bms&#39;</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">pg</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="n">mesh_specific_filename</span><span class="p">)</span>
+                <span class="n">data_to_save</span><span class="p">[</span><span class="s1">&#39;mesh_file&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh_specific_filename</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mesh saved to: </span><span class="si">{</span><span class="n">mesh_specific_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not save mesh to &#39;</span><span class="si">{</span><span class="n">mesh_specific_filename</span><span class="si">}</span><span class="s2">&#39;. Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pickle_filename</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">data_to_save</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;TimeLapseInversion results saved to: </span><span class="si">{</span><span class="n">pickle_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">IOError</span><span class="p">,</span> <span class="n">pickle</span><span class="o">.</span><span class="n">PicklingError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to save TimeLapseInversion results to &#39;</span><span class="si">{</span><span class="n">pickle_filename</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TimeLapseInversionResult.load"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.TimeLapseInversionResult.load">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;TimeLapseInversionResult&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load time-lapse inversion results. Overrides base class `load`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">pickle</span>
+        <span class="n">base_filename</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">pickle_filename</span> <span class="o">=</span> <span class="n">filename</span> <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;.pkl&#39;</span> <span class="k">else</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.pkl&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">pickle_filename</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;.pkl&#39;</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+                 <span class="n">pickle_filename</span> <span class="o">=</span> <span class="n">filename</span>
+            <span class="k">else</span><span class="p">:</span>
+                 <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Pickle data file not found: </span><span class="si">{</span><span class="n">pickle_filename</span><span class="si">}</span><span class="s2"> (or </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pickle_filename</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">loaded_data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="n">result_instance</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">()</span> <span class="c1"># Creates instance of TimeLapseInversionResult</span>
+
+        <span class="c1"># Load base attributes</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">final_model</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;final_model&#39;</span><span class="p">)</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">predicted_data</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;predicted_data&#39;</span><span class="p">)</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;coverage&#39;</span><span class="p">)</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">iteration_models</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;iteration_models&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">iteration_data_errors</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;iteration_data_errors&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">iteration_chi2</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;iteration_chi2&#39;</span><span class="p">,</span> <span class="p">[])</span> <span class="c1"># Base chi2 list</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;meta&#39;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="c1"># Load time-lapse specific attributes</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">final_models</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;final_models&#39;</span><span class="p">)</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">timesteps</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;timesteps&#39;</span><span class="p">)</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">all_coverage</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;all_coverage&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">result_instance</span><span class="o">.</span><span class="n">all_chi2</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;all_chi2_timelapse&#39;</span><span class="p">,</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;all_chi2&#39;</span><span class="p">,</span> <span class="p">[]))</span> <span class="c1"># Handle old naming</span>
+
+        <span class="n">mesh_file_path</span> <span class="o">=</span> <span class="n">loaded_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mesh_file&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mesh_file_path</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">mesh_file_path</span><span class="p">):</span>
+                <span class="n">pickle_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">pickle_filename</span><span class="p">))</span>
+                <span class="n">mesh_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pickle_dir</span><span class="p">,</span> <span class="n">mesh_file_path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">mesh_file_path</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">result_instance</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mesh_file_path</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mesh loaded from: </span><span class="si">{</span><span class="n">mesh_file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not load mesh from &#39;</span><span class="si">{</span><span class="n">mesh_file_path</span><span class="si">}</span><span class="s2">&#39;. Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Mesh file &#39;</span><span class="si">{</span><span class="n">mesh_file_path</span><span class="si">}</span><span class="s2">&#39; not found.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result_instance</span></div>
+
+<div class="viewcode-block" id="TimeLapseInversionResult.plot_time_slice"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.TimeLapseInversionResult.plot_time_slice">[docs]</a>    <span class="k">def</span> <span class="nf">plot_time_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">ax</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;viridis&#39;</span><span class="p">,</span>
+                       <span class="n">coverage_threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Figure</span><span class="p">,</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot a single time slice (inverted model at a specific timestep) from the results.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            timestep_idx (int): The zero-based index of the timestep to plot.</span>
+<span class="sd">            ax (Optional[plt.Axes], optional): Matplotlib Axes to plot on. If None, creates new.</span>
+<span class="sd">            cmap (str, optional): Colormap for model values. Defaults to &#39;viridis&#39;.</span>
+<span class="sd">            coverage_threshold (Optional[float], optional): Threshold for coverage masking.</span>
+<span class="sd">                                                             Defaults to None.</span>
+<span class="sd">            **kwargs (Any): Additional arguments passed to `pg.show`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple[plt.Figure, plt.Axes]: The matplotlib Figure and Axes objects.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If models or mesh are missing, or if `timestep_idx` is out of range.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_models</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot plot time slice: final_models or mesh is not available.&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">timestep_idx</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_models</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid timestep_idx: </span><span class="si">{</span><span class="n">timestep_idx</span><span class="si">}</span><span class="s2">. &quot;</span>
+                             <span class="sa">f</span><span class="s2">&quot;Must be between 0 and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">final_models</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        
+        <span class="n">fig</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">Figure</span>
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fig</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">figure</span>
+        
+        <span class="c1"># Get the model slice for the specified timestep</span>
+        <span class="n">model_slice_to_plot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span> <span class="n">timestep_idx</span><span class="p">]</span>
+
+        <span class="c1"># Apply coverage masking if specified</span>
+        <span class="n">current_coverage_array</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">coverage_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">timestep_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">timestep_idx</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">current_coverage_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">timestep_idx</span><span class="p">])</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_coverage_array</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">model_slice_to_plot</span><span class="p">):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Coverage array length for timestep </span><span class="si">{</span><span class="n">timestep_idx</span><span class="si">}</span><span class="s2"> does not match model slice length. Skipping coverage mask.&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">mask</span> <span class="o">=</span> <span class="n">current_coverage_array</span> <span class="o">&lt;</span> <span class="n">coverage_threshold</span>
+                    <span class="n">model_slice_to_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model_slice_to_plot</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_coverage</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">coverage_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">:</span>
+                <span class="c1"># Fallback to first coverage if specific one not found (original behavior)</span>
+                <span class="c1"># This might be misleading if coverages vary significantly.</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Coverage for timestep </span><span class="si">{</span><span class="n">timestep_idx</span><span class="si">}</span><span class="s2"> not found or incompatible. Attempting to use coverage from first timestep as fallback for masking.&quot;</span><span class="p">)</span>
+                <span class="n">current_coverage_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_coverage_array</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">model_slice_to_plot</span><span class="p">):</span>
+                     <span class="n">mask</span> <span class="o">=</span> <span class="n">current_coverage_array</span> <span class="o">&lt;</span> <span class="n">coverage_threshold</span>
+                     <span class="n">model_slice_to_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">model_slice_to_plot</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Fallback coverage array length also mismatched. No mask applied for this slice.&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: No suitable coverage data found for masking timestep </span><span class="si">{</span><span class="n">timestep_idx</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+
+        <span class="c1"># Plot the model slice on the mesh</span>
+        <span class="c1"># Pass any additional kwargs to pg.show (e.g., cMin, cMax, label for colorbar)</span>
+        <span class="n">cb</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">model_slice_to_plot</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="c1"># Add title with timestep information if available</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Time Slice (Index: </span><span class="si">{</span><span class="n">timestep_idx</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timesteps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">timestep_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timesteps</span><span class="p">):</span>
+            <span class="n">title</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; - Time: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">timesteps</span><span class="p">[</span><span class="n">timestep_idx</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="c1"># Assuming self.timesteps stores actual time values</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span></div>
+
+<div class="viewcode-block" id="TimeLapseInversionResult.create_time_lapse_animation"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.TimeLapseInversionResult.create_time_lapse_animation">[docs]</a>    <span class="k">def</span> <span class="nf">create_time_lapse_animation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="c1"># Renamed from filename</span>
+                                  <span class="n">cmap</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;viridis&#39;</span><span class="p">,</span> <span class="n">coverage_threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                  <span class="n">dpi</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">fps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create and save an animation (e.g., MP4 video) of the time-lapse inversion results.</span>
+
+<span class="sd">        Requires `ffmpeg` or another Matplotlib-supported animation writer to be installed.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            output_filename (str): The filename for the output animation (e.g., &#39;timelapse_animation.mp4&#39;).</span>
+<span class="sd">            cmap (str, optional): Colormap for model values. Defaults to &#39;viridis&#39;.</span>
+<span class="sd">            coverage_threshold (Optional[float], optional): Threshold for coverage masking. Defaults to None.</span>
+<span class="sd">            dpi (int, optional): Dots Per Inch for the output animation. Defaults to 100.</span>
+<span class="sd">            fps (int, optional): Frames Per Second for the animation. Defaults to 2.</span>
+<span class="sd">            **kwargs (Any): Additional keyword arguments passed to `plot_time_slice` for each frame.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If `final_models` or `mesh` is missing.</span>
+<span class="sd">            ImportError: If `matplotlib.animation` cannot be imported.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">matplotlib.animation</span> <span class="k">as</span> <span class="nn">animation</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;matplotlib.animation is required to create animations. Please install or check your matplotlib setup.&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_models</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot create animation: final_models or mesh is not available.&quot;</span><span class="p">)</span>
+        
+        <span class="n">num_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_models</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">num_timesteps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: No time slices available in final_models to animate.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span> <span class="c1"># Adjust figsize as needed</span>
+
+        <span class="c1"># Animation update function: called for each frame</span>
+        <span class="k">def</span> <span class="nf">update_animation_frame</span><span class="p">(</span><span class="n">frame_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Artist</span><span class="p">]:</span> <span class="c1"># Return list of artists to draw</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span> <span class="c1"># Clear previous frame&#39;s contents</span>
+            <span class="c1"># Use self.plot_time_slice to draw the model for the current frame_index</span>
+            <span class="c1"># All plot_time_slice arguments need to be passed.</span>
+            <span class="c1"># kwargs from create_time_lapse_animation are passed through.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot_time_slice</span><span class="p">(</span><span class="n">timestep_idx</span><span class="o">=</span><span class="n">frame_index</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span>
+                                 <span class="n">coverage_threshold</span><span class="o">=</span><span class="n">coverage_threshold</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="c1"># FuncAnimation expects a list of artists that were updated</span>
+            <span class="c1"># This includes images, collections (like contour lines), patches, lines, texts.</span>
+            <span class="c1"># Safest to return all artists associated with the axes.</span>
+            <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">images</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">collections</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">patches</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">lines</span><span class="p">)</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">texts</span><span class="p">)</span>
+
+
+        <span class="c1"># Create the animation object</span>
+        <span class="c1"># blit=True optimizes drawing by only redrawing what has changed.</span>
+        <span class="c1"># However, blit=True can be tricky with complex plots or changing axis limits/titles.</span>
+        <span class="c1"># If issues occur, try blit=False.</span>
+        <span class="n">ani</span> <span class="o">=</span> <span class="n">animation</span><span class="o">.</span><span class="n">FuncAnimation</span><span class="p">(</span>
+            <span class="n">fig</span><span class="p">,</span> <span class="n">update_animation_frame</span><span class="p">,</span> <span class="n">frames</span><span class="o">=</span><span class="n">num_timesteps</span><span class="p">,</span>
+            <span class="n">blit</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Set to False for safety with pg.show and title changes per frame</span>
+            <span class="n">repeat</span><span class="o">=</span><span class="kc">False</span> <span class="c1"># Don&#39;t repeat animation once done</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Save the animation</span>
+        <span class="c1"># Requires a writer like ffmpeg. User needs to have it installed.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ani</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">output_filename</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">,</span> <span class="n">writer</span><span class="o">=</span><span class="s1">&#39;ffmpeg&#39;</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="n">fps</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Time-lapse animation saved to: </span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Common errors: ffmpeg not found, or issues with plot contents.</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error saving animation &#39;</span><span class="si">{</span><span class="n">output_filename</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Ensure ffmpeg is installed and in PATH.&quot;</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span> <span class="c1"># Close the figure to free memory, especially if run in a loop.</span></div></div>
+
+
+<div class="viewcode-block" id="InversionBase"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionBase">[docs]</a><span class="k">class</span> <span class="nc">InversionBase</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Abstract base class for geophysical inversion methods.</span>
+
+<span class="sd">    This class provides a foundational structure for specific inversion techniques</span>
+<span class="sd">    (e.g., ERT, SRT). It manages observed data, mesh, common inversion parameters,</span>
+<span class="sd">    and an `InversionResult` object. Subclasses must implement methods for</span>
+<span class="sd">    setting up the inversion, running the inversion loop, computing Jacobians,</span>
+<span class="sd">    and evaluating the objective function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="InversionBase.__init__"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionBase.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the base inversion class.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data (pg.DataContainer): PyGIMLi DataContainer holding the observed geophysical data.</span>
+<span class="sd">            mesh (Optional[pg.Mesh], optional): A PyGIMLi mesh for the inversion.</span>
+<span class="sd">                                                If None, it&#39;s expected that subclasses will create or</span>
+<span class="sd">                                                load a mesh in their `setup` method. Defaults to None.</span>
+<span class="sd">            **kwargs (Any): Additional keyword arguments for configuring the inversion.</span>
+<span class="sd">                            These are stored in `self.parameters` and can override defaults.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;data must be a PyGIMLi pg.DataContainer object.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;mesh must be a PyGIMLi pg.Mesh object or None.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span> <span class="n">pg</span><span class="o">.</span><span class="n">DataContainer</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">:</span> <span class="n">InversionResult</span> <span class="o">=</span> <span class="n">InversionResult</span><span class="p">()</span> <span class="c1"># Initialize with a basic result container</span>
+                                                        <span class="c1"># Subclasses might replace this with a more specific one (e.g. TimeLapseInversionResult)</span>
+
+        <span class="c1"># Store user-provided parameters, allowing them to override defaults.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span>
+
+        <span class="c1"># Define default parameters common to many inversion types.</span>
+        <span class="c1"># Subclasses can extend or override these.</span>
+        <span class="n">default_inversion_parameters</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;lambda_reg&#39;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>          <span class="c1"># Regularization strength parameter (lambda)</span>
+            <span class="s1">&#39;max_iterations&#39;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>        <span class="c1"># Maximum number of inversion iterations</span>
+            <span class="s1">&#39;target_chi_squared&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>   <span class="c1"># Target chi-squared (χ²) value for convergence</span>
+            <span class="s1">&#39;convergence_tolerance&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="c1"># Relative change in chi-squared for convergence</span>
+            <span class="s1">&#39;model_constraints&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1e7</span><span class="p">),</span> <span class="c1"># Min and max bounds for model parameters (e.g., resistivity)</span>
+                                              <span class="c1"># Should be appropriate for the physical property being inverted.</span>
+            <span class="c1"># Other common params could be: error_model (relative, absolute), regularization_type, etc.</span>
+        <span class="p">}</span>
+        
+        <span class="c1"># Update instance parameters: user kwargs take precedence over defaults.</span>
+        <span class="c1"># This loop ensures that if a key is in kwargs, it uses that value, otherwise it uses default.</span>
+        <span class="c1"># A more pythonic way: self.parameters = {**default_inversion_parameters, **kwargs} (Python 3.5+)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">default_value</span> <span class="ow">in</span> <span class="n">default_inversion_parameters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span> <span class="c1"># Only set default if not provided by user</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_value</span></div>
+    
+<div class="viewcode-block" id="InversionBase.setup"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionBase.setup">[docs]</a>    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Abstract method to set up the inversion specifics.</span>
+
+<span class="sd">        This should be implemented by derived classes to prepare everything needed</span>
+<span class="sd">        for the inversion, such as:</span>
+<span class="sd">        - Creating or validating the mesh if not already done.</span>
+<span class="sd">        - Initializing forward modeling operators.</span>
+<span class="sd">        - Preparing data weighting and model regularization matrices.</span>
+<span class="sd">        - Setting up initial models.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Example: Mesh creation if not provided</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># This part is highly dependent on the type of inversion (ERT, SRT, etc.)</span>
+            <span class="c1"># and thus must be implemented in the specific subclass.</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Mesh creation or loading must be implemented in the setup() method of derived classes if mesh is not provided during initialization.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Other setup tasks like initializing forward operator,</span>
+        <span class="c1"># regularization matrices, etc., would go here or in subclass&#39;s setup.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="c1"># Store mesh in result object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;inversion_parameters&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="c1"># Store used params</span></div>
+
+<div class="viewcode-block" id="InversionBase.run"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionBase.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InversionResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Abstract method to run the main inversion loop.</span>
+<span class="sd">        </span>
+<span class="sd">        Derived classes must implement this to perform the iterative optimization process.</span>
+<span class="sd">        The method should populate and return an `InversionResult` (or subclass) object.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            InversionResult: An object containing the results of the inversion.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;The run() method must be implemented in derived classes.&quot;</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="InversionBase.compute_jacobian"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionBase.compute_jacobian">[docs]</a>    <span class="k">def</span> <span class="nf">compute_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Abstract method to compute the Jacobian matrix (sensitivity matrix).</span>
+
+<span class="sd">        The Jacobian J_ij = ∂d_i / ∂m_j relates changes in model parameters (m_j)</span>
+<span class="sd">        to changes in observed data (d_i).</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            model (np.ndarray): The current model parameter vector for which to compute the Jacobian.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:,</span>
+<span class="sd">            np.ndarray: The computed Jacobian matrix, typically of shape (n_data, n_model_params).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Jacobian computation (compute_jacobian) must be implemented in derived classes.&quot;</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="InversionBase.objective_function"><a class="viewcode-back" href="../../api/inversion.html#inversion.base.InversionBase.objective_function">[docs]</a>    <span class="k">def</span> <span class="nf">objective_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data_to_fit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Abstract method to compute the value of the objective function.</span>
+
+<span class="sd">        The objective function typically includes a data misfit term and one or more</span>
+<span class="sd">        regularization terms: Φ(m) = Φ_d(m) + λ * Φ_m(m).</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            model (np.ndarray): The current model parameter vector.</span>
+<span class="sd">            data_to_fit (Optional[np.ndarray], optional): The observed data to fit.</span>
+<span class="sd">                                                          If None, `self.data` (from DataContainer)</span>
+<span class="sd">                                                          is typically used. Defaults to None.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            float: The calculated value of the objective function.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Objective function calculation must be implemented in derived classes.&quot;</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

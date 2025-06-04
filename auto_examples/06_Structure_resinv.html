@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ex 6. Structure-Constrained Resistivity Inversion &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/06_Structure_resinv.html" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation" href="08_MC_WC.html" />
+    <link rel="prev" title="Ex 4. Time-Lapse ERT Inversion Techniques" href="04_TL_inversion.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_model_output.html">Ex 1. Loading and Processing Hydrological Model Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
+      <li class="breadcrumb-item active">Ex 6. Structure-Constrained Resistivity Inversion</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/geohang/PyHydroGeophysX/blob/main/docs/source/auto_examples/06_Structure_resinv.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-06-structure-resinv-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
+</div>
+<section class="sphx-glr-example-title" id="ex-6-structure-constrained-resistivity-inversion">
+<span id="sphx-glr-auto-examples-06-structure-resinv-py"></span><h1>Ex 6. Structure-Constrained Resistivity Inversion<a class="headerlink" href="#ex-6-structure-constrained-resistivity-inversion" title="Permalink to this heading"></a></h1>
+<p>This example demonstrates how to incorporate structural information from
+seismic velocity models into ERT inversion for improved subsurface imaging.</p>
+<p>The workflow includes:
+1. Loading seismic travel time data and performing velocity inversion
+2. Extracting velocity interfaces at specified thresholds
+3. Creating ERT meshes with geological layer boundaries
+4. Structure-constrained ERT inversion using velocity-derived interfaces
+5. Comparison with unconstrained inversion results</p>
+<p>Structure-constrained inversion significantly improves the accuracy of
+resistivity models by incorporating a priori geological information,
+leading to more reliable hydrological interpretations.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">import</span> <span class="nn">pygimli.physics.traveltime</span> <span class="k">as</span> <span class="nn">tt</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">pylab</span>
+
+<span class="c1"># Setup package path for development</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># For regular Python scripts</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+    <span class="c1"># For Jupyter notebooks</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="c1"># Add the parent directory to Python path</span>
+<span class="n">parent_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">current_dir</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.time_lapse</span> <span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
+
+<span class="c1"># Set up matplotlib parameters</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+         <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">14</span><span class="p">,</span>
+         <span class="s1">&#39;axes.titlesize&#39;</span><span class="p">:</span><span class="mi">14</span><span class="p">,</span>
+         <span class="s1">&#39;xtick.labelsize&#39;</span><span class="p">:</span><span class="mi">14</span><span class="p">,</span>
+         <span class="s1">&#39;ytick.labelsize&#39;</span><span class="p">:</span><span class="mi">14</span><span class="p">}</span>
+<span class="n">pylab</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC&quot;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>##  load data</p>
+<p>load seismic data</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ttData</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/workflow_example/synthetic_seismic_data.dat&quot;</span><span class="p">)</span>
+<span class="c1"># load ERT data</span>
+<span class="n">ertData</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples//results/TL_measurements/appres/synthetic_data30.dat&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>##  Using ERT data to create a mesh to take care of the boundary</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">paraBoundary</span> <span class="o">=</span> <span class="mf">0.1</span>
+
+<span class="n">ert1</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">ertData</span><span class="p">)</span>
+<span class="n">grid</span> <span class="o">=</span> <span class="n">ert1</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">ertData</span><span class="p">,</span><span class="n">quality</span> <span class="o">=</span> <span class="mi">31</span><span class="p">,</span><span class="n">paraDX</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">boundaryMaxCellSize</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span><span class="n">smooth</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+                       <span class="n">paraBoundary</span> <span class="o">=</span> <span class="n">paraBoundary</span><span class="p">,</span> <span class="n">paraDepth</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">)</span>
+<span class="n">ert1</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert1</span><span class="o">.</span><span class="n">fop</span><span class="o">.</span><span class="n">paraDomain</span>
+<span class="n">mesh</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()))</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>##  travel time inversion</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">TT</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">traveltime</span><span class="o">.</span><span class="n">TravelTimeManager</span><span class="p">()</span>
+<span class="n">TT</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+<span class="n">TT</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">ttData</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+          <span class="n">zWeight</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span><span class="n">vTop</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">vBottom</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span>
+          <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">limits</span><span class="o">=</span><span class="p">[</span><span class="mf">100.</span><span class="p">,</span> <span class="mf">6000.</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">showResult</span><span class="p">(</span><span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">TT</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">(),</span><span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span><span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">showResult</span><span class="p">(</span><span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span><span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">TT</span><span class="o">.</span><span class="n">paraDomain</span><span class="p">,</span><span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">TT</span><span class="o">.</span><span class="n">paraDomain</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="c1"># Assuming TT.model.array() gives you the velocity values</span>
+<span class="n">velocity_data</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+
+<span class="c1"># Get the mesh shape</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">paraDomain</span>
+<span class="n">cell_centers</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">()</span>
+<span class="n">x_coords</span> <span class="o">=</span> <span class="n">cell_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># X-coordinates of cell centers</span>
+<span class="n">z_coords</span> <span class="o">=</span> <span class="n">cell_centers</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># Z-coordinates (depth) of cell centers</span>
+
+<span class="c1"># Create a new array for the thresholded values</span>
+<span class="n">thresholded</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">velocity_data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+<span class="c1"># Get unique x-coordinates (horizontal distances)</span>
+<span class="n">unique_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">x_coords</span><span class="p">)</span>
+
+<span class="c1"># For each vertical column (each unique x-coordinate)</span>
+<span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">unique_x</span><span class="p">:</span>
+    <span class="c1"># Get indices of cells in this column, sorted by depth (z-coordinate)</span>
+    <span class="n">column_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">x_coords</span> <span class="o">==</span> <span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">column_indices</span> <span class="o">=</span> <span class="n">column_indices</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">z_coords</span><span class="p">[</span><span class="n">column_indices</span><span class="p">])]</span>
+
+    <span class="c1"># Check if any cell in this column exceeds the threshold</span>
+    <span class="n">threshold_crossed</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># Process cells from top to bottom</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">column_indices</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">velocity_data</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">1200</span> <span class="ow">or</span> <span class="n">threshold_crossed</span><span class="p">:</span>
+            <span class="n">thresholded</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="n">threshold_crossed</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="c1"># Otherwise thresholded[idx] remains 1</span>
+
+<span class="c1"># Now thresholded contains your classified values (1 or 2)</span>
+<span class="c1"># Let&#39;s visualize the result</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="c1"># Create a figure with two subplots to compare</span>
+<span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+<span class="c1"># Original data</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_data</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;viridis&#39;</span><span class="p">,</span> <span class="n">colorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Original Velocity Data&#39;</span><span class="p">)</span>
+
+<span class="c1"># Thresholded data</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">thresholded</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax2</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span> <span class="n">colorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Thresholded Data (1 &amp; 2)&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">interp1d</span>
+
+<span class="k">def</span> <span class="nf">extract_velocity_interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_data</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span><span class="n">interval</span> <span class="o">=</span> <span class="mf">4.0</span> <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract the interface where velocity equals the threshold value.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    mesh - The PyGIMLi mesh</span>
+<span class="sd">    velocity_data - The velocity values</span>
+<span class="sd">    threshold - The velocity value defining the interface (default: 1200)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    x_dense, z_dense - Arrays with x and z coordinates of the smooth interface</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get cell centers</span>
+    <span class="n">cell_centers</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">()</span>
+    <span class="n">x_coords</span> <span class="o">=</span> <span class="n">cell_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">z_coords</span> <span class="o">=</span> <span class="n">cell_centers</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># Get x-range for complete boundary</span>
+    <span class="n">x_min</span><span class="p">,</span> <span class="n">x_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">x_coords</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">x_coords</span><span class="p">)</span>
+
+    <span class="c1"># Create bins across the entire x-range</span>
+     <span class="c1"># Adjust for desired precision</span>
+    <span class="n">x_bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">x_min</span><span class="p">,</span> <span class="n">x_max</span> <span class="o">+</span> <span class="n">interval</span><span class="p">,</span> <span class="n">interval</span><span class="p">)</span>
+
+    <span class="c1"># Arrays to store interface points</span>
+    <span class="n">interface_x</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">interface_z</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># For each bin, find the velocity interface</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_bins</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c1"># Get all cells in this x-range</span>
+        <span class="n">bin_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">x_coords</span> <span class="o">&gt;=</span> <span class="n">x_bins</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x_coords</span> <span class="o">&lt;</span> <span class="n">x_bins</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]))[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bin_indices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Get velocity values and depths for this bin</span>
+            <span class="n">bin_velocities</span> <span class="o">=</span> <span class="n">velocity_data</span><span class="p">[</span><span class="n">bin_indices</span><span class="p">]</span>
+            <span class="n">bin_depths</span> <span class="o">=</span> <span class="n">z_coords</span><span class="p">[</span><span class="n">bin_indices</span><span class="p">]</span>
+
+            <span class="c1"># Sort by depth</span>
+            <span class="n">sort_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">bin_depths</span><span class="p">)</span>
+            <span class="n">bin_velocities</span> <span class="o">=</span> <span class="n">bin_velocities</span><span class="p">[</span><span class="n">sort_indices</span><span class="p">]</span>
+            <span class="n">bin_depths</span> <span class="o">=</span> <span class="n">bin_depths</span><span class="p">[</span><span class="n">sort_indices</span><span class="p">]</span>
+
+            <span class="c1"># Find where velocity crosses the threshold</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">bin_velocities</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">bin_velocities</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="n">bin_velocities</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">)</span> <span class="ow">or</span> \
+                   <span class="p">(</span><span class="n">bin_velocities</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">threshold</span> <span class="ow">and</span> <span class="n">bin_velocities</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">):</span>
+                    <span class="c1"># Linear interpolation for exact interface depth</span>
+                    <span class="n">v1</span> <span class="o">=</span> <span class="n">bin_velocities</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">v2</span> <span class="o">=</span> <span class="n">bin_velocities</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                    <span class="n">z1</span> <span class="o">=</span> <span class="n">bin_depths</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">z2</span> <span class="o">=</span> <span class="n">bin_depths</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+                    <span class="c1"># Calculate the interpolated z-value where velocity = threshold</span>
+                    <span class="n">ratio</span> <span class="o">=</span> <span class="p">(</span><span class="n">threshold</span> <span class="o">-</span> <span class="n">v1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">v2</span> <span class="o">-</span> <span class="n">v1</span><span class="p">)</span>
+                    <span class="n">interface_depth</span> <span class="o">=</span> <span class="n">z1</span> <span class="o">+</span> <span class="n">ratio</span> <span class="o">*</span> <span class="p">(</span><span class="n">z2</span> <span class="o">-</span> <span class="n">z1</span><span class="p">)</span>
+
+                    <span class="n">interface_x</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x_bins</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">x_bins</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+                    <span class="n">interface_z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">interface_depth</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+    <span class="c1"># Ensure we have interface points for the entire range</span>
+    <span class="c1"># If first point is missing, extrapolate from the first available points</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">interface_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">x_min</span> <span class="o">+</span> <span class="n">interval</span><span class="p">:</span>
+        <span class="n">interface_x</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">x_min</span><span class="p">)</span>
+        <span class="c1"># Use the slope of the first two points to extrapolate</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">slope</span> <span class="o">=</span> <span class="p">(</span><span class="n">interface_z</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">interface_z</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">interface_x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">interface_x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">interface_z</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">interface_z</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">slope</span> <span class="o">*</span> <span class="p">(</span><span class="n">interface_x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_min</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">interface_z</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">interface_z</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># If last point is missing, extrapolate from the last available points</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">interface_x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">x_max</span> <span class="o">-</span> <span class="n">interval</span><span class="p">:</span>
+        <span class="n">interface_x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_max</span><span class="p">)</span>
+        <span class="c1"># Use the slope of the last two points to extrapolate</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">slope</span> <span class="o">=</span> <span class="p">(</span><span class="n">interface_z</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">interface_z</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">interface_x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">interface_x</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">interface_z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">interface_z</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">slope</span> <span class="o">*</span> <span class="p">(</span><span class="n">x_max</span> <span class="o">-</span> <span class="n">interface_x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">interface_z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">interface_z</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="c1"># Create a dense interpolation grid for smoothing</span>
+    <span class="n">x_dense</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">x_min</span><span class="p">,</span> <span class="n">x_max</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>  <span class="c1"># 500 points for smooth curve</span>
+
+    <span class="c1"># Apply cubic interpolation for smoother interface</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">interp_func</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">interface_x</span><span class="p">,</span> <span class="n">interface_z</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;cubic&#39;</span><span class="p">,</span>
+                                <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="s2">&quot;extrapolate&quot;</span><span class="p">)</span>
+            <span class="n">z_dense</span> <span class="o">=</span> <span class="n">interp_func</span><span class="p">(</span><span class="n">x_dense</span><span class="p">)</span>
+
+            <span class="c1"># Apply additional smoothing</span>
+            <span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">savgol_filter</span>
+            <span class="n">z_dense</span> <span class="o">=</span> <span class="n">savgol_filter</span><span class="p">(</span><span class="n">z_dense</span><span class="p">,</span> <span class="n">window_length</span><span class="o">=</span><span class="mi">31</span><span class="p">,</span> <span class="n">polyorder</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c1"># Fall back to linear interpolation if cubic fails</span>
+            <span class="n">interp_func</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">interface_x</span><span class="p">,</span> <span class="n">interface_z</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span>
+                                <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="s2">&quot;extrapolate&quot;</span><span class="p">)</span>
+            <span class="n">z_dense</span> <span class="o">=</span> <span class="n">interp_func</span><span class="p">(</span><span class="n">x_dense</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Not enough points for cubic interpolation</span>
+        <span class="n">interp_func</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">interface_x</span><span class="p">,</span> <span class="n">interface_z</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span>
+                               <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="s2">&quot;extrapolate&quot;</span><span class="p">)</span>
+        <span class="n">z_dense</span> <span class="o">=</span> <span class="n">interp_func</span><span class="p">(</span><span class="n">x_dense</span><span class="p">)</span>
+
+
+
+
+    <span class="k">return</span> <span class="n">x_dense</span><span class="p">,</span> <span class="n">z_dense</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Call the function with velocity data</span>
+<span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span> <span class="o">=</span> <span class="n">extract_velocity_interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_data</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span><span class="n">interval</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax1</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+<span class="c1"># Original data</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_data</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;viridis&#39;</span><span class="p">,</span> <span class="n">colorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Original Velocity Data&#39;</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">geo</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">createParaMeshPLC</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">31</span><span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                                        <span class="n">paraBoundary</span><span class="o">=</span><span class="n">paraBoundary</span><span class="p">,</span><span class="n">paraDepth</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span><span class="n">boundaryMaxCellSize</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">geo</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">add_velocity_interface</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">,</span> <span class="n">paraBoundary</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add a velocity interface line to the geometry and create a mesh with different markers:</span>
+<span class="sd">    - Outside survey area: marker = 1</span>
+<span class="sd">    - Inside survey area, above velocity line: marker = 2</span>
+<span class="sd">    - Inside survey area, below velocity line: marker = 3</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    ertData - ERT data with sensor positions</span>
+<span class="sd">    smooth_x, smooth_z - Arrays with x and z coordinates of the velocity interface</span>
+<span class="sd">    paraBoundary, boundary - Mesh parameters</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    markers - Array with cell markers</span>
+<span class="sd">    meshafter - The created mesh with updated markers</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Create the initial parameter mesh</span>
+    <span class="n">geo</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">createParaMeshPLC</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+                                         <span class="n">paraBoundary</span><span class="o">=</span><span class="n">paraBoundary</span><span class="p">,</span> <span class="n">paraDepth</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span>
+                                         <span class="n">boundaryMaxCellSize</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+
+    <span class="c1"># Stack x and z coordinates for the interface</span>
+    <span class="n">interface_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="c1"># Extend the interface line beyond the data range by paraBoundary</span>
+    <span class="n">input_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">interface_points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">paraBoundary</span><span class="p">,</span> <span class="n">interface_points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]]]),</span>
+        <span class="n">interface_points</span><span class="p">,</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">interface_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">paraBoundary</span><span class="p">,</span> <span class="n">interface_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]]])</span>
+    <span class="p">))</span>
+
+    <span class="c1"># Create a polygon line for the interface</span>
+    <span class="n">interface_line</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">input_points</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">isClosed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                              <span class="n">interpolate</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">99</span><span class="p">)</span>
+
+    <span class="c1"># Add the interface to the geometry</span>
+    <span class="n">geo_with_interface</span> <span class="o">=</span> <span class="n">geo</span> <span class="o">+</span> <span class="n">interface_line</span>
+
+    <span class="c1"># Create a mesh from the combined geometry</span>
+    <span class="n">meshafter</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">geo_with_interface</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">28</span><span class="p">)</span>
+
+    <span class="c1"># Initialize all markers to 1 (outside region)</span>
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">meshafter</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span>
+
+    <span class="c1"># Identify the survey area</span>
+    <span class="n">survey_left</span> <span class="o">=</span> <span class="n">ertData</span><span class="o">.</span><span class="n">sensors</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">paraBoundary</span>
+    <span class="n">survey_right</span> <span class="o">=</span> <span class="n">ertData</span><span class="o">.</span><span class="n">sensors</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">paraBoundary</span>
+
+    <span class="c1"># Process each cell</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">meshafter</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()):</span>
+        <span class="n">cell_x</span> <span class="o">=</span> <span class="n">meshafter</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">center</span><span class="p">()</span><span class="o">.</span><span class="n">x</span><span class="p">()</span>
+        <span class="n">cell_y</span> <span class="o">=</span> <span class="n">meshafter</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">center</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span>
+
+        <span class="c1"># Only modify markers within the survey area</span>
+        <span class="k">if</span> <span class="n">cell_x</span> <span class="o">&gt;=</span> <span class="n">survey_left</span> <span class="ow">and</span> <span class="n">cell_x</span> <span class="o">&lt;=</span> <span class="n">survey_right</span><span class="p">:</span>
+            <span class="c1"># Interpolate the interface height at this x position</span>
+            <span class="n">interface_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">cell_x</span><span class="p">,</span> <span class="n">input_points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">input_points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+
+            <span class="c1"># Set marker based on position relative to interface</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">cell_y</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">interface_y</span><span class="p">):</span>
+                <span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># Below interface</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># Above interface</span>
+
+    <span class="n">markers</span><span class="p">[</span><span class="n">meshafter</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()</span><span class="o">==</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># Keep original markers for outside cells`</span>
+    <span class="c1"># Set the updated markers</span>
+    <span class="n">meshafter</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">markers</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">markers</span><span class="p">,</span> <span class="n">meshafter</span>
+
+<span class="c1"># Example usage:</span>
+<span class="c1"># markers, meshafter = add_velocity_interface(ertData, smooth_x, smooth_z)</span>
+<span class="c1"># pg.show(meshafter, markers=True, label=&#39;Region markers&#39;)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">markers</span><span class="p">,</span> <span class="n">mesh_with_interface</span> <span class="o">=</span> <span class="n">add_velocity_interface</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">)</span>
+<span class="n">mesh_with_interface</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_with_interface</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span> <span class="n">colorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Mesh with Velocity Interface&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_with_interface</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span><span class="mi">120</span><span class="p">])</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">([</span><span class="mi">1580</span><span class="p">,</span><span class="mi">1630</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.000 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-06-structure-resinv-py">
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/453ea9ccac13d85e4213f7289b6cc7e4/06_Structure_resinv.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">06_Structure_resinv.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/bd504e03f4d759d7b355cb94b6f63b5a/06_Structure_resinv.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">06_Structure_resinv.ipynb</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="04_TL_inversion.html" class="btn btn-neutral float-left" title="Ex 4. Time-Lapse ERT Inversion Techniques" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="08_MC_WC.html" class="btn btn-neutral float-right" title="Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
