@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex8_MC_WC.html" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling" href="Ex5_SRT.html" />
+    <link rel="prev" title="Ex 6. Structure-Constrained Resistivity Inversion" href="Ex6_Structure_resinv.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Ex 1. Loading and Processing Hydrological Model Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
+      <li class="breadcrumb-item active">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/auto_examples/Ex8_MC_WC.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex8-mc-wc-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
+</div>
+<section class="sphx-glr-example-title" id="ex-8-monte-carlo-uncertainty-quantification-for-water-content-estimation">
+<span id="sphx-glr-auto-examples-ex8-mc-wc-py"></span><h1>Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation<a class="headerlink" href="#ex-8-monte-carlo-uncertainty-quantification-for-water-content-estimation" title="Permalink to this heading"></a></h1>
+<p>This example demonstrates Monte Carlo uncertainty quantification for
+converting ERT resistivity models to water content estimates.</p>
+<p>The analysis includes:
+1. Loading inverted resistivity models from time-lapse ERT
+2. Defining parameter distributions for different geological layers
+3. Monte Carlo sampling of petrophysical parameters
+4. Probabilistic water content estimation with uncertainty bounds
+5. Statistical analysis and visualization of results
+6. Time series extraction with confidence intervals</p>
+<p>Uncertainty quantification is essential for reliable hydrological
+interpretation of geophysical data, providing confidence bounds on
+water content estimates and identifying regions of high/low certainty.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+
+<span class="c1"># Setup package path for development</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># For regular Python scripts</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+    <span class="c1"># For Jupyter notebooks</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="c1"># Add the parent directory to Python path</span>
+<span class="n">parent_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">current_dir</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">resistivity_to_saturation</span>
+
+<span class="c1"># Extract the inverted resistivity values</span>
+<span class="n">resistivity_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;resmodel.npy&quot;</span><span class="p">))</span>
+<span class="n">coverage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;all_coverage.npy&quot;</span><span class="p">))</span>
+<span class="c1"># Extract cell markers from the mesh (to identify different geological layers)</span>
+<span class="n">cell_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;index_marker.npy&quot;</span><span class="p">))</span>
+<span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy&quot;</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;mesh_res.bms&quot;</span><span class="p">))</span>
+
+<span class="c1"># Number of Monte Carlo realizations</span>
+<span class="n">n_realizations</span> <span class="o">=</span> <span class="mi">100</span>
+
+<span class="c1"># Set up parameter distributions (means and standard deviations)</span>
+<span class="c1"># Layer 1 (top layer - marker 3)</span>
+<span class="n">layer1_dist</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;rhos&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="mf">100.0</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">},</span>       <span class="c1"># Saturated resistivity (ohm-m)</span>
+    <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="mf">2.2</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span>             <span class="c1"># Saturation exponent</span>
+    <span class="s1">&#39;sigma_sur&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">500</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">2000</span><span class="p">},</span>  <span class="c1"># Surface conductivity (S/m)</span>
+    <span class="s1">&#39;porosity&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="mf">0.40</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">}</span>      <span class="c1"># Porosity</span>
+<span class="p">}</span>
+
+<span class="c1"># Layer 2 (bottom layer - marker 2)</span>
+<span class="n">layer2_dist</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;rhos&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="mf">500.0</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="mf">100.0</span><span class="p">},</span>      <span class="c1"># Saturated resistivity (ohm-m)</span>
+    <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="mf">1.8</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span>             <span class="c1"># Saturation exponent</span>
+    <span class="s1">&#39;sigma_sur&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">50000</span><span class="p">},</span>    <span class="c1"># Surface conductivity (S/m)</span>
+    <span class="s1">&#39;porosity&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="mf">0.35</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">}</span>      <span class="c1"># Porosity</span>
+<span class="p">}</span>
+
+<span class="c1"># Create arrays to store all MC realization results</span>
+<span class="n">water_content_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_realizations</span><span class="p">,</span> <span class="o">*</span><span class="n">resistivity_values</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+<span class="n">Saturation_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_realizations</span><span class="p">,</span> <span class="o">*</span><span class="n">resistivity_values</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+<span class="c1"># Create arrays to store the parameters used for each realization</span>
+<span class="n">params_used</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;layer1&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;rhos&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">),</span>
+        <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">),</span>
+        <span class="s1">&#39;sigma_sur&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">),</span>
+        <span class="s1">&#39;porosity&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">)</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;layer2&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;rhos&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">),</span>
+        <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">),</span>
+        <span class="s1">&#39;sigma_sur&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">),</span>
+        <span class="s1">&#39;porosity&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1"># Perform Monte Carlo simulation</span>
+<span class="k">for</span> <span class="n">mc_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">):</span>
+    <span class="c1"># Sample parameters for each layer from their distributions</span>
+    <span class="c1"># Layer 1</span>
+    <span class="n">layer1_params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;rhos&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer1_dist</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="n">layer1_dist</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">])),</span>
+        <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer1_dist</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="n">layer1_dist</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">])),</span>
+        <span class="s1">&#39;sigma_sur&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer1_dist</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="n">layer1_dist</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">]))</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Layer 2</span>
+    <span class="n">layer2_params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;rhos&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer2_dist</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="n">layer2_dist</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">])),</span>
+        <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer2_dist</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="n">layer2_dist</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">])),</span>
+        <span class="s1">&#39;sigma_sur&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer2_dist</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="n">layer2_dist</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">]))</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Sample porosity for each layer</span>
+    <span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">cell_markers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">layer1_porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer1_dist</span><span class="p">[</span><span class="s1">&#39;porosity&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span>
+                                              <span class="n">layer1_dist</span><span class="p">[</span><span class="s1">&#39;porosity&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">]),</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">)</span>
+    <span class="n">layer2_porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">layer2_dist</span><span class="p">[</span><span class="s1">&#39;porosity&#39;</span><span class="p">][</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span>
+                                              <span class="n">layer2_dist</span><span class="p">[</span><span class="s1">&#39;porosity&#39;</span><span class="p">][</span><span class="s1">&#39;std&#39;</span><span class="p">]),</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">)</span>
+
+    <span class="n">porosity</span><span class="p">[</span><span class="n">cell_markers</span> <span class="o">==</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer1_porosity</span>  <span class="c1"># Top layer porosity</span>
+    <span class="n">porosity</span><span class="p">[</span><span class="n">cell_markers</span> <span class="o">==</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer2_porosity</span>  <span class="c1"># Bottom layer porosity</span>
+
+    <span class="c1"># Save the parameters used for this realization</span>
+    <span class="n">params_used</span><span class="p">[</span><span class="s1">&#39;layer1&#39;</span><span class="p">][</span><span class="s1">&#39;rhos&#39;</span><span class="p">][</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer1_params</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">]</span>
+    <span class="n">params_used</span><span class="p">[</span><span class="s1">&#39;layer1&#39;</span><span class="p">][</span><span class="s1">&#39;n&#39;</span><span class="p">][</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer1_params</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">]</span>
+    <span class="n">params_used</span><span class="p">[</span><span class="s1">&#39;layer1&#39;</span><span class="p">][</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">][</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer1_params</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">]</span>
+    <span class="n">params_used</span><span class="p">[</span><span class="s1">&#39;layer1&#39;</span><span class="p">][</span><span class="s1">&#39;porosity&#39;</span><span class="p">][</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer1_porosity</span>
+
+    <span class="n">params_used</span><span class="p">[</span><span class="s1">&#39;layer2&#39;</span><span class="p">][</span><span class="s1">&#39;rhos&#39;</span><span class="p">][</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer2_params</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">]</span>
+    <span class="n">params_used</span><span class="p">[</span><span class="s1">&#39;layer2&#39;</span><span class="p">][</span><span class="s1">&#39;n&#39;</span><span class="p">][</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer2_params</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">]</span>
+    <span class="n">params_used</span><span class="p">[</span><span class="s1">&#39;layer2&#39;</span><span class="p">][</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">][</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer2_params</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">]</span>
+    <span class="n">params_used</span><span class="p">[</span><span class="s1">&#39;layer2&#39;</span><span class="p">][</span><span class="s1">&#39;porosity&#39;</span><span class="p">][</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer2_porosity</span>
+
+    <span class="c1"># Create arrays to store water content and saturation for this realization</span>
+    <span class="n">water_content</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">resistivity_values</span><span class="p">)</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">resistivity_values</span><span class="p">)</span>
+
+    <span class="c1"># Process each timestep</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">resistivity_values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="c1"># Extract resistivity for this timestep</span>
+        <span class="n">resistivity_t</span> <span class="o">=</span> <span class="n">resistivity_values</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span>
+
+        <span class="c1"># Process each layer separately</span>
+        <span class="c1"># Layer 1 (marker 3)</span>
+        <span class="n">mask_layer1</span> <span class="o">=</span> <span class="n">cell_markers</span> <span class="o">==</span> <span class="mi">3</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask_layer1</span><span class="p">):</span>
+            <span class="n">saturation</span><span class="p">[</span><span class="n">mask_layer1</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">resistivity_to_saturation</span><span class="p">(</span>
+                <span class="n">resistivity_t</span><span class="p">[</span><span class="n">mask_layer1</span><span class="p">],</span>
+                <span class="n">layer1_params</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">],</span>
+                <span class="n">layer1_params</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">],</span>
+                <span class="n">layer1_params</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Layer 2 (marker 2)</span>
+        <span class="n">mask_layer2</span> <span class="o">=</span> <span class="n">cell_markers</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask_layer2</span><span class="p">):</span>
+            <span class="n">saturation</span><span class="p">[</span><span class="n">mask_layer2</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">resistivity_to_saturation</span><span class="p">(</span>
+                <span class="n">resistivity_t</span><span class="p">[</span><span class="n">mask_layer2</span><span class="p">],</span>
+                <span class="n">layer2_params</span><span class="p">[</span><span class="s1">&#39;rhos&#39;</span><span class="p">],</span>
+                <span class="n">layer2_params</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">],</span>
+                <span class="n">layer2_params</span><span class="p">[</span><span class="s1">&#39;sigma_sur&#39;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Convert saturation to water content (water_content = saturation * porosity)</span>
+        <span class="n">water_content</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">saturation</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">*</span> <span class="n">porosity</span>
+
+    <span class="c1"># Store this realization&#39;s water content</span>
+    <span class="n">water_content_all</span><span class="p">[</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">water_content</span>
+    <span class="n">Saturation_all</span><span class="p">[</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">saturation</span>
+</pre></div>
+</div>
+<p>Calculate statistics across all realizations</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">water_content_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">water_content_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">water_content_p10</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># 10th percentile</span>
+<span class="n">water_content_p50</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># Median</span>
+<span class="n">water_content_p90</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># 90th percentile</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18_r</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pylab</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pylab</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+          <span class="c1">#&#39;figure.figsize&#39;: (15, 5),</span>
+         <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;axes.titlesize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;xtick.labelsize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;ytick.labelsize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">}</span>
+
+<span class="n">pylab</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18_r</span><span class="o">.</span><span class="n">mpl_colormap</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">])</span>
+
+<span class="c1"># Use tight_layout with adjusted parameters to reduce space</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">wspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">i</span> <span class="o">//</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">4</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Add common ylabel only to leftmost panels</span>
+    <span class="n">ylabel</span> <span class="o">=</span> <span class="s2">&quot;Elevation (m)&quot;</span> <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Add resistivity label only to the middle-right panel (row 1, col 3)</span>
+    <span class="n">resistivity_label</span> <span class="o">=</span> <span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span> <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">7</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Only show axis ticks on leftmost and bottom panels</span>
+    <span class="k">if</span> <span class="n">col</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+
+    <span class="k">if</span> <span class="n">row</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Not bottom row</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Add &quot;distance (m)&quot; label to bottom row panels</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create the plot</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span>
+                      <span class="n">water_content_mean</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span>
+                      <span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+                      <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+                      <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span>
+                      <span class="n">cMin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                      <span class="n">cMax</span><span class="o">=</span><span class="mf">0.32</span><span class="p">,</span>
+                      <span class="n">ylabel</span><span class="o">=</span><span class="n">ylabel</span><span class="p">,</span>
+                      <span class="n">label</span><span class="o">=</span> <span class="s1">&#39;Water Content (-)&#39;</span><span class="p">,</span>
+                      <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                      <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                      <span class="n">coverage</span><span class="o">=</span><span class="n">coverage</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span><span class="o">&gt;-</span><span class="mf">1.2</span><span class="p">)</span>
+
+    <span class="c1"># Only keep colorbar for the middle-right panel (row 1, col 3)</span>
+    <span class="c1"># This corresponds to panel index 7 in a 0-based indexing system</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">7</span><span class="p">:</span>  <span class="c1"># Keep only the colorbar for panel 7</span>
+        <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">WC_true</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span><span class="mi">361</span><span class="p">,</span><span class="mi">30</span><span class="p">):</span>
+    <span class="c1"># Extract true water content values for the current timestep</span>
+
+    <span class="n">synwcmodel_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="s2">&quot;TL_measurements&quot;</span><span class="p">,</span> <span class="s2">&quot;synwcmodel&quot;</span><span class="p">)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;synwcmodel&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.npy&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">synwcmodel_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="n">true_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="c1"># Store the true values for this timestep</span>
+    <span class="n">WC_true</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">true_values</span><span class="p">)</span>
+<span class="n">mesh_true</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="s2">&quot;TL_measurements&quot;</span><span class="p">,</span> <span class="s2">&quot;mesh.bms&quot;</span><span class="p">))</span>
+<span class="n">WC_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">WC_true</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">WC_true</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span>
+                <span class="n">water_content_mean</span><span class="p">[:,</span> <span class="mi">6</span><span class="p">],</span>
+                <span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+                <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+                <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span>
+                <span class="n">cMin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">cMax</span><span class="o">=</span><span class="mf">0.32</span><span class="p">,</span>
+                <span class="n">ylabel</span><span class="o">=</span><span class="n">ylabel</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span> <span class="s1">&#39;Water Content (-)&#39;</span><span class="p">,</span>
+                <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">coverage</span><span class="o">=</span><span class="n">coverage</span><span class="p">[</span><span class="mi">6</span><span class="p">,:]</span><span class="o">&gt;-</span><span class="mf">1.2</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">40</span><span class="p">],[</span><span class="mi">1607</span><span class="p">],</span><span class="s1">&#39;*&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">80</span><span class="p">],[</span><span class="mi">1621</span><span class="p">],</span><span class="s1">&#39;*&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">30</span><span class="p">],[</span><span class="mi">1604</span><span class="p">],</span><span class="s1">&#39;*&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">65</span><span class="p">],[</span><span class="mi">1608</span><span class="p">],</span><span class="s1">&#39;*&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Modified function to extract time series based on x AND y positions</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">extract_mc_time_series</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">values_all</span><span class="p">,</span> <span class="n">positions</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract Monte Carlo time series at specific x,y positions</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        mesh: PyGIMLI mesh</span>
+<span class="sd">        values_all: Array of all Monte Carlo realizations (n_realizations, n_cells, n_timesteps)</span>
+<span class="sd">        positions: List of (x,y) coordinate tuples</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        time_series: Array of shape (n_positions, n_realizations, n_timesteps)</span>
+<span class="sd">        cell_indices: List of cell indices corresponding to the positions</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_realizations</span> <span class="o">=</span> <span class="n">values_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">n_timesteps</span> <span class="o">=</span> <span class="n">values_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="c1"># Find indices of cells closest to specified positions</span>
+    <span class="n">cell_indices</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">x_pos</span><span class="p">,</span> <span class="n">y_pos</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">:</span>
+        <span class="c1"># Calculate distance from each cell center to the position</span>
+        <span class="n">cell_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">cell_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_pos</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">cell_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y_pos</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">cell_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">distances</span><span class="p">)</span>
+        <span class="n">cell_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cell_idx</span><span class="p">)</span>
+
+    <span class="c1"># Extract time series for each realization and position</span>
+    <span class="n">time_series</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">positions</span><span class="p">),</span> <span class="n">n_realizations</span><span class="p">,</span> <span class="n">n_timesteps</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">pos_idx</span><span class="p">,</span> <span class="n">cell_idx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cell_indices</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">mc_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_realizations</span><span class="p">):</span>
+            <span class="n">time_series</span><span class="p">[</span><span class="n">pos_idx</span><span class="p">,</span> <span class="n">mc_idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">values_all</span><span class="p">[</span><span class="n">mc_idx</span><span class="p">,</span> <span class="n">cell_idx</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="k">return</span> <span class="n">time_series</span><span class="p">,</span> <span class="n">cell_indices</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_true_values_at_positions</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">true_values</span><span class="p">,</span> <span class="n">positions</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract true water content values at specific x,y positions.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        mesh: PyGIMLI mesh</span>
+<span class="sd">        true_values: Array of true water content values (n_cells, n_timesteps) or (n_cells,)</span>
+<span class="sd">        positions: List of (x,y) coordinate tuples</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        true_values_at_positions: Values at each position</span>
+<span class="sd">        cell_indices: List of cell indices corresponding to the positions</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Find indices of cells closest to specified positions</span>
+    <span class="n">cell_indices</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">x_pos</span><span class="p">,</span> <span class="n">y_pos</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">:</span>
+        <span class="c1"># Calculate distance from each cell center to the position</span>
+        <span class="n">cell_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">cell_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_pos</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">cell_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y_pos</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">cell_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">distances</span><span class="p">)</span>
+        <span class="n">cell_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cell_idx</span><span class="p">)</span>
+
+    <span class="c1"># Extract true values at the specified positions</span>
+    <span class="k">if</span> <span class="n">true_values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># Single value per cell</span>
+        <span class="n">true_values_at_positions</span> <span class="o">=</span> <span class="n">true_values</span><span class="p">[</span><span class="n">cell_indices</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">true_values</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Time series per cell</span>
+        <span class="n">true_values_at_positions</span> <span class="o">=</span> <span class="n">true_values</span><span class="p">[</span><span class="n">cell_indices</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unexpected shape for true_values&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">true_values_at_positions</span><span class="p">,</span> <span class="n">cell_indices</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define positions to sample (x,y coordinates)</span>
+<span class="n">positions</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="mi">80</span><span class="p">,</span> <span class="mi">1621</span><span class="p">),</span>  <span class="c1"># Example coordinates, adjust based on your model</span>
+    <span class="p">(</span><span class="mi">40</span><span class="p">,</span> <span class="mi">1607</span><span class="p">),</span>
+<span class="p">]</span>
+
+<span class="c1"># Extract time series data for these positions</span>
+<span class="n">time_series_data</span><span class="p">,</span> <span class="n">cell_indices</span> <span class="o">=</span> <span class="n">extract_mc_time_series</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">water_content_all</span><span class="p">,</span> <span class="n">positions</span><span class="p">)</span>
+<span class="n">Pos1_true</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">extract_true_values_at_positions</span><span class="p">(</span><span class="n">mesh_true</span><span class="p">,</span> <span class="n">WC_true</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">positions</span><span class="p">)</span>
+<span class="n">Pos1_true</span>
+</pre></div>
+</div>
+<p>Plot time series with uncertainty bands</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+<span class="n">measurement_times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span><span class="mi">361</span><span class="p">,</span><span class="mi">30</span><span class="p">)</span>  <span class="c1"># Assuming sequential timesteps</span>
+
+
+<span class="c1"># Calculate statistics</span>
+<span class="n">mean_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">time_series_data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">std_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">time_series_data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span> <span class="n">mean_ts</span><span class="p">,</span> <span class="s1">&#39;o-&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;tab:blue&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Estimated&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span> <span class="n">mean_ts</span><span class="o">-</span><span class="n">std_ts</span><span class="p">,</span> <span class="n">mean_ts</span><span class="o">+</span><span class="n">std_ts</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;tab:blue&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span><span class="n">Pos1_true</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="s1">&#39;tab:blue&#39;</span><span class="p">,</span><span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;True&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time (Days)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Water Content (-)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">mean_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">time_series_data</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">std_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">time_series_data</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span> <span class="n">mean_ts</span><span class="p">,</span> <span class="s1">&#39;o-&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;tab:blue&#39;</span><span class="p">,)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span> <span class="n">mean_ts</span><span class="o">-</span><span class="n">std_ts</span><span class="p">,</span> <span class="n">mean_ts</span><span class="o">+</span><span class="n">std_ts</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;tab:blue&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span><span class="n">Pos1_true</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="s1">&#39;tab:blue&#39;</span><span class="p">,</span><span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time (Days)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Water Content (-)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">)</span>
+<span class="c1"># plt.legend()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Fractured bedrock layer</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define positions to sample (x,y coordinates)</span>
+<span class="n">positions</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">1604</span><span class="p">),</span>  <span class="c1"># Example coordinates, adjust based on your model</span>
+    <span class="p">(</span><span class="mi">65</span><span class="p">,</span> <span class="mi">1608</span><span class="p">),</span>
+<span class="p">]</span>
+
+<span class="c1"># Extract time series data for these positions</span>
+<span class="n">time_series_data2</span><span class="p">,</span> <span class="n">cell_indices</span> <span class="o">=</span> <span class="n">extract_mc_time_series</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">water_content_all</span><span class="p">,</span> <span class="n">positions</span><span class="p">)</span>
+<span class="n">Pos2_true</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">extract_true_values_at_positions</span><span class="p">(</span><span class="n">mesh_true</span><span class="p">,</span> <span class="n">WC_true</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">positions</span><span class="p">)</span>
+<span class="n">Pos2_true</span>
+</pre></div>
+</div>
+<p>Plot time series with uncertainty bands</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+<span class="n">measurement_times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span><span class="mi">361</span><span class="p">,</span><span class="mi">30</span><span class="p">)</span>  <span class="c1"># Assuming sequential timesteps</span>
+
+
+<span class="c1"># Calculate statistics</span>
+<span class="n">mean_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">time_series_data2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">std_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">time_series_data2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span> <span class="n">mean_ts</span><span class="p">,</span> <span class="s1">&#39;o-&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;tab:brown&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Estimated&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span> <span class="n">mean_ts</span><span class="o">-</span><span class="n">std_ts</span><span class="p">,</span> <span class="n">mean_ts</span><span class="o">+</span><span class="n">std_ts</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;tab:brown&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span><span class="n">Pos2_true</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="s1">&#39;tab:brown&#39;</span><span class="p">,</span><span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;True&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="c1">#plt.legend(frameon=False)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time (Days)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Water Content (-)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">mean_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">time_series_data2</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">std_ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">time_series_data2</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span> <span class="n">mean_ts</span><span class="p">,</span> <span class="s1">&#39;o-&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;tab:brown&#39;</span><span class="p">,)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span> <span class="n">mean_ts</span><span class="o">-</span><span class="n">std_ts</span><span class="p">,</span> <span class="n">mean_ts</span><span class="o">+</span><span class="n">std_ts</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;tab:brown&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">measurement_times</span><span class="p">,</span><span class="n">Pos2_true</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="s1">&#39;tab:brown&#39;</span><span class="p">,</span><span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time (Days)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Water Content (-)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">)</span>
+<span class="c1"># plt.legend()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.000 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex8-mc-wc-py">
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/f372f3c7425b655b2109e1f2ff2fd638/Ex8_MC_WC.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">Ex8_MC_WC.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/86d8291c979739bd21bb6001424c741d/Ex8_MC_WC.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex8_MC_WC.ipynb</span></code></a></p>
+</div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Ex6_Structure_resinv.html" class="btn btn-neutral float-left" title="Ex 6. Structure-Constrained Resistivity Inversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex5_SRT.html" class="btn btn-neutral float-right" title="Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

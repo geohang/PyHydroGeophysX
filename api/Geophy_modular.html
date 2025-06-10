@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geophy_modular package &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/api/Geophy_modular.html" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Geophy_modular package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/Geophy_modular.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="geophy-modular-package">
+<h1>Geophy_modular package<a class="headerlink" href="#geophy-modular-package" title="Permalink to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
+</section>
+<section id="geophy-modular-ert-to-wc-module">
+<h2>Geophy_modular.ERT_to_WC module<a class="headerlink" href="#geophy-modular-ert-to-wc-module" title="Permalink to this heading"></a></h2>
+</section>
+<section id="module-Geophy_modular.seismic_processor">
+<span id="geophy-modular-seismic-processor-module"></span><h2>Geophy_modular.seismic_processor module<a class="headerlink" href="#module-Geophy_modular.seismic_processor" title="Permalink to this heading"></a></h2>
+<p>Seismic data processing module for structure identification.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.seismic_processor.extract_velocity_structure">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.seismic_processor.</span></span><span class="sig-name descname"><span class="pre">extract_velocity_structure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocity_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/Geophy_modular/seismic_processor.html#extract_velocity_structure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.seismic_processor.extract_velocity_structure" title="Permalink to this definition"></a></dt>
+<dd><p>Extract structure interface from velocity model at the specified threshold.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mesh</strong> – PyGIMLi mesh</p></li>
+<li><p><strong>velocity_data</strong> – Velocity values for each cell</p></li>
+<li><p><strong>threshold</strong> – Velocity threshold defining interface (default: 1200)</p></li>
+<li><p><strong>interval</strong> – Horizontal sampling interval (default: 4.0)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Horizontal coordinates of interface points
+z_coords: Vertical coordinates of interface points
+interface_data: Dictionary with interface information</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>x_coords</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.seismic_processor.process_seismic_tomography">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.seismic_processor.</span></span><span class="sig-name descname"><span class="pre">process_seismic_tomography</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ttData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/Geophy_modular/seismic_processor.html#process_seismic_tomography"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.seismic_processor.process_seismic_tomography" title="Permalink to this definition"></a></dt>
+<dd><p>Process seismic tomography data and perform inversion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ttData</strong> – Travel time data container</p></li>
+<li><p><strong>mesh</strong> – Mesh for inversion (optional, created if None)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters including:
+- lam: Regularization parameter (default: 50)
+- zWeight: Vertical regularization weight (default: 0.2)
+- vTop: Top velocity constraint (default: 500)
+- vBottom: Bottom velocity constraint (default: 5000)
+- quality: Mesh quality if creating new mesh (default: 31)
+- paraDepth: Maximum depth for parametric domain (default: 30)
+- verbose: Verbosity level (default: 1)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>TravelTimeManager object with inversion results</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.seismic_processor.save_velocity_structure">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.seismic_processor.</span></span><span class="sig-name descname"><span class="pre">save_velocity_structure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_coords</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_coords</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interface_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/Geophy_modular/seismic_processor.html#save_velocity_structure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.seismic_processor.save_velocity_structure" title="Permalink to this definition"></a></dt>
+<dd><p>Save velocity structure data to file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> – Output filename</p></li>
+<li><p><strong>x_coords</strong> – X coordinates of interface</p></li>
+<li><p><strong>z_coords</strong> – Z coordinates of interface</p></li>
+<li><p><strong>interface_data</strong> – Additional data to save (optional)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.seismic_processor.seismic_velocity_classifier">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.seismic_processor.</span></span><span class="sig-name descname"><span class="pre">seismic_velocity_classifier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">velocity_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1200</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/Geophy_modular/seismic_processor.html#seismic_velocity_classifier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.seismic_processor.seismic_velocity_classifier" title="Permalink to this definition"></a></dt>
+<dd><p>Classify mesh cells based on velocity threshold.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>velocity_data</strong> – Velocity values for each cell</p></li>
+<li><p><strong>mesh</strong> – PyGIMLi mesh</p></li>
+<li><p><strong>threshold</strong> – Velocity threshold for classification (default: 1200)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>below threshold, 2: above threshold)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Array of cell markers (1</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-Geophy_modular.structure_integration">
+<span id="geophy-modular-structure-integration-module"></span><h2>Geophy_modular.structure_integration module<a class="headerlink" href="#module-Geophy_modular.structure_integration" title="Permalink to this heading"></a></h2>
+<p>Structure integration module for constrained geophysical inversion.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.structure_integration.create_ert_mesh_with_structure">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.structure_integration.</span></span><span class="sig-name descname"><span class="pre">create_ert_mesh_with_structure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ertData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interface_data</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/Geophy_modular/structure_integration.html#create_ert_mesh_with_structure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.structure_integration.create_ert_mesh_with_structure" title="Permalink to this definition"></a></dt>
+<dd><p>Create ERT mesh with structure interface for constrained inversion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ertData</strong> – PyGIMLi ERT data container</p></li>
+<li><p><strong>interface_data</strong> – Interface data (can be a tuple of (x, z) or a dictionary with smooth_x, smooth_z)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters including:
+- paraBoundary: Extra boundary size (default: 2)
+- quality: Mesh quality parameter (default: 28)
+- paraMaxCellSize: Maximum cell size (default: 30)
+- paraDepth: Maximum depth (default: 30.0)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mesh with interface structure
+markers: Cell markers array
+regions: Dictionary with region definitions</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>meshafter</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.structure_integration.create_joint_inversion_mesh">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.structure_integration.</span></span><span class="sig-name descname"><span class="pre">create_joint_inversion_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ertData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ttData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocity_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1200</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/Geophy_modular/structure_integration.html#create_joint_inversion_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.structure_integration.create_joint_inversion_mesh" title="Permalink to this definition"></a></dt>
+<dd><p>Create a mesh for joint ERT-seismic inversion by first inverting seismic data,
+extracting the velocity interface, and then creating a constrained ERT mesh.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ertData</strong> – PyGIMLi ERT data container</p></li>
+<li><p><strong>ttData</strong> – PyGIMLi seismic travel time data container</p></li>
+<li><p><strong>velocity_threshold</strong> – Threshold for velocity interface (default: 1200)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters including:
+- seismic_params: Dictionary of seismic inversion parameters
+- mesh_params: Dictionary of mesh generation parameters</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mesh suitable for constrained joint inversion
+seismic_manager: TravelTimeManager with seismic inversion results
+structure_data: Structure interface data</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>joint_mesh</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.structure_integration.integrate_velocity_interface">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.structure_integration.</span></span><span class="sig-name descname"><span class="pre">integrate_velocity_interface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ertData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paraBoundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">28</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paraMaxCellSize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paraDepth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/Geophy_modular/structure_integration.html#integrate_velocity_interface"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.structure_integration.integrate_velocity_interface" title="Permalink to this definition"></a></dt>
+<dd><p>Integrate velocity interface into mesh for constrained ERT inversion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ertData</strong> – PyGIMLi ERT data container</p></li>
+<li><p><strong>smooth_x</strong> – X coordinates of velocity interface</p></li>
+<li><p><strong>smooth_z</strong> – Z coordinates of velocity interface</p></li>
+<li><p><strong>paraBoundary</strong> – Extra boundary size (default: 2)</p></li>
+<li><p><strong>quality</strong> – Mesh quality parameter (default: 28)</p></li>
+<li><p><strong>paraMaxCellSize</strong> – Maximum cell size (default: 30)</p></li>
+<li><p><strong>paraDepth</strong> – Maximum depth of the model (default: 30.0)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Cell markers array
+meshafter: Mesh with interface structure</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>markers</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-Geophy_modular">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-Geophy_modular" title="Permalink to this heading"></a></h2>
+<p>Geophysical data processing module for watershed monitoring.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="Geophy_modular.ERTtoWC">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Geophy_modular.</span></span><span class="sig-name descname"><span class="pre">ERTtoWC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pygimli.Mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resistivity_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coverage</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/ERT_to_WC.html#ERTtoWC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.ERTtoWC" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for converting ERT resistivity models to water content.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Geophy_modular.ERTtoWC.extract_time_series">
+<span class="sig-name descname"><span class="pre">extract_time_series</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/ERT_to_WC.html#ERTtoWC.extract_time_series"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.ERTtoWC.extract_time_series" title="Permalink to this definition"></a></dt>
+<dd><p>Extract time series at specific positions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Geophy_modular.ERTtoWC.get_statistics">
+<span class="sig-name descname"><span class="pre">get_statistics</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/ERT_to_WC.html#ERTtoWC.get_statistics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.ERTtoWC.get_statistics" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate statistics across Monte Carlo realizations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Geophy_modular.ERTtoWC.plot_water_content">
+<span class="sig-name descname"><span class="pre">plot_water_content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'jet'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmax</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coverage_threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/ERT_to_WC.html#ERTtoWC.plot_water_content"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.ERTtoWC.plot_water_content" title="Permalink to this definition"></a></dt>
+<dd><p>Plot water content for a specific time step.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Geophy_modular.ERTtoWC.run_monte_carlo">
+<span class="sig-name descname"><span class="pre">run_monte_carlo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_realizations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">progress_bar</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/ERT_to_WC.html#ERTtoWC.run_monte_carlo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.ERTtoWC.run_monte_carlo" title="Permalink to this definition"></a></dt>
+<dd><p>Run Monte Carlo simulation for uncertainty quantification.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_realizations</strong> – Number of Monte Carlo realizations</p></li>
+<li><p><strong>progress_bar</strong> – Whether to show progress bar</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (water_content_all, saturation_all, params_used)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Geophy_modular.ERTtoWC.save_results">
+<span class="sig-name descname"><span class="pre">save_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/ERT_to_WC.html#ERTtoWC.save_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.ERTtoWC.save_results" title="Permalink to this definition"></a></dt>
+<dd><p>Save Monte Carlo results to files.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Geophy_modular.ERTtoWC.setup_layer_distributions">
+<span class="sig-name descname"><span class="pre">setup_layer_distributions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layer_distributions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/ERT_to_WC.html#ERTtoWC.setup_layer_distributions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.ERTtoWC.setup_layer_distributions" title="Permalink to this definition"></a></dt>
+<dd><p>Set up parameter distributions for different layers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>layer_distributions</strong> – Dictionary mapping layer markers to parameter distributions</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.create_ert_mesh_with_structure">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.</span></span><span class="sig-name descname"><span class="pre">create_ert_mesh_with_structure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ertData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interface_data</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/structure_integration.html#create_ert_mesh_with_structure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.create_ert_mesh_with_structure" title="Permalink to this definition"></a></dt>
+<dd><p>Create ERT mesh with structure interface for constrained inversion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ertData</strong> – PyGIMLi ERT data container</p></li>
+<li><p><strong>interface_data</strong> – Interface data (can be a tuple of (x, z) or a dictionary with smooth_x, smooth_z)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters including:
+- paraBoundary: Extra boundary size (default: 2)
+- quality: Mesh quality parameter (default: 28)
+- paraMaxCellSize: Maximum cell size (default: 30)
+- paraDepth: Maximum depth (default: 30.0)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mesh with interface structure
+markers: Cell markers array
+regions: Dictionary with region definitions</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>meshafter</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.create_joint_inversion_mesh">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.</span></span><span class="sig-name descname"><span class="pre">create_joint_inversion_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ertData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ttData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocity_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1200</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/structure_integration.html#create_joint_inversion_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.create_joint_inversion_mesh" title="Permalink to this definition"></a></dt>
+<dd><p>Create a mesh for joint ERT-seismic inversion by first inverting seismic data,
+extracting the velocity interface, and then creating a constrained ERT mesh.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ertData</strong> – PyGIMLi ERT data container</p></li>
+<li><p><strong>ttData</strong> – PyGIMLi seismic travel time data container</p></li>
+<li><p><strong>velocity_threshold</strong> – Threshold for velocity interface (default: 1200)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters including:
+- seismic_params: Dictionary of seismic inversion parameters
+- mesh_params: Dictionary of mesh generation parameters</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mesh suitable for constrained joint inversion
+seismic_manager: TravelTimeManager with seismic inversion results
+structure_data: Structure interface data</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>joint_mesh</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.extract_velocity_structure">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.</span></span><span class="sig-name descname"><span class="pre">extract_velocity_structure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">velocity_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/seismic_processor.html#extract_velocity_structure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.extract_velocity_structure" title="Permalink to this definition"></a></dt>
+<dd><p>Extract structure interface from velocity model at the specified threshold.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mesh</strong> – PyGIMLi mesh</p></li>
+<li><p><strong>velocity_data</strong> – Velocity values for each cell</p></li>
+<li><p><strong>threshold</strong> – Velocity threshold defining interface (default: 1200)</p></li>
+<li><p><strong>interval</strong> – Horizontal sampling interval (default: 4.0)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Horizontal coordinates of interface points
+z_coords: Vertical coordinates of interface points
+interface_data: Dictionary with interface information</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>x_coords</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.integrate_velocity_interface">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.</span></span><span class="sig-name descname"><span class="pre">integrate_velocity_interface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ertData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smooth_z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paraBoundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quality</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">28</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paraMaxCellSize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">paraDepth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/structure_integration.html#integrate_velocity_interface"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.integrate_velocity_interface" title="Permalink to this definition"></a></dt>
+<dd><p>Integrate velocity interface into mesh for constrained ERT inversion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ertData</strong> – PyGIMLi ERT data container</p></li>
+<li><p><strong>smooth_x</strong> – X coordinates of velocity interface</p></li>
+<li><p><strong>smooth_z</strong> – Z coordinates of velocity interface</p></li>
+<li><p><strong>paraBoundary</strong> – Extra boundary size (default: 2)</p></li>
+<li><p><strong>quality</strong> – Mesh quality parameter (default: 28)</p></li>
+<li><p><strong>paraMaxCellSize</strong> – Maximum cell size (default: 30)</p></li>
+<li><p><strong>paraDepth</strong> – Maximum depth of the model (default: 30.0)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Cell markers array
+meshafter: Mesh with interface structure</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>markers</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.plot_time_series">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.</span></span><span class="sig-name descname"><span class="pre">plot_time_series</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_steps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_series_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">true_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/ERT_to_WC.html#plot_time_series"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.plot_time_series" title="Permalink to this definition"></a></dt>
+<dd><p>Plot time series with uncertainty bands.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.process_seismic_tomography">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.</span></span><span class="sig-name descname"><span class="pre">process_seismic_tomography</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ttData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/seismic_processor.html#process_seismic_tomography"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.process_seismic_tomography" title="Permalink to this definition"></a></dt>
+<dd><p>Process seismic tomography data and perform inversion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ttData</strong> – Travel time data container</p></li>
+<li><p><strong>mesh</strong> – Mesh for inversion (optional, created if None)</p></li>
+<li><p><strong>**kwargs</strong> – Additional parameters including:
+- lam: Regularization parameter (default: 50)
+- zWeight: Vertical regularization weight (default: 0.2)
+- vTop: Top velocity constraint (default: 500)
+- vBottom: Bottom velocity constraint (default: 5000)
+- quality: Mesh quality if creating new mesh (default: 31)
+- paraDepth: Maximum depth for parametric domain (default: 30)
+- verbose: Verbosity level (default: 1)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>TravelTimeManager object with inversion results</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Geophy_modular.seismic_velocity_classifier">
+<span class="sig-prename descclassname"><span class="pre">Geophy_modular.</span></span><span class="sig-name descname"><span class="pre">seismic_velocity_classifier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">velocity_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1200</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/Geophy_modular/seismic_processor.html#seismic_velocity_classifier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#Geophy_modular.seismic_velocity_classifier" title="Permalink to this definition"></a></dt>
+<dd><p>Classify mesh cells based on velocity threshold.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>velocity_data</strong> – Velocity values for each cell</p></li>
+<li><p><strong>mesh</strong> – PyGIMLi mesh</p></li>
+<li><p><strong>threshold</strong> – Velocity threshold for classification (default: 1200)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>below threshold, 2: above threshold)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Array of cell markers (1</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

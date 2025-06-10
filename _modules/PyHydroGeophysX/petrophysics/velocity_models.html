@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PyHydroGeophysX.petrophysics.velocity_models &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/petrophysics/velocity_models.html" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">PyHydroGeophysX.petrophysics.velocity_models</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for PyHydroGeophysX.petrophysics.velocity_models</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Seismic velocity models for relating rock properties to elastic wave velocities.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">fsolve</span><span class="p">,</span> <span class="n">root</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
+
+
+<div class="viewcode-block" id="BaseVelocityModel"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BaseVelocityModel">[docs]</a><span class="k">class</span> <span class="nc">BaseVelocityModel</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for seismic velocity models.&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="BaseVelocityModel.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BaseVelocityModel.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize base velocity model.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+    
+<div class="viewcode-block" id="BaseVelocityModel.calculate_velocity"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BaseVelocityModel.calculate_velocity">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate seismic velocity from rock properties.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            **kwargs: Rock properties specific to each model</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Seismic velocity values (Vp, Vs, or both)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Velocity calculation must be implemented in derived classes&quot;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="VRHModel"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel">[docs]</a><span class="k">class</span> <span class="nc">VRHModel</span><span class="p">(</span><span class="n">BaseVelocityModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Voigt-Reuss-Hill (VRH) mixing model for effective elastic properties of composites.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="VRHModel.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize VRH model.&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="VRHModel.calculate_properties"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel.calculate_properties">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                           <span class="n">fractions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+                           <span class="n">bulk_moduli</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+                           <span class="n">shear_moduli</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+                           <span class="n">densities</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate effective elastic properties using the VRH model.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            fractions: Volume fractions of each mineral (must sum to 1)</span>
+<span class="sd">            bulk_moduli: Bulk moduli of each mineral (GPa)</span>
+<span class="sd">            shear_moduli: Shear moduli of each mineral (GPa)</span>
+<span class="sd">            densities: Densities of each mineral (kg/m³)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Effective bulk modulus (GPa), effective shear modulus (GPa), and effective density (kg/m³)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Convert inputs to numpy arrays</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fractions</span><span class="p">)</span>
+        <span class="n">K</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">bulk_moduli</span><span class="p">)</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">shear_moduli</span><span class="p">)</span>
+        <span class="n">rho</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">densities</span><span class="p">)</span>
+        
+        <span class="c1"># Verify that fractions sum to 1</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Volume fractions must sum to 1&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Calculate Voigt and Reuss averages for bulk modulus</span>
+        <span class="n">K_voigt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">*</span> <span class="n">K</span><span class="p">)</span>
+        <span class="n">K_reuss</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">/</span> <span class="n">K</span><span class="p">)</span>
+        
+        <span class="c1"># Calculate Voigt and Reuss averages for shear modulus</span>
+        <span class="n">G_voigt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">*</span> <span class="n">G</span><span class="p">)</span>
+        <span class="n">G_reuss</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">/</span> <span class="n">G</span><span class="p">)</span>
+        
+        <span class="c1"># Calculate Hill (VRH) averages</span>
+        <span class="n">K_vrh</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">K_voigt</span> <span class="o">+</span> <span class="n">K_reuss</span><span class="p">)</span>
+        <span class="n">G_vrh</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">G_voigt</span> <span class="o">+</span> <span class="n">G_reuss</span><span class="p">)</span>
+        
+        <span class="c1"># Calculate effective density (simple weighted average)</span>
+        <span class="n">rho_eff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">*</span> <span class="n">rho</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">K_vrh</span><span class="p">,</span> <span class="n">G_vrh</span><span class="p">,</span> <span class="n">rho_eff</span></div>
+    
+<div class="viewcode-block" id="VRHModel.calculate_velocity"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel.calculate_velocity">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                         <span class="n">fractions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+                         <span class="n">bulk_moduli</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+                         <span class="n">shear_moduli</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+                         <span class="n">densities</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate P-wave and S-wave velocities using the VRH model.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            fractions: Volume fractions of each mineral (must sum to 1)</span>
+<span class="sd">            bulk_moduli: Bulk moduli of each mineral (GPa)</span>
+<span class="sd">            shear_moduli: Shear moduli of each mineral (GPa)</span>
+<span class="sd">            densities: Densities of each mineral (kg/m³)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            P-wave velocity (m/s) and S-wave velocity (m/s)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Calculate effective properties</span>
+        <span class="n">K_eff</span><span class="p">,</span> <span class="n">G_eff</span><span class="p">,</span> <span class="n">rho_eff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calculate_properties</span><span class="p">(</span>
+            <span class="n">fractions</span><span class="p">,</span> <span class="n">bulk_moduli</span><span class="p">,</span> <span class="n">shear_moduli</span><span class="p">,</span> <span class="n">densities</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Convert GPa to Pa for velocity calculations</span>
+        <span class="n">K_eff_pa</span> <span class="o">=</span> <span class="n">K_eff</span> <span class="o">*</span> <span class="mf">1e9</span>
+        <span class="n">G_eff_pa</span> <span class="o">=</span> <span class="n">G_eff</span> <span class="o">*</span> <span class="mf">1e9</span>
+        
+        <span class="c1"># Calculate P-wave velocity</span>
+        <span class="n">Vp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">K_eff_pa</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_eff_pa</span><span class="p">)</span> <span class="o">/</span> <span class="n">rho_eff</span><span class="p">)</span>
+        
+        <span class="c1"># Calculate S-wave velocity</span>
+        <span class="n">Vs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">G_eff_pa</span> <span class="o">/</span> <span class="n">rho_eff</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">Vp</span><span class="p">,</span> <span class="n">Vs</span></div></div>
+
+
+<div class="viewcode-block" id="BrieModel"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel">[docs]</a><span class="k">class</span> <span class="nc">BrieModel</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Brie&#39;s model for calculating the effective bulk modulus of a partially saturated medium.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="BrieModel.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exponent</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize Brie&#39;s model.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            exponent: Brie&#39;s exponent (default: 3.0)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="o">=</span> <span class="n">exponent</span></div>
+    
+<div class="viewcode-block" id="BrieModel.calculate_fluid_modulus"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel.calculate_fluid_modulus">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_fluid_modulus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                              <span class="n">saturation</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                              <span class="n">water_modulus</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
+                              <span class="n">gas_modulus</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate effective fluid bulk modulus using Brie&#39;s equation.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            saturation: Water saturation (0 to 1)</span>
+<span class="sd">            water_modulus: Bulk modulus of water (GPa, default: 2.0)</span>
+<span class="sd">            gas_modulus: Bulk modulus of gas (GPa, default: 0.01)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Effective fluid bulk modulus (GPa)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">water_modulus</span> <span class="o">-</span> <span class="n">gas_modulus</span><span class="p">)</span> <span class="o">*</span> <span class="n">saturation</span> <span class="o">**</span> <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="o">+</span> <span class="n">gas_modulus</span></div>
+    
+<div class="viewcode-block" id="BrieModel.calculate_saturated_modulus"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel.calculate_saturated_modulus">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_saturated_modulus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                                  <span class="n">dry_modulus</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                                  <span class="n">mineral_modulus</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                                  <span class="n">porosity</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                                  <span class="n">saturation</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                                  <span class="n">water_modulus</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
+                                  <span class="n">gas_modulus</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the saturated bulk modulus based on Brie&#39;s equation.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            dry_modulus: Bulk modulus of the dry rock (GPa)</span>
+<span class="sd">            mineral_modulus: Bulk modulus of the mineral matrix (GPa)</span>
+<span class="sd">            porosity: Porosity of the rock</span>
+<span class="sd">            saturation: Water saturation (0 to 1)</span>
+<span class="sd">            water_modulus: Bulk modulus of water (GPa, default: 2.0)</span>
+<span class="sd">            gas_modulus: Bulk modulus of gas (GPa, default: 0.01)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Saturated bulk modulus (GPa)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Calculate effective fluid modulus</span>
+        <span class="n">fluid_modulus</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calculate_fluid_modulus</span><span class="p">(</span>
+            <span class="n">saturation</span><span class="p">,</span> <span class="n">water_modulus</span><span class="p">,</span> <span class="n">gas_modulus</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Apply Gassmann&#39;s equation</span>
+        <span class="n">numerator</span> <span class="o">=</span> <span class="n">dry_modulus</span> <span class="o">/</span> <span class="p">(</span><span class="n">mineral_modulus</span> <span class="o">-</span> <span class="n">dry_modulus</span><span class="p">)</span> <span class="o">+</span> <span class="n">fluid_modulus</span> <span class="o">/</span> <span class="p">(</span><span class="n">porosity</span> <span class="o">*</span> <span class="p">(</span><span class="n">mineral_modulus</span> <span class="o">-</span> <span class="n">fluid_modulus</span><span class="p">))</span>
+        <span class="n">denominator</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="n">dry_modulus</span> <span class="o">/</span> <span class="p">(</span><span class="n">mineral_modulus</span> <span class="o">-</span> <span class="n">dry_modulus</span><span class="p">)</span> <span class="o">+</span> <span class="n">fluid_modulus</span> <span class="o">/</span> <span class="p">(</span><span class="n">porosity</span> <span class="o">*</span> <span class="p">(</span><span class="n">mineral_modulus</span> <span class="o">-</span> <span class="n">fluid_modulus</span><span class="p">)))</span>
+        
+        <span class="k">return</span> <span class="p">(</span><span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span><span class="p">)</span> <span class="o">*</span> <span class="n">mineral_modulus</span></div></div>
+
+
+<div class="viewcode-block" id="DEMModel"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.DEMModel">[docs]</a><span class="k">class</span> <span class="nc">DEMModel</span><span class="p">(</span><span class="n">BaseVelocityModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Differential Effective Medium (DEM) model for calculating elastic properties</span>
+<span class="sd">    and seismic velocities of porous rocks.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="DEMModel.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.DEMModel.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize DEM model.&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="DEMModel.calculate_velocity"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.DEMModel.calculate_velocity">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                         <span class="n">porosity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                         <span class="n">saturation</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                         <span class="n">bulk_modulus</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                         <span class="n">shear_modulus</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                         <span class="n">mineral_density</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                         <span class="n">aspect_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate P-wave velocity using the DEM model.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            porosity: Porosity values (array)</span>
+<span class="sd">            saturation: Saturation values (array)</span>
+<span class="sd">            bulk_modulus: Initial bulk modulus of the solid matrix (GPa)</span>
+<span class="sd">            shear_modulus: Initial shear modulus of the solid matrix (GPa)</span>
+<span class="sd">            mineral_density: Density of the solid matrix (kg/m³)</span>
+<span class="sd">            aspect_ratio: Aspect ratio of pores (default: 0.1)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Effective bulk modulus (GPa), effective shear modulus (GPa), and P-wave velocity (m/s)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize arrays for calculated values</span>
+        <span class="n">Keff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">porosity</span><span class="p">))</span>
+        <span class="n">Geff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">porosity</span><span class="p">))</span>
+        <span class="n">Vp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">porosity</span><span class="p">))</span>
+        
+        <span class="c1"># Constants for fluid moduli</span>
+        <span class="n">Kw</span> <span class="o">=</span> <span class="mf">2.0</span>  <span class="c1"># Bulk modulus of water (GPa)</span>
+        <span class="n">Ka</span> <span class="o">=</span> <span class="mf">0.01</span>  <span class="c1"># Bulk modulus of air (GPa)</span>
+        
+        <span class="c1"># Process each porosity/saturation point</span>
+        <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">porosity</span><span class="p">)):</span>
+            <span class="c1"># Brie&#39;s equation for fluid bulk modulus</span>
+            <span class="n">Kf</span> <span class="o">=</span> <span class="p">(</span><span class="n">Kw</span> <span class="o">-</span> <span class="n">Ka</span><span class="p">)</span> <span class="o">*</span> <span class="n">saturation</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span> <span class="n">Ka</span>
+            
+            <span class="c1"># Calculate Poisson&#39;s ratio</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">bulk_modulus</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">shear_modulus</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">bulk_modulus</span> <span class="o">+</span> <span class="n">shear_modulus</span><span class="p">))</span>
+            
+            <span class="c1"># Calculate DEM parameters - matching velDEM implementation</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">aspect_ratio</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">5</span> <span class="o">*</span> <span class="p">((</span><span class="mi">3</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">aspect_ratio</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">-</span> <span class="n">v</span><span class="p">))))</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">c</span>  <span class="c1"># Two-step calculation as in velDEM</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">5</span> <span class="o">*</span> <span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">5</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">aspect_ratio</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">-</span> <span class="n">v</span><span class="p">))))</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">d</span>  <span class="c1"># Two-step calculation as in velDEM</span>
+            <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">aspect_ratio</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">))</span>
+            
+            <span class="c1"># Define equation for effective bulk modulus</span>
+            <span class="k">def</span> <span class="nf">equation_Keff</span><span class="p">(</span><span class="n">Keff_val</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">Keff_val</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="mf">1e6</span>  <span class="c1"># Return large value for invalid K_eff</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">Keff_val</span> <span class="o">-</span> <span class="n">Kf</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">bulk_modulus</span> <span class="o">-</span> <span class="n">Kf</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">bulk_modulus</span> <span class="o">/</span> <span class="n">Keff_val</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">b</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">b</span><span class="p">))</span>
+            
+            <span class="c1"># Solve for effective bulk modulus</span>
+
+            <span class="n">result_K</span> <span class="o">=</span> <span class="n">root</span><span class="p">(</span><span class="n">equation_Keff</span><span class="p">,</span> <span class="n">bulk_modulus</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;lm&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">result_K</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+                <span class="n">Keff</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_K</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Root finding for Keff failed at index </span><span class="si">{</span><span class="n">ii</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result_K</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            
+            <span class="c1"># Define equation for effective shear modulus</span>
+            <span class="k">def</span> <span class="nf">equation_Geff</span><span class="p">(</span><span class="n">Geff_val</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">Geff_val</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="mf">1e6</span>
+                <span class="k">return</span> <span class="n">Geff_val</span> <span class="o">/</span> <span class="n">shear_modulus</span> <span class="o">*</span> <span class="p">((</span><span class="mi">1</span> <span class="o">/</span> <span class="n">Geff_val</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">g</span> <span class="o">/</span> <span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">Kf</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">shear_modulus</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">g</span> <span class="o">/</span> <span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">Kf</span><span class="p">)))</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">c</span> <span class="o">/</span> <span class="n">d</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">d</span><span class="p">)</span>
+            
+            <span class="c1"># Solve for effective shear modulus</span>
+
+            <span class="n">result_G</span> <span class="o">=</span> <span class="n">root</span><span class="p">(</span><span class="n">equation_Geff</span><span class="p">,</span> <span class="n">shear_modulus</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;lm&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">result_G</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+                <span class="n">Geff</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_G</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Root finding for Geff failed at index </span><span class="si">{</span><span class="n">ii</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result_G</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            
+            <span class="c1"># Calculate total density considering porosity and saturation</span>
+            <span class="n">rho_a</span> <span class="o">=</span> <span class="mf">1.225</span>   <span class="c1"># Density of air (kg/m³)</span>
+            <span class="n">rho_w</span> <span class="o">=</span> <span class="mi">1000</span>    <span class="c1"># Density of water (kg/m³)</span>
+            <span class="n">rhototal</span> <span class="o">=</span> <span class="n">mineral_density</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="n">saturation</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">rho_w</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">saturation</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">*</span> <span class="n">rho_a</span><span class="p">)</span> <span class="o">*</span> <span class="n">porosity</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span>
+            
+            <span class="c1"># Calculate P-wave velocity</span>
+            <span class="n">Vp</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">Keff</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">Geff</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">rhototal</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">Keff</span><span class="p">,</span> <span class="n">Geff</span><span class="p">,</span> <span class="n">Vp</span></div></div>
+
+
+<div class="viewcode-block" id="HertzMindlinModel"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.HertzMindlinModel">[docs]</a><span class="k">class</span> <span class="nc">HertzMindlinModel</span><span class="p">(</span><span class="n">BaseVelocityModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Hertz-Mindlin model and Hashin-Shtrikman bounds for seismic velocity in porous rocks.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="HertzMindlinModel.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.HertzMindlinModel.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+               <span class="n">critical_porosity</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span> 
+               <span class="n">coordination_number</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">4.0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize Hertz-Mindlin model.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            critical_porosity: Critical porosity at which the rock loses matrix connectivity</span>
+<span class="sd">            coordination_number: Average number of contacts per grain</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">critical_porosity</span> <span class="o">=</span> <span class="n">critical_porosity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coordination_number</span> <span class="o">=</span> <span class="n">coordination_number</span></div>
+    
+<div class="viewcode-block" id="HertzMindlinModel.calculate_velocity"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.HertzMindlinModel.calculate_velocity">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                         <span class="n">porosity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                         <span class="n">saturation</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                         <span class="n">bulk_modulus</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                         <span class="n">shear_modulus</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                         <span class="n">mineral_density</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                         <span class="n">depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate P-wave velocity for porous rocks.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            porosity: Porosity values (array)</span>
+<span class="sd">            saturation: Saturation values (array)</span>
+<span class="sd">            bulk_modulus: Bulk modulus of the solid matrix (GPa)</span>
+<span class="sd">            shear_modulus: Shear modulus of the solid matrix (GPa)</span>
+<span class="sd">            mineral_density: Density of the solid matrix (kg/m³)</span>
+<span class="sd">            depth: Depth for pressure estimation (m, default: 1.0)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of high-bound P-wave velocity (m/s) and low-bound P-wave velocity (m/s)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Poisson&#39;s ratio</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">bulk_modulus</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">shear_modulus</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">bulk_modulus</span> <span class="o">+</span> <span class="n">shear_modulus</span><span class="p">))</span>
+        
+        <span class="c1"># Pressure estimation</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="p">(</span><span class="n">mineral_density</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">*</span> <span class="mf">9.8</span> <span class="o">*</span> <span class="n">depth</span> <span class="o">/</span> <span class="mf">1e9</span>  <span class="c1"># GPa</span>
+        
+        <span class="c1"># Hertz-Mindlin model at critical porosity</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordination_number</span>
+        <span class="n">phi_c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">critical_porosity</span>
+        
+        <span class="c1"># Calculate Hertz-Mindlin bulk modulus</span>
+        <span class="n">K_HM</span> <span class="o">=</span> <span class="p">(</span><span class="n">C</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">shear_modulus</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> 
+               <span class="p">(</span><span class="mi">18</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">P</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mi">3</span><span class="p">)</span>
+        
+        <span class="c1"># Calculate Hertz-Mindlin shear modulus</span>
+        <span class="n">G_HM</span> <span class="o">=</span> <span class="p">((</span><span class="mi">5</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">10</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">v</span><span class="p">)</span> <span class="o">*</span> 
+               <span class="p">((</span><span class="mi">3</span> <span class="o">*</span> <span class="n">C</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">shear_modulus</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">P</span> <span class="o">/</span> 
+                <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="mi">3</span><span class="p">)</span>
+        
+        <span class="c1"># Initialize velocity arrays</span>
+        <span class="n">Vp_high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">porosity</span><span class="p">))</span>
+        <span class="n">Vp_low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">porosity</span><span class="p">))</span>
+        
+        <span class="c1"># Create Brie model for fluid substitution</span>
+        <span class="n">brie_model</span> <span class="o">=</span> <span class="n">BrieModel</span><span class="p">()</span>
+        
+        <span class="c1"># Calculate velocities for each porosity/saturation point</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">porosity</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">phi_c</span><span class="p">:</span>
+                <span class="c1"># Below critical porosity, use modified Hashin-Shtrikman bounds</span>
+                
+                <span class="c1"># Lower bound for bulk modulus</span>
+                <span class="n">K_eff_L</span> <span class="o">=</span> <span class="p">(</span><span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span> <span class="o">/</span> <span class="p">(</span><span class="n">K_HM</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span> <span class="o">+</span> 
+                          <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">bulk_modulus</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span>
+                
+                <span class="c1"># Lower bound for shear modulus</span>
+                <span class="n">zeta</span> <span class="o">=</span> <span class="n">G_HM</span> <span class="o">/</span> <span class="mi">6</span> <span class="o">*</span> <span class="p">(</span><span class="mi">9</span> <span class="o">*</span> <span class="n">K_HM</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">K_HM</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span>
+                <span class="n">G_eff_L</span> <span class="o">=</span> <span class="p">(</span><span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span> <span class="o">/</span> <span class="p">(</span><span class="n">G_HM</span> <span class="o">+</span> <span class="n">zeta</span><span class="p">)</span> <span class="o">+</span> 
+                          <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">shear_modulus</span> <span class="o">+</span> <span class="n">zeta</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">zeta</span>
+                
+                <span class="c1"># Upper bound for bulk modulus</span>
+                <span class="n">K_eff_H</span> <span class="o">=</span> <span class="p">(</span><span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span> <span class="o">/</span> <span class="p">(</span><span class="n">K_HM</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">shear_modulus</span><span class="p">)</span> <span class="o">+</span> 
+                          <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">bulk_modulus</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">shear_modulus</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">shear_modulus</span>
+                
+                <span class="c1"># Upper bound for shear modulus</span>
+                <span class="n">zeta</span> <span class="o">=</span> <span class="n">shear_modulus</span> <span class="o">/</span> <span class="mi">6</span> <span class="o">*</span> <span class="p">(</span><span class="mi">9</span> <span class="o">*</span> <span class="n">bulk_modulus</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">shear_modulus</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">bulk_modulus</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">shear_modulus</span><span class="p">)</span>
+                <span class="n">G_eff_H</span> <span class="o">=</span> <span class="p">(</span><span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span> <span class="o">/</span> <span class="p">(</span><span class="n">G_HM</span> <span class="o">+</span> <span class="n">zeta</span><span class="p">)</span> <span class="o">+</span> 
+                          <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">shear_modulus</span> <span class="o">+</span> <span class="n">zeta</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">zeta</span>
+                
+                <span class="c1"># Apply fluid substitution</span>
+                <span class="n">K_sat_H</span> <span class="o">=</span> <span class="n">brie_model</span><span class="o">.</span><span class="n">calculate_saturated_modulus</span><span class="p">(</span>
+                    <span class="n">K_eff_H</span><span class="p">,</span> <span class="n">bulk_modulus</span><span class="p">,</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">saturation</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">K_sat_L</span> <span class="o">=</span> <span class="n">brie_model</span><span class="o">.</span><span class="n">calculate_saturated_modulus</span><span class="p">(</span>
+                    <span class="n">K_eff_L</span><span class="p">,</span> <span class="n">bulk_modulus</span><span class="p">,</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">saturation</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="p">)</span>
+                
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Above critical porosity, suspension model</span>
+                <span class="n">K_eff</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">K_HM</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span> <span class="o">+</span> 
+                        <span class="p">(</span><span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span>
+                
+                <span class="n">zeta</span> <span class="o">=</span> <span class="n">G_HM</span> <span class="o">/</span> <span class="mi">6</span> <span class="o">*</span> <span class="p">(</span><span class="mi">9</span> <span class="o">*</span> <span class="n">K_HM</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">K_HM</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span>
+                <span class="n">G_eff</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">G_HM</span> <span class="o">+</span> <span class="n">zeta</span><span class="p">)</span> <span class="o">+</span> 
+                        <span class="p">(</span><span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="n">zeta</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">zeta</span>
+                
+                <span class="n">K_sat_H</span> <span class="o">=</span> <span class="n">K_sat_L</span> <span class="o">=</span> <span class="n">brie_model</span><span class="o">.</span><span class="n">calculate_saturated_modulus</span><span class="p">(</span>
+                    <span class="n">K_eff</span><span class="p">,</span> <span class="n">bulk_modulus</span><span class="p">,</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">saturation</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">G_eff_H</span> <span class="o">=</span> <span class="n">G_eff_L</span> <span class="o">=</span> <span class="n">G_eff</span>
+            
+            <span class="c1"># Calculate total density</span>
+            <span class="n">rho_air</span> <span class="o">=</span> <span class="mf">1.225</span>
+            <span class="n">rho_water</span> <span class="o">=</span> <span class="mi">1000</span>
+            <span class="n">rho_total</span> <span class="o">=</span> <span class="n">mineral_density</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="n">saturation</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">rho_water</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">saturation</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="n">rho_air</span><span class="p">)</span> <span class="o">*</span> <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            
+            <span class="c1"># Calculate velocities</span>
+            <span class="n">Vp_high</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">K_sat_H</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_eff_H</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">rho_total</span><span class="p">)</span>
+            <span class="n">Vp_low</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">K_sat_L</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_eff_L</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">rho_total</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">Vp_high</span><span class="p">,</span> <span class="n">Vp_low</span></div></div>
+
+
+<div class="viewcode-block" id="VRH_model"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRH_model">[docs]</a><span class="k">def</span> <span class="nf">VRH_model</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="p">[</span><span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">,</span> <span class="mf">0.075</span><span class="p">],</span>
+             <span class="n">K</span><span class="o">=</span><span class="p">[</span><span class="mf">55.4</span><span class="p">,</span> <span class="mf">36.6</span><span class="p">,</span> <span class="mf">75.6</span><span class="p">,</span> <span class="mf">46.7</span><span class="p">,</span> <span class="mf">50.4</span><span class="p">],</span>
+             <span class="n">G</span><span class="o">=</span><span class="p">[</span><span class="mf">28.1</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="mf">25.6</span><span class="p">,</span> <span class="mf">23.65</span><span class="p">,</span> <span class="mf">27.4</span><span class="p">],</span>
+             <span class="n">rho</span><span class="o">=</span><span class="p">[</span><span class="mi">2560</span><span class="p">,</span> <span class="mi">2650</span><span class="p">,</span> <span class="mi">2630</span><span class="p">,</span> <span class="mi">2540</span><span class="p">,</span> <span class="mi">3050</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Implements the Voigt-Reuss-Hill (VRH) mixing model to estimate the effective bulk modulus (Km),</span>
+<span class="sd">    shear modulus (Gm), and density (rho_b) of a composite material made from various minerals.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    f (list): Fraction of each mineral in the composite (must sum to 1).</span>
+<span class="sd">    K (list): Bulk modulus of each mineral (GPa).</span>
+<span class="sd">    G (list): Shear modulus of each mineral (GPa).</span>
+<span class="sd">    rho (list): Density of each mineral (kg/m^3).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    Km (float): Effective bulk modulus of the composite material (GPa).</span>
+<span class="sd">    Gm (float): Effective shear modulus of the composite material (GPa).</span>
+<span class="sd">    rho_b (float): Effective density of the composite material (kg/m^3).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert input lists to numpy arrays for vectorized operations</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
+    <span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+    <span class="n">rho</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">rho</span><span class="p">)</span>
+
+    <span class="c1"># Calculate effective bulk modulus (Km) using the VRH model</span>
+    <span class="c1"># Voigt average for bulk modulus is the weighted sum of the moduli</span>
+    <span class="c1"># Reuss average for bulk modulus is the harmonic mean of the moduli</span>
+    <span class="c1"># VRH average is the arithmetic mean of Voigt and Reuss averages</span>
+    <span class="n">Km</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">*</span> <span class="n">K</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">/</span> <span class="n">K</span><span class="p">))</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># Calculate effective shear modulus (Gm) using the VRH model</span>
+    <span class="c1"># Similar to bulk modulus but for shear moduli</span>
+    <span class="n">Gm</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">*</span> <span class="n">G</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">/</span> <span class="n">G</span><span class="p">))</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># Calculate effective density (rho_b) as the weighted sum of the densities</span>
+    <span class="n">rho_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">*</span> <span class="n">rho</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Km</span><span class="p">,</span> <span class="n">Gm</span><span class="p">,</span> <span class="n">rho_b</span></div>
+
+
+<div class="viewcode-block" id="satK"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.satK">[docs]</a><span class="k">def</span> <span class="nf">satK</span><span class="p">(</span><span class="n">Keff</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">Sat</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the saturated bulk modulus (K_sat) based on Brie&#39;s equation.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    Keff (float): Effective bulk modulus of the dry rock (GPa).</span>
+<span class="sd">    Km (float): Bulk modulus of the matrix (GPa).</span>
+<span class="sd">    phi (float): Porosity of the rock.</span>
+<span class="sd">    Sat (float): Saturation level of the fluid in the pores.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    float: Saturated bulk modulus (GPa).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Kw</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># Bulk modulus of water (GPa)</span>
+    <span class="n">Ka</span> <span class="o">=</span> <span class="mf">0.01</span>  <span class="c1"># Bulk modulus of air (GPa)</span>
+    <span class="n">Kfl</span> <span class="o">=</span> <span class="p">(</span><span class="n">Kw</span> <span class="o">-</span> <span class="n">Ka</span><span class="p">)</span> <span class="o">*</span> <span class="n">Sat</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">+</span> <span class="n">Ka</span>  <span class="c1"># Effective fluid bulk modulus</span>
+    <span class="n">K_sat</span> <span class="o">=</span> <span class="p">(</span><span class="n">Keff</span> <span class="o">/</span> <span class="p">(</span><span class="n">Km</span> <span class="o">-</span> <span class="n">Keff</span><span class="p">)</span> <span class="o">+</span> <span class="n">Kfl</span> <span class="o">/</span> <span class="p">(</span><span class="n">phi</span> <span class="o">*</span> <span class="p">(</span><span class="n">Km</span> <span class="o">-</span> <span class="n">Kfl</span><span class="p">)))</span> <span class="o">*</span> <span class="n">Km</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="n">Keff</span> <span class="o">/</span> <span class="p">(</span><span class="n">Km</span> <span class="o">-</span> <span class="n">Keff</span><span class="p">)</span> <span class="o">+</span> <span class="n">Kfl</span> <span class="o">/</span> <span class="p">(</span><span class="n">phi</span> <span class="o">*</span> <span class="p">(</span><span class="n">Km</span> <span class="o">-</span> <span class="n">Kfl</span><span class="p">))))</span>
+    <span class="k">return</span> <span class="n">K_sat</span></div>
+
+
+<div class="viewcode-block" id="velDEM"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.velDEM">[docs]</a><span class="k">def</span> <span class="nf">velDEM</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">Gm</span><span class="p">,</span> <span class="n">rho_b</span><span class="p">,</span> <span class="n">Sat</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate effective bulk modulus (Keff), shear modulus (Geff), and P-wave velocity (Vp)</span>
+<span class="sd">    for a rock with varying porosity (phi) based on the DEM model, taking into account</span>
+<span class="sd">    the saturation (Sat) and the crack aspect ratio (alpha).</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    phi (np.array): Array of porosities.</span>
+<span class="sd">    Km (float): Initial bulk modulus of the material (GPa).</span>
+<span class="sd">    Gm (float): Initial shear modulus of the material (GPa).</span>
+<span class="sd">    rho_b (float): Density of the solid phase (kg/m^3).</span>
+<span class="sd">    Sat (float): Saturation level of the fluid in the cracks (0 to 1, where 1 is fully saturated).</span>
+<span class="sd">    alpha (float): Crack aspect ratio.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    Keff1 (np.array): Effective bulk modulus for each porosity value (GPa).</span>
+<span class="sd">    Geff1 (np.array): Effective shear modulus for each porosity value (GPa).</span>
+<span class="sd">    Vp (np.array): P-wave velocity for each porosity value (m/s).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Initialize arrays for the calculated values</span>
+    <span class="n">Keff1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span>
+    <span class="n">Geff1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span>
+    <span class="n">Vp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span>
+
+    <span class="c1"># Constants for fluid moduli</span>
+    <span class="n">Kw</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># Bulk modulus of water (GPa)</span>
+    <span class="n">Ka</span> <span class="o">=</span> <span class="mf">0.01</span>  <span class="c1"># Bulk modulus of air (GPa)</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phi</span><span class="p">)):</span>
+        <span class="n">Kf</span> <span class="o">=</span> <span class="p">(</span><span class="n">Kw</span> <span class="o">-</span> <span class="n">Ka</span><span class="p">)</span> <span class="o">*</span> <span class="n">Sat</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span> <span class="n">Ka</span>  <span class="c1"># Brie&#39;s equation for fluid bulk modulus</span>
+        
+        <span class="c1"># Poisson&#39;s ratio for the rock</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">Km</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">Gm</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">Km</span> <span class="o">+</span> <span class="n">Gm</span><span class="p">))</span>
+
+        <span class="c1"># Parameters b, c, and d for equations</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">5</span> <span class="o">*</span> <span class="p">((</span><span class="mi">3</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">-</span> <span class="n">v</span><span class="p">))))</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">c</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">5</span> <span class="o">*</span> <span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">5</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">-</span> <span class="n">v</span><span class="p">))))</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">d</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">alpha</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">))</span>
+        
+        <span class="c1"># Solve for effective bulk modulus Keff using fsolve</span>
+        <span class="k">def</span> <span class="nf">equation_Keff</span><span class="p">(</span><span class="n">Keff</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">Keff</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mf">1e6</span>  <span class="c1"># Return a large value to force root away from invalid values</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">Keff</span> <span class="o">-</span> <span class="n">Kf</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">Km</span> <span class="o">-</span> <span class="n">Kf</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">Km</span> <span class="o">/</span> <span class="n">Keff</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">b</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">b</span><span class="p">))</span>
+
+        <span class="c1"># Use fsolve to find Keff</span>
+        <span class="n">result_Keff</span> <span class="o">=</span> <span class="n">root</span><span class="p">(</span><span class="n">equation_Keff</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;lm&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result_Keff</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+            <span class="n">Keff1</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_Keff</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Root finding for Keff failed at index </span><span class="si">{</span><span class="n">ii</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result_Keff</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+        <span class="c1"># Solve for effective shear modulus Geff using fsolve</span>
+        <span class="k">def</span> <span class="nf">equation_Geff</span><span class="p">(</span><span class="n">Geff</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">Geff</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mf">1e6</span>
+            <span class="k">return</span> <span class="n">Geff</span> <span class="o">/</span> <span class="n">Gm</span> <span class="o">*</span> <span class="p">((</span><span class="mi">1</span> <span class="o">/</span> <span class="n">Geff</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">g</span> <span class="o">/</span> <span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">Kf</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">Gm</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">g</span> <span class="o">/</span> <span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">Kf</span><span class="p">)))</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">c</span> <span class="o">/</span> <span class="n">d</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">d</span><span class="p">)</span>
+
+        <span class="c1"># Use root to find Geff</span>
+        <span class="n">result_Geff</span> <span class="o">=</span> <span class="n">root</span><span class="p">(</span><span class="n">equation_Geff</span><span class="p">,</span> <span class="n">Gm</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;lm&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result_Geff</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+            <span class="n">Geff1</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_Geff</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Root finding for Geff failed at index </span><span class="si">{</span><span class="n">ii</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result_Geff</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Total density calculation considering porosity and saturation</span>
+        <span class="n">rho_a</span> <span class="o">=</span> <span class="mf">1.225</span>  <span class="c1"># Density of air (kg/m^3)</span>
+        <span class="n">rho_w</span> <span class="o">=</span> <span class="mi">1000</span>   <span class="c1"># Density of water (kg/m^3)</span>
+        <span class="n">rhototal</span> <span class="o">=</span> <span class="n">rho_b</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="n">Sat</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">rho_w</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">Sat</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">*</span> <span class="n">rho_a</span><span class="p">)</span> <span class="o">*</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span>
+
+        <span class="c1"># P-wave velocity calculation</span>
+        <span class="n">Vp</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">Keff1</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">Geff1</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">rhototal</span><span class="p">)</span>   <span class="c1"># in m/s</span>
+
+    <span class="k">return</span> <span class="n">Keff1</span><span class="p">,</span> <span class="n">Geff1</span><span class="p">,</span> <span class="n">Vp</span></div>
+
+
+<div class="viewcode-block" id="vel_porous"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.vel_porous">[docs]</a><span class="k">def</span> <span class="nf">vel_porous</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">Gm</span><span class="p">,</span> <span class="n">rho_b</span><span class="p">,</span> <span class="n">Sat</span><span class="p">,</span> <span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate P-wave velocity (Vp) for a rock with varying porosity (phi) based on the </span>
+<span class="sd">    Hertz-Mindlin model and Hashin-Shtrikman bounds, taking into account the saturation (Sat).</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    phi (np.array): Array of porosities.</span>
+<span class="sd">    Km (float): Bulk modulus of the solid phase (GPa).</span>
+<span class="sd">    Gm (float): Shear modulus of the solid phase (GPa).</span>
+<span class="sd">    rho_b (float): Density of the solid phase (kg/m^3).</span>
+<span class="sd">    Sat (float): Saturation level of the fluid in the pores (0 to 1, where 1 is fully saturated).</span>
+<span class="sd">    depth (float): depth for pressure estimation (m)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    Vp_h (np.array): P-wave velocity for each porosity value (upper Hashin-Shtrikman bound) (m/s).</span>
+<span class="sd">    Vp_l (np.array): P-wave velocity for each porosity value (lower Hashin-Shtrikman bound) (m/s).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Hertz-Mindlin model in critical porosity</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="mi">4</span>  <span class="c1"># The number of contacts</span>
+    <span class="n">phi_c</span> <span class="o">=</span> <span class="mf">0.4</span>  <span class="c1"># The critical porosity</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">Km</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">Gm</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">Km</span> <span class="o">+</span> <span class="n">Gm</span><span class="p">))</span>  <span class="c1"># Poisson&#39;s ratio</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="p">(</span><span class="n">rho_b</span> <span class="o">-</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">*</span> <span class="mf">9.8</span> <span class="o">*</span> <span class="n">depth</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1e9</span><span class="p">)</span>
+    <span class="n">K_HM</span> <span class="o">=</span> <span class="p">(</span><span class="n">C</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">Gm</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">18</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">P</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">G_HM</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">10</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="mi">3</span> <span class="o">*</span> <span class="n">C</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">Gm</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">P</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+
+    <span class="n">Vp_h</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">Vp_l</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">phi</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">phi_c</span><span class="p">:</span>
+            <span class="n">Keff_L</span> <span class="o">=</span> <span class="p">(</span><span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span> <span class="o">/</span> <span class="p">(</span><span class="n">K_HM</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">Km</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">))</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span>
+            <span class="n">onede</span> <span class="o">=</span> <span class="n">G_HM</span> <span class="o">/</span> <span class="mi">6</span> <span class="o">*</span> <span class="p">(</span><span class="mi">9</span> <span class="o">*</span> <span class="n">K_HM</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">K_HM</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span>
+            <span class="n">Geff_L</span> <span class="o">=</span> <span class="p">(</span><span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span> <span class="o">/</span> <span class="p">(</span><span class="n">G_HM</span> <span class="o">+</span> <span class="n">onede</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">Gm</span> <span class="o">+</span> <span class="n">onede</span><span class="p">))</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">onede</span>
+
+            <span class="n">Keff_H</span> <span class="o">=</span> <span class="p">(</span><span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span> <span class="o">/</span> <span class="p">(</span><span class="n">K_HM</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">Gm</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">Km</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">Gm</span><span class="p">))</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">Gm</span>
+            <span class="n">onede</span> <span class="o">=</span> <span class="n">Gm</span> <span class="o">/</span> <span class="mi">6</span> <span class="o">*</span> <span class="p">(</span><span class="mi">9</span> <span class="o">*</span> <span class="n">Km</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">Gm</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">Km</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">Gm</span><span class="p">)</span>
+            <span class="n">Geff_H</span> <span class="o">=</span> <span class="p">(</span><span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span> <span class="o">/</span> <span class="p">(</span><span class="n">G_HM</span> <span class="o">+</span> <span class="n">onede</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">/</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">Gm</span> <span class="o">+</span> <span class="n">onede</span><span class="p">))</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">onede</span>
+
+            <span class="n">Sh</span> <span class="o">=</span> <span class="n">satK</span><span class="p">(</span><span class="n">Keff_H</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">Sat</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span>
+            <span class="n">Sl</span> <span class="o">=</span> <span class="n">satK</span><span class="p">(</span><span class="n">Keff_L</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">Sat</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Keff</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">K_HM</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">))</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">G_HM</span>
+            <span class="n">onede</span> <span class="o">=</span> <span class="n">G_HM</span> <span class="o">/</span> <span class="mi">6</span> <span class="o">*</span> <span class="p">(</span><span class="mi">9</span> <span class="o">*</span> <span class="n">K_HM</span> <span class="o">+</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">K_HM</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">G_HM</span><span class="p">)</span>
+            <span class="n">Geff</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">G_HM</span> <span class="o">+</span> <span class="n">onede</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi_c</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">onede</span><span class="p">))</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">onede</span>
+
+            <span class="n">Sh</span> <span class="o">=</span> <span class="n">satK</span><span class="p">(</span><span class="n">Keff</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">Sat</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span>
+            <span class="n">Sl</span> <span class="o">=</span> <span class="n">satK</span><span class="p">(</span><span class="n">Keff</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">Sat</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span>
+            <span class="n">Geff_L</span> <span class="o">=</span> <span class="n">Geff</span>
+            <span class="n">Geff_H</span> <span class="o">=</span> <span class="n">Geff</span>
+
+        <span class="n">rho_a</span> <span class="o">=</span> <span class="mf">1.225</span>
+        <span class="n">rho_w</span> <span class="o">=</span> <span class="mi">1000</span>
+        <span class="n">rhototal</span> <span class="o">=</span> <span class="n">rho_b</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="n">Sat</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">*</span> <span class="n">rho_w</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">Sat</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">*</span> <span class="n">rho_a</span><span class="p">)</span> <span class="o">*</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span>
+        <span class="n">Vp_h</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">Sh</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">Geff_H</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">rhototal</span><span class="p">))</span>
+        <span class="n">Vp_l</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">Sl</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">Geff_L</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">rhototal</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Vp_h</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Vp_l</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

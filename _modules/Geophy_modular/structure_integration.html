@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geophy_modular.structure_integration &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/Geophy_modular/structure_integration.html" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Examples Gallery</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">Geophy_modular.structure_integration</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for Geophy_modular.structure_integration</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Structure integration module for constrained geophysical inversion.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">import</span> <span class="nn">pygimli.meshtools</span> <span class="k">as</span> <span class="nn">mt</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
+
+
+<div class="viewcode-block" id="integrate_velocity_interface"><a class="viewcode-back" href="../../api/Geophy_modular.html#Geophy_modular.structure_integration.integrate_velocity_interface">[docs]</a><span class="k">def</span> <span class="nf">integrate_velocity_interface</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">,</span> <span class="n">paraBoundary</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> 
+                               <span class="n">quality</span><span class="o">=</span><span class="mi">28</span><span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">paraDepth</span><span class="o">=</span><span class="mf">30.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Integrate velocity interface into mesh for constrained ERT inversion.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        ertData: PyGIMLi ERT data container</span>
+<span class="sd">        smooth_x: X coordinates of velocity interface</span>
+<span class="sd">        smooth_z: Z coordinates of velocity interface</span>
+<span class="sd">        paraBoundary: Extra boundary size (default: 2)</span>
+<span class="sd">        quality: Mesh quality parameter (default: 28)</span>
+<span class="sd">        paraMaxCellSize: Maximum cell size (default: 30)</span>
+<span class="sd">        paraDepth: Maximum depth of the model (default: 30.0)</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        markers: Cell markers array</span>
+<span class="sd">        meshafter: Mesh with interface structure</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Create the initial parameter mesh</span>
+    <span class="n">geo</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createParaMeshPLC</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="n">quality</span><span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="n">paraMaxCellSize</span><span class="p">,</span>
+                              <span class="n">paraBoundary</span><span class="o">=</span><span class="n">paraBoundary</span><span class="p">,</span> <span class="n">paraDepth</span><span class="o">=</span><span class="n">paraDepth</span><span class="p">,</span>
+                              <span class="n">boundaryMaxCellSize</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+    
+    <span class="c1"># Stack x and z coordinates for the interface</span>
+    <span class="n">interface_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+    
+    <span class="c1"># Extend the interface line beyond the data range by paraBoundary</span>
+    <span class="n">input_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">interface_points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">paraBoundary</span><span class="p">,</span> <span class="n">interface_points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]]]),</span>
+        <span class="n">interface_points</span><span class="p">,</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">interface_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">paraBoundary</span><span class="p">,</span> <span class="n">interface_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]]])</span>
+    <span class="p">))</span>
+    
+    <span class="c1"># Create a polygon line for the interface</span>
+    <span class="n">interface_line</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createPolygon</span><span class="p">(</span><span class="n">input_points</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">isClosed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                     <span class="n">interpolate</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="mi">99</span><span class="p">)</span>
+    
+    <span class="c1"># Add the interface to the geometry</span>
+    <span class="n">geo_with_interface</span> <span class="o">=</span> <span class="n">geo</span> <span class="o">+</span> <span class="n">interface_line</span>
+    
+    <span class="c1"># Create a mesh from the combined geometry</span>
+    <span class="n">meshafter</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">geo_with_interface</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="n">quality</span><span class="p">)</span>
+    
+    <span class="c1"># Initialize all markers to 1 (outside region)</span>
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">meshafter</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span>
+    
+    <span class="c1"># Identify the survey area</span>
+    <span class="n">survey_left</span> <span class="o">=</span> <span class="n">ertData</span><span class="o">.</span><span class="n">sensors</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">paraBoundary</span>
+    <span class="n">survey_right</span> <span class="o">=</span> <span class="n">ertData</span><span class="o">.</span><span class="n">sensors</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">paraBoundary</span>
+    
+    <span class="c1"># Process each cell</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">meshafter</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()):</span>
+        <span class="n">cell_x</span> <span class="o">=</span> <span class="n">meshafter</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">center</span><span class="p">()</span><span class="o">.</span><span class="n">x</span><span class="p">()</span>
+        <span class="n">cell_y</span> <span class="o">=</span> <span class="n">meshafter</span><span class="o">.</span><span class="n">cell</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">center</span><span class="p">()</span><span class="o">.</span><span class="n">y</span><span class="p">()</span>
+        
+        <span class="c1"># Only modify markers within the survey area</span>
+        <span class="k">if</span> <span class="n">cell_x</span> <span class="o">&gt;=</span> <span class="n">survey_left</span> <span class="ow">and</span> <span class="n">cell_x</span> <span class="o">&lt;=</span> <span class="n">survey_right</span><span class="p">:</span>
+            <span class="c1"># Interpolate the interface height at this x position</span>
+            <span class="n">interface_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">cell_x</span><span class="p">,</span> <span class="n">input_points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">input_points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+            
+            <span class="c1"># Set marker based on position relative to interface</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">cell_y</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">interface_y</span><span class="p">):</span>
+                <span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># Below interface</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># Above interface</span>
+    
+    <span class="c1"># Keep original markers for outside cells</span>
+    <span class="n">markers</span><span class="p">[</span><span class="n">meshafter</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()</span><span class="o">==</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    
+    <span class="c1"># Set the updated markers</span>
+    <span class="n">meshafter</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">markers</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">markers</span><span class="p">,</span> <span class="n">meshafter</span></div>
+
+
+<div class="viewcode-block" id="create_ert_mesh_with_structure"><a class="viewcode-back" href="../../api/Geophy_modular.html#Geophy_modular.structure_integration.create_ert_mesh_with_structure">[docs]</a><span class="k">def</span> <span class="nf">create_ert_mesh_with_structure</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">interface_data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create ERT mesh with structure interface for constrained inversion.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        ertData: PyGIMLi ERT data container</span>
+<span class="sd">        interface_data: Interface data (can be a tuple of (x, z) or a dictionary with smooth_x, smooth_z)</span>
+<span class="sd">        **kwargs: Additional parameters including:</span>
+<span class="sd">            - paraBoundary: Extra boundary size (default: 2)</span>
+<span class="sd">            - quality: Mesh quality parameter (default: 28)</span>
+<span class="sd">            - paraMaxCellSize: Maximum cell size (default: 30)</span>
+<span class="sd">            - paraDepth: Maximum depth (default: 30.0)</span>
+<span class="sd">            </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        meshafter: Mesh with interface structure</span>
+<span class="sd">        markers: Cell markers array</span>
+<span class="sd">        regions: Dictionary with region definitions</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Set default parameters</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;paraBoundary&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="s1">&#39;quality&#39;</span><span class="p">:</span> <span class="mi">28</span><span class="p">,</span> 
+        <span class="s1">&#39;paraMaxCellSize&#39;</span><span class="p">:</span> <span class="mi">30</span><span class="p">,</span>
+        <span class="s1">&#39;paraDepth&#39;</span><span class="p">:</span> <span class="mf">30.0</span>
+    <span class="p">}</span>
+    <span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+    
+    <span class="c1"># Extract interface coordinates</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">interface_data</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">interface_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span> <span class="o">=</span> <span class="n">interface_data</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">interface_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;smooth_x&#39;</span> <span class="ow">in</span> <span class="n">interface_data</span> <span class="ow">and</span> <span class="s1">&#39;smooth_z&#39;</span> <span class="ow">in</span> <span class="n">interface_data</span><span class="p">:</span>
+        <span class="n">smooth_x</span> <span class="o">=</span> <span class="n">interface_data</span><span class="p">[</span><span class="s1">&#39;smooth_x&#39;</span><span class="p">]</span>
+        <span class="n">smooth_z</span> <span class="o">=</span> <span class="n">interface_data</span><span class="p">[</span><span class="s1">&#39;smooth_z&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Interface data must be a (x, z) tuple or a dictionary with &#39;smooth_x&#39; and &#39;smooth_z&#39; keys&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Create mesh with interface</span>
+    <span class="n">markers</span><span class="p">,</span> <span class="n">meshafter</span> <span class="o">=</span> <span class="n">integrate_velocity_interface</span><span class="p">(</span>
+        <span class="n">ertData</span><span class="p">,</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">,</span>
+        <span class="n">paraBoundary</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;paraBoundary&#39;</span><span class="p">],</span>
+        <span class="n">quality</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;quality&#39;</span><span class="p">],</span>
+        <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;paraMaxCellSize&#39;</span><span class="p">],</span>
+        <span class="n">paraDepth</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;paraDepth&#39;</span><span class="p">]</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Define regions based on markers</span>
+    <span class="n">regions</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;boundary&quot;</span><span class="p">,</span> <span class="s2">&quot;marker&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Outside survey area&quot;</span><span class="p">},</span>
+        <span class="mi">2</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;lower_layer&quot;</span><span class="p">,</span> <span class="s2">&quot;marker&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Below velocity interface&quot;</span><span class="p">},</span>
+        <span class="mi">3</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;upper_layer&quot;</span><span class="p">,</span> <span class="s2">&quot;marker&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Above velocity interface&quot;</span><span class="p">}</span>
+    <span class="p">}</span>
+    
+    <span class="k">return</span> <span class="n">meshafter</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span> <span class="n">regions</span></div>
+
+
+<div class="viewcode-block" id="create_joint_inversion_mesh"><a class="viewcode-back" href="../../api/Geophy_modular.html#Geophy_modular.structure_integration.create_joint_inversion_mesh">[docs]</a><span class="k">def</span> <span class="nf">create_joint_inversion_mesh</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">ttData</span><span class="p">,</span> <span class="n">velocity_threshold</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a mesh for joint ERT-seismic inversion by first inverting seismic data,</span>
+<span class="sd">    extracting the velocity interface, and then creating a constrained ERT mesh.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        ertData: PyGIMLi ERT data container</span>
+<span class="sd">        ttData: PyGIMLi seismic travel time data container</span>
+<span class="sd">        velocity_threshold: Threshold for velocity interface (default: 1200)</span>
+<span class="sd">        **kwargs: Additional parameters including:</span>
+<span class="sd">            - seismic_params: Dictionary of seismic inversion parameters</span>
+<span class="sd">            - mesh_params: Dictionary of mesh generation parameters</span>
+<span class="sd">            </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        joint_mesh: Mesh suitable for constrained joint inversion</span>
+<span class="sd">        seismic_manager: TravelTimeManager with seismic inversion results</span>
+<span class="sd">        structure_data: Structure interface data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Import required modules</span>
+    <span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">traveltime</span> <span class="k">as</span> <span class="n">tt</span>
+    <span class="kn">from</span> <span class="nn">watershed_geophysics.Geophy_modular.seismic_processor</span> <span class="kn">import</span> <span class="p">(</span>
+        <span class="n">process_seismic_tomography</span><span class="p">,</span> <span class="n">extract_velocity_structure</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Extract parameter dictionaries</span>
+    <span class="n">seismic_params</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;seismic_params&#39;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">mesh_params</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mesh_params&#39;</span><span class="p">,</span> <span class="p">{})</span>
+    
+    <span class="c1"># Create mesh for seismic inversion if not provided</span>
+    <span class="k">if</span> <span class="s1">&#39;mesh&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seismic_params</span><span class="p">:</span>
+        <span class="c1"># Use ERT data to create a suitable mesh</span>
+        <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">ertData</span><span class="p">)</span>
+        <span class="n">seismic_mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">ertData</span><span class="p">,</span> 
+            <span class="n">quality</span><span class="o">=</span><span class="n">seismic_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;quality&#39;</span><span class="p">,</span> <span class="mi">31</span><span class="p">),</span>
+            <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="n">seismic_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;paraMaxCellSize&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+            <span class="n">paraBoundary</span><span class="o">=</span><span class="n">seismic_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;paraBoundary&#39;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+            <span class="n">paraDepth</span><span class="o">=</span><span class="n">seismic_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;paraDepth&#39;</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">seismic_params</span><span class="p">[</span><span class="s1">&#39;mesh&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">seismic_mesh</span>
+    
+    <span class="c1"># Process seismic tomography</span>
+    <span class="n">seismic_manager</span> <span class="o">=</span> <span class="n">process_seismic_tomography</span><span class="p">(</span><span class="n">ttData</span><span class="p">,</span> <span class="o">**</span><span class="n">seismic_params</span><span class="p">)</span>
+    
+    <span class="c1"># Extract velocity interface</span>
+    <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">,</span> <span class="n">structure_data</span> <span class="o">=</span> <span class="n">extract_velocity_structure</span><span class="p">(</span>
+        <span class="n">seismic_manager</span><span class="o">.</span><span class="n">paraDomain</span><span class="p">,</span>
+        <span class="n">seismic_manager</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">(),</span>
+        <span class="n">threshold</span><span class="o">=</span><span class="n">velocity_threshold</span><span class="p">,</span>
+        <span class="n">interval</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;interface_interval&#39;</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">)</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Create ERT mesh with interface structure</span>
+    <span class="n">joint_mesh</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span> <span class="n">regions</span> <span class="o">=</span> <span class="n">create_ert_mesh_with_structure</span><span class="p">(</span>
+        <span class="n">ertData</span><span class="p">,</span> 
+        <span class="p">(</span><span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">),</span>
+        <span class="o">**</span><span class="n">mesh_params</span>
+    <span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">joint_mesh</span><span class="p">,</span> <span class="n">seismic_manager</span><span class="p">,</span> <span class="n">structure_data</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
