@@ -18,6 +18,45 @@ import numpy as np
 from scipy.optimize import fsolve
 
 
+
+
+
+
+def WS_Model(saturation, porosity, sigma_w, m, n, sigma_s=0):
+    """
+    Convert water content to resistivity using Waxman-Smits model.
+    
+    Based on equation: σ = (S_w^n/F)σ_w + σ_s
+    where F = φ^(-m) (formation factor from Archie's law)
+    
+    Args:
+        saturation (array): Saturation (S_w)
+        porosity (array): Porosity values (φ)
+        sigma_w (float): Pore water conductivity (σ_w)
+        m (float): Cementation exponent
+        n (float): Saturation exponent  
+        sigma_s (float): Surface conductivity (σ_s). Default is 0 (no surface effects).
+    
+    Returns:
+        array: Resistivity values
+    """
+    # Calculate saturation (S_w)
+
+    
+    # Calculate formation factor F = φ^(-m)
+    formation_factor = porosity**(-m)
+    
+    # Calculate conductivity using Waxman-Smits model
+    # σ = (S_w^n/F)(σ_w + σ_s/S_w)
+    sigma = (saturation**n / formation_factor) * (sigma_w + sigma_s/saturation)
+    
+    # Convert conductivity to resistivity
+    resistivity = 1.0 / sigma
+    
+    return resistivity
+
+
+
 def water_content_to_resistivity(water_content, rhos, n, porosity, sigma_sur=0):
     """
     Convert water content to resistivity using Waxman-Smits model.
