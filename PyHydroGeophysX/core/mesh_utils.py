@@ -7,6 +7,9 @@ import pygimli.meshtools as mt
 from typing import Tuple, List, Optional, Union
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
+from scipy import ndimage
+from scipy.interpolate import griddata
+
 
 def create_mesh_from_layers(surface: np.ndarray,
                           line1: np.ndarray,
@@ -99,26 +102,29 @@ def create_mesh_from_layers(surface: np.ndarray,
 
 
 
-def extract_velocity_interface(mesh, velocity_data, threshold=1200, interval=4.0):
+def extract_velocity_interface(mesh, velocity_data, threshold=1200, interval=4.0, x_min=None, x_max=None):
     """
     Extract the interface where velocity equals the threshold value.
     
-    Args:
-        mesh: The PyGIMLi mesh
-        velocity_data: The velocity values
-        threshold: The velocity value defining the interface (default: 1200)
-        interval: Spacing between x-coordinate points (default: 4.0)
-        
+    Parameters:
+    mesh - The PyGIMLi mesh
+    velocity_data - The velocity values
+    threshold - The velocity value defining the interface (default: 1200)
+    interval - The binning interval for extracting the interface (default: 4.0)
+    x_min - Optional: minimum x-coordinate for the range (default: None, uses mesh data)
+    x_max - Optional: maximum x-coordinate for the range (default: None, uses mesh data)
+    
     Returns:
-        x_dense, z_dense: Arrays with x and z coordinates of the smooth interface
+    x_dense, z_dense - Arrays with x and z coordinates of the smooth interface
     """
     # Get cell centers
     cell_centers = mesh.cellCenters()
-    x_coords = cell_centers[:,0]
-    z_coords = cell_centers[:,1]
+    x_coords = cell_centers[:, 0]
+    z_coords = cell_centers[:, 1]
     
-    # Get x-range for complete boundary
-    x_min, x_max = np.min(x_coords), np.max(x_coords)
+    # Get x-range for complete boundary if not provided
+    if x_min is None or x_max is None:
+        x_min, x_max = np.min(x_coords), np.max(x_coords)
     
     # Create bins across the entire x-range
     x_bins = np.arange(x_min, x_max + interval, interval)
@@ -128,9 +134,9 @@ def extract_velocity_interface(mesh, velocity_data, threshold=1200, interval=4.0
     interface_z = []
     
     # For each bin, find the velocity interface
-    for i in range(len(x_bins)-1):
+    for i in range(len(x_bins) - 1):
         # Get all cells in this x-range
-        bin_indices = np.where((x_coords >= x_bins[i]) & (x_coords < x_bins[i+1]))[0]
+        bin_indices = np.where((x_coords >= x_bins[i]) & (x_coords < x_bins[i + 1]))[0]
         
         if len(bin_indices) > 0:
             # Get velocity values and depths for this bin
@@ -144,37 +150,33 @@ def extract_velocity_interface(mesh, velocity_data, threshold=1200, interval=4.0
             
             # Find where velocity crosses the threshold
             for j in range(1, len(bin_velocities)):
-                if (bin_velocities[j-1] < threshold and bin_velocities[j] >= threshold) or \
-                   (bin_velocities[j-1] >= threshold and bin_velocities[j] < threshold):
+                if (bin_velocities[j - 1] < threshold and bin_velocities[j] >= threshold) or \
+                   (bin_velocities[j - 1] >= threshold and bin_velocities[j] < threshold):
                     # Linear interpolation for exact interface depth
-                    v1 = bin_velocities[j-1]
+                    v1 = bin_velocities[j - 1]
                     v2 = bin_velocities[j]
-                    z1 = bin_depths[j-1]
+                    z1 = bin_depths[j - 1]
                     z2 = bin_depths[j]
                     
                     # Calculate the interpolated z-value where velocity = threshold
                     ratio = (threshold - v1) / (v2 - v1)
                     interface_depth = z1 + ratio * (z2 - z1)
                     
-                    interface_x.append((x_bins[i] + x_bins[i+1]) / 2)
+                    interface_x.append((x_bins[i] + x_bins[i + 1]) / 2)
                     interface_z.append(interface_depth)
                     break
     
     # Ensure we have interface points for the entire range
-    # If first point is missing, extrapolate from the first available points
     if len(interface_x) > 0 and interface_x[0] > x_min + interval:
         interface_x.insert(0, x_min)
-        # Use the slope of the first two points to extrapolate
         if len(interface_x) > 2:
             slope = (interface_z[1] - interface_z[0]) / (interface_x[1] - interface_x[0])
             interface_z.insert(0, interface_z[0] - slope * (interface_x[1] - x_min))
         else:
             interface_z.insert(0, interface_z[0])
     
-    # If last point is missing, extrapolate from the last available points
     if len(interface_x) > 0 and interface_x[-1] < x_max - interval:
         interface_x.append(x_max)
-        # Use the slope of the last two points to extrapolate
         if len(interface_x) > 2:
             slope = (interface_z[-1] - interface_z[-2]) / (interface_x[-1] - interface_x[-2])
             interface_z.append(interface_z[-1] + slope * (x_max - interface_x[-1]))
@@ -188,23 +190,25 @@ def extract_velocity_interface(mesh, velocity_data, threshold=1200, interval=4.0
     if len(interface_x) > 3:
         try:
             interp_func = interp1d(interface_x, interface_z, kind='cubic', 
-                                  bounds_error=False, fill_value="extrapolate")
+                                   bounds_error=False, fill_value="extrapolate")
             z_dense = interp_func(x_dense)
             
             # Apply additional smoothing
+            from scipy.signal import savgol_filter
             z_dense = savgol_filter(z_dense, window_length=31, polyorder=3)
         except:
             # Fall back to linear interpolation if cubic fails
             interp_func = interp1d(interface_x, interface_z, kind='linear',
-                                  bounds_error=False, fill_value="extrapolate")
+                                    bounds_error=False, fill_value="extrapolate")
             z_dense = interp_func(x_dense)
     else:
         # Not enough points for cubic interpolation
         interp_func = interp1d(interface_x, interface_z, kind='linear',
-                              bounds_error=False, fill_value="extrapolate")
+                               bounds_error=False, fill_value="extrapolate")
         z_dense = interp_func(x_dense)
     
     return x_dense, z_dense
+
 
 
 def add_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2, boundary=1):
@@ -281,7 +285,111 @@ def add_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2, boundary
     return markers, meshafter
 
 
+def fill_holes_2d(pos, cov, grid_resolution=100):
+    """
+    Fill holes (0 values) surrounded by 1 values in 2D scattered data.
+    
+    Parameters:
+    -----------
+    pos : ndarray of shape (n, 3)
+        Position array where first two columns are x,y coordinates
+    cov : ndarray of shape (n,)
+        Coverage values at each point (0 or 1)
+    grid_resolution : int
+        Resolution of the grid for interpolation
+        
+    Returns:
+    --------
+    filled_cov : ndarray of shape (n,)
+        Updated coverage values with holes filled
+    """
+    # Extract only the first two columns (x, y) from pos
+    pos_2d = pos[:, :2]
+    
+    # Extract min and max coordinates for grid boundaries
+    min_coords = np.min(pos_2d, axis=0)
+    max_coords = np.max(pos_2d, axis=0)
+    
+    # Create a regular 2D grid
+    x = np.linspace(min_coords[0], max_coords[0], grid_resolution)
+    y = np.linspace(min_coords[1], max_coords[1], grid_resolution)
+    X, Y = np.meshgrid(x, y)
+    
+    # Interpolate scattered data to regular grid
+    grid_points = np.vstack([X.ravel(), Y.ravel()]).T
+    grid_cov = griddata(pos_2d, cov, grid_points, method='nearest').reshape(X.shape)
+    
+    # Convert to binary
+    binary_grid = (grid_cov > 0.5)
+    
+    # Fill holes using binary_fill_holes from scipy
+    filled_grid = ndimage.binary_fill_holes(binary_grid)
+    
+    # Convert back to original data type
+    filled_grid = filled_grid.astype(float)
+    
+    # Interpolate back to original scattered points
+    filled_cov = griddata(grid_points, filled_grid.ravel(), pos_2d, method='nearest')
+    
+    return filled_cov
 
+def createTriangles(mesh):
+    """Generate triangle objects for later drawing.
+
+    Creates triangle for each 2D triangle cell or 3D boundary.
+    Quads will be split into two triangles. Result will be cached into mesh._triData.
+
+    Parameters
+    ----------
+    mesh : :gimliapi:`GIMLI::Mesh`
+        2D mesh or 3D mesh
+
+    Returns
+    -------
+    x : numpy array
+        x position of nodes
+    y : numpy array
+        x position of nodes
+    triangles : numpy array Cx3
+        cell indices for each triangle, quad or boundary face
+    z : numpy array
+        z position for given indices
+    dataIdx : list of int
+        List of indices for a data array
+    """
+    if hasattr(mesh, '_triData'):
+        if hash(mesh) == mesh._triData[0]:
+            return mesh._triData[1:]
+
+    x = pg.x(mesh)
+    y = pg.y(mesh)
+    z = pg.z(mesh)
+    #    x.round(1e-1)
+    #    y.round(1e-1)
+
+    if mesh.dim() == 2:
+        ents = mesh.cells()
+    else:
+        ents = mesh.boundaries(mesh.boundaryMarkers() != 0)
+        if len(ents) == 0:
+            for b in mesh.boundaries():
+                if b.leftCell() is None or b.rightCell() is None:
+                    ents.append(b)
+
+    triangles = []
+    dataIdx = []
+
+    for c in ents:
+        triangles.append([c.node(0).id(), c.node(1).id(), c.node(2).id()])
+        dataIdx.append(c.id())
+
+        if c.shape().nodeCount() == 4:
+            triangles.append([c.node(0).id(), c.node(2).id(), c.node(3).id()])
+            dataIdx.append(c.id())
+
+    mesh._triData = [hash(mesh), x, y, triangles, z, dataIdx]
+
+    return x, y, triangles, z, dataIdx
 
 
 class MeshCreator:
