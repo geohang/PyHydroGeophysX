@@ -311,8 +311,8 @@ If you use PyHydroGeophysX in your research, please cite:
 
 ```bibtex
 @software{chen2025pyhydrogeophysx,
-  author = {Chen, Hang},
-  title = {PyHydroGeophysX: Integrating Hydrological and Geophysical Modeling},
+  author = {Chen, Hang, Niu, Qifei, Wu, Yuxin},
+  title = {PyHydroGeophysX: An Extensible Open-Source Platform for Bridging Hydrological Models and Geophysical Measurements},
   year = {2025},
   publisher = {GitHub},
   url = {https://github.com/yourusername/PyHydroGeophysX}
@@ -321,7 +321,7 @@ If you use PyHydroGeophysX in your research, please cite:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the Apache-2.0 license - see the LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
@@ -331,7 +331,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📧 Contact
 
 Author: Hang Chen  
-Email: hchen8@lbl.gov
+Email: hangchen.work@gmail.com
 Issues: GitHub Issues  
 
 ---
