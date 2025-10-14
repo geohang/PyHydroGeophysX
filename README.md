@@ -314,8 +314,8 @@ If you use PyHydroGeophysX in your research, please cite:
   author = {Chen, Hang, Niu, Qifei, Wu, Yuxin},
   title = {PyHydroGeophysX: An Extensible Open-Source Platform for Bridging Hydrological Models and Geophysical Measurements},
   year = {2025},
-  publisher = {GitHub},
-  url = {https://github.com/yourusername/PyHydroGeophysX}
+  publisher = {Water Resources Research (under review)},
+  url = {https://github.com/geohang/PyHydroGeophysX}
 }
 ```
 
