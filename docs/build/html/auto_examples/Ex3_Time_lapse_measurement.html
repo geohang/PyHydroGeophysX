@@ -1,31 +1,29 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ex3. Creating Synthetic Time-Lapse ERT Measurements &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
-    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex3_Time_lapse_measurement.html" />
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
   
-        <script src="../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex3_Time_lapse_measurement.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion" href="Ex2_workflow.html" />
-    <link rel="prev" title="Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling" href="Ex5_SRT.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -57,18 +55,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Ex 1. Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
-</ul>
-</li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Examples Gallery</a></li>
 </ul>
 
         </div>
@@ -85,7 +73,6 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
       <li class="breadcrumb-item active">Ex3. Creating Synthetic Time-Lapse ERT Measurements</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex3_Time_lapse_measurement.rst.txt" rel="nofollow"> View page source</a>
@@ -102,7 +89,7 @@
 to download the full example code</p>
 </div>
 <section class="sphx-glr-example-title" id="ex3-creating-synthetic-time-lapse-ert-measurements">
-<span id="sphx-glr-auto-examples-ex3-time-lapse-measurement-py"></span><h1>Ex3. Creating Synthetic Time-Lapse ERT Measurements<a class="headerlink" href="#ex3-creating-synthetic-time-lapse-ert-measurements" title="Permalink to this heading"></a></h1>
+<span id="sphx-glr-auto-examples-ex3-time-lapse-measurement-py"></span><h1>Ex3. Creating Synthetic Time-Lapse ERT Measurements<a class="headerlink" href="#ex3-creating-synthetic-time-lapse-ert-measurements" title="Link to this heading"></a></h1>
 <p>This example demonstrates how to create synthetic time-lapse electrical
 resistivity tomography (ERT) measurements for watershed monitoring applications.</p>
 <p>The example covers:
@@ -114,13 +101,13 @@ resistivity tomography (ERT) measurements for watershed monitoring applications.
 6. Creating animations showing temporal water content variations</p>
 <p>This workflow is essential for testing time-lapse inversion algorithms
 and understanding the sensitivity of ERT measurements to hydrological changes.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
-<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
-<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="kn">import</span> <span class="n">make_axes_locatable</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pygimli.physics</span><span class="w"> </span><span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mpl_toolkits.axes_grid1</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_axes_locatable</span>
 
 <span class="c1"># Setup package path for development</span>
 <span class="k">try</span><span class="p">:</span>
@@ -136,11 +123,11 @@ and understanding the sensitivity of ERT measurements to hydrological changes.</
     <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
 
 <span class="c1"># Import PyHydroGeophysX modules</span>
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.model_output.modflow_output</span> <span class="kn">import</span> <span class="n">MODFLOWWaterContent</span>
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.core.interpolation</span> <span class="kn">import</span> <span class="n">ProfileInterpolator</span><span class="p">,</span> <span class="n">create_surface_lines</span>
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.core.mesh_utils</span> <span class="kn">import</span> <span class="n">MeshCreator</span>
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span> <span class="kn">import</span> <span class="n">water_content_to_resistivity</span>
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.forward.ert_forward</span> <span class="kn">import</span> <span class="n">ERTForwardModeling</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.model_output.modflow_output</span><span class="w"> </span><span class="kn">import</span> <span class="n">MODFLOWWaterContent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.interpolation</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProfileInterpolator</span><span class="p">,</span> <span class="n">create_surface_lines</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshCreator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">water_content_to_resistivity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.forward.ert_forward</span><span class="w"> </span><span class="kn">import</span> <span class="n">ERTForwardModeling</span>
 </pre></div>
 </div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span>  <span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="s2">&quot;TL_measurements&quot;</span><span class="p">)</span> <span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements&quot;</span>
@@ -428,8 +415,8 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 </pre></div>
 </div>
 <p>## plot the apparent resitivity</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">pylab</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pylab</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pylab</span>
 <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
           <span class="c1">#&#39;figure.figsize&#39;: (15, 5),</span>
          <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
@@ -471,7 +458,7 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 <p>## Showing the water content model for the differnent timesteps</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">14</span><span class="p">))</span>
 
-<span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18_r</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18_r</span>
 <span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18_r</span><span class="o">.</span><span class="n">mpl_colormap</span>
 <span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">wc25</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synwcmodel/synwcmodel30.npy&quot;</span>  <span class="p">))</span>
@@ -507,7 +494,7 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 <p>## Showing the water content model for the differnent timesteps</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">14</span><span class="p">))</span>
 
-<span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
 <span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
 <span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">wc30</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synresmodel/synresmodel30.npy&quot;</span>  <span class="p">))</span>
@@ -544,14 +531,14 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;resistivity_model.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
-<span class="kn">import</span> <span class="nn">io</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
 
 <span class="c1"># Import your color map</span>
-<span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18_r</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18_r</span>
 <span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18_r</span><span class="o">.</span><span class="n">mpl_colormap</span>
 
 <span class="c1"># Create a list to store the frames</span>
@@ -649,10 +636,7 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex5_SRT.html" class="btn btn-neutral float-left" title="Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex2_workflow.html" class="btn btn-neutral float-right" title="Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 

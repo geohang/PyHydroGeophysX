@@ -1,31 +1,29 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ex 1. Loading and Processing Hydrological Model Outputs &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
-    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex1_model_output.html" />
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
   
-        <script src="../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex1_model_output.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion" href="Ex7_structure_TLresinv.html" />
-    <link rel="prev" title="Examples Gallery" href="index.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -57,30 +55,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 1. Loading and Processing Hydrological Model Outputs</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#parflow-example">1. ParFlow Example</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#visualizing-parflow-data">Visualizing ParFlow Data</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#modflow-example">2. MODFLOW Example</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#visualizing-modflow-data">Visualizing MODFLOW Data</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="#summary-and-next-steps">Summary and Next Steps</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#download-and-links">Download and Links</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
-</ul>
-</li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Examples Gallery</a></li>
 </ul>
 
         </div>
@@ -97,7 +73,6 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
       <li class="breadcrumb-item active">Ex 1. Loading and Processing Hydrological Model Outputs</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex1_model_output.rst.txt" rel="nofollow"> View page source</a>
@@ -114,7 +89,7 @@
 to download the full example code</p>
 </div>
 <section class="sphx-glr-example-title" id="ex-1-loading-and-processing-hydrological-model-outputs">
-<span id="sphx-glr-auto-examples-ex1-model-output-py"></span><h1>Ex 1. Loading and Processing Hydrological Model Outputs<a class="headerlink" href="#ex-1-loading-and-processing-hydrological-model-outputs" title="Permalink to this heading"></a></h1>
+<span id="sphx-glr-auto-examples-ex1-model-output-py"></span><h1>Ex 1. Loading and Processing Hydrological Model Outputs<a class="headerlink" href="#ex-1-loading-and-processing-hydrological-model-outputs" title="Link to this heading"></a></h1>
 <p>This example demonstrates how to load and process outputs from different
 hydrological models using PyHydroGeophysX. We show examples for both
 ParFlow and MODFLOW models.</p>
@@ -124,10 +99,10 @@ ParFlow and MODFLOW models.</p>
 - Basic visualization of the loaded data</p>
 <p>This is typically the first step in any workflow where you want to
 convert hydrological model outputs to geophysical data.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
 <span class="c1"># For Jupyter notebooks, use the current working directory</span>
 <span class="k">try</span><span class="p">:</span>
@@ -142,12 +117,12 @@ convert hydrological model outputs to geophysical data.</p>
 <span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
     <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
 
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.model_output.parflow_output</span> <span class="kn">import</span> <span class="n">ParflowSaturation</span><span class="p">,</span> <span class="n">ParflowPorosity</span>
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.model_output.modflow_output</span> <span class="kn">import</span> <span class="n">MODFLOWWaterContent</span><span class="p">,</span> <span class="n">MODFLOWPorosity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.model_output.parflow_output</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParflowSaturation</span><span class="p">,</span> <span class="n">ParflowPorosity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.model_output.modflow_output</span><span class="w"> </span><span class="kn">import</span> <span class="n">MODFLOWWaterContent</span><span class="p">,</span> <span class="n">MODFLOWPorosity</span>
 </pre></div>
 </div>
 <section id="parflow-example">
-<h2>1. ParFlow Example<a class="headerlink" href="#parflow-example" title="Permalink to this heading"></a></h2>
+<h2>1. ParFlow Example<a class="headerlink" href="#parflow-example" title="Link to this heading"></a></h2>
 <p>Let’s start by loading ParFlow data. ParFlow is a physically-based,
 three-dimensional model that simulates surface and subsurface flow.</p>
 <p>Path to your Parflow model directory</p>
@@ -177,7 +152,7 @@ three-dimensional model that simulates surface and subsurface flow.</p>
 </pre></div>
 </div>
 <section id="visualizing-parflow-data">
-<h3>Visualizing ParFlow Data<a class="headerlink" href="#visualizing-parflow-data" title="Permalink to this heading"></a></h3>
+<h3>Visualizing ParFlow Data<a class="headerlink" href="#visualizing-parflow-data" title="Link to this heading"></a></h3>
 <p>Now let’s create visualizations of the loaded ParFlow data. We’ll plot
 both porosity and saturation for layer 19 of the model.</p>
 <p>Plotting the data</p>
@@ -202,11 +177,12 @@ both porosity and saturation for layer 19 of the model.</p>
 Notice how the values vary spatially across the domain. The porosity shows
 the void space available for fluid storage, while saturation indicates how
 much of that space is filled with water.</p>
-<a class="reference internal image-reference" href="../_images/Ex1_model_output_fig_01.png"><img alt="../_images/Ex1_model_output_fig_01.png" class="align-center" src="../_images/Ex1_model_output_fig_01.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="auto_examples/images/Ex1_model_output_fig_01.png"><img alt="auto_examples/images/Ex1_model_output_fig_01.png" class="align-center" src="auto_examples/images/Ex1_model_output_fig_01.png" style="width: 600px;" />
+</a>
 </section>
 </section>
 <section id="modflow-example">
-<h2>2. MODFLOW Example<a class="headerlink" href="#modflow-example" title="Permalink to this heading"></a></h2>
+<h2>2. MODFLOW Example<a class="headerlink" href="#modflow-example" title="Link to this heading"></a></h2>
 <p>MODFLOW is a widely-used groundwater flow model. Here we’ll load water content
 and porosity data from a MODFLOW simulation.</p>
 <p>These would be your actual data files</p>
@@ -239,7 +215,7 @@ and porosity data from a MODFLOW simulation.</p>
 </pre></div>
 </div>
 <section id="visualizing-modflow-data">
-<h3>Visualizing MODFLOW Data<a class="headerlink" href="#visualizing-modflow-data" title="Permalink to this heading"></a></h3>
+<h3>Visualizing MODFLOW Data<a class="headerlink" href="#visualizing-modflow-data" title="Link to this heading"></a></h3>
 <p>Let’s create visualizations of the MODFLOW simulation results. We’ll compare
 the porosity distribution with the water content.</p>
 <p>Plotting the data</p>
@@ -264,11 +240,12 @@ the porosity distribution with the water content.</p>
 <p>The MODFLOW results show the comparison between porosity distribution and
 water content. The water content represents the volumetric water content,
 which is the product of porosity and saturation.</p>
-<a class="reference internal image-reference" href="../_images/Ex1_model_output_fig_02.png"><img alt="../_images/Ex1_model_output_fig_02.png" class="align-center" src="../_images/Ex1_model_output_fig_02.png" style="width: 600px;" /></a>
+<a class="reference internal image-reference" href="auto_examples/images/Ex1_model_output_fig_02.png"><img alt="auto_examples/images/Ex1_model_output_fig_02.png" class="align-center" src="auto_examples/images/Ex1_model_output_fig_02.png" style="width: 600px;" />
+</a>
 </section>
 </section>
 <section id="summary-and-next-steps">
-<h2>Summary and Next Steps<a class="headerlink" href="#summary-and-next-steps" title="Permalink to this heading"></a></h2>
+<h2>Summary and Next Steps<a class="headerlink" href="#summary-and-next-steps" title="Link to this heading"></a></h2>
 <p>This example has demonstrated the basic workflow for loading hydrological
 model outputs using PyHydroGeophysX. Key points:</p>
 <ul class="simple">
@@ -289,7 +266,7 @@ using petrophysical relationships.</p>
 </ul>
 </section>
 <section id="download-and-links">
-<h2>Download and Links<a class="headerlink" href="#download-and-links" title="Permalink to this heading"></a></h2>
+<h2>Download and Links<a class="headerlink" href="#download-and-links" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><a class="reference download internal" download="" href="../_downloads/a1c541679b3366c49ff675811af4b6e7/Ex1_model_output.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">this</span> <span class="pre">example</span></code></a></p></li>
 <li><p>See <span class="xref std std-ref">example_02</span> for the complete workflow</p></li>
@@ -310,10 +287,7 @@ using petrophysical relationships.</p>
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="Examples Gallery" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex7_structure_TLresinv.html" class="btn btn-neutral float-right" title="Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 

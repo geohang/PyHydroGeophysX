@@ -1,26 +1,26 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Quickstart &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/sg_gallery.css" type="text/css" />
-      <link rel="stylesheet" href="_static/sg_gallery-binder.css" type="text/css" />
-      <link rel="stylesheet" href="_static/sg_gallery-dataframe.css" type="text/css" />
-      <link rel="stylesheet" href="_static/sg_gallery-rendered-html.css" type="text/css" />
-    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/quickstart.html" />
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
   
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=2389946f"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/quickstart.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -95,10 +95,10 @@
            <div itemprop="articleBody">
              
   <section id="quickstart">
-<h1>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this heading"></a></h1>
+<h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading"></a></h1>
 <p>Welcome to <strong>PyHydroGeophysX</strong>—a Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, specializing in ERT and SRT for watershed monitoring.</p>
 <section id="key-features">
-<h2>Key Features<a class="headerlink" href="#key-features" title="Permalink to this heading"></a></h2>
+<h2>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p>Hydrological model integration (MODFLOW, ParFlow)</p></li>
 <li><p>Advanced petrophysical relationships (Archie, Waxman-Smits, DEM, Hertz-Mindlin)</p></li>
@@ -108,7 +108,7 @@
 </ul>
 </section>
 <section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h2>
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
 <p>PyHydroGeophysX requires <strong>Python 3.8 or higher</strong>.</p>
 <p><strong>From PyPI</strong> (when available):
 .. code-block:: bash</p>
@@ -135,9 +135,9 @@ pip install joblib</p>
 </div></blockquote>
 </section>
 <section id="basic-example-hydrological-model-integration">
-<h2>Basic Example: Hydrological Model Integration<a class="headerlink" href="#basic-example-hydrological-model-integration" title="Permalink to this heading"></a></h2>
+<h2>Basic Example: Hydrological Model Integration<a class="headerlink" href="#basic-example-hydrological-model-integration" title="Link to this heading"></a></h2>
 <p>Load and process MODFLOW or ParFlow outputs:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyHydroGeophysX.model_output</span> <span class="kn">import</span> <span class="n">MODFLOWWaterContent</span><span class="p">,</span> <span class="n">ParflowSaturation</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.model_output</span><span class="w"> </span><span class="kn">import</span> <span class="n">MODFLOWWaterContent</span><span class="p">,</span> <span class="n">ParflowSaturation</span>
 
 <span class="c1"># For MODFLOW</span>
 <span class="n">processor</span> <span class="o">=</span> <span class="n">MODFLOWWaterContent</span><span class="p">(</span><span class="s2">&quot;path/to/modflow_workspace&quot;</span><span class="p">,</span> <span class="n">idomain</span><span class="p">)</span>  <span class="c1"># idomain: array for active model domain</span>
@@ -150,9 +150,9 @@ pip install joblib</p>
 </div>
 </section>
 <section id="petrophysical-modeling">
-<h2>Petrophysical Modeling<a class="headerlink" href="#petrophysical-modeling" title="Permalink to this heading"></a></h2>
+<h2>Petrophysical Modeling<a class="headerlink" href="#petrophysical-modeling" title="Link to this heading"></a></h2>
 <p>Convert water content to resistivity, or water content to seismic velocity:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyHydroGeophysX.petrophysics</span> <span class="kn">import</span> <span class="n">water_content_to_resistivity</span><span class="p">,</span> <span class="n">HertzMindlinModel</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics</span><span class="w"> </span><span class="kn">import</span> <span class="n">water_content_to_resistivity</span><span class="p">,</span> <span class="n">HertzMindlinModel</span>
 
 <span class="n">resistivity</span> <span class="o">=</span> <span class="n">water_content_to_resistivity</span><span class="p">(</span>
     <span class="n">water_content</span><span class="o">=</span><span class="n">wc</span><span class="p">,</span> <span class="n">rho_saturated</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">saturation_exponent_n</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
@@ -168,9 +168,9 @@ pip install joblib</p>
 </div>
 </section>
 <section id="forward-modeling-ert-srt">
-<h2>Forward Modeling (ERT/SRT)<a class="headerlink" href="#forward-modeling-ert-srt" title="Permalink to this heading"></a></h2>
+<h2>Forward Modeling (ERT/SRT)<a class="headerlink" href="#forward-modeling-ert-srt" title="Link to this heading"></a></h2>
 <p>Generate synthetic geophysical data (requires mesh/data creation as in examples):</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyHydroGeophysX.forward</span> <span class="kn">import</span> <span class="n">ERTForwardModeling</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.forward</span><span class="w"> </span><span class="kn">import</span> <span class="n">ERTForwardModeling</span>
 
 <span class="n">ert_fwd</span> <span class="o">=</span> <span class="n">ERTForwardModeling</span><span class="p">(</span><span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">data_scheme</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 <span class="n">synthetic_data_ert</span> <span class="o">=</span> <span class="n">ert_fwd</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">=</span><span class="n">resistivity_model</span><span class="p">)</span>
@@ -178,8 +178,8 @@ pip install joblib</p>
 </div>
 </section>
 <section id="time-lapse-inversion-ert">
-<h2>Time-Lapse Inversion (ERT)<a class="headerlink" href="#time-lapse-inversion-ert" title="Permalink to this heading"></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion</span> <span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
+<h2>Time-Lapse Inversion (ERT)<a class="headerlink" href="#time-lapse-inversion-ert" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
 
 <span class="c1"># inversion = TimeLapseERTInversion(</span>
 <span class="c1">#     data_files=ert_files,</span>
@@ -193,7 +193,7 @@ pip install joblib</p>
 </div>
 </section>
 <section id="more-examples-and-documentation">
-<h2>More Examples and Documentation<a class="headerlink" href="#more-examples-and-documentation" title="Permalink to this heading"></a></h2>
+<h2>More Examples and Documentation<a class="headerlink" href="#more-examples-and-documentation" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p>See the <span class="xref std std-ref">api</span> for detailed API documentation.</p></li>
 <li><p>Explore the <span class="xref std std-ref">auto_examples</span> for more workflows.</p></li>

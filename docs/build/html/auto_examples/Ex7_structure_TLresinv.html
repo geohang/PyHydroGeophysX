@@ -1,31 +1,29 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
-    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex7_structure_TLresinv.html" />
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
   
-        <script src="../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex7_structure_TLresinv.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex 4. Time-Lapse ERT Inversion Techniques" href="Ex4_TL_inversion.html" />
-    <link rel="prev" title="Ex 1. Loading and Processing Hydrological Model Outputs" href="Ex1_model_output.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -57,18 +55,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Ex 1. Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
-</ul>
-</li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Examples Gallery</a></li>
 </ul>
 
         </div>
@@ -85,7 +73,6 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
       <li class="breadcrumb-item active">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex7_structure_TLresinv.rst.txt" rel="nofollow"> View page source</a>
@@ -102,7 +89,7 @@
 to download the full example code</p>
 </div>
 <section class="sphx-glr-example-title" id="ex-7-structure-constrained-time-lapse-resistivity-inversion">
-<span id="sphx-glr-auto-examples-ex7-structure-tlresinv-py"></span><h1>Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion<a class="headerlink" href="#ex-7-structure-constrained-time-lapse-resistivity-inversion" title="Permalink to this heading"></a></h1>
+<span id="sphx-glr-auto-examples-ex7-structure-tlresinv-py"></span><h1>Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion<a class="headerlink" href="#ex-7-structure-constrained-time-lapse-resistivity-inversion" title="Link to this heading"></a></h1>
 <p>This example combines structural constraints with time-lapse ERT inversion
 to monitor water content changes in layered geological media.</p>
 <p>The workflow demonstrates:
@@ -114,13 +101,13 @@ to monitor water content changes in layered geological media.</p>
 <p>This advanced approach provides the most reliable estimates of subsurface
 water content evolution by combining temporal, spatial, and geological
 constraints in the inversion process.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
-<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
-<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="kn">import</span> <span class="n">make_axes_locatable</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pygimli.physics</span><span class="w"> </span><span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mpl_toolkits.axes_grid1</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_axes_locatable</span>
 
 <span class="c1"># Setup package path for development</span>
 <span class="k">try</span><span class="p">:</span>
@@ -136,8 +123,8 @@ constraints in the inversion process.</p>
     <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
 
 <span class="c1"># Import PyHydroGeophysX modules</span>
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.time_lapse</span> <span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.windowed</span> <span class="kn">import</span> <span class="n">WindowedTimeLapseERTInversion</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.time_lapse</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.windowed</span><span class="w"> </span><span class="kn">import</span> <span class="n">WindowedTimeLapseERTInversion</span>
 </pre></div>
 </div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;TL_measurements&quot;</span><span class="p">,</span><span class="s2">&quot;appres&quot;</span><span class="p">)</span>
@@ -222,10 +209,10 @@ constraints in the inversion process.</p>
 <span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms&quot;</span>
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">pylab</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pylab</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pylab</span>
 <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
           <span class="c1">#&#39;figure.figsize&#39;: (15, 5),</span>
          <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
@@ -305,10 +292,7 @@ constraints in the inversion process.</p>
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex1_model_output.html" class="btn btn-neutral float-left" title="Ex 1. Loading and Processing Hydrological Model Outputs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex4_TL_inversion.html" class="btn btn-neutral float-right" title="Ex 4. Time-Lapse ERT Inversion Techniques" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 

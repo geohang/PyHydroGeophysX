@@ -1,31 +1,29 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ex 6. Structure-Constrained Resistivity Inversion &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
-    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex6_Structure_resinv.html" />
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
   
-        <script src="../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex6_Structure_resinv.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation" href="Ex8_MC_WC.html" />
-    <link rel="prev" title="Ex 4. Time-Lapse ERT Inversion Techniques" href="Ex4_TL_inversion.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -57,18 +55,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Ex 1. Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex8_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
-</ul>
-</li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Examples Gallery</a></li>
 </ul>
 
         </div>
@@ -85,7 +73,6 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
       <li class="breadcrumb-item active">Ex 6. Structure-Constrained Resistivity Inversion</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex6_Structure_resinv.rst.txt" rel="nofollow"> View page source</a>
@@ -102,7 +89,7 @@
 to download the full example code</p>
 </div>
 <section class="sphx-glr-example-title" id="ex-6-structure-constrained-resistivity-inversion">
-<span id="sphx-glr-auto-examples-ex6-structure-resinv-py"></span><h1>Ex 6. Structure-Constrained Resistivity Inversion<a class="headerlink" href="#ex-6-structure-constrained-resistivity-inversion" title="Permalink to this heading"></a></h1>
+<span id="sphx-glr-auto-examples-ex6-structure-resinv-py"></span><h1>Ex 6. Structure-Constrained Resistivity Inversion<a class="headerlink" href="#ex-6-structure-constrained-resistivity-inversion" title="Link to this heading"></a></h1>
 <p>This example demonstrates how to incorporate structural information from
 seismic velocity models into ERT inversion for improved subsurface imaging.</p>
 <p>The workflow includes:
@@ -114,14 +101,14 @@ seismic velocity models into ERT inversion for improved subsurface imaging.</p>
 <p>Structure-constrained inversion significantly improves the accuracy of
 resistivity models by incorporating a priori geological information,
 leading to more reliable hydrological interpretations.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
-<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
-<span class="kn">import</span> <span class="nn">pygimli.physics.traveltime</span> <span class="k">as</span> <span class="nn">tt</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">pylab</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pygimli.physics</span><span class="w"> </span><span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli.physics.traveltime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pylab</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pylab</span>
 
 <span class="c1"># Setup package path for development</span>
 <span class="k">try</span><span class="p">:</span>
@@ -137,7 +124,7 @@ leading to more reliable hydrological interpretations.</p>
     <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
 
 <span class="c1"># Import PyHydroGeophysX modules</span>
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.time_lapse</span> <span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.time_lapse</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
 
 <span class="c1"># Set up matplotlib parameters</span>
 <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
@@ -193,7 +180,7 @@ leading to more reliable hydrological interpretations.</p>
 <span class="nb">print</span><span class="p">(</span><span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="c1"># Assuming TT.model.array() gives you the velocity values</span>
 <span class="n">velocity_data</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
@@ -228,7 +215,7 @@ leading to more reliable hydrological interpretations.</p>
 
 <span class="c1"># Now thresholded contains your classified values (1 or 2)</span>
 <span class="c1"># Let&#39;s visualize the result</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
 <span class="c1"># Create a figure with two subplots to compare</span>
 <span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
@@ -245,9 +232,9 @@ leading to more reliable hydrological interpretations.</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">interp1d</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.interpolate</span><span class="w"> </span><span class="kn">import</span> <span class="n">interp1d</span>
 
-<span class="k">def</span> <span class="nf">extract_velocity_interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_data</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span><span class="n">interval</span> <span class="o">=</span> <span class="mf">4.0</span> <span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_velocity_interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_data</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span><span class="n">interval</span> <span class="o">=</span> <span class="mf">4.0</span> <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Extract the interface where velocity equals the threshold value.</span>
 
@@ -340,7 +327,7 @@ leading to more reliable hydrological interpretations.</p>
             <span class="n">z_dense</span> <span class="o">=</span> <span class="n">interp_func</span><span class="p">(</span><span class="n">x_dense</span><span class="p">)</span>
 
             <span class="c1"># Apply additional smoothing</span>
-            <span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">savgol_filter</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">savgol_filter</span>
             <span class="n">z_dense</span> <span class="o">=</span> <span class="n">savgol_filter</span><span class="p">(</span><span class="n">z_dense</span><span class="p">,</span> <span class="n">window_length</span><span class="o">=</span><span class="mi">31</span><span class="p">,</span> <span class="n">polyorder</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="c1"># Fall back to linear interpolation if cubic fails</span>
@@ -377,7 +364,7 @@ leading to more reliable hydrological interpretations.</p>
 <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">geo</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">add_velocity_interface</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">,</span> <span class="n">paraBoundary</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">add_velocity_interface</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">,</span> <span class="n">paraBoundary</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Add a velocity interface line to the geometry and create a mesh with different markers:</span>
 <span class="sd">    - Outside survey area: marker = 1</span>
@@ -485,10 +472,7 @@ leading to more reliable hydrological interpretations.</p>
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex4_TL_inversion.html" class="btn btn-neutral float-left" title="Ex 4. Time-Lapse ERT Inversion Techniques" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex8_MC_WC.html" class="btn btn-neutral float-right" title="Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 

@@ -21,5 +21,5 @@ Module contents
 
 .. automodule:: PyHydroGeophysX
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

@@ -1,26 +1,26 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>API Reference &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
-    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/api/index.html" />
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+
   
-        <script src="../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/api/index.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -93,7 +93,7 @@
            <div itemprop="articleBody">
              
   <section id="api-reference">
-<h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this heading"></a></h1>
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
 <p>This section contains the complete API reference for PyHydroGeophysX.</p>
 <div class="toctree-wrapper compound">
 <ul>
@@ -134,7 +134,10 @@
 <li class="toctree-l1"><a class="reference internal" href="petrophysics.html">petrophysics package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="petrophysics.html#submodules">Submodules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="petrophysics.html#module-petrophysics.resistivity_models">petrophysics.resistivity_models module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="petrophysics.html#petrophysics.resistivity_models.WS_Model"><code class="docutils literal notranslate"><span class="pre">WS_Model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="petrophysics.html#petrophysics.resistivity_models.resistivity_to_porosity"><code class="docutils literal notranslate"><span class="pre">resistivity_to_porosity()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="petrophysics.html#petrophysics.resistivity_models.resistivity_to_saturation"><code class="docutils literal notranslate"><span class="pre">resistivity_to_saturation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="petrophysics.html#petrophysics.resistivity_models.resistivity_to_saturation2"><code class="docutils literal notranslate"><span class="pre">resistivity_to_saturation2()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="petrophysics.html#petrophysics.resistivity_models.resistivity_to_water_content"><code class="docutils literal notranslate"><span class="pre">resistivity_to_water_content()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="petrophysics.html#petrophysics.resistivity_models.water_content_to_resistivity"><code class="docutils literal notranslate"><span class="pre">water_content_to_resistivity()</span></code></a></li>
 </ul>
@@ -203,36 +206,9 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="core.html">core package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="core.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="core.html#module-core.interpolation">core.interpolation module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.ProfileInterpolator"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.create_surface_lines"><code class="docutils literal notranslate"><span class="pre">create_surface_lines()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.interpolate_structure_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_structure_to_profile()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.interpolate_to_mesh"><code class="docutils literal notranslate"><span class="pre">interpolate_to_mesh()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.interpolate_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_to_profile()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.prepare_2D_profile_data"><code class="docutils literal notranslate"><span class="pre">prepare_2D_profile_data()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.setup_profile_coordinates"><code class="docutils literal notranslate"><span class="pre">setup_profile_coordinates()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="core.html#module-core.mesh_utils">core.mesh_utils module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.MeshCreator"><code class="docutils literal notranslate"><span class="pre">MeshCreator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.add_velocity_interface"><code class="docutils literal notranslate"><span class="pre">add_velocity_interface()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.create_mesh_from_layers"><code class="docutils literal notranslate"><span class="pre">create_mesh_from_layers()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.extract_velocity_interface"><code class="docutils literal notranslate"><span class="pre">extract_velocity_interface()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="core.html#module-core">Module contents</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.MeshCreator"><code class="docutils literal notranslate"><span class="pre">MeshCreator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.ProfileInterpolator"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.add_velocity_interface"><code class="docutils literal notranslate"><span class="pre">add_velocity_interface()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.create_mesh_from_layers"><code class="docutils literal notranslate"><span class="pre">create_mesh_from_layers()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.extract_velocity_interface"><code class="docutils literal notranslate"><span class="pre">extract_velocity_interface()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolate_structure_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_structure_to_profile()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolate_to_mesh"><code class="docutils literal notranslate"><span class="pre">interpolate_to_mesh()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolate_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_to_profile()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.prepare_2D_profile_data"><code class="docutils literal notranslate"><span class="pre">prepare_2D_profile_data()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.setup_profile_coordinates"><code class="docutils literal notranslate"><span class="pre">setup_profile_coordinates()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="core.html#core-interpolation-module">core.interpolation module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core.html#core-mesh-utils-module">core.mesh_utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

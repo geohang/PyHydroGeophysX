@@ -9,23 +9,23 @@ The examples are organized to show the complete workflow from loading hydrologic
 
 **Basic Examples:**
 
-* **Ex1_model_output.py**: Loading and processing MODFLOW and ParFlow model outputs
-* **Ex2_workflow.py**: Complete workflow from water content to ERT inversion
+* **Ex_model_output.py**: Loading and processing MODFLOW and ParFlow model outputs
+* **Ex_ERT_workflow.py**: Workflow for integrating hydrological model outputs with ERT forward modeling and inversion
 
 **Time-Lapse Analysis:**
 
-* **Ex3_Time_lapse_measurement.py**: Creating synthetic time-lapse ERT measurements
-* **Ex4_TL_inversion.py**: Time-lapse ERT inversion techniques
-* **Ex7_structure_TLresinv.py**: Structure-constrained time-lapse inversion
+* **Ex_Time_lapse_measurement.py**: Creating synthetic time-lapse ERT measurements
+* **Ex_TL_inversion.py**: Time-lapse ERT inversion techniques
+* **Ex_structure_TLresinv.py**: Structure-constrained time-lapse inversion
 
 **Seismic Methods:**
 
-* **Ex5_SRT.py**: Seismic refraction tomography (SRT) forward modeling
-
+* **EX_SRT_forward.py**: Seismic refraction tomography (SRT) forward modeling
+* **EX_SRT_inv.py**: Seismic refraction tomography (SRT) inversion and analysis
 **Advanced Applications:**
 
-* **Ex6_Structure_resinv.py**: Structure-constrained resistivity inversion
-* **Ex8_MC_WC.py**: Monte Carlo uncertainty quantification for water content estimation
+* **Ex_Structure_resinv.py**: Structure-constrained resistivity inversion
+* **Ex_MC_WC.py**: Monte Carlo uncertainty quantification for water content estimation
 
 Each example includes detailed comments and demonstrates best practices for watershed geophysical monitoring applications.
 
@@ -34,142 +34,162 @@ Each example includes detailed comments and demonstrates best practices for wate
 
     <div class="sphx-glr-thumbnails">
 
+.. thumbnail-parent-div-open
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load and process outputs from different  hydrological models u...">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load and process outputs from different  hydrological models using PyHydroGeophysX. We show examples for both  ParFlow and MODFLOW models.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex1_model_output_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_model_output_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex1_model_output.py`
+  :ref:`sphx_glr_auto_examples_Ex_model_output.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex 1. Loading and Processing Hydrological Model Outputs</div>
+      <div class="sphx-glr-thumbnail-title">Ex. Loading and Processing Hydrological Model Outputs</div>
     </div>
 
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example combines structural constraints with time-lapse ERT inversion to monitor water con...">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to incorporate structural information from  seismic velocity models into ERT inversion for improved subsurface imaging.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex7_structure_TLresinv_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_Structure_resinv_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex7_structure_TLresinv.py`
+  :ref:`sphx_glr_auto_examples_Ex_Structure_resinv.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</div>
+      <div class="sphx-glr-thumbnail-title">Ex. Structure-Constrained Resistivity Inversion</div>
     </div>
 
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates different approaches for time-lapse electrical  resistivity tomograph...">
+    <div class="sphx-glr-thumbcontainer" tooltip="The script focuses on the inversion and post-processing stages of a geophysical workflow.  It begins by loading pre-existing synthetic travel time data and then uses tomographic inversion  to reconstruct the subsurface P-wave velocity distribution. A key feature demonstrated is the extraction of geological interfaces based on velocity thresholds.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex4_TL_inversion_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_SRT_inv_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex4_TL_inversion.py`
+  :ref:`sphx_glr_auto_examples_Ex_SRT_inv.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex 4. Time-Lapse ERT Inversion Techniques</div>
+      <div class="sphx-glr-thumbnail-title">Ex. Seismic Refraction Tomography (SRT) Inversion</div>
     </div>
 
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to incorporate structural information from  seismic velocity mode...">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example combines structural constraints with time-lapse ERT inversion to monitor water content changes in layered geological media.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex6_Structure_resinv_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_structure_TLresinv_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex6_Structure_resinv.py`
+  :ref:`sphx_glr_auto_examples_Ex_structure_TLresinv.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex 6. Structure-Constrained Resistivity Inversion</div>
+      <div class="sphx-glr-thumbnail-title">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</div>
     </div>
 
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates Monte Carlo uncertainty quantification for  converting ERT resistivit...">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates different approaches for time-lapse electrical  resistivity tomography (ERT) inversion using PyHydroGeophysX.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex8_MC_WC_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_TL_inversion_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex8_MC_WC.py`
+  :ref:`sphx_glr_auto_examples_Ex_TL_inversion.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</div>
+      <div class="sphx-glr-thumbnail-title">Ex. Time-Lapse ERT Inversion Techniques</div>
     </div>
 
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates seismic refraction tomography forward modeling for watershed structur...">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates Monte Carlo uncertainty quantification for  converting ERT resistivity models to water content estimates.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex5_SRT_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_MC_Hydro_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex5_SRT.py`
+  :ref:`sphx_glr_auto_examples_Ex_MC_Hydro.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</div>
+      <div class="sphx-glr-thumbnail-title">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</div>
     </div>
 
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to create synthetic time-lapse electrical  resistivity tomography...">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to create synthetic time-lapse electrical  resistivity tomography (ERT) measurements for watershed monitoring applications.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex3_Time_lapse_measurement_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_Time_lapse_measurement_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex3_Time_lapse_measurement.py`
+  :ref:`sphx_glr_auto_examples_Ex_Time_lapse_measurement.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex3. Creating Synthetic Time-Lapse ERT Measurements</div>
+      <div class="sphx-glr-thumbnail-title">Ex. Creating Synthetic Time-Lapse ERT Measurements</div>
     </div>
 
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for integrating hydrological  model outputs wit...">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates seismic refraction tomography forward modeling for watershed structure characterization using PyHydroGeophysX.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex2_workflow_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_EX_SRT_forward_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex2_workflow.py`
+  :ref:`sphx_glr_auto_examples_EX_SRT_forward.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</div>
+      <div class="sphx-glr-thumbnail-title">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</div>
     </div>
 
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for integrating hydrological  model outputs with ERT forward modeling and inversion using PyHydroGeophysX.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_ERT_workflow_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Ex_ERT_workflow.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</div>
+    </div>
+
+
+.. thumbnail-parent-div-close
 
 .. raw:: html
 
@@ -179,14 +199,15 @@ Each example includes detailed comments and demonstrates best practices for wate
 .. toctree::
    :hidden:
 
-   /auto_examples/Ex1_model_output
-   /auto_examples/Ex7_structure_TLresinv
-   /auto_examples/Ex4_TL_inversion
-   /auto_examples/Ex6_Structure_resinv
-   /auto_examples/Ex8_MC_WC
-   /auto_examples/Ex5_SRT
-   /auto_examples/Ex3_Time_lapse_measurement
-   /auto_examples/Ex2_workflow
+   /auto_examples/Ex_model_output
+   /auto_examples/Ex_Structure_resinv
+   /auto_examples/Ex_SRT_inv
+   /auto_examples/Ex_structure_TLresinv
+   /auto_examples/Ex_TL_inversion
+   /auto_examples/Ex_MC_Hydro
+   /auto_examples/Ex_Time_lapse_measurement
+   /auto_examples/EX_SRT_forward
+   /auto_examples/Ex_ERT_workflow
 
 
 .. only:: html
