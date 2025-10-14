@@ -15,7 +15,7 @@ Installation
 ------------
 PyHydroGeophysX requires **Python 3.8 or higher**.
 
-**From PyPI** (when available):
+**From PyPI** (available now!):
 .. code-block:: bash
 
    pip install PyHydroGeophysX

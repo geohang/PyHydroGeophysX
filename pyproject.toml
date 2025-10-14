@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PyHydroGeophysX"
+version = "0.1.0"
+description = "A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Hang Chen", email = "hangchen.work@gmail.com"},
+]
+keywords = [
+    "geophysics", 
+    "hydrology", 
+    "ERT", 
+    "seismic", 
+    "tomography", 
+    "inversion", 
+    "MODFLOW", 
+    "ParFlow",
+    "watershed monitoring"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Hydrology",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "numpy>=1.19",
+    "scipy>=1.5",
+    "matplotlib>=3.2",
+    "tqdm>=4.0",
+]
+
+[project.optional-dependencies]
+geophysics = [
+    "pygimli>=1.5",
+    "flopy",
+    "joblib",
+]
+gpu = [
+    "cupy",
+]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov",
+    "black",
+    "flake8",
+]
+all = [
+    "pygimli>=1.5",
+    "flopy",
+    "joblib",
+    "cupy",
+    "pytest>=6.0",
+    "pytest-cov",
+    "black",
+    "flake8",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/geohang/PyHydroGeophysX"
+"Documentation" = "https://geohang.github.io/PyHydroGeophysX/"
+"Repository" = "https://github.com/geohang/PyHydroGeophysX"
+"Bug Tracker" = "https://github.com/geohang/PyHydroGeophysX/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["PyHydroGeophysX*"]
+
+[tool.setuptools.package-data]
+PyHydroGeophysX = ["data/*", "examples/*", "*.md"]
