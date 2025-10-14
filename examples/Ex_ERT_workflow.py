@@ -1,6 +1,6 @@
 # %%
 """
-Ex 2. ERT Workflow: From Hydrological Models to ERT responses and Inversion
+Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion
 ====================================================================
 
 This example demonstrates the complete workflow for integrating hydrological 

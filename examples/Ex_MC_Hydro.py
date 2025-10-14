@@ -1,5 +1,5 @@
 """
-Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation
+Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation
 ====================================================================
 
 This example demonstrates Monte Carlo uncertainty quantification for 

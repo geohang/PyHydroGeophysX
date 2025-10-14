@@ -1,5 +1,5 @@
 """
-Ex 1. Loading and Processing Hydrological Model Outputs
+Ex. Loading and Processing Hydrological Model Outputs
 ==================================================
 
 This example demonstrates how to load and process outputs from different 

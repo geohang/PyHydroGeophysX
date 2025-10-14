@@ -1,6 +1,6 @@
 # %%
 """
-Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling
+Ex. Seismic Refraction Tomography (SRT) Forward Modeling
 ====================================================
 
 This example demonstrates seismic refraction tomography forward modeling

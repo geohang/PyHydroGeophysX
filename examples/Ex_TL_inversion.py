@@ -1,5 +1,5 @@
 """
-Ex 4. Time-Lapse ERT Inversion Techniques
+Ex. Time-Lapse ERT Inversion Techniques
 ===================================
 
 This example demonstrates different approaches for time-lapse electrical 
