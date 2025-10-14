@@ -28,16 +28,15 @@ The workflow includes:
 1. Converting water content to seismic P-wave velocity using rock physics models
 2. Creating seismic survey geometry along topographic profiles
 3. Forward modeling to generate synthetic travel time data
-4. Seismic tomography inversion to recover velocity structure
-5. Visualization of velocity models and first-arrival picks
+4. Visualization of velocity models and first-arrival picks
+5. One-step integrated workflow from hydrology to seismic measurements
 
-We also include an example using the one-step approach.
 
 SRT is valuable for determining subsurface structure and bedrock interface
 geometry, which provides important constraints for hydrogeophysical modeling
 and interpretation of ERT data.
 
-.. GENERATED FROM PYTHON SOURCE LINES 24-55
+.. GENERATED FROM PYTHON SOURCE LINES 23-55
 
 .. code-block:: Python
 
@@ -67,6 +66,7 @@ and interpretation of ERT data.
     # Import PyHydroGeophysX modules
     from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surface_lines
     from PyHydroGeophysX.core.mesh_utils import MeshCreator
+    from PyHydroGeophysX.core.plt_utils import drawFirstPicks
     from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_resistivity
     from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
 
@@ -316,7 +316,7 @@ and interpretation of ERT data.
     print(np.min(velocity_mesh[bot_mask]), np.max(velocity_mesh[bot_mask]))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 271-282
+.. GENERATED FROM PYTHON SOURCE LINES 271-280
 
 .. code-block:: Python
 
@@ -330,9 +330,21 @@ and interpretation of ERT data.
             xlabel="Distance (m)", ylabel="Elevation (m)", 
             label='Velocity (m s$^{-1}$)', cMin=500, cMax=5500)
 
+.. GENERATED FROM PYTHON SOURCE LINES 281-292
 
+P-Wave Velocity Model from Petrophysical Conversion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. GENERATED FROM PYTHON SOURCE LINES 283-299
+The velocity model shows realistic three-layer structure derived from water 
+content and porosity using rock physics models. Regolith (500-2500 m/s), 
+fractured bedrock (2500-4500 m/s), and fresh bedrock (4500+ m/s) exhibit 
+distinct velocity ranges appropriate for watershed environments.
+
+.. image:: /auto_examples/images/EX_SRT_forward_fig_01.png
+   :align: center
+   :width: 700px
+
+.. GENERATED FROM PYTHON SOURCE LINES 294-310
 
 .. code-block:: Python
 
@@ -353,7 +365,7 @@ and interpretation of ERT data.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 300-372
+.. GENERATED FROM PYTHON SOURCE LINES 311-382
 
 .. code-block:: Python
 
@@ -429,16 +441,27 @@ and interpretation of ERT data.
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, "velocity_porosity_saturation.tiff"), dpi=300, bbox_inches='tight')
 
+.. GENERATED FROM PYTHON SOURCE LINES 383-396
 
-.. GENERATED FROM PYTHON SOURCE LINES 373-374
+Petrophysical Relationships Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Multi-panel analysis validates rock physics models: velocity-depth profile 
+(left), Hertz-Mindlin model for regolith showing saturation effects (top right), 
+and DEM model for fractured bedrock (bottom right). Theoretical curves match 
+computed values, confirming realistic petrophysical transformations.
+
+.. image:: /auto_examples/images/EX_SRT_forward_fig_02.png
+   :align: center
+   :width: 800px
+%% [markdown]
 ## Short distance seismic survey
 
-.. GENERATED FROM PYTHON SOURCE LINES 376-377
+.. GENERATED FROM PYTHON SOURCE LINES 398-399
 
 ################# Seismic data #####################
 
-.. GENERATED FROM PYTHON SOURCE LINES 377-408
+.. GENERATED FROM PYTHON SOURCE LINES 399-430
 
 .. code-block:: Python
 
@@ -474,93 +497,34 @@ and interpretation of ERT data.
     datasrt.save(os.path.join(output_dir, "synthetic_seismic_data.dat"))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 409-486
+.. GENERATED FROM PYTHON SOURCE LINES 431-437
 
 .. code-block:: Python
 
-    def drawFirstPicks(ax, data, tt=None, plotva=False, **kwargs):
-        """Plot first arrivals as lines.
-    
-        Parameters
-        ----------
-        ax : matplotlib.axes
-            axis to draw the lines in
-        data : :gimliapi:`GIMLI::DataContainer`
-            data containing shots ("s"), geophones ("g") and traveltimes ("t")
-        tt : array, optional
-            traveltimes to use instead of data("t")
-        plotva : bool, optional
-            plot apparent velocity instead of traveltimes
-    
-        Return
-        ------
-        ax : matplotlib.axes
-            the modified axis
-        """
-        # Extract coordinates
-        px = pg.x(data)
-        gx = np.array([px[int(g)] for g in data("g")])
-        sx = np.array([px[int(s)] for s in data("s")])
-    
-        # Get traveltimes
-        if tt is None:
-            tt = np.array(data("t"))
-        if plotva:
-            tt = np.absolute(gx - sx) / tt
-    
-        # Find unique source positions    
-        uns = np.unique(sx)
-    
-        # Override kwargs with clean, minimalist style
-        kwargs['color'] = 'black'
-        kwargs['linestyle'] = '--'
-        kwargs['linewidth'] = 0.9
-        kwargs['marker'] = None  # No markers on the lines
-    
-        # Plot for each source
-        for i, si in enumerate(uns):
-            ti = tt[sx == si]
-            gi = gx[sx == si]
-            ii = gi.argsort()
-        
-            # Plot line
-            ax.plot(gi[ii], ti[ii], **kwargs)
-        
-            # Add source marker as black square at top
-            ax.plot(si, 0.0, 's', color='black', markersize=4, 
-                    markeredgecolor='black', markeredgewidth=0.5)
-    
-        # Clean grid style
-        ax.grid(True, linestyle='-', linewidth=0.2, color='lightgray')
-    
-        # Set proper axis labels with units
-        if plotva:
-            ax.set_ylabel("Apparent velocity (m s$^{-1}$)")
-        else:
-            ax.set_ylabel("Travel time (s)")
-    
-        ax.set_xlabel("Distance (m)")
-    
 
-    
-
-    
-        # Invert y-axis for traveltimes
-        ax.invert_yaxis()
-
-        return ax
 
     # Usage
     fig, ax = plt.subplots(figsize=(4, 3)) 
     drawFirstPicks(ax, datasrt)
     fig.savefig(os.path.join(output_dir, "synthetic_seismic_data_first_picks_short.tiff"), dpi=300, bbox_inches='tight')
 
+.. GENERATED FROM PYTHON SOURCE LINES 438-451
 
-.. GENERATED FROM PYTHON SOURCE LINES 487-488
+Short Survey First-Arrival Travel Times  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The 72-geophone short survey (72m length) provides high-resolution shallow 
+imaging with dense ray coverage. First-arrival picks show clear velocity 
+layering with direct waves, refracted arrivals, and crossover distances 
+indicating velocity interfaces at shallow depths.
+
+.. image:: /auto_examples/images/EX_SRT_forward_fig_03.png
+   :align: center
+   :width: 600px
+%% [markdown]
 ## Long distance seismic survey
 
-.. GENERATED FROM PYTHON SOURCE LINES 490-512
+.. GENERATED FROM PYTHON SOURCE LINES 453-475
 
 .. code-block:: Python
 
@@ -587,7 +551,7 @@ and interpretation of ERT data.
     scheme.setSensors(pos)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 513-520
+.. GENERATED FROM PYTHON SOURCE LINES 476-483
 
 .. code-block:: Python
 
@@ -599,11 +563,11 @@ and interpretation of ERT data.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 521-522
+.. GENERATED FROM PYTHON SOURCE LINES 484-485
 
 ## SRT one step from HM to GM
 
-.. GENERATED FROM PYTHON SOURCE LINES 524-646
+.. GENERATED FROM PYTHON SOURCE LINES 487-606
 
 .. code-block:: Python
 
@@ -727,8 +691,29 @@ and interpretation of ERT data.
 
     plt.tight_layout()
 
+.. GENERATED FROM PYTHON SOURCE LINES 607-618
 
+One-Step Integrated Workflow Results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The integrated hydro-to-seismic workflow produces consistent results: velocity 
+model (top) shows realistic layering from petrophysical conversion, while 
+synthetic travel times (bottom) exhibit clear refraction patterns suitable 
+for tomographic inversion and interface extraction.
+
+.. image:: /auto_examples/images/EX_SRT_forward_fig_05.png
+   :align: center
+   :width: 800px
+
+.. GENERATED FROM PYTHON SOURCE LINES 620-627
+
+Summary
+~~~~~~~
+
+This workflow demonstrated complete seismic forward modeling from hydrological 
+inputs to synthetic measurements. Key achievements include realistic velocity 
+models from rock physics, multi-scale survey design, and integrated 
+hydro-geophysical workflows suitable for watershed monitoring applications.
 
 
 .. _sphx_glr_download_auto_examples_EX_SRT_forward.py:

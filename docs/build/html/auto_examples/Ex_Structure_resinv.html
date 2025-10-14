@@ -70,10 +70,10 @@
 <li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation</a></li>
 </ul>
 </li>
 </ul>
@@ -254,20 +254,10 @@ while applying smoothing constraints within each geological unit.</p>
 <h2>Structure-Constrained ERT Inversion Results<a class="headerlink" href="#structure-constrained-ert-inversion-results" title="Link to this heading"></a></h2>
 <p>The structure-constrained ERT inversion produces a resistivity model that
 honors both the electrical measurements and the geological structure derived
-from seismic data
-.. image:: /auto_examples/images/Ex_Structure_resinv_fig_04.png</p>
-<blockquote>
-<div><dl class="field-list simple">
-<dt class="field-odd">align<span class="colon">:</span></dt>
-<dd class="field-odd"><p>center</p>
-</dd>
-<dt class="field-even">width<span class="colon">:</span></dt>
-<dd class="field-even"><p>800px</p>
-</dd>
-</dl>
-</div></blockquote>
-<p>%% [markdown]
-### 6. Save the mesh</p>
+from seismic data</p>
+<a class="reference internal image-reference" href="../_images/Ex_Structure_resinv_fig_04.png"><img alt="../_images/Ex_Structure_resinv_fig_04.png" class="align-center" src="../_images/Ex_Structure_resinv_fig_04.png" style="width: 800px;" />
+</a>
+<p>### 6. Save the mesh</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/mesh_with_interface.bms&quot;</span><span class="p">)</span>
 </pre></div>
 </div>

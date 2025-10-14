@@ -24,7 +24,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="Ex. Seismic Refraction Tomography (SRT) Forward Modeling" href="EX_SRT_forward.html" /> 
+    <link rel="next" title="Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation" href="Ex_MC_Hydro.html" />
+    <link rel="prev" title="Ex. Creating Synthetic Time-Lapse ERT Measurements" href="Ex_Time_lapse_measurement.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -60,13 +61,22 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#profile-setup-and-topographic-analysis">Profile Setup and Topographic Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mesh-properties-and-interpolation-results">Mesh Properties and Interpolation Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#petrophysical-relationship-validation">Petrophysical Relationship Validation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#forward-modeling-results">Forward Modeling Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#inversion-results-comparison">Inversion Results Comparison</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#one-step-integrated-workflow-results">One-Step Integrated Workflow Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#summary">Summary</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation</a></li>
 </ul>
 </li>
 </ul>
@@ -110,7 +120,7 @@ model outputs with ERT forward modeling and inversion using PyHydroGeophysX.</p>
 2. Setting up 2D profile interpolation from 3D model data
 3. Creating meshes with geological layer structure
 4. Converting water content to resistivity using petrophysical relationships
-5. Forward modeling to create synthetic ERT c data
+5. Forward modeling to create synthetic ERT data
 6. Performing ERT inversion to recover resistivity models</p>
 <p>This example serves as a comprehensive tutorial showing the integration
 of hydrological and geophysical modeling for watershed monitoring applications.</p>
@@ -266,7 +276,16 @@ of hydrological and geophysical modeling for watershed monitoring applications.<
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>## Interpolating data to mesh</p>
+<section id="profile-setup-and-topographic-analysis">
+<h2>Profile Setup and Topographic Analysis<a class="headerlink" href="#profile-setup-and-topographic-analysis" title="Link to this heading"></a></h2>
+<p>Left panel shows the 3D MODFLOW domain with the selected 2D profile line
+(red dashed) connecting start (red) and end (blue) points. Right panel
+displays the extracted elevation profile that will guide mesh generation
+and geological structure definition.</p>
+<a class="reference internal image-reference" href="../_images/Ex_ERT_workflow_fig_01.png"><img alt="../_images/Ex_ERT_workflow_fig_01.png" class="align-center" src="../_images/Ex_ERT_workflow_fig_01.png" style="width: 800px;" />
+</a>
+<p>%% [markdown]
+## Interpolating data to mesh</p>
 <p>Step 6: Interpolate data to mesh</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">ID1</span> <span class="o">=</span> <span class="n">porosity_profile</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <span class="n">ID1</span><span class="p">[:</span><span class="n">mid_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1">#regolith</span>
@@ -399,6 +418,16 @@ of hydrological and geophysical modeling for watershed monitoring applications.<
 <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;topography_and_properties.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
 </pre></div>
 </div>
+</section>
+<section id="mesh-properties-and-interpolation-results">
+<h2>Mesh Properties and Interpolation Results<a class="headerlink" href="#mesh-properties-and-interpolation-results" title="Link to this heading"></a></h2>
+<p>Four-panel analysis showing: (1) surface elevation map with profile line,
+(2) elevation profile, (3) interpolated porosity field with three-layer
+structure, and (4) saturation distribution. The mesh preserves geological
+boundaries while providing appropriate resolution for ERT modeling.</p>
+<a class="reference internal image-reference" href="../_images/Ex_ERT_workflow_fig_02.png"><img alt="../_images/Ex_ERT_workflow_fig_02.png" class="align-center" src="../_images/Ex_ERT_workflow_fig_02.png" style="width: 900px;" />
+</a>
+<p>%%</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Water Content min/max:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Saturation min/max:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">saturation</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">saturation</span><span class="p">))</span>
 </pre></div>
@@ -530,7 +559,17 @@ of hydrological and geophysical modeling for watershed monitoring applications.<
 <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;resistivity_porosity_saturation.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>## ERT forward modeling simulation</p>
+</section>
+<section id="petrophysical-relationship-validation">
+<h2>Petrophysical Relationship Validation<a class="headerlink" href="#petrophysical-relationship-validation" title="Link to this heading"></a></h2>
+<p>Multi-panel analysis validates rock physics models: vertical resistivity
+profile (left), Waxman-Smits model for regolith (top right), and Archie’s
+law for fractured bedrock (bottom right). Scattered data points match
+theoretical curves, confirming realistic petrophysical transformations.</p>
+<a class="reference internal image-reference" href="../_images/Ex_ERT_workflow_fig_03.png"><img alt="../_images/Ex_ERT_workflow_fig_03.png" class="align-center" src="../_images/Ex_ERT_workflow_fig_03.png" style="width: 800px;" />
+</a>
+<p>%% [markdown]
+## ERT forward modeling simulation</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">xpos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="o">+</span><span class="mi">72</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span><span class="mi">72</span><span class="p">)</span>
 <span class="n">ypos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">xpos</span><span class="p">,</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span><span class="n">interpolator</span><span class="o">.</span><span class="n">surface_profile</span><span class="p">)</span>
 <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">xpos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="n">ypos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
@@ -589,7 +628,17 @@ of hydrological and geophysical modeling for watershed monitoring applications.<
 <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;res_model_and_synth_data.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Step 11: Run ERT inversion on synthetic data</p>
+</section>
+<section id="forward-modeling-results">
+<h2>Forward Modeling Results<a class="headerlink" href="#forward-modeling-results" title="Link to this heading"></a></h2>
+<p>Left panel shows the true resistivity model with electrode positions (black
+circles) along the surface. Right panel displays synthetic ERT measurements
+showing characteristic pseudosection patterns that reflect the three-layer
+geological structure in the apparent resistivity data.</p>
+<a class="reference internal image-reference" href="../_images/Ex_ERT_workflow_fig_04.png"><img alt="../_images/Ex_ERT_workflow_fig_04.png" class="align-center" src="../_images/Ex_ERT_workflow_fig_04.png" style="width: 800px;" />
+</a>
+<p>%%
+Step 11: Run ERT inversion on synthetic data</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1">## using my code to the inversion</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step 11: Running ERT inversion...&quot;</span><span class="p">)</span>
 
@@ -630,10 +679,18 @@ of hydrological and geophysical modeling for watershed monitoring applications.<
 <span class="n">ax3</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Inverted Resistivity Model (Pygimli)&quot;</span><span class="p">)</span>
 <span class="c1"># Adjust layout</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-
-
-
-<span class="c1"># The inversion results are almost same from this code and Pygimli default inversion.</span>
+</pre></div>
+</div>
+</section>
+<section id="inversion-results-comparison">
+<h2>Inversion Results Comparison<a class="headerlink" href="#inversion-results-comparison" title="Link to this heading"></a></h2>
+<p>Three-panel comparison showing: (1) true resistivity model from petrophysical
+conversion, (2) PyHydroGeophysX inversion result, and (3) PyGIMLi standard
+inversion. Both methods successfully recover the main geological features,
+validating the complete hydro-to-geophysical workflow.</p>
+<a class="reference internal image-reference" href="../_images/Ex_ERT_workflow_fig_05.png"><img alt="../_images/Ex_ERT_workflow_fig_05.png" class="align-center" src="../_images/Ex_ERT_workflow_fig_05.png" style="width: 900px;" />
+</a>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The inversion results are almost same from this code and Pygimli default inversion.</span>
 <span class="c1"># the difference is that the chi2 value for stop inversion is not the same, we chose 1.5 while Pygimli is 1.0</span>
 </pre></div>
 </div>
@@ -724,6 +781,22 @@ of hydrological and geophysical modeling for watershed monitoring applications.<
 <span class="n">ert</span><span class="o">.</span><span class="n">showData</span><span class="p">(</span><span class="n">synth_data</span><span class="p">,</span>  <span class="n">logscale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
+</section>
+<section id="one-step-integrated-workflow-results">
+<h2>One-Step Integrated Workflow Results<a class="headerlink" href="#one-step-integrated-workflow-results" title="Link to this heading"></a></h2>
+<p>The streamlined hydro-to-ERT workflow produces synthetic apparent resistivity
+data directly from MODFLOW outputs. This integrated approach demonstrates
+automated processing from hydrological model results to geophysical measurements
+suitable for inversion and interpretation.</p>
+<a class="reference internal image-reference" href="../_images/Ex_ERT_workflow_fig_06.png"><img alt="../_images/Ex_ERT_workflow_fig_06.png" class="align-center" src="../_images/Ex_ERT_workflow_fig_06.png" style="width: 700px;" />
+</a>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading"></a></h2>
+<p>This comprehensive workflow demonstrated the complete integration from
+hydrological models to ERT responses and inversion. Key achievements include
+realistic petrophysical transformations, successful forward modeling, and
+validated inversion results suitable for watershed monitoring applications.</p>
 <div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-ert-workflow-py">
 <div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
 <p><a class="reference download internal" download="" href="../_downloads/8d883e84c7b59a9964b3a5d1f006fa9c/Ex_ERT_workflow.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex_ERT_workflow.ipynb</span></code></a></p>
@@ -736,12 +809,14 @@ of hydrological and geophysical modeling for watershed monitoring applications.<
 </div>
 </div>
 </section>
+</section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="EX_SRT_forward.html" class="btn btn-neutral float-left" title="Ex. Seismic Refraction Tomography (SRT) Forward Modeling" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex_Time_lapse_measurement.html" class="btn btn-neutral float-left" title="Ex. Creating Synthetic Time-Lapse ERT Measurements" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex_MC_Hydro.html" class="btn btn-neutral float-right" title="Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

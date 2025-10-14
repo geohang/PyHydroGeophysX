@@ -18,7 +18,7 @@
 .. _sphx_glr_auto_examples_Ex_MC_Hydro.py:
 
 
-Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation
+Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation
 ====================================================================
 
 This example demonstrates Monte Carlo uncertainty quantification for 
@@ -31,12 +31,13 @@ The analysis includes:
 4. Probabilistic water content estimation with uncertainty bounds
 5. Statistical analysis and visualization of results
 6. Time series extraction with confidence intervals
+7. Eastimate the porosity in satuatd zone
 
 Uncertainty quantification is essential for reliable hydrological 
 interpretation of geophysical data, providing confidence bounds on
 water content estimates and identifying regions of high/low certainty.
 
-.. GENERATED FROM PYTHON SOURCE LINES 20-169
+.. GENERATED FROM PYTHON SOURCE LINES 24-47
 
 .. code-block:: Python
 
@@ -63,149 +64,184 @@ water content estimates and identifying regions of high/low certainty.
     # Import PyHydroGeophysX modules
     from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_saturation
 
+
+.. GENERATED FROM PYTHON SOURCE LINES 48-49
+
+### MC sampling for paramters
+
+.. GENERATED FROM PYTHON SOURCE LINES 51-214
+
+.. code-block:: Python
+
+
+
     # Extract the inverted resistivity values
-    resistivity_values = np.load(os.path.join(current_dir, "results","Structure_WC","resmodel.npy"))
-    coverage = np.load(os.path.join(current_dir, "results","Structure_WC","all_coverage.npy"))
+    resistivity_values = np.load("results/Structure_WC/resmodel.npy")
+    coverage = np.load("results/Structure_WC/all_coverage.npy")
     # Extract cell markers from the mesh (to identify different geological layers)
-    cell_markers = np.load(os.path.join(current_dir, "results","Structure_WC","index_marker.npy"))
-    #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy"
-    mesh = pg.load(os.path.join(current_dir, "results","Structure_WC","mesh_res.bms"))
+    cell_markers = np.load("results/Structure_WC/index_marker.npy")
+
+    mesh = pg.load("results/Structure_WC/mesh_res.bms")
 
     # Number of Monte Carlo realizations
     n_realizations = 100
 
     # Set up parameter distributions (means and standard deviations)
-    # Layer 1 (top layer - marker 3)
+    # Updated to use rock physics parameters instead of saturated resistivity
+
+    # Layer 1 (top layer - marker 3) - Regolith/Soil
     layer1_dist = {
-        'rhos': {'mean': 100.0, 'std': 20.0},       # Saturated resistivity (ohm-m)
-        'n': {'mean': 2.2, 'std': 0.2},             # Saturation exponent
-        'sigma_sur': {'mean': 1/500, 'std': 1/2000},  # Surface conductivity (S/m)
-        'porosity': {'mean': 0.40, 'std': 0.05}      # Porosity
+        'm': {'mean': 1.3, 'std': 0.1},               # Cementation exponent (lower for unconsolidated)
+        'n': {'mean': 2.1, 'std': 0.1},               # Saturation exponent
+        'sigma_sur': {'mean': 1/200, 'std': 1/200},  # Surface conductivity (S/m)
+        'porosity': {'mean': 0.42, 'std': 0.05},      # Porosity
     }
 
-    # Layer 2 (bottom layer - marker 2)
+    # Layer 2 (bottom layer - marker 2) - Fractured/Fresh Bedrock
     layer2_dist = {
-        'rhos': {'mean': 500.0, 'std': 100.0},      # Saturated resistivity (ohm-m)
-        'n': {'mean': 1.8, 'std': 0.2},             # Saturation exponent
-        'sigma_sur': {'mean': 0, 'std': 1/50000},    # Surface conductivity (S/m)
-        'porosity': {'mean': 0.35, 'std': 0.1}      # Porosity
+        'm': {'mean': 1.9, 'std': 0.2},               # Cementation exponent (higher for consolidated)
+        'n': {'mean': 1.7, 'std': 0.2},               # Saturation exponent
+        'porosity': {'mean': 0.25, 'std': 0.15},      # Porosity (lower in bedrock)
     }
 
     # Create arrays to store all MC realization results
     water_content_all = np.zeros((n_realizations, *resistivity_values.shape))
     Saturation_all = np.zeros((n_realizations, *resistivity_values.shape))
+
     # Create arrays to store the parameters used for each realization
     params_used = {
         'layer1': {
-            'rhos': np.zeros(n_realizations),
+            'm': np.zeros(n_realizations),
+            'rho_fluid': np.zeros(n_realizations),
             'n': np.zeros(n_realizations),
             'sigma_sur': np.zeros(n_realizations),
-            'porosity': np.zeros(n_realizations)
+            'porosity': np.zeros(n_realizations),
         },
         'layer2': {
-            'rhos': np.zeros(n_realizations),
+            'm': np.zeros(n_realizations),
+            'rho_fluid': np.zeros(n_realizations),
             'n': np.zeros(n_realizations),
             'sigma_sur': np.zeros(n_realizations),
-            'porosity': np.zeros(n_realizations)
+            'porosity': np.zeros(n_realizations),
         }
     }
 
     # Perform Monte Carlo simulation
-    for mc_idx in range(n_realizations):
+    print("Starting Monte Carlo simulation...")
+    for mc_idx in tqdm(range(n_realizations), desc="MC Realizations"):
+    
         # Sample parameters for each layer from their distributions
-        # Layer 1
+        # Layer 1 (Top layer - Regolith/Soil)
         layer1_params = {
-            'rhos': max(1.0, np.random.normal(layer1_dist['rhos']['mean'], layer1_dist['rhos']['std'])),
-            'n': max(1.0, np.random.normal(layer1_dist['n']['mean'], layer1_dist['n']['std'])),
-            'sigma_sur': max(0.0, np.random.normal(layer1_dist['sigma_sur']['mean'], layer1_dist['sigma_sur']['std']))
+            'm': max(0.0, np.random.normal(layer1_dist['m']['mean'], layer1_dist['m']['std'])),
+            'rho_fluid': 20,
+            'n': max(0.0, np.random.normal(layer1_dist['n']['mean'], layer1_dist['n']['std'])),
+            'sigma_sur': max(0.0, np.random.normal(layer1_dist['sigma_sur']['mean'], layer1_dist['sigma_sur']['std'])),
+            'porosity': max(0.0, np.random.normal(layer1_dist['porosity']['mean'], layer1_dist['porosity']['std'])),
         }
     
-        # Layer 2
+        # Layer 2 (Bottom layer - Bedrock)
         layer2_params = {
-            'rhos': max(1.0, np.random.normal(layer2_dist['rhos']['mean'], layer2_dist['rhos']['std'])),
-            'n': max(1.0, np.random.normal(layer2_dist['n']['mean'], layer2_dist['n']['std'])),
-            'sigma_sur': max(0.0, np.random.normal(layer2_dist['sigma_sur']['mean'], layer2_dist['sigma_sur']['std']))
+            'm': max(0.0, np.random.normal(layer2_dist['m']['mean'], layer2_dist['m']['std'])),
+            'rho_fluid': 20,
+            'n': max(0.0, np.random.normal(layer2_dist['n']['mean'], layer2_dist['n']['std'])),
+            'sigma_sur': 0.0,  # Minimal surface conductivity in bedrock,
+            'porosity': max(0.0, np.random.normal(layer2_dist['porosity']['mean'], layer2_dist['porosity']['std'])),
         }
     
-        # Sample porosity for each layer
-        porosity = np.zeros_like(cell_markers, dtype=float)
-        layer1_porosity = np.clip(np.random.normal(layer1_dist['porosity']['mean'], 
-                                                  layer1_dist['porosity']['std']), 0.05, 0.6)
-        layer2_porosity = np.clip(np.random.normal(layer2_dist['porosity']['mean'], 
-                                                  layer2_dist['porosity']['std']), 0.05, 0.6)
-    
-        porosity[cell_markers == 3] = layer1_porosity  # Top layer porosity
-        porosity[cell_markers == 2] = layer2_porosity  # Bottom layer porosity
+
     
         # Save the parameters used for this realization
-        params_used['layer1']['rhos'][mc_idx] = layer1_params['rhos']
+        params_used['layer1']['m'][mc_idx] = layer1_params['m']
+        params_used['layer1']['rho_fluid'][mc_idx] = layer1_params['rho_fluid']
         params_used['layer1']['n'][mc_idx] = layer1_params['n']
         params_used['layer1']['sigma_sur'][mc_idx] = layer1_params['sigma_sur']
-        params_used['layer1']['porosity'][mc_idx] = layer1_porosity
+        params_used['layer1']['porosity'][mc_idx] = layer1_params['porosity']
     
-        params_used['layer2']['rhos'][mc_idx] = layer2_params['rhos']
+        params_used['layer2']['m'][mc_idx] = layer2_params['m']
+        params_used['layer2']['rho_fluid'][mc_idx] = layer2_params['rho_fluid']
         params_used['layer2']['n'][mc_idx] = layer2_params['n']
         params_used['layer2']['sigma_sur'][mc_idx] = layer2_params['sigma_sur']
-        params_used['layer2']['porosity'][mc_idx] = layer2_porosity
+        params_used['layer2']['porosity'][mc_idx] = layer2_params['porosity']
     
         # Create arrays to store water content and saturation for this realization
         water_content = np.zeros_like(resistivity_values)
         saturation = np.zeros_like(resistivity_values)
-    
+
+        # Create porosity array for all cells
+        porosity = np.zeros_like(cell_markers, dtype=float)
+        porosity[cell_markers == 3] = layer1_params['porosity'] # Top layer porosity
+        porosity[cell_markers == 2] = layer2_params['porosity']  # Bottom layer porosity
+
         # Process each timestep
         for t in range(resistivity_values.shape[1]):
             # Extract resistivity for this timestep
             resistivity_t = resistivity_values[:, t]
         
-            # Process each layer separately
-            # Layer 1 (marker 3)
+            # Process each layer separately using the NEW resistivity_to_saturation function
+        
+            # Layer 1 (marker 3) - Top layer
             mask_layer1 = cell_markers == 3
             if np.any(mask_layer1):
                 saturation[mask_layer1, t] = resistivity_to_saturation(
-                    resistivity_t[mask_layer1],
-                    layer1_params['rhos'],
-                    layer1_params['n'],
-                    layer1_params['sigma_sur']
+                    resistivity=resistivity_t[mask_layer1],
+                    porosity=layer1_params['porosity'],
+                    m=layer1_params['m'],
+                    rho_fluid=layer1_params['rho_fluid'],
+                    n=layer1_params['n'],
+                    sigma_sur=layer1_params['sigma_sur'],
                 )
         
-            # Layer 2 (marker 2)
+            # Layer 2 (marker 2) - Bottom layer
             mask_layer2 = cell_markers == 2
             if np.any(mask_layer2):
                 saturation[mask_layer2, t] = resistivity_to_saturation(
-                    resistivity_t[mask_layer2],
-                    layer2_params['rhos'],
-                    layer2_params['n'],
-                    layer2_params['sigma_sur']
+                    resistivity=resistivity_t[mask_layer2],
+                    porosity=layer2_params['porosity'],
+                    m=layer2_params['m'],
+                    rho_fluid=layer2_params['rho_fluid'],
+                    n=layer2_params['n'],
+                    sigma_sur=layer2_params['sigma_sur'],
                 )
         
             # Convert saturation to water content (water_content = saturation * porosity)
             water_content[:, t] = saturation[:, t] * porosity
     
-        # Store this realization's water content
+        # Store this realization's water content and saturation
         water_content_all[mc_idx] = water_content
         Saturation_all[mc_idx] = saturation
 
+    print("Monte Carlo simulation completed!")
 
-
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 170-171
-
-Calculate statistics across all realizations
-
-.. GENERATED FROM PYTHON SOURCE LINES 171-177
-
-.. code-block:: Python
-
+    # Calculate statistics across all realizations
+    print("Calculating statistics...")
     water_content_mean = np.mean(water_content_all, axis=0)
     water_content_std = np.std(water_content_all, axis=0)
     water_content_p10 = np.percentile(water_content_all, 10, axis=0)  # 10th percentile
     water_content_p50 = np.percentile(water_content_all, 50, axis=0)  # Median
     water_content_p90 = np.percentile(water_content_all, 90, axis=0)  # 90th percentile
 
+    print("Statistics calculation completed!")
 
-.. GENERATED FROM PYTHON SOURCE LINES 178-241
+    # Print some summary statistics
+    print(f"\nSummary Statistics:")
+    print(f"Layer 1 (Regolith) - Mean porosity: {np.mean(params_used['layer1']['porosity']):.3f} ± {np.std(params_used['layer1']['porosity']):.3f}")
+    print(f"Layer 1 - Mean m: {np.mean(params_used['layer1']['m']):.3f} ± {np.std(params_used['layer1']['m']):.3f}")
+    print(f"Layer 1 - Mean rho_fluid: {np.mean(params_used['layer1']['rho_fluid']):.1f} ± {np.std(params_used['layer1']['rho_fluid']):.1f} Ω·m")
+
+    print(f"\nLayer 2 (Bedrock) - Mean porosity: {np.mean(params_used['layer2']['porosity']):.3f} ± {np.std(params_used['layer2']['porosity']):.3f}")
+    print(f"Layer 2 - Mean m: {np.mean(params_used['layer2']['m']):.3f} ± {np.std(params_used['layer2']['m']):.3f}")
+    print(f"Layer 2 - Mean rho_fluid: {np.mean(params_used['layer2']['rho_fluid']):.1f} ± {np.std(params_used['layer2']['rho_fluid']):.1f} Ω·m")
+
+    print(f"\nWater content range: {np.min(water_content_mean):.4f} - {np.max(water_content_mean):.4f}")
+    print(f"Mean uncertainty (std): {np.mean(water_content_std):.4f}")
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 215-216
+
+### Plot the water content distribution
+
+.. GENERATED FROM PYTHON SOURCE LINES 218-280
 
 .. code-block:: Python
 
@@ -262,7 +298,7 @@ Calculate statistics across all realizations
                           label= 'Water Content (-)',
                           ax=ax,
                           logScale=False,
-                          coverage=coverage[i,:]>-1.2)
+                          coverage=coverage[i,:]>-1.0)
     
         # Only keep colorbar for the middle-right panel (row 1, col 3)
         # This corresponds to panel index 7 in a 0-based indexing system
@@ -270,10 +306,25 @@ Calculate statistics across all realizations
             cbar.remove()
 
     plt.tight_layout()
+    plt.savefig("results/Structure_WC/timelapse_sat.tiff", dpi=300, bbox_inches='tight')
 
+.. GENERATED FROM PYTHON SOURCE LINES 281-294
 
+Time-Lapse Water Content with Uncertainty
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. GENERATED FROM PYTHON SOURCE LINES 242-258
+The Monte Carlo analysis reveals temporal water content evolution with 
+quantified uncertainty bounds across 12 months. Spatial patterns show 
+higher uncertainty in transition zones between geological layers, while 
+temporal changes track seasonal hydrological processes with confidence intervals.
+
+.. image:: /auto_examples/images/Ex_MC_Hydro_fig_01.png
+   :align: center
+   :width: 900px
+%% [markdown]
+### Extract the true water content values
+
+.. GENERATED FROM PYTHON SOURCE LINES 296-308
 
 .. code-block:: Python
 
@@ -281,27 +332,27 @@ Calculate statistics across all realizations
 
     for i in np.arange(30,361,30):
         # Extract true water content values for the current timestep
-
-        synwcmodel_dir = os.path.join(current_dir, "results", "TL_measurements", "synwcmodel")
-        filename = "synwcmodel" + str(i) + ".npy"
-        file_path = os.path.join(synwcmodel_dir, filename)
-        true_values = np.load(file_path)
+        true_values = np.load("results/TL_measurements/synwcmodel/synwcmodel"+str(i)+".npy")
       
         # Store the true values for this timestep
         WC_true.append(true_values)
-    mesh_true = pg.load(os.path.join(current_dir, "results", "TL_measurements", "mesh.bms"))
+    mesh_true = pg.load("results/TL_measurements/mesh.bms")
     WC_true = np.array(WC_true)
     print(WC_true.shape)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 259-280
+.. GENERATED FROM PYTHON SOURCE LINES 309-310
+
+### Pick up the comparison locations
+
+.. GENERATED FROM PYTHON SOURCE LINES 312-335
 
 .. code-block:: Python
 
     fig = plt.figure(figsize=[6, 3])
     ax = fig.add_subplot(1, 1, 1)
     ax, cbar = pg.show(mesh,
-                    water_content_mean[:, 6],
+                    water_content_mean[:, 4],
                     pad=0.3,
                     orientation="vertical",
                     cMap=fixed_cmap,
@@ -313,18 +364,36 @@ Calculate statistics across all realizations
                     logScale=False,
                     coverage=coverage[6,:]>-1.2)
 
-    ax.plot([40],[1607],'*')
-    ax.plot([80],[1621],'*')
+    ax.plot([30],[1610],'*')
+    ax.plot([65],[1614],'*')
 
-    ax.plot([30],[1604],'*')
+    ax.plot([30],[1606],'*')
     ax.plot([65],[1608],'*')
 
+    ax.plot([40],[1590],'*')
+    ax.plot([55],[1590],'*')
 
-.. GENERATED FROM PYTHON SOURCE LINES 281-282
+.. GENERATED FROM PYTHON SOURCE LINES 336-349
+
+Monitoring Point Selection
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Six monitoring points selected across different geological layers and 
+elevations for detailed uncertainty analysis. Points sample regolith 
+(top 4 stars) and fractured bedrock (bottom 2 stars) to capture 
+layer-specific uncertainty patterns in water content estimates.
+
+.. image:: /auto_examples/images/Ex_MC_Hydro_fig_02.png
+   :align: center
+   :width: 600px
+%% [markdown]
+### Function for analyze the time-series data
+
+.. GENERATED FROM PYTHON SOURCE LINES 351-352
 
 Modified function to extract time series based on x AND y positions
 
-.. GENERATED FROM PYTHON SOURCE LINES 282-351
+.. GENERATED FROM PYTHON SOURCE LINES 352-421
 
 .. code-block:: Python
 
@@ -398,15 +467,19 @@ Modified function to extract time series based on x AND y positions
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 352-364
+.. GENERATED FROM PYTHON SOURCE LINES 422-423
+
+### Pick up the locations
+
+.. GENERATED FROM PYTHON SOURCE LINES 425-437
 
 .. code-block:: Python
 
 
     # Define positions to sample (x,y coordinates)
     positions = [
-        (80, 1621),  # Example coordinates, adjust based on your model
-        (40, 1607),
+        (30, 1610),
+        (65, 1613),  # Example coordinates, adjust based on your model
     ]
 
     # Extract time series data for these positions
@@ -415,11 +488,15 @@ Modified function to extract time series based on x AND y positions
     Pos1_true
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 365-366
+.. GENERATED FROM PYTHON SOURCE LINES 438-439
+
+### Comparisons of water content
+
+.. GENERATED FROM PYTHON SOURCE LINES 441-442
 
 Plot time series with uncertainty bands
 
-.. GENERATED FROM PYTHON SOURCE LINES 366-398
+.. GENERATED FROM PYTHON SOURCE LINES 442-473
 
 .. code-block:: Python
 
@@ -453,21 +530,32 @@ Plot time series with uncertainty bands
     # plt.legend()
     plt.grid(True)
     plt.tight_layout()
+    plt.savefig("results/Structure_WC/regolith_WC.tiff", dpi=300, bbox_inches='tight')
 
+.. GENERATED FROM PYTHON SOURCE LINES 474-487
 
+Regolith Layer Water Content Uncertainty
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. GENERATED FROM PYTHON SOURCE LINES 399-400
+ Time series at regolith monitoring points show excellent agreement between 
+ estimated (solid lines) and true (dashed lines) water content. Uncertainty 
+ bands (shaded areas) capture parameter variability while maintaining 
+ reasonable confidence intervals for practical applications.
 
-Fractured bedrock layer
+ .. image:: /auto_examples/images/Ex_MC_Hydro_fig_03.png
+    :align: center
+    :width: 800px
+ %%
+## Fractured bedrock layer
 
-.. GENERATED FROM PYTHON SOURCE LINES 400-412
+.. GENERATED FROM PYTHON SOURCE LINES 487-499
 
 .. code-block:: Python
 
 
     # Define positions to sample (x,y coordinates)
     positions = [
-        (30, 1604),  # Example coordinates, adjust based on your model
+        (30, 1606),  # Example coordinates, adjust based on your model
         (65, 1608),
     ]
 
@@ -477,11 +565,11 @@ Fractured bedrock layer
     Pos2_true
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 413-414
+.. GENERATED FROM PYTHON SOURCE LINES 500-501
 
 Plot time series with uncertainty bands
 
-.. GENERATED FROM PYTHON SOURCE LINES 414-447
+.. GENERATED FROM PYTHON SOURCE LINES 501-533
 
 .. code-block:: Python
 
@@ -516,8 +604,268 @@ Plot time series with uncertainty bands
     plt.grid(True)
     plt.tight_layout()
 
+    plt.savefig("results/Structure_WC/Fracture_WC.tiff", dpi=300, bbox_inches='tight')
+
+.. GENERATED FROM PYTHON SOURCE LINES 534-547
+
+Fractured Bedrock Water Content Uncertainty
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Fractured bedrock monitoring points exhibit lower water content and 
+different uncertainty patterns compared to regolith. The broader uncertainty 
+bands reflect higher parameter variability in consolidated materials and 
+reduced ERT sensitivity in low-porosity environments.
+
+.. image:: /auto_examples/images/Ex_MC_Hydro_fig_04.png
+   :align: center
+   :width: 800px
+%% [markdown]
+### Estimate Porosity
+
+.. GENERATED FROM PYTHON SOURCE LINES 549-550
+
+If we know the water table and then use it to estimate the porosity
+
+.. GENERATED FROM PYTHON SOURCE LINES 550-693
+
+.. code-block:: Python
 
 
+
+
+    # Import PyHydroGeophysX modules
+    from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_porosity
+
+    # Extract the inverted resistivity values
+    resistivity_values = np.load("results/Structure_WC/resmodel.npy")
+    coverage = np.load("results/Structure_WC/all_coverage.npy")
+    # Extract cell markers from the mesh (to identify different geological layers)
+    cell_markers = np.load("results/Structure_WC/index_marker.npy")
+
+    mesh = pg.load("results/Structure_WC/mesh_res.bms")
+
+    # Number of Monte Carlo realizations
+    n_realizations = 100
+
+    # Assume full saturation under the water table
+    saturation_value = 1.0
+
+    # Set up parameter distributions (means and standard deviations)
+    # For porosity estimation from resistivity with known saturation
+
+    # Layer 1 (top layer - marker 3) - Regolith/Soil
+    layer1_dist = {
+        'm': {'mean': 1.3, 'std': 0.1},               # Cementation exponent (lower for unconsolidated)
+        'n': {'mean': 2.1, 'std': 0.1},               # Saturation exponent
+        'sigma_sur': {'mean': 1/200, 'std': 1/200},  # Surface conductivity (S/m)
+    }
+
+    # Layer 2 (bottom layer - marker 2) - Fractured/Fresh Bedrock
+    layer2_dist = {
+        'm': {'mean': 1.9, 'std': 0.2},               # Cementation exponent (higher for consolidated)
+        'n': {'mean': 1.7, 'std': 0.2},               # Saturation exponent
+        'sigma_sur': {'mean': 0.0, 'std': 0.0},      # No surface conductivity in bedrock
+    }
+
+    # Create arrays to store all MC realization results
+    porosity_all = np.zeros((n_realizations, *resistivity_values.shape))
+    water_content_all = np.zeros((n_realizations, *resistivity_values.shape))  # Since saturation = 1, WC = porosity
+
+    # Create arrays to store the parameters used for each realization
+    params_used = {
+        'layer1': {
+            'm': np.zeros(n_realizations),
+            'rho_fluid': np.zeros(n_realizations),
+            'n': np.zeros(n_realizations),
+            'sigma_sur': np.zeros(n_realizations),
+        },
+        'layer2': {
+            'm': np.zeros(n_realizations),
+            'rho_fluid': np.zeros(n_realizations),
+            'n': np.zeros(n_realizations),
+            'sigma_sur': np.zeros(n_realizations),
+        }
+    }
+
+    # Perform Monte Carlo simulation
+    print("Starting Monte Carlo simulation for porosity estimation...")
+    print(f"Assuming full saturation (S = {saturation_value}) everywhere")
+
+    for mc_idx in tqdm(range(n_realizations), desc="MC Realizations"):
+    
+        # Sample parameters for each layer from their distributions
+        # Layer 1 (Top layer - Regolith/Soil)
+        layer1_params = {
+            'm': max(0.0, np.random.normal(layer1_dist['m']['mean'], layer1_dist['m']['std'])),
+            'rho_fluid': 20,
+            'n': max(0.0, np.random.normal(layer1_dist['n']['mean'], layer1_dist['n']['std'])),
+            'sigma_sur': max(0.0, np.random.normal(layer1_dist['sigma_sur']['mean'], layer1_dist['sigma_sur']['std'])),
+        }
+    
+        # Layer 2 (Bottom layer - Bedrock)
+        layer2_params = {
+            'm': max(0.0, np.random.normal(layer2_dist['m']['mean'], layer2_dist['m']['std'])),
+            'rho_fluid': 20,
+            'n': max(0.0, np.random.normal(layer2_dist['n']['mean'], layer2_dist['n']['std'])),
+            'sigma_sur': 0,
+        }
+    
+        # Save the parameters used for this realization
+        params_used['layer1']['m'][mc_idx] = layer1_params['m']
+        params_used['layer1']['rho_fluid'][mc_idx] = layer1_params['rho_fluid']
+        params_used['layer1']['n'][mc_idx] = layer1_params['n']
+        params_used['layer1']['sigma_sur'][mc_idx] = layer1_params['sigma_sur']
+    
+        params_used['layer2']['m'][mc_idx] = layer2_params['m']
+        params_used['layer2']['rho_fluid'][mc_idx] = layer2_params['rho_fluid']
+        params_used['layer2']['n'][mc_idx] = layer2_params['n']
+        params_used['layer2']['sigma_sur'][mc_idx] = layer2_params['sigma_sur']
+    
+        # Create arrays to store porosity for this realization
+        porosity = np.zeros_like(resistivity_values)
+    
+        # Process each timestep
+        for t in range(resistivity_values.shape[1]):
+            # Extract resistivity for this timestep
+            resistivity_t = resistivity_values[:, t]
+        
+            # Process each layer separately using resistivity_to_porosity function
+        
+            # Layer 1 (marker 3) - Top layer
+            mask_layer1 = cell_markers == 3
+            if np.any(mask_layer1):
+                porosity[mask_layer1, t] = resistivity_to_porosity(
+                    resistivity=resistivity_t[mask_layer1],
+                    saturation=saturation_value,  # Full saturation
+                    m=layer1_params['m'],
+                    rho_fluid=layer1_params['rho_fluid'],
+                    n=layer1_params['n'],
+                    sigma_sur=layer1_params['sigma_sur'],
+                    a=1.0  # Fixed tortuosity
+                )
+        
+            # Layer 2 (marker 2) - Bottom layer
+            mask_layer2 = cell_markers == 2
+            if np.any(mask_layer2):
+                porosity[mask_layer2, t] = resistivity_to_porosity(
+                    resistivity=resistivity_t[mask_layer2],
+                    saturation=saturation_value,  # Full saturation
+                    m=layer2_params['m'],
+                    rho_fluid=layer2_params['rho_fluid'],
+                    n=layer2_params['n'],
+                    sigma_sur=layer2_params['sigma_sur'],
+                    a=1.0 # Fixed tortuosity for bedrock
+                )
+    
+        # Store this realization's porosity
+        porosity_all[mc_idx] = porosity
+    
+        # Since saturation = 1, water content = porosity
+        water_content_all[mc_idx] = porosity
+
+    print("Monte Carlo simulation completed!")
+
+    # Calculate statistics across all realizations
+    print("Calculating statistics...")
+    porosity_mean = np.mean(porosity_all, axis=0)
+    porosity_std = np.std(porosity_all, axis=0)
+
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 694-695
+
+### Unsaturated zone comparison
+
+.. GENERATED FROM PYTHON SOURCE LINES 697-717
+
+.. code-block:: Python
+
+    from scipy.interpolate import griddata
+
+    porosity_true = pg.load("results/TL_measurements/porosity.npy")
+    mesh_centers = np.array(mesh_true.cellCenters())
+    x1, y1 = np.mgrid[40:55:100j, 1600:1600:1j]
+    po_1 = griddata(mesh_centers[:,0:2], porosity_true, (x1, y1), method='linear')
+
+    mesh_centers2 = np.array(mesh.cellCenters())
+    po_2 = griddata(mesh_centers2[:,0:2], porosity_mean[:,10], (x1, y1), method='linear')
+    std_2 = griddata(mesh_centers2[:,0:2], porosity_std[:,10], (x1, y1), method='linear')
+
+    fig = plt.figure(figsize=[6, 3])
+
+    plt.plot(x1,po_2,c='k',label='Estimated')
+    plt.fill_between(x1.ravel(),po_2.ravel()-std_2.ravel(), po_2.ravel()+std_2.ravel(), color='k', alpha=0.2)
+    plt.plot(x1,po_1,c='k',ls='--',label='True')
+    plt.ylim(0, 0.35)
+    plt.xlabel('Distance (m)')
+    plt.ylabel('Porosity (-)')
+    plt.legend(frameon=False)
+
+.. GENERATED FROM PYTHON SOURCE LINES 718-731
+
+Unsaturated Zone Porosity Estimation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Cross-sectional porosity comparison in unsaturated zone (y=1600m) shows 
+good agreement between estimated (solid) and true (dashed) values. 
+Uncertainty bands reflect parameter variability in petrophysical 
+relationships for partially saturated conditions.
+
+.. image:: /auto_examples/images/Ex_MC_Hydro_fig_05.png
+   :align: center
+   :width: 700px
+%% [markdown]
+### Saturated zone comparison
+
+.. GENERATED FROM PYTHON SOURCE LINES 733-750
+
+.. code-block:: Python
+
+    from scipy.interpolate import griddata
+
+    porosity_true = pg.load("results/TL_measurements/porosity.npy")
+    mesh_centers = np.array(mesh_true.cellCenters())
+    x1, y1 = np.mgrid[40:55:100j, 1590:1590:1j]
+    po_1 = griddata(mesh_centers[:,0:2], porosity_true, (x1, y1), method='linear')
+
+    mesh_centers2 = np.array(mesh.cellCenters())
+    po_2 = griddata(mesh_centers2[:,0:2], porosity_mean[:,10], (x1, y1), method='linear')
+    std_2 = griddata(mesh_centers2[:,0:2], porosity_std[:,10], (x1, y1), method='linear')
+
+    fig = plt.figure(figsize=[6, 3])
+    plt.plot(x1,po_1,c='k',ls='--',label='True')
+    plt.plot(x1,po_2, c='k',label='Estimated')
+    plt.fill_between(x1.ravel(),po_2.ravel()-std_2.ravel(), po_2.ravel()+std_2.ravel(), color='k', alpha=0.2)
+    plt.ylim(0, 0.35)
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 751-763
+
+Saturated Zone Porosity Validation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Saturated zone porosity estimates (y=1590m) demonstrate excellent recovery 
+with narrow uncertainty bounds. Full saturation assumption provides strong 
+constraints, reducing parameter uncertainty and improving estimation reliability 
+compared to partially saturated conditions.
+
+.. image:: /auto_examples/images/Ex_MC_Hydro_fig_06.png
+   :align: center
+   :width: 700px
+%%
+
+.. GENERATED FROM PYTHON SOURCE LINES 765-773
+
+Summary
+~~~~~~~
+
+This Monte Carlo analysis successfully quantified uncertainty in water content 
+and porosity estimates from ERT data. Key findings include layer-specific 
+uncertainty patterns, temporal monitoring with confidence bounds, and enhanced 
+reliability in saturated zones. The probabilistic framework provides essential 
+uncertainty information for water resource management decisions.
 
 
 .. _sphx_glr_download_auto_examples_Ex_MC_Hydro.py:

@@ -219,7 +219,7 @@ while applying smoothing constraints within each geological unit.
     mgrConstrained.invert(data=ertData, verbose=True, lam=10, mesh=mesh_with_interface,limits=[1., 10000.])
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 156-162
+.. GENERATED FROM PYTHON SOURCE LINES 156-163
 
 .. code-block:: Python
 
@@ -230,20 +230,24 @@ while applying smoothing constraints within each geological unit.
 
     mgrConstrained.showResult(xlabel="Distance (m)", ylabel="Elevation (m)",coverage = res_cov,cMap=fixed_cmap)
 
-.. GENERATED FROM PYTHON SOURCE LINES 163-173
+
+.. GENERATED FROM PYTHON SOURCE LINES 164-173
 
 Structure-Constrained ERT Inversion Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The structure-constrained ERT inversion produces a resistivity model that
 honors both the electrical measurements and the geological structure derived
 from seismic data
+
 .. image:: /auto_examples/images/Ex_Structure_resinv_fig_04.png
    :align: center
    :width: 800px
-%% [markdown]
+
+.. GENERATED FROM PYTHON SOURCE LINES 176-177
+
 ### 6. Save the mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 175-178
+.. GENERATED FROM PYTHON SOURCE LINES 179-182
 
 .. code-block:: Python
 

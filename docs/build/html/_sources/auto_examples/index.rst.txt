@@ -123,18 +123,18 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates Monte Carlo uncertainty quantification for  converting ERT resistivity models to water content estimates.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates seismic refraction tomography forward modeling for watershed structure characterization using PyHydroGeophysX.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_MC_Hydro_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_EX_SRT_forward_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_MC_Hydro.py`
+  :ref:`sphx_glr_auto_examples_EX_SRT_forward.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</div>
+      <div class="sphx-glr-thumbnail-title">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</div>
     </div>
 
 
@@ -157,23 +157,6 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates seismic refraction tomography forward modeling for watershed structure characterization using PyHydroGeophysX.">
-
-.. only:: html
-
-  .. image:: /auto_examples/images/thumb/sphx_glr_EX_SRT_forward_thumb.png
-    :alt:
-
-  :ref:`sphx_glr_auto_examples_EX_SRT_forward.py`
-
-.. raw:: html
-
-      <div class="sphx-glr-thumbnail-title">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</div>
-    </div>
-
-
-.. raw:: html
-
     <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for integrating hydrological  model outputs with ERT forward modeling and inversion using PyHydroGeophysX.">
 
 .. only:: html
@@ -186,6 +169,23 @@ Each example includes detailed comments and demonstrates best practices for wate
 .. raw:: html
 
       <div class="sphx-glr-thumbnail-title">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates Monte Carlo uncertainty quantification for  converting ERT resistivity models to water content estimates.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_MC_Hydro_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Ex_MC_Hydro.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation</div>
     </div>
 
 
@@ -204,10 +204,10 @@ Each example includes detailed comments and demonstrates best practices for wate
    /auto_examples/Ex_SRT_inv
    /auto_examples/Ex_structure_TLresinv
    /auto_examples/Ex_TL_inversion
-   /auto_examples/Ex_MC_Hydro
-   /auto_examples/Ex_Time_lapse_measurement
    /auto_examples/EX_SRT_forward
+   /auto_examples/Ex_Time_lapse_measurement
    /auto_examples/Ex_ERT_workflow
+   /auto_examples/Ex_MC_Hydro
 
 
 .. only:: html

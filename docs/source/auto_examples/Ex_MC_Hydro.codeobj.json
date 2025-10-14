@@ -8,6 +8,15 @@
    "name": "mpl_colormap"
   }
  ],
+ "griddata": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "scipy.interpolate",
+   "module_short": "scipy.interpolate",
+   "name": "griddata"
+  }
+ ],
  "np.any": [
   {
    "is_class": false,
@@ -44,15 +53,6 @@
    "name": "array"
   }
  ],
- "np.clip": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "clip"
-  }
- ],
  "np.load": [
   {
    "is_class": false,
@@ -62,6 +62,15 @@
    "name": "load"
   }
  ],
+ "np.max": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "max"
+  }
+ ],
  "np.mean": [
   {
    "is_class": false,
@@ -69,6 +78,24 @@
    "module": "numpy",
    "module_short": "numpy",
    "name": "mean"
+  }
+ ],
+ "np.mgrid": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "mgrid"
+  }
+ ],
+ "np.min": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "min"
   }
  ],
  "np.percentile": [
@@ -152,15 +179,6 @@
    "name": "dirname"
   }
  ],
- "os.path.join": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "os.path",
-   "module_short": "os.path",
-   "name": "join"
-  }
- ],
  "pg.load": [
   {
    "is_class": false,
@@ -233,6 +251,15 @@
    "name": "rcParams"
   }
  ],
+ "plt.savefig": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "savefig"
+  }
+ ],
  "plt.subplot": [
   {
    "is_class": false,
@@ -296,6 +323,15 @@
    "name": "update"
   }
  ],
+ "resistivity_to_porosity": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.petrophysics.resistivity_models",
+   "module_short": "PyHydroGeophysX.petrophysics.resistivity_models",
+   "name": "resistivity_to_porosity"
+  }
+ ],
  "resistivity_to_saturation": [
   {
    "is_class": false,
@@ -321,6 +357,15 @@
    "module": "sys.path",
    "module_short": "sys.path",
    "name": "append"
+  }
+ ],
+ "tqdm": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "tqdm",
+   "module_short": "tqdm",
+   "name": "tqdm"
   }
  ]
 }

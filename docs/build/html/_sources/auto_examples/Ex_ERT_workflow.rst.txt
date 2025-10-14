@@ -29,7 +29,7 @@ The workflow includes:
 2. Setting up 2D profile interpolation from 3D model data
 3. Creating meshes with geological layer structure
 4. Converting water content to resistivity using petrophysical relationships
-5. Forward modeling to create synthetic ERT c data
+5. Forward modeling to create synthetic ERT data
 6. Performing ERT inversion to recover resistivity models
 
 This example serves as a comprehensive tutorial showing the integration
@@ -228,7 +228,7 @@ Step 4: Interpolate data to profile
 
 Visualize the result
 
-.. GENERATED FROM PYTHON SOURCE LINES 166-190
+.. GENERATED FROM PYTHON SOURCE LINES 166-189
 
 .. code-block:: Python
 
@@ -256,16 +256,27 @@ Visualize the result
     plt.tight_layout()
     plt.show()
 
+.. GENERATED FROM PYTHON SOURCE LINES 190-203
 
-.. GENERATED FROM PYTHON SOURCE LINES 191-192
+Profile Setup and Topographic Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Left panel shows the 3D MODFLOW domain with the selected 2D profile line 
+(red dashed) connecting start (red) and end (blue) points. Right panel 
+displays the extracted elevation profile that will guide mesh generation 
+and geological structure definition.
+
+.. image:: /auto_examples/images/Ex_ERT_workflow_fig_01.png
+   :align: center
+   :width: 800px
+%% [markdown]
 ## Interpolating data to mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 194-195
+.. GENERATED FROM PYTHON SOURCE LINES 205-206
 
 Step 6: Interpolate data to mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 195-255
+.. GENERATED FROM PYTHON SOURCE LINES 206-266
 
 .. code-block:: Python
 
@@ -330,7 +341,7 @@ Step 6: Interpolate data to mesh
     saturation = wc_mesh / porosity_mesh
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 256-328
+.. GENERATED FROM PYTHON SOURCE LINES 267-338
 
 .. code-block:: Python
 
@@ -406,8 +417,22 @@ Step 6: Interpolate data to mesh
     plt.savefig(os.path.join(output_dir, "topography_and_properties.tiff"), dpi=300)
 
 
+.. GENERATED FROM PYTHON SOURCE LINES 339-351
 
-.. GENERATED FROM PYTHON SOURCE LINES 329-333
+Mesh Properties and Interpolation Results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Four-panel analysis showing: (1) surface elevation map with profile line, 
+(2) elevation profile, (3) interpolated porosity field with three-layer 
+structure, and (4) saturation distribution. The mesh preserves geological 
+boundaries while providing appropriate resolution for ERT modeling.
+
+.. image:: /auto_examples/images/Ex_ERT_workflow_fig_02.png
+   :align: center
+   :width: 900px
+%%
+
+.. GENERATED FROM PYTHON SOURCE LINES 351-355
 
 .. code-block:: Python
 
@@ -416,15 +441,15 @@ Step 6: Interpolate data to mesh
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 334-335
+.. GENERATED FROM PYTHON SOURCE LINES 356-357
 
 ## Calculating saturation
 
-.. GENERATED FROM PYTHON SOURCE LINES 337-338
+.. GENERATED FROM PYTHON SOURCE LINES 359-360
 
 Ensure porosity is not zero to avoid division by zero
 
-.. GENERATED FROM PYTHON SOURCE LINES 338-341
+.. GENERATED FROM PYTHON SOURCE LINES 360-363
 
 .. code-block:: Python
 
@@ -432,15 +457,15 @@ Ensure porosity is not zero to avoid division by zero
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 342-343
+.. GENERATED FROM PYTHON SOURCE LINES 364-365
 
 ## Converting to resistivity
 
-.. GENERATED FROM PYTHON SOURCE LINES 345-346
+.. GENERATED FROM PYTHON SOURCE LINES 367-368
 
 Convert to resistivity using petrophysical model
 
-.. GENERATED FROM PYTHON SOURCE LINES 346-391
+.. GENERATED FROM PYTHON SOURCE LINES 368-413
 
 .. code-block:: Python
 
@@ -490,7 +515,7 @@ Convert to resistivity using petrophysical model
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 392-467
+.. GENERATED FROM PYTHON SOURCE LINES 414-488
 
 .. code-block:: Python
 
@@ -569,12 +594,23 @@ Convert to resistivity using petrophysical model
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, "resistivity_porosity_saturation.tiff"), dpi=300)
 
+.. GENERATED FROM PYTHON SOURCE LINES 489-502
 
-.. GENERATED FROM PYTHON SOURCE LINES 468-469
+Petrophysical Relationship Validation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Multi-panel analysis validates rock physics models: vertical resistivity 
+profile (left), Waxman-Smits model for regolith (top right), and Archie's 
+law for fractured bedrock (bottom right). Scattered data points match 
+theoretical curves, confirming realistic petrophysical transformations.
+
+.. image:: /auto_examples/images/Ex_ERT_workflow_fig_03.png
+   :align: center
+   :width: 800px
+%% [markdown]
 ## ERT forward modeling simulation
 
-.. GENERATED FROM PYTHON SOURCE LINES 471-499
+.. GENERATED FROM PYTHON SOURCE LINES 504-532
 
 .. code-block:: Python
 
@@ -607,7 +643,7 @@ Convert to resistivity using petrophysical model
     synth_data.save(os.path.join(output_dir, "synthetic_data.dat"))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 500-528
+.. GENERATED FROM PYTHON SOURCE LINES 533-560
 
 .. code-block:: Python
 
@@ -639,12 +675,23 @@ Convert to resistivity using petrophysical model
     plt.show()
     plt.savefig(os.path.join(output_dir, "res_model_and_synth_data.tiff"), dpi=300)
 
+.. GENERATED FROM PYTHON SOURCE LINES 561-574
 
-.. GENERATED FROM PYTHON SOURCE LINES 529-530
+Forward Modeling Results
+~~~~~~~~~~~~~~~~~~~~~~~~
 
+Left panel shows the true resistivity model with electrode positions (black 
+circles) along the surface. Right panel displays synthetic ERT measurements 
+showing characteristic pseudosection patterns that reflect the three-layer 
+geological structure in the apparent resistivity data.
+
+.. image:: /auto_examples/images/Ex_ERT_workflow_fig_04.png
+   :align: center
+   :width: 800px
+%%
 Step 11: Run ERT inversion on synthetic data
 
-.. GENERATED FROM PYTHON SOURCE LINES 530-545
+.. GENERATED FROM PYTHON SOURCE LINES 574-589
 
 .. code-block:: Python
 
@@ -664,11 +711,11 @@ Step 11: Run ERT inversion on synthetic data
     inversion_result = inversion.run()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 546-547
+.. GENERATED FROM PYTHON SOURCE LINES 590-591
 
 # Using Pygimili default to the inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 547-550
+.. GENERATED FROM PYTHON SOURCE LINES 591-594
 
 .. code-block:: Python
 
@@ -676,7 +723,7 @@ Step 11: Run ERT inversion on synthetic data
     inv = mgr.invert(lam=10, verbose=True,quality=34)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 551-577
+.. GENERATED FROM PYTHON SOURCE LINES 595-615
 
 .. code-block:: Python
 
@@ -701,25 +748,43 @@ Step 11: Run ERT inversion on synthetic data
     # Adjust layout
     plt.tight_layout()
 
+.. GENERATED FROM PYTHON SOURCE LINES 616-627
+
+Inversion Results Comparison
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Three-panel comparison showing: (1) true resistivity model from petrophysical 
+conversion, (2) PyHydroGeophysX inversion result, and (3) PyGIMLi standard 
+inversion. Both methods successfully recover the main geological features, 
+validating the complete hydro-to-geophysical workflow.
+
+.. image:: /auto_examples/images/Ex_ERT_workflow_fig_05.png
+   :align: center
+   :width: 900px
+
+.. GENERATED FROM PYTHON SOURCE LINES 627-632
+
+.. code-block:: Python
+
 
 
     # The inversion results are almost same from this code and Pygimli default inversion.
     # the difference is that the chi2 value for stop inversion is not the same, we chose 1.5 while Pygimli is 1.0
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 578-579
+.. GENERATED FROM PYTHON SOURCE LINES 633-634
 
 # One step approach
 
-.. GENERATED FROM PYTHON SOURCE LINES 581-582
+.. GENERATED FROM PYTHON SOURCE LINES 636-637
 
 ## ERT one step from HM to GM
 
-.. GENERATED FROM PYTHON SOURCE LINES 584-585
+.. GENERATED FROM PYTHON SOURCE LINES 639-640
 
 Set up directories
 
-.. GENERATED FROM PYTHON SOURCE LINES 585-669
+.. GENERATED FROM PYTHON SOURCE LINES 640-724
 
 .. code-block:: Python
 
@@ -807,6 +872,30 @@ Set up directories
     ert.showData(synth_data,  logscale=True)
 
 
+
+.. GENERATED FROM PYTHON SOURCE LINES 725-736
+
+One-Step Integrated Workflow Results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The streamlined hydro-to-ERT workflow produces synthetic apparent resistivity 
+data directly from MODFLOW outputs. This integrated approach demonstrates 
+automated processing from hydrological model results to geophysical measurements 
+suitable for inversion and interpretation.
+
+.. image:: /auto_examples/images/Ex_ERT_workflow_fig_06.png
+   :align: center
+   :width: 700px
+
+.. GENERATED FROM PYTHON SOURCE LINES 738-744
+
+Summary
+~~~~~~~
+
+This comprehensive workflow demonstrated the complete integration from 
+hydrological models to ERT responses and inversion. Key achievements include 
+realistic petrophysical transformations, successful forward modeling, and 
+validated inversion results suitable for watershed monitoring applications.
 
 
 .. _sphx_glr_download_auto_examples_Ex_ERT_workflow.py:

@@ -24,8 +24,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion" href="Ex_ERT_workflow.html" />
-    <link rel="prev" title="Ex. Creating Synthetic Time-Lapse ERT Measurements" href="Ex_Time_lapse_measurement.html" /> 
+    <link rel="next" title="Ex. Creating Synthetic Time-Lapse ERT Measurements" href="Ex_Time_lapse_measurement.html" />
+    <link rel="prev" title="Ex. Time-Lapse ERT Inversion Techniques" href="Ex_TL_inversion.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -61,14 +61,20 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#p-wave-velocity-model-from-petrophysical-conversion">P-Wave Velocity Model from Petrophysical Conversion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#petrophysical-relationships-analysis">Petrophysical Relationships Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#short-survey-first-arrival-travel-times">Short Survey First-Arrival Travel Times</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#one-step-integrated-workflow-results">One-Step Integrated Workflow Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#summary">Summary</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation</a></li>
 </ul>
 </li>
 </ul>
@@ -111,9 +117,8 @@ for watershed structure characterization using PyHydroGeophysX.</p>
 1. Converting water content to seismic P-wave velocity using rock physics models
 2. Creating seismic survey geometry along topographic profiles
 3. Forward modeling to generate synthetic travel time data
-4. Seismic tomography inversion to recover velocity structure
-5. Visualization of velocity models and first-arrival picks</p>
-<p>We also include an example using the one-step approach.</p>
+4. Visualization of velocity models and first-arrival picks
+5. One-step integrated workflow from hydrology to seismic measurements</p>
 <p>SRT is valuable for determining subsurface structure and bedrock interface
 geometry, which provides important constraints for hydrogeophysical modeling
 and interpretation of ERT data.</p>
@@ -143,6 +148,7 @@ and interpretation of ERT data.</p>
 <span class="c1"># Import PyHydroGeophysX modules</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.interpolation</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProfileInterpolator</span><span class="p">,</span> <span class="n">create_surface_lines</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshCreator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.plt_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">drawFirstPicks</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">water_content_to_resistivity</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.velocity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">HertzMindlinModel</span><span class="p">,</span> <span class="n">DEMModel</span>
 </pre></div>
@@ -358,6 +364,14 @@ and interpretation of ERT data.</p>
         <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m s$^{-1}$)&#39;</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5500</span><span class="p">)</span>
 </pre></div>
 </div>
+<section id="p-wave-velocity-model-from-petrophysical-conversion">
+<h2>P-Wave Velocity Model from Petrophysical Conversion<a class="headerlink" href="#p-wave-velocity-model-from-petrophysical-conversion" title="Link to this heading"></a></h2>
+<p>The velocity model shows realistic three-layer structure derived from water
+content and porosity using rock physics models. Regolith (500-2500 m/s),
+fractured bedrock (2500-4500 m/s), and fresh bedrock (4500+ m/s) exhibit
+distinct velocity ranges appropriate for watershed environments.</p>
+<a class="reference internal image-reference" href="../_images/EX_SRT_forward_fig_01.png"><img alt="../_images/EX_SRT_forward_fig_01.png" class="align-center" src="../_images/EX_SRT_forward_fig_01.png" style="width: 700px;" />
+</a>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mpl</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -447,7 +461,17 @@ and interpretation of ERT data.</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;velocity_porosity_saturation.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>## Short distance seismic survey</p>
+</section>
+<section id="petrophysical-relationships-analysis">
+<h2>Petrophysical Relationships Analysis<a class="headerlink" href="#petrophysical-relationships-analysis" title="Link to this heading"></a></h2>
+<p>Multi-panel analysis validates rock physics models: velocity-depth profile
+(left), Hertz-Mindlin model for regolith showing saturation effects (top right),
+and DEM model for fractured bedrock (bottom right). Theoretical curves match
+computed values, confirming realistic petrophysical transformations.</p>
+<a class="reference internal image-reference" href="../_images/EX_SRT_forward_fig_02.png"><img alt="../_images/EX_SRT_forward_fig_02.png" class="align-center" src="../_images/EX_SRT_forward_fig_02.png" style="width: 800px;" />
+</a>
+<p>%% [markdown]
+## Short distance seismic survey</p>
 <p>################# Seismic data #####################</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create a synthetic seismic data scheme</span>
 <span class="n">xpos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="o">+</span><span class="mi">72</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span><span class="mi">72</span><span class="p">)</span>
@@ -480,85 +504,23 @@ and interpretation of ERT data.</p>
 <span class="n">datasrt</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synthetic_seismic_data.dat&quot;</span><span class="p">))</span>
 </pre></div>
 </div>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">tt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plotva</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot first arrivals as lines.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    ax : matplotlib.axes</span>
-<span class="sd">        axis to draw the lines in</span>
-<span class="sd">    data : :gimliapi:`GIMLI::DataContainer`</span>
-<span class="sd">        data containing shots (&quot;s&quot;), geophones (&quot;g&quot;) and traveltimes (&quot;t&quot;)</span>
-<span class="sd">    tt : array, optional</span>
-<span class="sd">        traveltimes to use instead of data(&quot;t&quot;)</span>
-<span class="sd">    plotva : bool, optional</span>
-<span class="sd">        plot apparent velocity instead of traveltimes</span>
-
-<span class="sd">    Return</span>
-<span class="sd">    ------</span>
-<span class="sd">    ax : matplotlib.axes</span>
-<span class="sd">        the modified axis</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Extract coordinates</span>
-    <span class="n">px</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">x</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-    <span class="n">gx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">px</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">g</span><span class="p">)]</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="s2">&quot;g&quot;</span><span class="p">)])</span>
-    <span class="n">sx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">px</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">)]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">data</span><span class="p">(</span><span class="s2">&quot;s&quot;</span><span class="p">)])</span>
-
-    <span class="c1"># Get traveltimes</span>
-    <span class="k">if</span> <span class="n">tt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">plotva</span><span class="p">:</span>
-        <span class="n">tt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">(</span><span class="n">gx</span> <span class="o">-</span> <span class="n">sx</span><span class="p">)</span> <span class="o">/</span> <span class="n">tt</span>
-
-    <span class="c1"># Find unique source positions</span>
-    <span class="n">uns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">sx</span><span class="p">)</span>
-
-    <span class="c1"># Override kwargs with clean, minimalist style</span>
-    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;color&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;black&#39;</span>
-    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linestyle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;--&#39;</span>
-    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;linewidth&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.9</span>
-    <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;marker&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># No markers on the lines</span>
-
-    <span class="c1"># Plot for each source</span>
-    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">si</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">uns</span><span class="p">):</span>
-        <span class="n">ti</span> <span class="o">=</span> <span class="n">tt</span><span class="p">[</span><span class="n">sx</span> <span class="o">==</span> <span class="n">si</span><span class="p">]</span>
-        <span class="n">gi</span> <span class="o">=</span> <span class="n">gx</span><span class="p">[</span><span class="n">sx</span> <span class="o">==</span> <span class="n">si</span><span class="p">]</span>
-        <span class="n">ii</span> <span class="o">=</span> <span class="n">gi</span><span class="o">.</span><span class="n">argsort</span><span class="p">()</span>
-
-        <span class="c1"># Plot line</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">gi</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="n">ti</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="c1"># Add source marker as black square at top</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">si</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-                <span class="n">markeredgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">markeredgewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
-
-    <span class="c1"># Clean grid style</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;lightgray&#39;</span><span class="p">)</span>
-
-    <span class="c1"># Set proper axis labels with units</span>
-    <span class="k">if</span> <span class="n">plotva</span><span class="p">:</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Apparent velocity (m s$^{-1}$)&quot;</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Travel time (s)&quot;</span><span class="p">)</span>
-
-    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
-
-
-
-
-
-    <span class="c1"># Invert y-axis for traveltimes</span>
-    <span class="n">ax</span><span class="o">.</span><span class="n">invert_yaxis</span><span class="p">()</span>
-
-    <span class="k">return</span> <span class="n">ax</span>
-
-<span class="c1"># Usage</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Usage</span>
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
 <span class="n">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">datasrt</span><span class="p">)</span>
 <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;synthetic_seismic_data_first_picks_short.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>## Long distance seismic survey</p>
+</section>
+<section id="short-survey-first-arrival-travel-times">
+<h2>Short Survey First-Arrival Travel Times<a class="headerlink" href="#short-survey-first-arrival-travel-times" title="Link to this heading"></a></h2>
+<p>The 72-geophone short survey (72m length) provides high-resolution shallow
+imaging with dense ray coverage. First-arrival picks show clear velocity
+layering with direct waves, refracted arrivals, and crossover distances
+indicating velocity interfaces at shallow depths.</p>
+<a class="reference internal image-reference" href="../_images/EX_SRT_forward_fig_03.png"><img alt="../_images/EX_SRT_forward_fig_03.png" class="align-center" src="../_images/EX_SRT_forward_fig_03.png" style="width: 600px;" />
+</a>
+<p>%% [markdown]
+## Long distance seismic survey</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">numberGeophones</span> <span class="o">=</span> <span class="mi">90</span>
 <span class="n">shotDistance</span> <span class="o">=</span> <span class="mi">3</span>
 
@@ -711,6 +673,22 @@ and interpretation of ERT data.</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </pre></div>
 </div>
+</section>
+<section id="one-step-integrated-workflow-results">
+<h2>One-Step Integrated Workflow Results<a class="headerlink" href="#one-step-integrated-workflow-results" title="Link to this heading"></a></h2>
+<p>The integrated hydro-to-seismic workflow produces consistent results: velocity
+model (top) shows realistic layering from petrophysical conversion, while
+synthetic travel times (bottom) exhibit clear refraction patterns suitable
+for tomographic inversion and interface extraction.</p>
+<a class="reference internal image-reference" href="../_images/EX_SRT_forward_fig_05.png"><img alt="../_images/EX_SRT_forward_fig_05.png" class="align-center" src="../_images/EX_SRT_forward_fig_05.png" style="width: 800px;" />
+</a>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading"></a></h2>
+<p>This workflow demonstrated complete seismic forward modeling from hydrological
+inputs to synthetic measurements. Key achievements include realistic velocity
+models from rock physics, multi-scale survey design, and integrated
+hydro-geophysical workflows suitable for watershed monitoring applications.</p>
 <div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-srt-forward-py">
 <div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
 <p><a class="reference download internal" download="" href="../_downloads/2289a12d9de6380c2715aebefa2e227b/EX_SRT_forward.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">EX_SRT_forward.ipynb</span></code></a></p>
@@ -723,13 +701,14 @@ and interpretation of ERT data.</p>
 </div>
 </div>
 </section>
+</section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex_Time_lapse_measurement.html" class="btn btn-neutral float-left" title="Ex. Creating Synthetic Time-Lapse ERT Measurements" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex_ERT_workflow.html" class="btn btn-neutral float-right" title="Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="Ex_TL_inversion.html" class="btn btn-neutral float-left" title="Ex. Time-Lapse ERT Inversion Techniques" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex_Time_lapse_measurement.html" class="btn btn-neutral float-right" title="Ex. Creating Synthetic Time-Lapse ERT Measurements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

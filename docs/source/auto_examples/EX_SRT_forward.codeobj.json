@@ -71,6 +71,15 @@
    "name": "create_surface_lines"
   }
  ],
+ "drawFirstPicks": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.core.plt_utils",
+   "module_short": "PyHydroGeophysX.core.plt_utils",
+   "name": "drawFirstPicks"
+  }
+ ],
  "griddata": [
   {
    "is_class": false,
@@ -105,15 +114,6 @@
    "module": "numpy",
    "module_short": "numpy",
    "name": "abs"
-  }
- ],
- "np.absolute": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "absolute"
   }
  ],
  "np.amin": [
@@ -242,15 +242,6 @@
    "name": "ones"
   }
  ],
- "np.unique": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "unique"
-  }
- ],
  "np.where": [
   {
    "is_class": false,
@@ -339,15 +330,6 @@
    "module": "pygimli",
    "module_short": "pygimli",
    "name": "show"
-  }
- ],
- "pg.x": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "pygimli",
-   "module_short": "pygimli",
-   "name": "x"
   }
  ],
  "plt.colorbar": [
@@ -474,15 +456,6 @@
    "module": "sys.path",
    "module_short": "sys.path",
    "name": "append"
-  }
- ],
- "tt": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "pygimli.physics",
-   "module_short": "pygimli.physics",
-   "name": "traveltime"
   }
  ]
 }

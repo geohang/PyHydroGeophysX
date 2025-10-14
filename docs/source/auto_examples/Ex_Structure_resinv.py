@@ -159,15 +159,19 @@ fixed_cmap = BlueDarkRed18_18.mpl_colormap
 res_cov = mgrConstrained.coverage()[mgrConstrained.paraDomain.cellMarkers()]>-1.0
 
 mgrConstrained.showResult(xlabel="Distance (m)", ylabel="Elevation (m)",coverage = res_cov,cMap=fixed_cmap)
+
 ###############################################################################
 # Structure-Constrained ERT Inversion Results
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # The structure-constrained ERT inversion produces a resistivity model that
 # honors both the electrical measurements and the geological structure derived
 # from seismic data
+#
 # .. image:: /auto_examples/images/Ex_Structure_resinv_fig_04.png
 #    :align: center
 #    :width: 800px
+
+
 # %% [markdown]
 # ### 6. Save the mesh
 

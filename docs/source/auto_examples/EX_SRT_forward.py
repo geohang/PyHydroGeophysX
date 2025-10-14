@@ -10,10 +10,9 @@ The workflow includes:
 1. Converting water content to seismic P-wave velocity using rock physics models
 2. Creating seismic survey geometry along topographic profiles
 3. Forward modeling to generate synthetic travel time data
-4. Seismic tomography inversion to recover velocity structure
-5. Visualization of velocity models and first-arrival picks
+4. Visualization of velocity models and first-arrival picks
+5. One-step integrated workflow from hydrology to seismic measurements
 
-We also include an example using the one-step approach.
 
 SRT is valuable for determining subsurface structure and bedrock interface
 geometry, which provides important constraints for hydrogeophysical modeling
@@ -47,6 +46,7 @@ if parent_dir not in sys.path:
 # Import PyHydroGeophysX modules
 from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surface_lines
 from PyHydroGeophysX.core.mesh_utils import MeshCreator
+from PyHydroGeophysX.core.plt_utils import drawFirstPicks
 from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_resistivity
 from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
 
@@ -277,7 +277,18 @@ ax,cbar = pg.show(mesh,velocity_mesh, ax= axs, orientation="horizontal",
         cMap=fixed_cmap, showColorBar=True,
         xlabel="Distance (m)", ylabel="Elevation (m)", 
         label='Velocity (m s$^{-1}$)', cMin=500, cMax=5500)
-
+###############################################################################
+# P-Wave Velocity Model from Petrophysical Conversion
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The velocity model shows realistic three-layer structure derived from water 
+# content and porosity using rock physics models. Regolith (500-2500 m/s), 
+# fractured bedrock (2500-4500 m/s), and fresh bedrock (4500+ m/s) exhibit 
+# distinct velocity ranges appropriate for watershed environments.
+#
+# .. image:: /auto_examples/images/EX_SRT_forward_fig_01.png
+#    :align: center
+#    :width: 700px
 
 # %%
 import matplotlib.pyplot as plt
@@ -368,7 +379,18 @@ plt.colorbar(label='Saturation (-)')
 
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, "velocity_porosity_saturation.tiff"), dpi=300, bbox_inches='tight')
-
+###############################################################################
+# Petrophysical Relationships Analysis
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Multi-panel analysis validates rock physics models: velocity-depth profile 
+# (left), Hertz-Mindlin model for regolith showing saturation effects (top right), 
+# and DEM model for fractured bedrock (bottom right). Theoretical curves match 
+# computed values, confirming realistic petrophysical transformations.
+#
+# .. image:: /auto_examples/images/EX_SRT_forward_fig_02.png
+#    :align: center
+#    :width: 800px
 # %% [markdown]
 # ## Short distance seismic survey
 
@@ -406,83 +428,24 @@ datasrt = mgr.simulate(slowness=1.0 / velocity_mesh, scheme=scheme, mesh=mesh,
 datasrt.save(os.path.join(output_dir, "synthetic_seismic_data.dat"))
 
 # %%
-def drawFirstPicks(ax, data, tt=None, plotva=False, **kwargs):
-    """Plot first arrivals as lines.
-    
-    Parameters
-    ----------
-    ax : matplotlib.axes
-        axis to draw the lines in
-    data : :gimliapi:`GIMLI::DataContainer`
-        data containing shots ("s"), geophones ("g") and traveltimes ("t")
-    tt : array, optional
-        traveltimes to use instead of data("t")
-    plotva : bool, optional
-        plot apparent velocity instead of traveltimes
-    
-    Return
-    ------
-    ax : matplotlib.axes
-        the modified axis
-    """
-    # Extract coordinates
-    px = pg.x(data)
-    gx = np.array([px[int(g)] for g in data("g")])
-    sx = np.array([px[int(s)] for s in data("s")])
-    
-    # Get traveltimes
-    if tt is None:
-        tt = np.array(data("t"))
-    if plotva:
-        tt = np.absolute(gx - sx) / tt
-    
-    # Find unique source positions    
-    uns = np.unique(sx)
-    
-    # Override kwargs with clean, minimalist style
-    kwargs['color'] = 'black'
-    kwargs['linestyle'] = '--'
-    kwargs['linewidth'] = 0.9
-    kwargs['marker'] = None  # No markers on the lines
-    
-    # Plot for each source
-    for i, si in enumerate(uns):
-        ti = tt[sx == si]
-        gi = gx[sx == si]
-        ii = gi.argsort()
-        
-        # Plot line
-        ax.plot(gi[ii], ti[ii], **kwargs)
-        
-        # Add source marker as black square at top
-        ax.plot(si, 0.0, 's', color='black', markersize=4, 
-                markeredgecolor='black', markeredgewidth=0.5)
-    
-    # Clean grid style
-    ax.grid(True, linestyle='-', linewidth=0.2, color='lightgray')
-    
-    # Set proper axis labels with units
-    if plotva:
-        ax.set_ylabel("Apparent velocity (m s$^{-1}$)")
-    else:
-        ax.set_ylabel("Travel time (s)")
-    
-    ax.set_xlabel("Distance (m)")
-    
 
-    
-
-    
-    # Invert y-axis for traveltimes
-    ax.invert_yaxis()
-
-    return ax
 
 # Usage
 fig, ax = plt.subplots(figsize=(4, 3)) 
 drawFirstPicks(ax, datasrt)
 fig.savefig(os.path.join(output_dir, "synthetic_seismic_data_first_picks_short.tiff"), dpi=300, bbox_inches='tight')
-
+###############################################################################
+# Short Survey First-Arrival Travel Times  
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The 72-geophone short survey (72m length) provides high-resolution shallow 
+# imaging with dense ray coverage. First-arrival picks show clear velocity 
+# layering with direct waves, refracted arrivals, and crossover distances 
+# indicating velocity interfaces at shallow depths.
+#
+# .. image:: /auto_examples/images/EX_SRT_forward_fig_03.png
+#    :align: center
+#    :width: 600px
 # %% [markdown]
 # ## Long distance seismic survey
 
@@ -640,6 +603,24 @@ SeismicForwardModeling.draw_first_picks(axes[1], synth_data)
 axes[1].set_title('Synthetic First-Arrival Travel Times')
 
 plt.tight_layout()
+###############################################################################
+# One-Step Integrated Workflow Results
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The integrated hydro-to-seismic workflow produces consistent results: velocity 
+# model (top) shows realistic layering from petrophysical conversion, while 
+# synthetic travel times (bottom) exhibit clear refraction patterns suitable 
+# for tomographic inversion and interface extraction.
+#
+# .. image:: /auto_examples/images/EX_SRT_forward_fig_05.png
+#    :align: center
+#    :width: 800px
 
-
-
+###############################################################################
+# Summary
+# ~~~~~~~
+#
+# This workflow demonstrated complete seismic forward modeling from hydrological 
+# inputs to synthetic measurements. Key achievements include realistic velocity 
+# models from rock physics, multi-scale survey design, and integrated 
+# hydro-geophysical workflows suitable for watershed monitoring applications.

@@ -11,7 +11,7 @@ The workflow includes:
 2. Setting up 2D profile interpolation from 3D model data
 3. Creating meshes with geological layer structure
 4. Converting water content to resistivity using petrophysical relationships
-5. Forward modeling to create synthetic ERT c data
+5. Forward modeling to create synthetic ERT data
 6. Performing ERT inversion to recover resistivity models
 
 This example serves as a comprehensive tutorial showing the integration
@@ -186,7 +186,18 @@ plt.ylabel('Elevation')
 
 plt.tight_layout()
 plt.show()
-
+###############################################################################
+# Profile Setup and Topographic Analysis
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Left panel shows the 3D MODFLOW domain with the selected 2D profile line 
+# (red dashed) connecting start (red) and end (blue) points. Right panel 
+# displays the extracted elevation profile that will guide mesh generation 
+# and geological structure definition.
+#
+# .. image:: /auto_examples/images/Ex_ERT_workflow_fig_01.png
+#    :align: center
+#    :width: 800px
 # %% [markdown]
 # ## Interpolating data to mesh
 
@@ -324,7 +335,18 @@ pg.show(mesh, saturation,
 plt.tight_layout(pad=3)
 plt.savefig(os.path.join(output_dir, "topography_and_properties.tiff"), dpi=300)
 
-
+###############################################################################
+# Mesh Properties and Interpolation Results
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Four-panel analysis showing: (1) surface elevation map with profile line, 
+# (2) elevation profile, (3) interpolated porosity field with three-layer 
+# structure, and (4) saturation distribution. The mesh preserves geological 
+# boundaries while providing appropriate resolution for ERT modeling.
+#
+# .. image:: /auto_examples/images/Ex_ERT_workflow_fig_02.png
+#    :align: center
+#    :width: 900px
 # %%
 print("Water Content min/max:", np.min(wc_mesh), np.max(wc_mesh))
 print("Saturation min/max:", np.min(saturation), np.max(saturation))
@@ -463,7 +485,18 @@ plt.ylim([100,2500])
 # plt.yscale('log')
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, "resistivity_porosity_saturation.tiff"), dpi=300)
-
+###############################################################################
+# Petrophysical Relationship Validation
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Multi-panel analysis validates rock physics models: vertical resistivity 
+# profile (left), Waxman-Smits model for regolith (top right), and Archie's 
+# law for fractured bedrock (bottom right). Scattered data points match 
+# theoretical curves, confirming realistic petrophysical transformations.
+#
+# .. image:: /auto_examples/images/Ex_ERT_workflow_fig_03.png
+#    :align: center
+#    :width: 800px
 # %% [markdown]
 # ## ERT forward modeling simulation
 
@@ -524,7 +557,18 @@ axs[1].spines['right'].set_visible(False)
 plt.tight_layout()
 plt.show()
 plt.savefig(os.path.join(output_dir, "res_model_and_synth_data.tiff"), dpi=300)
-
+###############################################################################
+# Forward Modeling Results
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Left panel shows the true resistivity model with electrode positions (black 
+# circles) along the surface. Right panel displays synthetic ERT measurements 
+# showing characteristic pseudosection patterns that reflect the three-layer 
+# geological structure in the apparent resistivity data.
+#
+# .. image:: /auto_examples/images/Ex_ERT_workflow_fig_04.png
+#    :align: center
+#    :width: 800px
 # %%
 # Step 11: Run ERT inversion on synthetic data
 
@@ -568,7 +612,18 @@ cbar2 = pg.show(mgr.paraDomain, mgr.paraModel(), ax=ax3, cMap='jet', logScale=Fa
 ax3.set_title("Inverted Resistivity Model (Pygimli)")
 # Adjust layout
 plt.tight_layout()
-
+###############################################################################
+# Inversion Results Comparison
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Three-panel comparison showing: (1) true resistivity model from petrophysical 
+# conversion, (2) PyHydroGeophysX inversion result, and (3) PyGIMLi standard 
+# inversion. Both methods successfully recover the main geological features, 
+# validating the complete hydro-to-geophysical workflow.
+#
+# .. image:: /auto_examples/images/Ex_ERT_workflow_fig_05.png
+#    :align: center
+#    :width: 900px
 
 
 # The inversion results are almost same from this code and Pygimli default inversion.
@@ -666,3 +721,24 @@ synth_data, res_model = hydro_to_ert(
 ert.showData(synth_data,  logscale=True)
 
 
+###############################################################################
+# One-Step Integrated Workflow Results
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The streamlined hydro-to-ERT workflow produces synthetic apparent resistivity 
+# data directly from MODFLOW outputs. This integrated approach demonstrates 
+# automated processing from hydrological model results to geophysical measurements 
+# suitable for inversion and interpretation.
+#
+# .. image:: /auto_examples/images/Ex_ERT_workflow_fig_06.png
+#    :align: center
+#    :width: 700px
+
+###############################################################################
+# Summary
+# ~~~~~~~
+#
+# This comprehensive workflow demonstrated the complete integration from 
+# hydrological models to ERT responses and inversion. Key achievements include 
+# realistic petrophysical transformations, successful forward modeling, and 
+# validated inversion results suitable for watershed monitoring applications.
