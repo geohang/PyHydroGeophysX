@@ -1,6 +1,6 @@
 # %%
 """
-Ex . Structure-Constrained Resistivity Inversion
+Ex. Structure-Constrained Resistivity Inversion
 ===========================================
 
 This example demonstrates how to incorporate structural information from 

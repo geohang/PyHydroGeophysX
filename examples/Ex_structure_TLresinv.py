@@ -1,5 +1,5 @@
 """
-Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion
+Ex. Structure-Constrained Time-Lapse Resistivity Inversion
 ======================================================
 
 This example combines structural constraints with time-lapse ERT inversion

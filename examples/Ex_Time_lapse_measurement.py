@@ -1,5 +1,5 @@
 """
-Ex3. Creating Synthetic Time-Lapse ERT Measurements
+Ex. Creating Synthetic Time-Lapse ERT Measurements
 ==============================================
 
 This example demonstrates how to create synthetic time-lapse electrical 

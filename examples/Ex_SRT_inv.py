@@ -1,6 +1,6 @@
 # %%
 """
-Ex . Seismic Refraction Tomography (SRT) Inversion
+Ex. Seismic Refraction Tomography (SRT) Inversion
 ====================================================
 Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation
 This example demonstrates how to perform a 2D seismic refraction tomography (SRT) 
