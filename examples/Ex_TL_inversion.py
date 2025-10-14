@@ -123,6 +123,22 @@ for i in range(12):
                     , ylabel="Elevation (m)",label=' Resistivity ($\Omega$ m)',ax=ax,logScale=False,coverage=result.all_coverage[i]>-1)
     cbar.remove()
 
+###############################################################################
+# Full Time-Lapse ERT Inversion Results  
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The time-lapse sequence reveals the temporal evolution of subsurface water
+# content over 12 months. Notice how the resistivity distribution changes 
+# systematically, with high resistivity zones (dry areas) gradually becoming
+# more conductive (wet) as water infiltrates through the soil layers.
+# The temporal regularization ensures smooth transitions between consecutive
+# time steps while capturing realistic subsurface changes.
+#
+# .. image:: /auto_examples/images/Ex_TL_inversion_fig_01.png
+#    :align: center
+#    :width: 900px
+
+
 # %% [markdown]
 # ## 2. Window L2 time-lapse inversion
 
@@ -235,7 +251,20 @@ for i in range(12):
         cbar.remove()
 
 plt.tight_layout()
-
+###############################################################################
+# Windowed Time-Lapse Inversion Results
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The windowed approach processes consecutive time steps in overlapping groups,
+# which is computationally more efficient for large datasets while maintaining
+# temporal coherence. This method shows similar overall patterns to the full 
+# time-lapse inversion but with reduced computational cost. The windowing 
+# approach is particularly valuable when processing years of monitoring data
+# or when computational resources are limited.
+#
+# .. image:: /auto_examples/images/Ex_TL_inversion_fig_02.png
+#    :align: center
+#    :width: 900px
 
 # %% [markdown]
 # ## 3. Full L1 Time-lapse Inversion
@@ -303,10 +332,44 @@ for i in range(12):
                     , ylabel="Elevation (m)",label=' Resistivity ($\Omega$ m)',ax=ax,logScale=False,coverage=result.all_coverage[i]>-1)
     cbar.remove()
 
-# %%
+###############################################################################
+# L1-Norm Regularized Inversion Results
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The L1-norm regularization produces sharper boundaries compared to L2 
+# regularization, which is beneficial for detecting distinct geological layers
+# or sharp interfaces. Notice how the resistivity transitions are more abrupt
+# in this inversion, making it easier to identify distinct zones of different
+# water content. This approach is particularly useful when the subsurface is
+# expected to have layered structures rather than gradual transitions.
+#
+# .. image:: /auto_examples/images/Ex_TL_inversion_fig_03.png
+#    :align: center  
+#    :width: 900px
 
 
-# %%
-
-
-
+###############################################################################
+# Summary and Recommendations
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This example demonstrated three approaches to time-lapse ERT inversion:
+#
+# **Key Findings:**
+#
+# * **Temporal regularization** is essential for realistic time-lapse results
+# * **Windowed inversion** provides computational efficiency with minimal quality loss
+# * **L1 regularization** enhances boundary detection in layered media
+# * **Parameter tuning** (λ, α) significantly affects result quality
+#
+# **Recommendations:**
+#
+# * Use **full L2** for high-quality results with moderate datasets
+# * Apply **windowed L2** for large datasets or real-time processing
+# * Choose **L1 regularization** when sharp interfaces are expected
+# * Always validate results against known geological information
+#
+# **Next Steps:**
+#
+# * Combine with seismic constraints (see structure-constrained examples)
+# * Apply uncertainty quantification (see Monte Carlo examples)
+# * Integrate with hydrological models for enhanced interpretation

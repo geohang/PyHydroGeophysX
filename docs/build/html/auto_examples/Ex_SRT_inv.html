@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ex. Seismic Refraction Tomography (SRT) Inversion &mdash; PyHydroGeophysX Documentation</title>
+  <title>Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation &mdash; PyHydroGeophysX Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
@@ -61,14 +61,19 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Seismic Refraction Tomography (SRT) Inversion</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#long-profile-seismic-velocity-model">Long Profile Seismic Velocity Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#automated-interface-extraction">Automated Interface Extraction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#short-profile-multi-scale-comparison">Short Profile Multi-Scale Comparison</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#summary">Summary</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 </ul>
 </li>
 </ul>
@@ -88,7 +93,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
-      <li class="breadcrumb-item active">Ex. Seismic Refraction Tomography (SRT) Inversion</li>
+      <li class="breadcrumb-item active">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/auto_examples/Ex_SRT_inv.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -103,10 +108,9 @@
 <p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex-srt-inv-py"><span class="std std-ref">Go to the end</span></a>
 to download the full example code.</p>
 </div>
-<section class="sphx-glr-example-title" id="ex-seismic-refraction-tomography-srt-inversion">
-<span id="sphx-glr-auto-examples-ex-srt-inv-py"></span><h1>Ex. Seismic Refraction Tomography (SRT) Inversion<a class="headerlink" href="#ex-seismic-refraction-tomography-srt-inversion" title="Link to this heading"></a></h1>
-<p>Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation
-This example demonstrates how to perform a 2D seismic refraction tomography (SRT)
+<section class="sphx-glr-example-title" id="ex-seismic-refraction-tomography-srt-inversion-and-interface-delineation">
+<span id="sphx-glr-auto-examples-ex-srt-inv-py"></span><h1>Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation<a class="headerlink" href="#ex-seismic-refraction-tomography-srt-inversion-and-interface-delineation" title="Link to this heading"></a></h1>
+<p>This example demonstrates how to perform a 2D seismic refraction tomography (SRT)
 inversion and interpret the results to define subsurface structures.</p>
 <p>The script focuses on the inversion and post-processing stages of a geophysical workflow.
 It begins by loading pre-existing synthetic travel time data and then uses tomographic inversion
@@ -201,7 +205,16 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
 <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">&#39;seismic_velocity_long.tiff&#39;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>### Get subsurface structure for hydrologic modeling</p>
+<section id="long-profile-seismic-velocity-model">
+<h2>Long Profile Seismic Velocity Model<a class="headerlink" href="#long-profile-seismic-velocity-model" title="Link to this heading"></a></h2>
+<p>The seismic tomography reveals three-layer velocity structure: weathered
+regolith (blue, &lt;1200 m/s), fractured bedrock (green-yellow, 1200-5000 m/s),
+and fresh bedrock (red, &gt;5000 m/s). Dashed and solid lines show extracted
+geological interfaces at 1200 and 5000 m/s respectively.</p>
+<a class="reference internal image-reference" href="../_images/Ex_SRT_inv_fig_01.png"><img alt="../_images/Ex_SRT_inv_fig_01.png" class="align-center" src="../_images/Ex_SRT_inv_fig_01.png" style="width: 700px;" />
+</a>
+<p>%% [markdown]
+### Get subsurface structure for hydrologic modeling</p>
 <p>Assuming TT.model.array() gives you the velocity values</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">velocity_data</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
 
@@ -231,7 +244,17 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
 <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">&#39;fractured_bedrock_interface.txt&#39;</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">smooth_x2</span><span class="p">,</span> <span class="n">smooth_z2</span><span class="p">])</span>
 </pre></div>
 </div>
-<p>## Short seismic profiles</p>
+</section>
+<section id="automated-interface-extraction">
+<h2>Automated Interface Extraction<a class="headerlink" href="#automated-interface-extraction" title="Link to this heading"></a></h2>
+<p>Two critical geological boundaries extracted from velocity thresholds:
+regolith-bedrock interface (dashed line, 1200 m/s) and fractured-fresh
+bedrock interface (solid line, 5000 m/s). Interfaces are smoothed and
+exported as text files for integration with hydrogeological models.</p>
+<a class="reference internal image-reference" href="../_images/Ex_SRT_inv_fig_02.png"><img alt="../_images/Ex_SRT_inv_fig_02.png" class="align-center" src="../_images/Ex_SRT_inv_fig_02.png" style="width: 700px;" />
+</a>
+<p>%% [markdown]
+## Short seismic profiles</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">ttData</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;./results/workflow_example/synthetic_seismic_data.dat&quot;</span><span class="p">)</span>
 <span class="n">TT_short</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">traveltime</span><span class="o">.</span><span class="n">TravelTimeManager</span><span class="p">()</span>
 <span class="n">mesh_inv1</span> <span class="o">=</span> <span class="n">TT_short</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">ttData</span> <span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">paraDepth</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">)</span>
@@ -277,6 +300,24 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
 <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">&#39;seismic_velocity_short.tiff&#39;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
+</section>
+<section id="short-profile-multi-scale-comparison">
+<h2>Short Profile Multi-Scale Comparison<a class="headerlink" href="#short-profile-multi-scale-comparison" title="Link to this heading"></a></h2>
+<p>Short profile provides enhanced shallow resolution (0-30m depth) with
+detailed regolith characterization. Higher ray density improves near-surface
+velocity mapping while sacrificing deeper penetration. The 1200 m/s interface
+shows excellent agreement with the long profile.</p>
+<a class="reference internal image-reference" href="../_images/Ex_SRT_inv_fig_03.png"><img alt="../_images/Ex_SRT_inv_fig_03.png" class="align-center" src="../_images/Ex_SRT_inv_fig_03.png" style="width: 700px;" />
+</a>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading"></a></h2>
+<p>This example demonstrated seismic refraction tomography with automated
+interface extraction for watershed applications. Key results include
+three-layer velocity structure resolution, interface extraction at 1200
+and 5000 m/s thresholds, and multi-scale survey comparison.</p>
+<p>The extracted interfaces provide structural constraints for ERT inversions
+and direct input for hydrogeological models like MODFLOW and ParFlow.</p>
 <div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-srt-inv-py">
 <div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
 <p><a class="reference download internal" download="" href="../_downloads/88f1ee6641bdcac7b4a55b01c18dc318/Ex_SRT_inv.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex_SRT_inv.ipynb</span></code></a></p>
@@ -288,6 +329,7 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
 <p><a class="reference download internal" download="" href="../_downloads/6387903961f47e14335cc2e680e01dd5/Ex_SRT_inv.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">Ex_SRT_inv.zip</span></code></a></p>
 </div>
 </div>
+</section>
 </section>
 
 

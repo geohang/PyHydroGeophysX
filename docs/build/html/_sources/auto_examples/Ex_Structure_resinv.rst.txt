@@ -135,11 +135,17 @@ using ERT data to create a mesh to take care of the boundary
     ax, cbar = TT.showResult(cMap='jet',coverage=TT.standardizedCoverage(),cMin=500,cMax=5000)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 94-95
+.. GENERATED FROM PYTHON SOURCE LINES 94-101
 
+Seismic Velocity Inversion Results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. image:: /auto_examples/images/Ex_Structure_resinv_fig_01.png
+   :align: center
+   :width: 700px
+%% [markdown]
 ### 4. Get the structure interface
 
-.. GENERATED FROM PYTHON SOURCE LINES 97-108
+.. GENERATED FROM PYTHON SOURCE LINES 103-113
 
 .. code-block:: Python
 
@@ -154,12 +160,20 @@ using ERT data to create a mesh to take care of the boundary
     ax1.set_title('Original Velocity Data')
     ax1.plot(smooth_x, smooth_z)
 
+.. GENERATED FROM PYTHON SOURCE LINES 114-124
 
-.. GENERATED FROM PYTHON SOURCE LINES 109-110
+Velocity Interface Extraction
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This interface will be incorporated into the ERT mesh to constrain the
+inversion and preserve sharp geological boundaries.
 
+.. image:: /auto_examples/images/Ex_Structure_resinv_fig_02.png
+   :align: center
+   :width: 600px
+%% [markdown]
 ### 4. Put structure interface into mesh for inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 112-115
+.. GENERATED FROM PYTHON SOURCE LINES 126-129
 
 .. code-block:: Python
 
@@ -167,11 +181,11 @@ using ERT data to create a mesh to take care of the boundary
     mesh_with_interface
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 116-117
+.. GENERATED FROM PYTHON SOURCE LINES 130-131
 
 # chceck the mesh with interface
 
-.. GENERATED FROM PYTHON SOURCE LINES 117-123
+.. GENERATED FROM PYTHON SOURCE LINES 131-136
 
 .. code-block:: Python
 
@@ -181,12 +195,23 @@ using ERT data to create a mesh to take care of the boundary
     plt.show()
     mesh_with_interface
 
+.. GENERATED FROM PYTHON SOURCE LINES 137-150
 
-.. GENERATED FROM PYTHON SOURCE LINES 124-125
+Mesh with Structural Constraints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The mesh refinement along the structural boundary ensures accurate
+representation of the geological interface while maintaining appropriate
+resolution for ERT measurements. This structured mesh allows the inversion
+to preserve sharp resistivity contrasts at the known geological boundary
+while applying smoothing constraints within each geological unit.
 
+.. image:: /auto_examples/images/Ex_Structure_resinv_fig_03.png
+   :align: center
+   :width: 700px
+%% [markdown]
 ### 5. Inversion with the updated mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 127-130
+.. GENERATED FROM PYTHON SOURCE LINES 152-155
 
 .. code-block:: Python
 
@@ -194,7 +219,7 @@ using ERT data to create a mesh to take care of the boundary
     mgrConstrained.invert(data=ertData, verbose=True, lam=10, mesh=mesh_with_interface,limits=[1., 10000.])
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 131-138
+.. GENERATED FROM PYTHON SOURCE LINES 156-162
 
 .. code-block:: Python
 
@@ -205,12 +230,20 @@ using ERT data to create a mesh to take care of the boundary
 
     mgrConstrained.showResult(xlabel="Distance (m)", ylabel="Elevation (m)",coverage = res_cov,cMap=fixed_cmap)
 
+.. GENERATED FROM PYTHON SOURCE LINES 163-173
 
-.. GENERATED FROM PYTHON SOURCE LINES 139-140
-
+Structure-Constrained ERT Inversion Results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The structure-constrained ERT inversion produces a resistivity model that
+honors both the electrical measurements and the geological structure derived
+from seismic data
+.. image:: /auto_examples/images/Ex_Structure_resinv_fig_04.png
+   :align: center
+   :width: 800px
+%% [markdown]
 ### 6. Save the mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 142-145
+.. GENERATED FROM PYTHON SOURCE LINES 175-178
 
 .. code-block:: Python
 

@@ -61,14 +61,19 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Time-Lapse ERT Inversion Techniques</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#full-time-lapse-ert-inversion-results">Full Time-Lapse ERT Inversion Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#windowed-time-lapse-inversion-results">Windowed Time-Lapse Inversion Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#l1-norm-regularized-inversion-results">L1-Norm Regularized Inversion Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#summary-and-recommendations">Summary and Recommendations</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 </ul>
 </li>
 </ul>
@@ -218,6 +223,16 @@ time steps while allowing for realistic changes.</p>
     <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
 </pre></div>
 </div>
+<section id="full-time-lapse-ert-inversion-results">
+<h2>Full Time-Lapse ERT Inversion Results<a class="headerlink" href="#full-time-lapse-ert-inversion-results" title="Link to this heading"></a></h2>
+<p>The time-lapse sequence reveals the temporal evolution of subsurface water
+content over 12 months. Notice how the resistivity distribution changes
+systematically, with high resistivity zones (dry areas) gradually becoming
+more conductive (wet) as water infiltrates through the soil layers.
+The temporal regularization ensures smooth transitions between consecutive
+time steps while capturing realistic subsurface changes.</p>
+<a class="reference internal image-reference" href="../_images/Ex_TL_inversion_fig_01.png"><img alt="../_images/Ex_TL_inversion_fig_01.png" class="align-center" src="../_images/Ex_TL_inversion_fig_01.png" style="width: 900px;" />
+</a>
 <p>## 2. Window L2 time-lapse inversion</p>
 <p>Measurement times (can be timestamps or any sequential numbers representing time)</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
@@ -328,6 +343,17 @@ time steps while allowing for realistic changes.</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </pre></div>
 </div>
+</section>
+<section id="windowed-time-lapse-inversion-results">
+<h2>Windowed Time-Lapse Inversion Results<a class="headerlink" href="#windowed-time-lapse-inversion-results" title="Link to this heading"></a></h2>
+<p>The windowed approach processes consecutive time steps in overlapping groups,
+which is computationally more efficient for large datasets while maintaining
+temporal coherence. This method shows similar overall patterns to the full
+time-lapse inversion but with reduced computational cost. The windowing
+approach is particularly valuable when processing years of monitoring data
+or when computational resources are limited.</p>
+<a class="reference internal image-reference" href="../_images/Ex_TL_inversion_fig_02.png"><img alt="../_images/Ex_TL_inversion_fig_02.png" class="align-center" src="../_images/Ex_TL_inversion_fig_02.png" style="width: 900px;" />
+</a>
 <p>## 3. Full L1 Time-lapse Inversion</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="n">cMax</span> <span class="o">=</span> <span class="mi">3000</span>
                     <span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span><span class="p">,</span><span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
@@ -386,6 +412,41 @@ time steps while allowing for realistic changes.</p>
     <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
 </pre></div>
 </div>
+</section>
+<section id="l1-norm-regularized-inversion-results">
+<h2>L1-Norm Regularized Inversion Results<a class="headerlink" href="#l1-norm-regularized-inversion-results" title="Link to this heading"></a></h2>
+<p>The L1-norm regularization produces sharper boundaries compared to L2
+regularization, which is beneficial for detecting distinct geological layers
+or sharp interfaces. Notice how the resistivity transitions are more abrupt
+in this inversion, making it easier to identify distinct zones of different
+water content. This approach is particularly useful when the subsurface is
+expected to have layered structures rather than gradual transitions.</p>
+<a class="reference internal image-reference" href="../_images/Ex_TL_inversion_fig_03.png"><img alt="../_images/Ex_TL_inversion_fig_03.png" class="align-center" src="../_images/Ex_TL_inversion_fig_03.png" style="width: 900px;" />
+</a>
+</section>
+<section id="summary-and-recommendations">
+<h2>Summary and Recommendations<a class="headerlink" href="#summary-and-recommendations" title="Link to this heading"></a></h2>
+<p>This example demonstrated three approaches to time-lapse ERT inversion:</p>
+<p><strong>Key Findings:</strong></p>
+<ul class="simple">
+<li><p><strong>Temporal regularization</strong> is essential for realistic time-lapse results</p></li>
+<li><p><strong>Windowed inversion</strong> provides computational efficiency with minimal quality loss</p></li>
+<li><p><strong>L1 regularization</strong> enhances boundary detection in layered media</p></li>
+<li><p><strong>Parameter tuning</strong> (λ, α) significantly affects result quality</p></li>
+</ul>
+<p><strong>Recommendations:</strong></p>
+<ul class="simple">
+<li><p>Use <strong>full L2</strong> for high-quality results with moderate datasets</p></li>
+<li><p>Apply <strong>windowed L2</strong> for large datasets or real-time processing</p></li>
+<li><p>Choose <strong>L1 regularization</strong> when sharp interfaces are expected</p></li>
+<li><p>Always validate results against known geological information</p></li>
+</ul>
+<p><strong>Next Steps:</strong></p>
+<ul class="simple">
+<li><p>Combine with seismic constraints (see structure-constrained examples)</p></li>
+<li><p>Apply uncertainty quantification (see Monte Carlo examples)</p></li>
+<li><p>Integrate with hydrological models for enhanced interpretation</p></li>
+</ul>
 <div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-tl-inversion-py">
 <div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
 <p><a class="reference download internal" download="" href="../_downloads/c30d01bc0bbd2251ed909057e55c6348/Ex_TL_inversion.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex_TL_inversion.ipynb</span></code></a></p>
@@ -397,6 +458,7 @@ time steps while allowing for realistic changes.</p>
 <p><a class="reference download internal" download="" href="../_downloads/bec055faec4b912df1753b81d002e1db/Ex_TL_inversion.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">Ex_TL_inversion.zip</span></code></a></p>
 </div>
 </div>
+</section>
 </section>
 
 

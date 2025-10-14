@@ -61,14 +61,20 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Creating Synthetic Time-Lapse ERT Measurements</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#time-lapse-apparent-resistivity-response">Time-Lapse Apparent Resistivity Response</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#water-content-evolution-over-time">Water Content Evolution Over Time</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#resistivity-model-evolution">Resistivity Model Evolution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#animation-and-advanced-visualization">Animation and Advanced Visualization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#summary-and-applications">Summary and Applications</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 </ul>
 </li>
 </ul>
@@ -419,6 +425,17 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 <span class="n">ert</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">syn_data</span><span class="p">)</span>
 </pre></div>
 </div>
+<dl>
+<dt>Synthetic ERT Data Visualization</dt><dd><p>This plot shows a single timestep of synthetic ERT measurements. The data
+represents apparent resistivity values measured at different electrode
+configurations. Each point corresponds to a specific current injection and
+voltage measurement pair, providing information about subsurface resistivity
+distribution at this particular time.</p>
+<a class="reference internal image-reference" href="../_images/Ex_Time_lapse_measurement_fig_01.png"><img alt="../_images/Ex_Time_lapse_measurement_fig_01.png" class="align-center" src="../_images/Ex_Time_lapse_measurement_fig_01.png" style="width: 700px;" />
+</a>
+<p>%%</p>
+</dd>
+</dl>
 <p>load all synthetic data and plot them</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">all_syn_data</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Water_Content</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
@@ -464,12 +481,26 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;apparent_resistivity.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
 </pre></div>
 </div>
+<section id="time-lapse-apparent-resistivity-response">
+<h2>Time-Lapse Apparent Resistivity Response<a class="headerlink" href="#time-lapse-apparent-resistivity-response" title="Link to this heading"></a></h2>
+<p>The time-series analysis reveals the relationship between precipitation events
+and subsurface electrical response. The top panel shows daily precipitation
+over one year, while the bottom panel displays the corresponding apparent
+resistivity measurements for all electrode configurations. Notice how
+resistivity decreases (becomes more conductive) following major precipitation
+events, indicating increased water content in the subsurface.</p>
+<a class="reference internal image-reference" href="../_images/Ex_Time_lapse_measurement_fig_02.png"><img alt="../_images/Ex_Time_lapse_measurement_fig_02.png" class="align-center" src="../_images/Ex_Time_lapse_measurement_fig_02.png" style="width: 800px;" />
+</a>
+<p>%%</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">211</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">syn_data_array</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">cMap</span><span class="p">(</span><span class="s1">&#39;rhoa&#39;</span><span class="p">),</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">2000</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Apparent Resistivity (Ω·m)&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
+<a class="reference internal image-reference" href="../_images/Ex_Time_lapse_measurement_fig_03.png"><img alt="../_images/Ex_Time_lapse_measurement_fig_03.png" class="align-center" src="../_images/Ex_Time_lapse_measurement_fig_03.png" style="width: 800px;" />
+</a>
+<p>%%</p>
 <p>## Showing the water content model for the differnent timesteps</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">14</span><span class="p">))</span>
 
@@ -506,7 +537,19 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;water_content_model.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>## Showing the water content model for the differnent timesteps</p>
+</section>
+<section id="water-content-evolution-over-time">
+<h2>Water Content Evolution Over Time<a class="headerlink" href="#water-content-evolution-over-time" title="Link to this heading"></a></h2>
+<p>These cross-sections show how water content changes throughout the year at
+four representative time points. Day 30 shows relatively dry conditions,
+Day 150 captures the wet season response, Day 210 represents peak saturation
+after sustained precipitation, and Day 330 shows the transition to drier
+conditions. Notice how water infiltrates from the surface (regolith layer)
+and gradually saturates deeper layers (fractured and fresh bedrock).</p>
+<a class="reference internal image-reference" href="../_images/Ex_Time_lapse_measurement_fig_04.png"><img alt="../_images/Ex_Time_lapse_measurement_fig_04.png" class="align-center" src="../_images/Ex_Time_lapse_measurement_fig_04.png" style="width: 900px;" />
+</a>
+<p>%%
+## Showing the water content model for the differnent timesteps</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">14</span><span class="p">))</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
@@ -546,6 +589,19 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;resistivity_model.tiff&quot;</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
 </pre></div>
 </div>
+</section>
+<section id="resistivity-model-evolution">
+<h2>Resistivity Model Evolution<a class="headerlink" href="#resistivity-model-evolution" title="Link to this heading"></a></h2>
+<p>The corresponding resistivity models show the inverse relationship with water
+content - high resistivity zones (red/yellow) indicate dry conditions while
+low resistivity areas (blue) represent saturated regions. The petrophysical
+transformation from water content to resistivity uses layer-specific parameters
+(formation resistivity, cementation exponent) that account for different
+geological units. This resistivity evolution serves as the basis for forward
+modeling synthetic ERT measurements.</p>
+<a class="reference internal image-reference" href="../_images/Ex_Time_lapse_measurement_fig_05.png"><img alt="../_images/Ex_Time_lapse_measurement_fig_05.png" class="align-center" src="../_images/Ex_Time_lapse_measurement_fig_05.png" style="width: 900px;" />
+</a>
+<p>%%</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
@@ -637,6 +693,48 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;GIF saved successfully to </span><span class="si">{</span><span class="n">gif_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
+</section>
+<section id="animation-and-advanced-visualization">
+<h2>Animation and Advanced Visualization<a class="headerlink" href="#animation-and-advanced-visualization" title="Link to this heading"></a></h2>
+<p>The code also generates an animated GIF showing the complete temporal evolution
+of water content throughout the year. This animation provides insights into:</p>
+<ul class="simple">
+<li><p><strong>Seasonal patterns</strong>: Clear wet and dry season variations</p></li>
+<li><p><strong>Infiltration dynamics</strong>: How water moves from surface to depth</p></li>
+<li><p><strong>Layer interactions</strong>: Different response rates in geological units</p></li>
+<li><p><strong>Event-based changes</strong>: Rapid responses to individual storms</p></li>
+</ul>
+<p>The animation is saved as ‘WCanimation.gif’ in the results directory.</p>
+</section>
+<section id="summary-and-applications">
+<h2>Summary and Applications<a class="headerlink" href="#summary-and-applications" title="Link to this heading"></a></h2>
+<p>This example demonstrated the complete workflow for creating synthetic
+time-lapse ERT measurements from hydrological model outputs:</p>
+<p><strong>Key Workflow Steps:</strong></p>
+<ol class="arabic simple">
+<li><p><strong>Load and process</strong> MODFLOW water content time series</p></li>
+<li><p><strong>Interpolate</strong> 3D data to 2D profiles for geophysical modeling</p></li>
+<li><p><strong>Convert</strong> water content to resistivity using petrophysical models</p></li>
+<li><p><strong>Generate</strong> synthetic ERT data via forward modeling</p></li>
+<li><p><strong>Visualize</strong> temporal patterns in apparent resistivity</p></li>
+<li><p><strong>Create animations</strong> showing subsurface dynamics</p></li>
+</ol>
+<p><strong>Scientific Insights:</strong></p>
+<ul class="simple">
+<li><p>ERT measurements show clear <strong>sensitivity</strong> to hydrological changes</p></li>
+<li><p><strong>Temporal regularization</strong> is crucial for time-lapse inversions</p></li>
+<li><p><strong>Multi-layer</strong> petrophysical models capture geological heterogeneity</p></li>
+<li><p><strong>Parallel processing</strong> enables efficient large dataset generation</p></li>
+</ul>
+<p><strong>Next Steps:</strong></p>
+<ul class="simple">
+<li><p>Apply time-lapse inversion techniques (see Ex_TL_inversion.py)</p></li>
+<li><p>Include structural constraints from seismic data</p></li>
+<li><p>Implement uncertainty quantification methods</p></li>
+<li><p>Integrate with real field measurements for validation</p></li>
+</ul>
+<p>This synthetic dataset provides a controlled environment for testing and
+validating time-lapse ERT monitoring approaches in watershed applications.</p>
 <div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-time-lapse-measurement-py">
 <div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
 <p><a class="reference download internal" download="" href="../_downloads/9dd013c8b83498d2902774a5496f924d/Ex_Time_lapse_measurement.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex_Time_lapse_measurement.ipynb</span></code></a></p>
@@ -648,6 +746,7 @@ os.makedirs(os.path.join(output_dir, “appres”), exist_ok=True)</p>
 <p><a class="reference download internal" download="" href="../_downloads/4d877de5e0c5721785252631168f77dc/Ex_Time_lapse_measurement.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">Ex_Time_lapse_measurement.zip</span></code></a></p>
 </div>
 </div>
+</section>
 </section>
 
 

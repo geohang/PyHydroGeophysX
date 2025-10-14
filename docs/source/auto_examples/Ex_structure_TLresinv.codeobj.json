@@ -44,6 +44,15 @@
    "name": "array"
   }
  ],
+ "np.load": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "load"
+  }
+ ],
  "np.save": [
   {
    "is_class": false,
@@ -123,6 +132,15 @@
    "module": "matplotlib.pyplot",
    "module_short": "matplotlib",
    "name": "rcParams"
+  }
+ ],
+ "plt.savefig": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "savefig"
   }
  ],
  "plt.subplots_adjust": [

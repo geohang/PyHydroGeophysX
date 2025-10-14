@@ -24,7 +24,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex. Seismic Refraction Tomography (SRT) Inversion" href="Ex_SRT_inv.html" />
+    <link rel="next" title="Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation" href="Ex_SRT_inv.html" />
     <link rel="prev" title="Ex. Loading and Processing Hydrological Model Outputs" href="Ex_model_output.html" /> 
 </head>
 
@@ -60,15 +60,20 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Structure-Constrained Resistivity Inversion</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#seismic-velocity-inversion-results">Seismic Velocity Inversion Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#velocity-interface-extraction">Velocity Interface Extraction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mesh-with-structural-constraints">Mesh with Structural Constraints</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#structure-constrained-ert-inversion-results">Structure-Constrained ERT Inversion Results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 </ul>
 </li>
 </ul>
@@ -181,7 +186,12 @@ leading to more reliable hydrological interpretations.</p>
 <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">showResult</span><span class="p">(</span><span class="n">cMap</span><span class="o">=</span><span class="s1">&#39;jet&#39;</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">TT</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">(),</span><span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span><span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>### 4. Get the structure interface</p>
+<section id="seismic-velocity-inversion-results">
+<h2>Seismic Velocity Inversion Results<a class="headerlink" href="#seismic-velocity-inversion-results" title="Link to this heading"></a></h2>
+<a class="reference internal image-reference" href="../_images/Ex_Structure_resinv_fig_01.png"><img alt="../_images/Ex_Structure_resinv_fig_01.png" class="align-center" src="../_images/Ex_Structure_resinv_fig_01.png" style="width: 700px;" />
+</a>
+<p>%% [markdown]
+### 4. Get the structure interface</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">velocity_data</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
 <span class="c1"># Call the function with velocity data</span>
 <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span> <span class="o">=</span> <span class="n">extract_velocity_interface</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_data</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span><span class="n">interval</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span>
@@ -194,7 +204,15 @@ leading to more reliable hydrological interpretations.</p>
 <span class="n">ax1</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>### 4. Put structure interface into mesh for inversion</p>
+</section>
+<section id="velocity-interface-extraction">
+<h2>Velocity Interface Extraction<a class="headerlink" href="#velocity-interface-extraction" title="Link to this heading"></a></h2>
+<p>This interface will be incorporated into the ERT mesh to constrain the
+inversion and preserve sharp geological boundaries.</p>
+<a class="reference internal image-reference" href="../_images/Ex_Structure_resinv_fig_02.png"><img alt="../_images/Ex_Structure_resinv_fig_02.png" class="align-center" src="../_images/Ex_Structure_resinv_fig_02.png" style="width: 600px;" />
+</a>
+<p>%% [markdown]
+### 4. Put structure interface into mesh for inversion</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">markers</span><span class="p">,</span> <span class="n">mesh_with_interface</span> <span class="o">=</span> <span class="n">add_velocity_interface</span><span class="p">(</span><span class="n">ertData</span><span class="p">,</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">)</span>
 <span class="n">mesh_with_interface</span>
 </pre></div>
@@ -207,7 +225,18 @@ leading to more reliable hydrological interpretations.</p>
 <span class="n">mesh_with_interface</span>
 </pre></div>
 </div>
-<p>### 5. Inversion with the updated mesh</p>
+</section>
+<section id="mesh-with-structural-constraints">
+<h2>Mesh with Structural Constraints<a class="headerlink" href="#mesh-with-structural-constraints" title="Link to this heading"></a></h2>
+<p>The mesh refinement along the structural boundary ensures accurate
+representation of the geological interface while maintaining appropriate
+resolution for ERT measurements. This structured mesh allows the inversion
+to preserve sharp resistivity contrasts at the known geological boundary
+while applying smoothing constraints within each geological unit.</p>
+<a class="reference internal image-reference" href="../_images/Ex_Structure_resinv_fig_03.png"><img alt="../_images/Ex_Structure_resinv_fig_03.png" class="align-center" src="../_images/Ex_Structure_resinv_fig_03.png" style="width: 700px;" />
+</a>
+<p>%% [markdown]
+### 5. Inversion with the updated mesh</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">mgrConstrained</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">()</span>
 <span class="n">mgrConstrained</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">ertData</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh_with_interface</span><span class="p">,</span><span class="n">limits</span><span class="o">=</span><span class="p">[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">10000.</span><span class="p">])</span>
 </pre></div>
@@ -220,7 +249,25 @@ leading to more reliable hydrological interpretations.</p>
 <span class="n">mgrConstrained</span><span class="o">.</span><span class="n">showResult</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">res_cov</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>### 6. Save the mesh</p>
+</section>
+<section id="structure-constrained-ert-inversion-results">
+<h2>Structure-Constrained ERT Inversion Results<a class="headerlink" href="#structure-constrained-ert-inversion-results" title="Link to this heading"></a></h2>
+<p>The structure-constrained ERT inversion produces a resistivity model that
+honors both the electrical measurements and the geological structure derived
+from seismic data
+.. image:: /auto_examples/images/Ex_Structure_resinv_fig_04.png</p>
+<blockquote>
+<div><dl class="field-list simple">
+<dt class="field-odd">align<span class="colon">:</span></dt>
+<dd class="field-odd"><p>center</p>
+</dd>
+<dt class="field-even">width<span class="colon">:</span></dt>
+<dd class="field-even"><p>800px</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>%% [markdown]
+### 6. Save the mesh</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/mesh_with_interface.bms&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -236,13 +283,14 @@ leading to more reliable hydrological interpretations.</p>
 </div>
 </div>
 </section>
+</section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="Ex_model_output.html" class="btn btn-neutral float-left" title="Ex. Loading and Processing Hydrological Model Outputs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex_SRT_inv.html" class="btn btn-neutral float-right" title="Ex. Seismic Refraction Tomography (SRT) Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="Ex_SRT_inv.html" class="btn btn-neutral float-right" title="Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -25,7 +25,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Ex. Time-Lapse ERT Inversion Techniques" href="Ex_TL_inversion.html" />
-    <link rel="prev" title="Ex. Seismic Refraction Tomography (SRT) Inversion" href="Ex_SRT_inv.html" /> 
+    <link rel="prev" title="Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation" href="Ex_SRT_inv.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -61,14 +61,18 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#structure-constrained-time-lapse-inversion-results">Structure-Constrained Time-Lapse Inversion Results</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#true-resistivity-model-comparison">True Resistivity Model Comparison</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#summary-and-best-practices">Summary and Best Practices</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
 </ul>
 </li>
 </ul>
@@ -105,17 +109,30 @@ to download the full example code.</p>
 </div>
 <section class="sphx-glr-example-title" id="ex-structure-constrained-time-lapse-resistivity-inversion">
 <span id="sphx-glr-auto-examples-ex-structure-tlresinv-py"></span><h1>Ex. Structure-Constrained Time-Lapse Resistivity Inversion<a class="headerlink" href="#ex-structure-constrained-time-lapse-resistivity-inversion" title="Link to this heading"></a></h1>
-<p>This example combines structural constraints with time-lapse ERT inversion
-to monitor water content changes in layered geological media.</p>
-<p>The workflow demonstrates:
-1. Loading meshes with geological structure from seismic interpretation
-2. Time-lapse ERT inversion with structural constraints
-3. Converting resistivity to water content using layer-specific petrophysics
-4. Uncertainty quantification through Monte Carlo analysis
-5. Time series analysis of water content at specific locations</p>
+<p>This example demonstrates advanced time-lapse ERT inversion using structural
+constraints derived from seismic interpretation to monitor subsurface water
+content changes in layered geological media.</p>
+<p>The comprehensive workflow includes:</p>
+<ol class="arabic simple">
+<li><p>Loading pre-existing meshes with geological structure from seismic interpretation</p></li>
+<li><p>Configuring windowed time-lapse ERT inversion with structural constraints</p></li>
+<li><p>Processing 12 months of synthetic ERT measurements</p></li>
+<li><p>Comparing structure-constrained results with true resistivity models</p></li>
+<li><p>Analyzing temporal evolution at monitoring points within geological layers</p></li>
+<li><p>Quantifying the improvement gained from structural constraints</p></li>
+</ol>
 <p>This advanced approach provides the most reliable estimates of subsurface
-water content evolution by combining temporal, spatial, and geological
-constraints in the inversion process.</p>
+water content evolution by integrating temporal, spatial, and geological
+constraints in a unified inversion framework.</p>
+<p>Key advantages of structure-constrained inversion:
+* Sharp geological boundaries preserved throughout time series
+* Reduced artifacts from unconstrained regularization
+* Improved resolution of layered structures
+* Enhanced compatibility with hydrogeological interpretations
+* Better temporal coherence in monitoring applications</p>
+<p>This technique is particularly valuable for watershed monitoring, groundwater
+management, and landslide early warning systems where geological structure
+plays a critical role in subsurface flow patterns.</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -142,8 +159,7 @@ constraints in the inversion process.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.windowed</span><span class="w"> </span><span class="kn">import</span> <span class="n">WindowedTimeLapseERTInversion</span>
 </pre></div>
 </div>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;TL_measurements&quot;</span><span class="p">,</span><span class="s2">&quot;appres&quot;</span><span class="p">)</span>
-<span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres&quot;</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;results/TL_measurements/appres&quot;</span>
 
 <span class="c1"># List of ERT data files testing monthly time-lapse inversion</span>
 <span class="n">ert_files</span> <span class="o">=</span> <span class="p">[</span>
@@ -172,14 +188,13 @@ constraints in the inversion process.</p>
 <span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
 <span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">ert_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
 <span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-<span class="n">mesh_with_interface</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;mesh_with_interface.bms&quot;</span><span class="p">))</span>
-    <span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_with_interface.bms&quot;)</span>
+<span class="n">mesh_with_interface</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/mesh_with_interface.bms&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set up inversion parameters</span>
 <span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
-    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">5.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
+    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">5.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
     <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
     <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
     <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
@@ -216,12 +231,9 @@ constraints in the inversion process.</p>
 <span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="o">.</span><span class="n">shape</span>
 </pre></div>
 </div>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;resmodel.npy&quot;</span><span class="p">),</span> <span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">(),:])</span>
-<span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy&quot;</span>
-<span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;all_coverage.npy&quot;</span><span class="p">),</span> <span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[:,</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()])</span>
-<span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy&quot;</span>
-<span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;mesh_res.bms&quot;</span><span class="p">))</span>
-<span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms&quot;</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/resmodel.npy&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">(),:])</span>
+<span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/all_coverage.npy&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[:,</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()])</span>
+<span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/mesh_res.bms&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
@@ -272,27 +284,126 @@ constraints in the inversion process.</p>
                       <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
                       <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span>
                       <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                      <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span>
+                      <span class="n">cMax</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
                       <span class="n">ylabel</span><span class="o">=</span><span class="n">ylabel</span><span class="p">,</span>
                       <span class="n">label</span><span class="o">=</span><span class="n">resistivity_label</span><span class="p">,</span>
                       <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
-                      <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                      <span class="n">logScale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                       <span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()]</span><span class="o">&gt;-</span><span class="mf">1.2</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span><span class="mi">0</span><span class="p">:</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">40</span><span class="p">],[</span><span class="mi">1607</span><span class="p">],</span><span class="s1">&#39;*&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">)</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">80</span><span class="p">],[</span><span class="mi">1621</span><span class="p">],</span><span class="s1">&#39;*&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">30</span><span class="p">],[</span><span class="mi">1610</span><span class="p">],</span><span class="s1">&#39;.&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;tab:blue&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">65</span><span class="p">],[</span><span class="mi">1613</span><span class="p">],</span><span class="s1">&#39;.&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;tab:blue&#39;</span><span class="p">)</span>
 
-        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">30</span><span class="p">],[</span><span class="mi">1604</span><span class="p">],</span><span class="s1">&#39;*&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">)</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">65</span><span class="p">],[</span><span class="mi">1608</span><span class="p">],</span><span class="s1">&#39;*&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">30</span><span class="p">],[</span><span class="mi">1606</span><span class="p">],</span><span class="s1">&#39;.&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;tab:brown&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">65</span><span class="p">],[</span><span class="mi">1608</span><span class="p">],</span><span class="s1">&#39;.&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;tab:brown&#39;</span><span class="p">)</span>
 
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">40</span><span class="p">,</span><span class="mi">55</span><span class="p">],[</span><span class="mi">1600</span><span class="p">,</span><span class="mi">1600</span><span class="p">],</span><span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">40</span><span class="p">,</span><span class="mi">55</span><span class="p">],[</span><span class="mi">1600</span><span class="p">,</span><span class="mi">1600</span><span class="p">],</span><span class="n">ls</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">)</span>
     <span class="c1"># Only keep colorbar for the middle-right panel (row 1, col 3)</span>
     <span class="c1"># This corresponds to panel index 7 in a 0-based indexing system</span>
     <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">7</span><span class="p">:</span>  <span class="c1"># Keep only the colorbar for panel 7</span>
         <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;results/Structure_WC/timelapse_ert_with structure.tiff&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
+<section id="structure-constrained-time-lapse-inversion-results">
+<h2>Structure-Constrained Time-Lapse Inversion Results<a class="headerlink" href="#structure-constrained-time-lapse-inversion-results" title="Link to this heading"></a></h2>
+<p>The structure-constrained time-lapse inversion successfully monitors water
+content changes over 12 months while honoring geological boundaries derived
+from seismic interpretation. The mesh incorporates structural interfaces that
+guide the inversion process, resulting in sharper layer boundaries and more
+geologically consistent resistivity distributions.</p>
+<p><strong>Key Features:</strong></p>
+<ul class="simple">
+<li><p><strong>Sharp layer boundaries</strong>: Structural constraints maintain distinct geological interfaces</p></li>
+<li><p><strong>Temporal coherence</strong>: Smooth evolution between consecutive monthly measurements</p></li>
+<li><p><strong>Monitoring points</strong>: Colored dots indicate locations for detailed time-series analysis
+- Blue dots: Upper regolith monitoring points
+- Brown dots: Fractured bedrock monitoring points
+- Dashed line: Major geological interface from seismic data</p></li>
+<li><p><strong>Coverage-based quality</strong>: Gray areas indicate regions with poor data coverage</p></li>
+</ul>
+<p>The windowed inversion approach processes overlapping groups of measurements,
+providing computational efficiency while maintaining temporal consistency across
+the 12-month monitoring period.</p>
+<a class="reference internal image-reference" href="../_images/Ex_structure_TLresinv_fig_01.png"><img alt="../_images/Ex_structure_TLresinv_fig_01.png" class="align-center" src="../_images/Ex_structure_TLresinv_fig_01.png" style="width: 900px;" />
+</a>
+<p>%%
+plot the true resistivity model</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">])</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;results/TL_measurements/mesh.bms&quot;</span><span class="p">)</span>
+<span class="c1"># Use tight_layout with adjusted parameters to reduce space</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">wspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">i</span> <span class="o">//</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">4</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Add common ylabel only to leftmost panels</span>
+    <span class="n">ylabel</span> <span class="o">=</span> <span class="s2">&quot;Elevation (m)&quot;</span> <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Add resistivity label only to the middle-right panel (row 1, col 3)</span>
+    <span class="n">resistivity_label</span> <span class="o">=</span> <span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span> <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">7</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Only show axis ticks on leftmost and bottom panels</span>
+    <span class="k">if</span> <span class="n">col</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+
+    <span class="k">if</span> <span class="n">row</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Not bottom row</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Add &quot;distance (m)&quot; label to bottom row panels</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create the plot</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span>
+                      <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;results/TL_measurements/synresmodel/synresmodel&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">((</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="mi">30</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;.npy&quot;</span><span class="p">),</span>
+                      <span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+                      <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+                      <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span>
+                      <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                      <span class="n">cMax</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
+                      <span class="n">ylabel</span><span class="o">=</span><span class="n">ylabel</span><span class="p">,</span>
+                      <span class="n">label</span><span class="o">=</span><span class="n">resistivity_label</span><span class="p">,</span>
+                      <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                      <span class="n">logScale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">7</span><span class="p">:</span>  <span class="c1"># Keep only the colorbar for panel 7</span>
+        <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="true-resistivity-model-comparison">
+<h2>True Resistivity Model Comparison<a class="headerlink" href="#true-resistivity-model-comparison" title="Link to this heading"></a></h2>
+<p>The true resistivity models show the actual subsurface conditions used to
+generate the synthetic ERT data. Comparing these reference models with the
+structure-constrained inversion results demonstrates the effectiveness of
+incorporating geological constraints.</p>
+<p><strong>Comparison Analysis:</strong></p>
+<ul class="simple">
+<li><p><strong>Layer definition</strong>: True models show distinct geological boundaries that should be preserved</p></li>
+<li><p><strong>Temporal variations</strong>: Seasonal changes in resistivity reflect water content evolution</p></li>
+<li><p><strong>Structural consistency</strong>: Sharp interfaces between regolith, fractured, and fresh bedrock</p></li>
+<li><p><strong>Validation reference</strong>: These models serve as ground truth for inversion quality assessment</p></li>
+</ul>
+<p>The structure-constrained inversion successfully recovers the main geological
+features while accurately tracking temporal resistivity changes, demonstrating
+the value of integrating geophysical constraints in time-lapse monitoring.</p>
+<a class="reference internal image-reference" href="../_images/Ex_structure_TLresinv_fig_02.png"><img alt="../_images/Ex_structure_TLresinv_fig_02.png" class="align-center" src="../_images/Ex_structure_TLresinv_fig_02.png" style="width: 900px;" />
+</a>
+</section>
+<section id="summary-and-best-practices">
+<h2>Summary and Best Practices<a class="headerlink" href="#summary-and-best-practices" title="Link to this heading"></a></h2>
+<p>This example demonstrated the complete workflow for structure-constrained
+time-lapse ERT inversion in watershed monitoring applications:
+* Successfully integrated seismic-derived structural constraints with ERT inversion
+* Implemented windowed processing for computational efficiency
+* Maintained geological consistency while tracking temporal changes
+* Achieved high-quality results suitable for quantitative hydrological interpretation</p>
 <div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-structure-tlresinv-py">
 <div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
 <p><a class="reference download internal" download="" href="../_downloads/e7e028a0c3333b52ede83d61f339648a/Ex_structure_TLresinv.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex_structure_TLresinv.ipynb</span></code></a></p>
@@ -305,12 +416,13 @@ constraints in the inversion process.</p>
 </div>
 </div>
 </section>
+</section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex_SRT_inv.html" class="btn btn-neutral float-left" title="Ex. Seismic Refraction Tomography (SRT) Inversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Ex_SRT_inv.html" class="btn btn-neutral float-left" title="Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="Ex_TL_inversion.html" class="btn btn-neutral float-right" title="Ex. Time-Lapse ERT Inversion Techniques" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

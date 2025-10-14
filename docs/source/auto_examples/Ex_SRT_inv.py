@@ -1,8 +1,8 @@
 # %%
 """
-Ex. Seismic Refraction Tomography (SRT) Inversion
-====================================================
 Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation
+=======================================================================
+
 This example demonstrates how to perform a 2D seismic refraction tomography (SRT) 
 inversion and interpret the results to define subsurface structures.
 
@@ -111,7 +111,18 @@ ax1.tricontour(x, y, triangles, z, levels=[5000], linewidths=1.0, colors='k', li
 pg.viewer.mpl.drawSensors(ax1, datasrt.sensors(), diam=0.9,
                          facecolor='black', edgecolor='black')
 fig.savefig(os.path.join(output_dir, 'seismic_velocity_long.tiff'), dpi=300, bbox_inches='tight')
-
+###############################################################################
+# Long Profile Seismic Velocity Model
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The seismic tomography reveals three-layer velocity structure: weathered 
+# regolith (blue, <1200 m/s), fractured bedrock (green-yellow, 1200-5000 m/s), 
+# and fresh bedrock (red, >5000 m/s). Dashed and solid lines show extracted 
+# geological interfaces at 1200 and 5000 m/s respectively.
+#
+# .. image:: /auto_examples/images/Ex_SRT_inv_fig_01.png
+#    :align: center
+#    :width: 700px
 # %% [markdown]
 # ### Get subsurface structure for hydrologic modeling
 
@@ -144,7 +155,18 @@ ax1.plot(smooth_x2, smooth_z2, 'k-', linewidth=2, label='Fractured Bedrock- Fres
 ax1.legend(fontsize=12)
 np.savetxt(os.path.join(output_dir, 'regolith_interface.txt'), np.c_[smooth_x1, smooth_z1])
 np.savetxt(os.path.join(output_dir, 'fractured_bedrock_interface.txt'), np.c_[smooth_x2, smooth_z2])
-
+###############################################################################
+# Automated Interface Extraction
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Two critical geological boundaries extracted from velocity thresholds: 
+# regolith-bedrock interface (dashed line, 1200 m/s) and fractured-fresh 
+# bedrock interface (solid line, 5000 m/s). Interfaces are smoothed and 
+# exported as text files for integration with hydrogeological models.
+#
+# .. image:: /auto_examples/images/Ex_SRT_inv_fig_02.png
+#    :align: center
+#    :width: 700px
 # %% [markdown]
 # ## Short seismic profiles
 
@@ -192,5 +214,27 @@ ax1.tricontour(x1, y1, triangles1, z1, levels=[1200], linewidths=1.0, colors='k'
 pg.viewer.mpl.drawSensors(ax1, ttData.sensors(), diam=0.8,
                          facecolor='black', edgecolor='black')
 fig.savefig(os.path.join(output_dir, 'seismic_velocity_short.tiff'), dpi=300, bbox_inches='tight')
+###############################################################################
+# Short Profile Multi-Scale Comparison
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Short profile provides enhanced shallow resolution (0-30m depth) with 
+# detailed regolith characterization. Higher ray density improves near-surface 
+# velocity mapping while sacrificing deeper penetration. The 1200 m/s interface 
+# shows excellent agreement with the long profile.
+#
+# .. image:: /auto_examples/images/Ex_SRT_inv_fig_03.png
+#    :align: center
+#    :width: 700px
 
-
+###############################################################################
+# Summary
+# ~~~~~~~
+#
+# This example demonstrated seismic refraction tomography with automated 
+# interface extraction for watershed applications. Key results include 
+# three-layer velocity structure resolution, interface extraction at 1200 
+# and 5000 m/s thresholds, and multi-scale survey comparison.
+#
+# The extracted interfaces provide structural constraints for ERT inversions 
+# and direct input for hydrogeological models like MODFLOW and ParFlow.

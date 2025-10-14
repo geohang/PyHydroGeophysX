@@ -163,15 +163,31 @@ time steps while allowing for realistic changes.
         cbar.remove()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 127-128
+.. GENERATED FROM PYTHON SOURCE LINES 127-140
+
+Full Time-Lapse ERT Inversion Results  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The time-lapse sequence reveals the temporal evolution of subsurface water
+content over 12 months. Notice how the resistivity distribution changes 
+systematically, with high resistivity zones (dry areas) gradually becoming
+more conductive (wet) as water infiltrates through the soil layers.
+The temporal regularization ensures smooth transitions between consecutive
+time steps while capturing realistic subsurface changes.
+
+.. image:: /auto_examples/images/Ex_TL_inversion_fig_01.png
+   :align: center
+   :width: 900px
+
+.. GENERATED FROM PYTHON SOURCE LINES 143-144
 
 ## 2. Window L2 time-lapse inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 130-131
+.. GENERATED FROM PYTHON SOURCE LINES 146-147
 
 Measurement times (can be timestamps or any sequential numbers representing time)
 
-.. GENERATED FROM PYTHON SOURCE LINES 131-172
+.. GENERATED FROM PYTHON SOURCE LINES 147-188
 
 .. code-block:: Python
 
@@ -217,7 +233,7 @@ Measurement times (can be timestamps or any sequential numbers representing time
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 173-176
+.. GENERATED FROM PYTHON SOURCE LINES 189-192
 
 .. code-block:: Python
 
@@ -225,7 +241,7 @@ Measurement times (can be timestamps or any sequential numbers representing time
     result.final_models.shape
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 177-240
+.. GENERATED FROM PYTHON SOURCE LINES 193-254
 
 .. code-block:: Python
 
@@ -291,13 +307,27 @@ Measurement times (can be timestamps or any sequential numbers representing time
 
     plt.tight_layout()
 
+.. GENERATED FROM PYTHON SOURCE LINES 255-268
 
+Windowed Time-Lapse Inversion Results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. GENERATED FROM PYTHON SOURCE LINES 241-242
+The windowed approach processes consecutive time steps in overlapping groups,
+which is computationally more efficient for large datasets while maintaining
+temporal coherence. This method shows similar overall patterns to the full 
+time-lapse inversion but with reduced computational cost. The windowing 
+approach is particularly valuable when processing years of monitoring data
+or when computational resources are limited.
+
+.. image:: /auto_examples/images/Ex_TL_inversion_fig_02.png
+   :align: center
+   :width: 900px
+
+.. GENERATED FROM PYTHON SOURCE LINES 270-271
 
 ## 3. Full L1 Time-lapse Inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 247-250
+.. GENERATED FROM PYTHON SOURCE LINES 276-279
 
 .. code-block:: Python
 
@@ -305,11 +335,11 @@ Measurement times (can be timestamps or any sequential numbers representing time
                         , ylabel="Elevation (m)",label=' Resistivity ($\Omega$ m)',logScale=False,coverage=result.all_coverage[i]>-1)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 254-255
+.. GENERATED FROM PYTHON SOURCE LINES 283-284
 
 Full paths to data files
 
-.. GENERATED FROM PYTHON SOURCE LINES 255-293
+.. GENERATED FROM PYTHON SOURCE LINES 284-322
 
 .. code-block:: Python
 
@@ -352,7 +382,7 @@ Full paths to data files
     print("Inversion complete!")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 294-306
+.. GENERATED FROM PYTHON SOURCE LINES 323-335
 
 .. code-block:: Python
 
@@ -368,6 +398,49 @@ Full paths to data files
                         , ylabel="Elevation (m)",label=' Resistivity ($\Omega$ m)',ax=ax,logScale=False,coverage=result.all_coverage[i]>-1)
         cbar.remove()
 
+
+.. GENERATED FROM PYTHON SOURCE LINES 336-349
+
+L1-Norm Regularized Inversion Results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The L1-norm regularization produces sharper boundaries compared to L2 
+regularization, which is beneficial for detecting distinct geological layers
+or sharp interfaces. Notice how the resistivity transitions are more abrupt
+in this inversion, making it easier to identify distinct zones of different
+water content. This approach is particularly useful when the subsurface is
+expected to have layered structures rather than gradual transitions.
+
+.. image:: /auto_examples/images/Ex_TL_inversion_fig_03.png
+   :align: center  
+   :width: 900px
+
+.. GENERATED FROM PYTHON SOURCE LINES 352-376
+
+Summary and Recommendations
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example demonstrated three approaches to time-lapse ERT inversion:
+
+**Key Findings:**
+
+* **Temporal regularization** is essential for realistic time-lapse results
+* **Windowed inversion** provides computational efficiency with minimal quality loss
+* **L1 regularization** enhances boundary detection in layered media
+* **Parameter tuning** (λ, α) significantly affects result quality
+
+**Recommendations:**
+
+* Use **full L2** for high-quality results with moderate datasets
+* Apply **windowed L2** for large datasets or real-time processing
+* Choose **L1 regularization** when sharp interfaces are expected
+* Always validate results against known geological information
+
+**Next Steps:**
+
+* Combine with seismic constraints (see structure-constrained examples)
+* Apply uncertainty quantification (see Monte Carlo examples)
+* Integrate with hydrological models for enhanced interpretation
 
 
 .. _sphx_glr_download_auto_examples_Ex_TL_inversion.py:

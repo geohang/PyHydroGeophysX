@@ -331,7 +331,19 @@ os.makedirs("results/TL_measurements/synresmodel", exist_ok=True)
 # example to load and show the synthetic data
 syn_data = pg.load(os.path.join(output_dir, "appres/synthetic_data"+str(1)+".dat"))
 ert.show(syn_data)
-
+###############################################################################
+# Synthetic ERT Data Visualization
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This plot shows a single timestep of synthetic ERT measurements. The data
+# represents apparent resistivity values measured at different electrode 
+# configurations. Each point corresponds to a specific current injection and
+# voltage measurement pair, providing information about subsurface resistivity
+# distribution at this particular time.
+#
+# .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_01.png
+#    :align: center
+#    :width: 700px
 # %%
 #load all synthetic data and plot them
 all_syn_data = []
@@ -376,13 +388,29 @@ plt.ylabel('Measurement #')
 plt.xlabel('Time (days)')
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, "apparent_resistivity.tiff"), dpi=300)
-
+###############################################################################
+# Time-Lapse Apparent Resistivity Response
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The time-series analysis reveals the relationship between precipitation events
+# and subsurface electrical response. The top panel shows daily precipitation
+# over one year, while the bottom panel displays the corresponding apparent
+# resistivity measurements for all electrode configurations. Notice how
+# resistivity decreases (becomes more conductive) following major precipitation
+# events, indicating increased water content in the subsurface.
+#
+# .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_02.png
+#    :align: center
+#    :width: 800px
 # %%
 plt.figure(figsize=(12, 6))
 plt.subplot(211)
 plt.imshow(syn_data_array.T, aspect='auto', cmap=pg.utils.cMap('rhoa'), vmin=200, vmax=2000)
 plt.colorbar(label='Apparent Resistivity (Ω·m)')
-
+###############################################################################
+# .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_03.png
+#    :align: center
+#    :width: 800px
 # %%
 
 
@@ -421,7 +449,20 @@ ax1.set_title("Day 330")
 
 fig.tight_layout()
 plt.savefig(os.path.join(output_dir, "water_content_model.tiff"), dpi=300)
-
+###############################################################################
+# Water Content Evolution Over Time
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# These cross-sections show how water content changes throughout the year at
+# four representative time points. Day 30 shows relatively dry conditions,
+# Day 150 captures the wet season response, Day 210 represents peak saturation
+# after sustained precipitation, and Day 330 shows the transition to drier
+# conditions. Notice how water infiltrates from the surface (regolith layer)
+# and gradually saturates deeper layers (fractured and fresh bedrock).
+#
+# .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_04.png
+#    :align: center
+#    :width: 900px
 # %%
 # ## Showing the water content model for the differnent timesteps
 fig, axes = plt.subplots(1, 4, figsize=(16, 14))
@@ -461,7 +502,21 @@ cbar1 = pg.show(mesh, wc280, ax=ax1, cMap=fixed_cmap, logScale=False, showColorB
 
 fig.tight_layout()
 plt.savefig(os.path.join(output_dir, "resistivity_model.tiff"), dpi=300)
-
+###############################################################################
+# Resistivity Model Evolution 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The corresponding resistivity models show the inverse relationship with water
+# content - high resistivity zones (red/yellow) indicate dry conditions while
+# low resistivity areas (blue) represent saturated regions. The petrophysical
+# transformation from water content to resistivity uses layer-specific parameters
+# (formation resistivity, cementation exponent) that account for different 
+# geological units. This resistivity evolution serves as the basis for forward
+# modeling synthetic ERT measurements.
+#
+# .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_05.png
+#    :align: center
+#    :width: 900px
 # %%
 import numpy as np
 import matplotlib.pyplot as plt
@@ -553,7 +608,53 @@ frames[0].save(
 
 print(f"GIF saved successfully to {gif_path}")
 
-# %%
+###############################################################################
+# Animation and Advanced Visualization
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The code also generates an animated GIF showing the complete temporal evolution
+# of water content throughout the year. This animation provides insights into:
+#
+# * **Seasonal patterns**: Clear wet and dry season variations
+# * **Infiltration dynamics**: How water moves from surface to depth  
+# * **Layer interactions**: Different response rates in geological units
+# * **Event-based changes**: Rapid responses to individual storms
+#
+# The animation is saved as 'WCanimation.gif' in the results directory.
+
+###############################################################################
+# Summary and Applications
+# ~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This example demonstrated the complete workflow for creating synthetic 
+# time-lapse ERT measurements from hydrological model outputs:
+#
+# **Key Workflow Steps:**
+#
+# 1. **Load and process** MODFLOW water content time series
+# 2. **Interpolate** 3D data to 2D profiles for geophysical modeling  
+# 3. **Convert** water content to resistivity using petrophysical models
+# 4. **Generate** synthetic ERT data via forward modeling
+# 5. **Visualize** temporal patterns in apparent resistivity
+# 6. **Create animations** showing subsurface dynamics
+#
+# **Scientific Insights:**
+#
+# * ERT measurements show clear **sensitivity** to hydrological changes
+# * **Temporal regularization** is crucial for time-lapse inversions
+# * **Multi-layer** petrophysical models capture geological heterogeneity  
+# * **Parallel processing** enables efficient large dataset generation
+#
+# **Next Steps:**
+#
+# * Apply time-lapse inversion techniques (see Ex_TL_inversion.py)
+# * Include structural constraints from seismic data  
+# * Implement uncertainty quantification methods
+# * Integrate with real field measurements for validation
+#
+# This synthetic dataset provides a controlled environment for testing and
+# validating time-lapse ERT monitoring approaches in watershed applications.
+
 
 
 

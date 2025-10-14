@@ -72,7 +72,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="The script focuses on the inversion and post-processing stages of a geophysical workflow.  It begins by loading pre-existing synthetic travel time data and then uses tomographic inversion  to reconstruct the subsurface P-wave velocity distribution. A key feature demonstrated is the extraction of geological interfaces based on velocity thresholds.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to perform a 2D seismic refraction tomography (SRT)  inversion and interpret the results to define subsurface structures.">
 
 .. only:: html
 
@@ -83,13 +83,13 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex. Seismic Refraction Tomography (SRT) Inversion</div>
+      <div class="sphx-glr-thumbnail-title">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</div>
     </div>
 
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example combines structural constraints with time-lapse ERT inversion to monitor water content changes in layered geological media.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates advanced time-lapse ERT inversion using structural constraints derived from seismic interpretation to monitor subsurface water  content changes in layered geological media.">
 
 .. only:: html
 

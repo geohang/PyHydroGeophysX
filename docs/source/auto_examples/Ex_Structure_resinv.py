@@ -90,6 +90,12 @@ TT.invert(ttData, lam=50,
 
 ax, cbar = TT.showResult(cMap='jet',coverage=TT.standardizedCoverage(),cMin=500,cMax=5000)
 
+###############################################################################
+# Seismic Velocity Inversion Results
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# .. image:: /auto_examples/images/Ex_Structure_resinv_fig_01.png
+#    :align: center
+#    :width: 700px
 # %% [markdown]
 # ### 4. Get the structure interface
 
@@ -104,7 +110,15 @@ fig, ax1 = plt.subplots(1, 1, figsize=(5, 3))
 pg.show(mesh, velocity_data, ax=ax1, cMap='viridis', colorBar=True)
 ax1.set_title('Original Velocity Data')
 ax1.plot(smooth_x, smooth_z)
-
+###############################################################################
+# Velocity Interface Extraction
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# This interface will be incorporated into the ERT mesh to constrain the
+# inversion and preserve sharp geological boundaries.
+#
+# .. image:: /auto_examples/images/Ex_Structure_resinv_fig_02.png
+#    :align: center
+#    :width: 600px
 # %% [markdown]
 # ### 4. Put structure interface into mesh for inversion
 
@@ -119,7 +133,18 @@ pg.show(mesh_with_interface, markers, ax=ax, cMap='jet', colorBar=True)
 plt.title('Mesh with Velocity Interface')
 plt.show()
 mesh_with_interface
-
+###############################################################################
+# Mesh with Structural Constraints
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The mesh refinement along the structural boundary ensures accurate
+# representation of the geological interface while maintaining appropriate
+# resolution for ERT measurements. This structured mesh allows the inversion
+# to preserve sharp resistivity contrasts at the known geological boundary
+# while applying smoothing constraints within each geological unit.
+#
+# .. image:: /auto_examples/images/Ex_Structure_resinv_fig_03.png
+#    :align: center
+#    :width: 700px
 # %% [markdown]
 # ### 5. Inversion with the updated mesh
 
@@ -134,7 +159,15 @@ fixed_cmap = BlueDarkRed18_18.mpl_colormap
 res_cov = mgrConstrained.coverage()[mgrConstrained.paraDomain.cellMarkers()]>-1.0
 
 mgrConstrained.showResult(xlabel="Distance (m)", ylabel="Elevation (m)",coverage = res_cov,cMap=fixed_cmap)
-
+###############################################################################
+# Structure-Constrained ERT Inversion Results
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The structure-constrained ERT inversion produces a resistivity model that
+# honors both the electrical measurements and the geological structure derived
+# from seismic data
+# .. image:: /auto_examples/images/Ex_Structure_resinv_fig_04.png
+#    :align: center
+#    :width: 800px
 # %% [markdown]
 # ### 6. Save the mesh
 

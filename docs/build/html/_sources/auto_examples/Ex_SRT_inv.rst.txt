@@ -18,9 +18,9 @@
 .. _sphx_glr_auto_examples_Ex_SRT_inv.py:
 
 
-Ex. Seismic Refraction Tomography (SRT) Inversion
-====================================================
 Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation
+=======================================================================
+
 This example demonstrates how to perform a 2D seismic refraction tomography (SRT) 
 inversion and interpret the results to define subsurface structures.
 
@@ -118,7 +118,7 @@ Get coverage and cell positions
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 86-115
+.. GENERATED FROM PYTHON SOURCE LINES 86-114
 
 .. code-block:: Python
 
@@ -151,16 +151,27 @@ Get coverage and cell positions
                              facecolor='black', edgecolor='black')
     fig.savefig(os.path.join(output_dir, 'seismic_velocity_long.tiff'), dpi=300, bbox_inches='tight')
 
+.. GENERATED FROM PYTHON SOURCE LINES 115-128
 
-.. GENERATED FROM PYTHON SOURCE LINES 116-117
+Long Profile Seismic Velocity Model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The seismic tomography reveals three-layer velocity structure: weathered 
+regolith (blue, <1200 m/s), fractured bedrock (green-yellow, 1200-5000 m/s), 
+and fresh bedrock (red, >5000 m/s). Dashed and solid lines show extracted 
+geological interfaces at 1200 and 5000 m/s respectively.
+
+.. image:: /auto_examples/images/Ex_SRT_inv_fig_01.png
+   :align: center
+   :width: 700px
+%% [markdown]
 ### Get subsurface structure for hydrologic modeling
 
-.. GENERATED FROM PYTHON SOURCE LINES 119-120
+.. GENERATED FROM PYTHON SOURCE LINES 130-131
 
 Assuming TT.model.array() gives you the velocity values
 
-.. GENERATED FROM PYTHON SOURCE LINES 120-131
+.. GENERATED FROM PYTHON SOURCE LINES 131-142
 
 .. code-block:: Python
 
@@ -176,11 +187,11 @@ Assuming TT.model.array() gives you the velocity values
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 132-133
+.. GENERATED FROM PYTHON SOURCE LINES 143-144
 
 # plot the extracted interfaces withe filled velocity images
 
-.. GENERATED FROM PYTHON SOURCE LINES 133-148
+.. GENERATED FROM PYTHON SOURCE LINES 144-158
 
 .. code-block:: Python
 
@@ -199,12 +210,23 @@ Assuming TT.model.array() gives you the velocity values
     np.savetxt(os.path.join(output_dir, 'regolith_interface.txt'), np.c_[smooth_x1, smooth_z1])
     np.savetxt(os.path.join(output_dir, 'fractured_bedrock_interface.txt'), np.c_[smooth_x2, smooth_z2])
 
+.. GENERATED FROM PYTHON SOURCE LINES 159-172
 
-.. GENERATED FROM PYTHON SOURCE LINES 149-150
+Automated Interface Extraction
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Two critical geological boundaries extracted from velocity thresholds: 
+regolith-bedrock interface (dashed line, 1200 m/s) and fractured-fresh 
+bedrock interface (solid line, 5000 m/s). Interfaces are smoothed and 
+exported as text files for integration with hydrogeological models.
+
+.. image:: /auto_examples/images/Ex_SRT_inv_fig_02.png
+   :align: center
+   :width: 700px
+%% [markdown]
 ## Short seismic profiles
 
-.. GENERATED FROM PYTHON SOURCE LINES 152-159
+.. GENERATED FROM PYTHON SOURCE LINES 174-181
 
 .. code-block:: Python
 
@@ -216,7 +238,7 @@ Assuming TT.model.array() gives you the velocity values
               verbose=1, limits=[300., 8000.])
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 160-165
+.. GENERATED FROM PYTHON SOURCE LINES 182-187
 
 .. code-block:: Python
 
@@ -226,7 +248,7 @@ Assuming TT.model.array() gives you the velocity values
     filled_cov1 = fill_holes_2d(pos, TT_short.standardizedCoverage())
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 166-197
+.. GENERATED FROM PYTHON SOURCE LINES 188-217
 
 .. code-block:: Python
 
@@ -260,7 +282,32 @@ Assuming TT.model.array() gives you the velocity values
                              facecolor='black', edgecolor='black')
     fig.savefig(os.path.join(output_dir, 'seismic_velocity_short.tiff'), dpi=300, bbox_inches='tight')
 
+.. GENERATED FROM PYTHON SOURCE LINES 218-229
 
+Short Profile Multi-Scale Comparison
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Short profile provides enhanced shallow resolution (0-30m depth) with 
+detailed regolith characterization. Higher ray density improves near-surface 
+velocity mapping while sacrificing deeper penetration. The 1200 m/s interface 
+shows excellent agreement with the long profile.
+
+.. image:: /auto_examples/images/Ex_SRT_inv_fig_03.png
+   :align: center
+   :width: 700px
+
+.. GENERATED FROM PYTHON SOURCE LINES 231-241
+
+Summary
+~~~~~~~
+
+This example demonstrated seismic refraction tomography with automated 
+interface extraction for watershed applications. Key results include 
+three-layer velocity structure resolution, interface extraction at 1200 
+and 5000 m/s thresholds, and multi-scale survey comparison.
+
+The extracted interfaces provide structural constraints for ERT inversions 
+and direct input for hydrogeological models like MODFLOW and ParFlow.
 
 
 .. _sphx_glr_download_auto_examples_Ex_SRT_inv.py:
