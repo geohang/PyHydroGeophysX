@@ -7,7 +7,16 @@ Specialized agent for generating comprehensive reports from workflow results.
 from typing import Dict, Any, Optional
 import os
 from datetime import datetime
+import pandas as pd
+import numpy as np
 from .base_agent import BaseAgent
+
+# Climate analysis thresholds (configurable constants)
+RAINFALL_THRESHOLD_MM = 5.0  # Significant rainfall threshold
+WET_PERIOD_THRESHOLD_MM = 25.0  # 7-day antecedent for wet periods
+DRY_PERIOD_THRESHOLD_MM = 5.0  # 7-day antecedent for dry periods
+PET_DEFICIT_THRESHOLD_MM = -2.0  # P-PET deficit indicating drying
+HIGH_TEMP_THRESHOLD_C = 30.0  # High temperature affecting measurements
 
 
 class ReportAgent(BaseAgent):
@@ -282,9 +291,6 @@ including detection of post-rainfall infiltration and high-PET drying periods.
         
         # Check if we have aligned data for event-based analysis
         if climate.get('ert_alignment') and 'ert_aligned_data' in climate['ert_alignment']:
-            import pandas as pd
-            import numpy as np
-            
             aligned_data = climate['ert_alignment']['ert_aligned_data']
             
             if isinstance(aligned_data, pd.DataFrame) and not aligned_data.empty:
@@ -293,12 +299,12 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                 # Analyze precipitation events
                 if 'prcp' in aligned_data.columns:
                     prcp_values = aligned_data['prcp'].values
-                    # Detect significant rainfall (> 5mm threshold)
-                    rainfall_events = prcp_values > 5.0
+                    # Detect significant rainfall using threshold constant
+                    rainfall_events = prcp_values > RAINFALL_THRESHOLD_MM
                     n_rainfall = np.sum(rainfall_events)
                     
                     if n_rainfall > 0:
-                        analysis += f"- **Rainfall Events:** {n_rainfall} ERT acquisition(s) occurred during or shortly after significant rainfall (>5mm)\n"
+                        analysis += f"- **Rainfall Events:** {n_rainfall} ERT acquisition(s) occurred during or shortly after significant rainfall (>{RAINFALL_THRESHOLD_MM}mm)\n"
                         analysis += "  - *Expected Impact:* Decreased resistivity due to increased moisture content\n"
                         analysis += "  - *Data Quality Note:* Post-rainfall measurements may show transient infiltration patterns\n"
                     else:
@@ -312,14 +318,14 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                     # Check 7-day antecedent if available
                     if 'prcp_antecedent_7d' in aligned_data.columns:
                         antecedent_7d = aligned_data['prcp_antecedent_7d'].values
-                        # Classify as wet (>25mm) or dry (<5mm) periods
-                        wet_periods = antecedent_7d > 25.0
-                        dry_periods = antecedent_7d < 5.0
+                        # Classify as wet or dry periods using threshold constants
+                        wet_periods = antecedent_7d > WET_PERIOD_THRESHOLD_MM
+                        dry_periods = antecedent_7d < DRY_PERIOD_THRESHOLD_MM
                         
                         if np.any(wet_periods):
-                            analysis += f"  - Wet periods (7-day total >25mm): {np.sum(wet_periods)} acquisition(s)\n"
+                            analysis += f"  - Wet periods (7-day total >{WET_PERIOD_THRESHOLD_MM}mm): {np.sum(wet_periods)} acquisition(s)\n"
                         if np.any(dry_periods):
-                            analysis += f"  - Dry periods (7-day total <5mm): {np.sum(dry_periods)} acquisition(s)\n"
+                            analysis += f"  - Dry periods (7-day total <{DRY_PERIOD_THRESHOLD_MM}mm): {np.sum(dry_periods)} acquisition(s)\n"
                 
                 # Analyze water balance (P-PET)
                 p_pet_cols = [col for col in aligned_data.columns if 'p_minus' in col]
@@ -330,7 +336,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                         p_pet_values = aligned_data[p_pet_col].values
                         # Positive P-PET indicates moisture surplus, negative indicates deficit
                         surplus_periods = p_pet_values > 0
-                        deficit_periods = p_pet_values < -2.0  # Significant deficit
+                        deficit_periods = p_pet_values < PET_DEFICIT_THRESHOLD_MM  # Significant deficit
                         
                         n_surplus = np.sum(surplus_periods)
                         n_deficit = np.sum(deficit_periods)
@@ -347,11 +353,11 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                 # Temperature effects
                 if 'tmax' in aligned_data.columns:
                     tmax_values = aligned_data['tmax'].values
-                    hot_periods = tmax_values > 30.0  # >30°C threshold
+                    hot_periods = tmax_values > HIGH_TEMP_THRESHOLD_C  # High temperature threshold
                     
                     if np.any(hot_periods):
                         analysis += f"\n- **Temperature Effects:**\n"
-                        analysis += f"  - High temperature periods (>30°C): {np.sum(hot_periods)} acquisition(s)\n"
+                        analysis += f"  - High temperature periods (>{HIGH_TEMP_THRESHOLD_C}°C): {np.sum(hot_periods)} acquisition(s)\n"
                         analysis += f"    *Note:* High temperatures may affect electrode contact and measurements\n"
             else:
                 analysis += "*No aligned data available for detailed event analysis.*\n"
