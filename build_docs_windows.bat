@@ -1,55 +1,53 @@
 @echo off
 echo ========================================
-echo PyHydroGeophysX Documentation Builder
+echo Building PyHydroGeophysX Documentation
 echo ========================================
 
-REM Set environment variables to avoid frozen module warnings
-set PYDEVD_DISABLE_FILE_VALIDATION=1
-set PYTHONFROZENMODULES=off
+REM Install requirements
+pip install sphinx sphinx-rtd-theme sphinx-gallery
 
+REM Create all necessary directories
+mkdir docs\source\_static 2>nul
+mkdir docs\build\html 2>nul
+mkdir docs\build\html\auto_examples 2>nul
+mkdir docs\build\html\auto_examples\images 2>nul
 
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo Error: Python is not installed or not in PATH
-    exit /b 1
+REM Check for figures
+if exist docs\source\auto_examples\images\*.png (
+    echo ✅ Found figures - copying to build locations
+    
+    REM Copy to build directory (where Sphinx expects them)
+    xcopy docs\source\auto_examples\images\*.png docs\build\html\auto_examples\images\ /Y >nul 2>&1
+    
+    REM Also copy to _static for direct access
+    xcopy docs\source\auto_examples\images\*.png docs\source\_static\ /Y >nul 2>&1
+    
+    echo Figures copied successfully
+) else (
+    echo ⚠️  No figures found in docs\source\auto_examples\images\
 )
 
-echo.
-echo 1. Installing documentation requirements...
-pip install -r docs\requirements.txt
-if errorlevel 1 (
-    echo Error: Failed to install documentation requirements
-    exit /b 1
-)
+REM Generate API documentation
+sphinx-apidoc -f -o docs\source\api PyHydroGeophysX
 
-echo.
-echo 2. Generating API documentation...
-sphinx-apidoc -f -o docs\source\api PyHydroGeophysX PyHydroGeophysX\examples
-if errorlevel 1 (
-    echo Error: Failed to generate API documentation
-    exit /b 1
-)
-
-echo.
-echo 3. Building documentation...
+REM Build documentation
 cd docs
-call make.bat clean
-call make.bat html
-if errorlevel 1 (
-    echo Error: Failed to build HTML documentation
-    cd ..
-    exit /b 1
-)
+sphinx-build -b html source build\html --keep-going -v
 cd ..
 
+REM Copy figures again after build (in case Sphinx overwrites)
+if exist docs\source\auto_examples\images\*.png (
+    xcopy docs\source\auto_examples\images\*.png docs\build\html\auto_examples\images\ /Y >nul 2>&1
+    echo Final figure copy completed
+)
+
 echo.
 echo ========================================
-echo Documentation built successfully!
+echo Build Complete!
 echo ========================================
 echo.
 echo Open: docs\build\html\index.html
+echo Gallery: docs\build\html\auto_examples\index.html
 
-set /p choice="Open documentation now? (y/n): "
-if /i "%choice%"=="y" (
-    start docs\build\html\index.html
-)
+pause
+start docs\build\html\auto_examples\index.html

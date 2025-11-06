@@ -1,26 +1,29 @@
-PyHydroGeophysX.core
-====================
-
-.. automodule:: PyHydroGeophysX.core
-   :members:
-   :undoc-members:
-   :show-inheritance:
+core package
+============
 
 Submodules
 ----------
 
-PyHydroGeophysX.core.interpolation module
------------------------------------------
+core.interpolation module
+-------------------------
 
-.. automodule:: PyHydroGeophysX.core.interpolation
+.. automodule:: core.interpolation
    :members:
    :undoc-members:
    :show-inheritance:
 
-PyHydroGeophysX.core.mesh\_utils module
----------------------------------------
+core.mesh\_utils module
+-----------------------
 
-.. automodule:: PyHydroGeophysX.core.mesh_utils
+.. automodule:: core.mesh_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: core
    :members:
    :undoc-members:
    :show-inheritance:

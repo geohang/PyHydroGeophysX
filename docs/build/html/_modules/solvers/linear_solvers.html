@@ -1,28 +1,29 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../../">
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>solvers.linear_solvers &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
-
+  <title>solvers.linear_solvers &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/solvers/linear_solvers.html" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
-      <script src="../../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -50,7 +51,7 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -113,9 +114,7 @@
     <span class="n">PARALLEL_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
 
 
-<div class="viewcode-block" id="generalized_solver">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.generalized_solver">[docs]</a>
-<span class="k">def</span> <span class="nf">generalized_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;cgls&quot;</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maxiter</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span>
+<div class="viewcode-block" id="generalized_solver"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.generalized_solver">[docs]</a><span class="k">def</span> <span class="nf">generalized_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;cgls&quot;</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maxiter</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span>
                       <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">damp</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Generalized solver for Ax = b with optional GPU acceleration and parallelism.</span>
@@ -197,7 +196,6 @@
         <span class="k">return</span> <span class="n">_rrls</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">rr</span><span class="p">,</span> <span class="n">rr0</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">damp</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown method: </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">. Supported methods: &#39;lsqr&#39;, &#39;rrlsqr&#39;, &#39;cgls&#39;, &#39;rrls&#39;&quot;</span><span class="p">)</span></div>
-
 
 
 <span class="k">def</span> <span class="nf">_matrix_multiply</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="p">,</span> <span class="n">xp</span><span class="p">):</span>
@@ -580,14 +578,10 @@
     <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="k">if</span> <span class="n">use_gpu</span> <span class="ow">and</span> <span class="n">GPU_AVAILABLE</span> <span class="k">else</span> <span class="n">x</span>
 
 
-<div class="viewcode-block" id="LinearSolver">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.LinearSolver">[docs]</a>
-<span class="k">class</span> <span class="nc">LinearSolver</span><span class="p">:</span>
+<div class="viewcode-block" id="LinearSolver"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.LinearSolver">[docs]</a><span class="k">class</span> <span class="nc">LinearSolver</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for linear system solvers.&quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="LinearSolver.__init__">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.LinearSolver.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;cgls&quot;</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> 
+<div class="viewcode-block" id="LinearSolver.__init__"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.LinearSolver.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;cgls&quot;</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> 
                 <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">damping</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
                 <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -626,11 +620,8 @@
         <span class="k">if</span> <span class="n">parallel</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">PARALLEL_AVAILABLE</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Parallel computation requested but joblib not available. Using serial.&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">parallel</span> <span class="o">=</span> <span class="kc">False</span></div>
-
     
-<div class="viewcode-block" id="LinearSolver.solve">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.LinearSolver.solve">[docs]</a>
-    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="LinearSolver.solve"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.LinearSolver.solve">[docs]</a>    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Solve linear system Ax = b.</span>
 <span class="sd">        </span>
@@ -647,19 +638,13 @@
             <span class="n">maxiter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span><span class="p">,</span>
             <span class="n">verbose</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="n">damp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">damping</span><span class="p">,</span>
             <span class="n">use_gpu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span>
-        <span class="p">)</span></div>
-</div>
+        <span class="p">)</span></div></div>
 
 
-
-<div class="viewcode-block" id="CGLSSolver">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.CGLSSolver">[docs]</a>
-<span class="k">class</span> <span class="nc">CGLSSolver</span><span class="p">(</span><span class="n">LinearSolver</span><span class="p">):</span>
+<div class="viewcode-block" id="CGLSSolver"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.CGLSSolver">[docs]</a><span class="k">class</span> <span class="nc">CGLSSolver</span><span class="p">(</span><span class="n">LinearSolver</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;CGLS (Conjugate Gradient Least Squares) solver.&quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="CGLSSolver.__init__">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.CGLSSolver.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
+<div class="viewcode-block" id="CGLSSolver.__init__"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.CGLSSolver.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
                 <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">damping</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize CGLS solver.</span>
@@ -677,19 +662,13 @@
             <span class="n">method</span><span class="o">=</span><span class="s2">&quot;cgls&quot;</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="n">max_iterations</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">tolerance</span><span class="p">,</span>
             <span class="n">use_gpu</span><span class="o">=</span><span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span>
             <span class="n">damping</span><span class="o">=</span><span class="n">damping</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span>
-        <span class="p">)</span></div>
-</div>
+        <span class="p">)</span></div></div>
 
 
-
-<div class="viewcode-block" id="LSQRSolver">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.LSQRSolver">[docs]</a>
-<span class="k">class</span> <span class="nc">LSQRSolver</span><span class="p">(</span><span class="n">LinearSolver</span><span class="p">):</span>
+<div class="viewcode-block" id="LSQRSolver"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.LSQRSolver">[docs]</a><span class="k">class</span> <span class="nc">LSQRSolver</span><span class="p">(</span><span class="n">LinearSolver</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;LSQR solver for least squares problems.&quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="LSQRSolver.__init__">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.LSQRSolver.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
+<div class="viewcode-block" id="LSQRSolver.__init__"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.LSQRSolver.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
                 <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">damping</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize LSQR solver.</span>
@@ -707,19 +686,13 @@
             <span class="n">method</span><span class="o">=</span><span class="s2">&quot;lsqr&quot;</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="n">max_iterations</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">tolerance</span><span class="p">,</span>
             <span class="n">use_gpu</span><span class="o">=</span><span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span>
             <span class="n">damping</span><span class="o">=</span><span class="n">damping</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span>
-        <span class="p">)</span></div>
-</div>
+        <span class="p">)</span></div></div>
 
 
-
-<div class="viewcode-block" id="RRLSQRSolver">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.RRLSQRSolver">[docs]</a>
-<span class="k">class</span> <span class="nc">RRLSQRSolver</span><span class="p">(</span><span class="n">LinearSolver</span><span class="p">):</span>
+<div class="viewcode-block" id="RRLSQRSolver"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.RRLSQRSolver">[docs]</a><span class="k">class</span> <span class="nc">RRLSQRSolver</span><span class="p">(</span><span class="n">LinearSolver</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Regularized LSQR solver.&quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="RRLSQRSolver.__init__">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.RRLSQRSolver.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
+<div class="viewcode-block" id="RRLSQRSolver.__init__"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.RRLSQRSolver.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
                 <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">damping</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize regularized LSQR solver.</span>
@@ -737,19 +710,13 @@
             <span class="n">method</span><span class="o">=</span><span class="s2">&quot;rrlsqr&quot;</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="n">max_iterations</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">tolerance</span><span class="p">,</span>
             <span class="n">use_gpu</span><span class="o">=</span><span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span>
             <span class="n">damping</span><span class="o">=</span><span class="n">damping</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span>
-        <span class="p">)</span></div>
-</div>
+        <span class="p">)</span></div></div>
 
 
-
-<div class="viewcode-block" id="RRLSSolver">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.RRLSSolver">[docs]</a>
-<span class="k">class</span> <span class="nc">RRLSSolver</span><span class="p">(</span><span class="n">LinearSolver</span><span class="p">):</span>
+<div class="viewcode-block" id="RRLSSolver"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.RRLSSolver">[docs]</a><span class="k">class</span> <span class="nc">RRLSSolver</span><span class="p">(</span><span class="n">LinearSolver</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Range-Restricted Least Squares solver.&quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="RRLSSolver.__init__">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.RRLSSolver.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
+<div class="viewcode-block" id="RRLSSolver.__init__"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.RRLSSolver.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">use_gpu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
                 <span class="n">parallel</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">damping</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize RRLS solver.</span>
@@ -767,16 +734,12 @@
             <span class="n">method</span><span class="o">=</span><span class="s2">&quot;rrls&quot;</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="n">max_iterations</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">tolerance</span><span class="p">,</span>
             <span class="n">use_gpu</span><span class="o">=</span><span class="n">use_gpu</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="n">parallel</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span class="p">,</span>
             <span class="n">damping</span><span class="o">=</span><span class="n">damping</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span>
-        <span class="p">)</span></div>
-</div>
-
+        <span class="p">)</span></div></div>
 
 
 <span class="c1"># Additional solver implementations</span>
 <span class="kn">import</span> <span class="nn">scipy.linalg</span>
-<div class="viewcode-block" id="direct_solver">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.direct_solver">[docs]</a>
-<span class="k">def</span> <span class="nf">direct_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;lu&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="direct_solver"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.direct_solver">[docs]</a><span class="k">def</span> <span class="nf">direct_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;lu&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Solve a linear system using direct methods.</span>
 <span class="sd">    </span>
@@ -841,15 +804,10 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown direct solver method: </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
-
-<div class="viewcode-block" id="TikhonvRegularization">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.TikhonvRegularization">[docs]</a>
-<span class="k">class</span> <span class="nc">TikhonvRegularization</span><span class="p">:</span>
+<div class="viewcode-block" id="TikhonvRegularization"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.TikhonvRegularization">[docs]</a><span class="k">class</span> <span class="nc">TikhonvRegularization</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Tikhonov regularization for ill-posed problems.&quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="TikhonvRegularization.__init__">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.TikhonvRegularization.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">regularization_matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+<div class="viewcode-block" id="TikhonvRegularization.__init__"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.TikhonvRegularization.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">regularization_matrix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
                  <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">regularization_type</span><span class="o">=</span><span class="s1">&#39;identity&#39;</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize Tikhonov regularization.</span>
@@ -862,11 +820,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">regularization_matrix</span> <span class="o">=</span> <span class="n">regularization_matrix</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">regularization_type</span> <span class="o">=</span> <span class="n">regularization_type</span></div>
-
     
-<div class="viewcode-block" id="TikhonvRegularization.create_regularization_matrix">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.TikhonvRegularization.create_regularization_matrix">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_regularization_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+<div class="viewcode-block" id="TikhonvRegularization.create_regularization_matrix"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.TikhonvRegularization.create_regularization_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">create_regularization_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create regularization matrix based on the selected type.</span>
 <span class="sd">        </span>
@@ -889,11 +844,8 @@
             <span class="k">return</span> <span class="n">D</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown regularization type: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">regularization_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
-
     
-<div class="viewcode-block" id="TikhonvRegularization.apply">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.TikhonvRegularization.apply">[docs]</a>
-    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="TikhonvRegularization.apply"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.TikhonvRegularization.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Apply Tikhonov regularization to the linear system.</span>
 <span class="sd">        </span>
@@ -931,21 +883,15 @@
                 <span class="k">return</span> <span class="n">splinalg</span><span class="o">.</span><span class="n">lsqr</span><span class="p">(</span><span class="n">A_aug</span><span class="p">,</span> <span class="n">b_aug</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Use provided solver</span>
-            <span class="k">return</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A_aug</span><span class="p">,</span> <span class="n">b_aug</span><span class="p">)</span></div>
-</div>
+            <span class="k">return</span> <span class="n">solver</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A_aug</span><span class="p">,</span> <span class="n">b_aug</span><span class="p">)</span></div></div>
 
 
-
-<div class="viewcode-block" id="IterativeRefinement">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.IterativeRefinement">[docs]</a>
-<span class="k">class</span> <span class="nc">IterativeRefinement</span><span class="p">:</span>
+<div class="viewcode-block" id="IterativeRefinement"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.IterativeRefinement">[docs]</a><span class="k">class</span> <span class="nc">IterativeRefinement</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Iterative refinement to improve accuracy of a solution to a linear system.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="IterativeRefinement.__init__">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.IterativeRefinement.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span> 
+<div class="viewcode-block" id="IterativeRefinement.__init__"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.IterativeRefinement.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span> 
                  <span class="n">use_double_precision</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize iterative refinement.</span>
@@ -958,11 +904,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span> <span class="o">=</span> <span class="n">max_iterations</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="o">=</span> <span class="n">tolerance</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">use_double_precision</span> <span class="o">=</span> <span class="n">use_double_precision</span></div>
-
     
-<div class="viewcode-block" id="IterativeRefinement.refine">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.IterativeRefinement.refine">[docs]</a>
-    <span class="k">def</span> <span class="nf">refine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">solver_func</span><span class="p">):</span>
+<div class="viewcode-block" id="IterativeRefinement.refine"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.IterativeRefinement.refine">[docs]</a>    <span class="k">def</span> <span class="nf">refine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">solver_func</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Perform iterative refinement.</span>
 <span class="sd">        </span>
@@ -995,14 +938,10 @@
             <span class="c1"># Update solution</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">correction</span>
         
-        <span class="k">return</span> <span class="n">x</span></div>
-</div>
+        <span class="k">return</span> <span class="n">x</span></div></div>
 
 
-
-<div class="viewcode-block" id="get_optimal_solver">
-<a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.get_optimal_solver">[docs]</a>
-<span class="k">def</span> <span class="nf">get_optimal_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">estimate_condition</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
+<div class="viewcode-block" id="get_optimal_solver"><a class="viewcode-back" href="../../api/solvers.html#solvers.linear_solvers.get_optimal_solver">[docs]</a><span class="k">def</span> <span class="nf">get_optimal_solver</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">estimate_condition</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
                       <span class="n">time_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">memory_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Automatically select the optimal solver for a given linear system.</span>
@@ -1131,7 +1070,6 @@
     <span class="c1"># Rectangular or fallback, use LSQR</span>
     <span class="n">solver</span> <span class="o">=</span> <span class="n">RRLSQRSolver</span><span class="p">(</span><span class="n">max_iterations</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">1000</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">solver</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;rrlsqr&quot;</span><span class="p">,</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span> <span class="s2">&quot;rectangular&quot;</span><span class="p">}</span></div>
-
 </pre></div>
 
            </div>

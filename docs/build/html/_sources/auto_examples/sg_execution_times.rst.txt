@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**00:00.000** total execution time for 8 files **from auto_examples**:
+**00:00.000** total execution time for 10 files **from auto_examples**:
 
 .. container::
 
@@ -32,27 +32,33 @@ Computation times
    * - Example
      - Time
      - Mem (MB)
-   * - :ref:`sphx_glr_auto_examples_EX4_TL_inversion.py` (``EX4_TL_inversion.py``)
+   * - :ref:`sphx_glr_auto_examples_EX_SRT_forward.py` (``EX_SRT_forward.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex1_model_output.py` (``Ex1_model_output.py``)
+   * - :ref:`sphx_glr_auto_examples_Ex_ERT_workflow.py` (``Ex_ERT_workflow.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex2_workflow.py` (``Ex2_workflow.py``)
+   * - :ref:`sphx_glr_auto_examples_Ex_MC_Hydro.py` (``Ex_MC_Hydro.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex3_Time_lapse_measurement.py` (``Ex3_Time_lapse_measurement.py``)
+   * - :ref:`sphx_glr_auto_examples_Ex_SRT_inv.py` (``Ex_SRT_inv.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex5_SRT.py` (``Ex5_SRT.py``)
+   * - :ref:`sphx_glr_auto_examples_Ex_Structure_resinv.py` (``Ex_Structure_resinv.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex6_Structure_resinv.py` (``Ex6_Structure_resinv.py``)
+   * - :ref:`sphx_glr_auto_examples_Ex_TL_inversion.py` (``Ex_TL_inversion.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex7_structure_TLresinv.py` (``Ex7_structure_TLresinv.py``)
+   * - :ref:`sphx_glr_auto_examples_Ex_Time_lapse_measurement.py` (``Ex_Time_lapse_measurement.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex8_MC_WC.py` (``Ex8_MC_WC.py``)
+   * - :ref:`sphx_glr_auto_examples_Ex_model_output.py` (``Ex_model_output.py``)
+     - 00:00.000
+     - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_structure_TLresinv.py` (``Ex_structure_TLresinv.py``)
+     - 00:00.000
+     - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_workflow.py` (``Ex_workflow.py``)
      - 00:00.000
      - 0.0

@@ -51,7 +51,7 @@ def binaryread(file_obj: Any, # Should be BinaryIO
     else: # Standard numpy dtype
         num_values_to_read = int(np.prod(shape)) # Ensure integer for count
         data_array = np.fromfile(file_obj, dtype=vartype, count=num_values_to_read)
-        
+
         if data_array.size < num_values_to_read:
             raise EOFError(f"Attempted to read {num_values_to_read} values of type {vartype}, "
                            f"but only found {data_array.size} values (EOF reached).")
@@ -106,13 +106,13 @@ class MODFLOWWaterContent: # Renamed to avoid direct conflict if imported alongs
 
         if not isinstance(idomain, np.ndarray):
             raise TypeError("idomain must be a NumPy array.")
-        
+
         # UZF cells are typically related to the top active layer of the model.
         # If a 3D idomain is provided, use its first layer (slice).
         current_idomain_slice = idomain[0, :, :] if idomain.ndim == 3 else idomain
         if current_idomain_slice.ndim != 2:
             raise ValueError("The effective idomain for UZF mapping must be a 2D array.")
-            
+
         self.idomain = current_idomain_slice
         self.nrows, self.ncols = self.idomain.shape
         
@@ -141,7 +141,7 @@ class MODFLOWWaterContent: # Renamed to avoid direct conflict if imported alongs
         Returns:
             np.ndarray: A 3D NumPy array of water content values with shape (nlay_uzf, nrows, ncols).
                         Values for inactive grid cells (where idomain <= 0) will be NaN.
-        
+
         Raises:
             IndexError: If `timestep_idx` results in no data being loaded (e.g., out of bounds).
             RuntimeError: If data loading for the specific timestep fails unexpectedly.
@@ -206,10 +206,10 @@ class MODFLOWWaterContent: # Renamed to avoid direct conflict if imported alongs
                         _ = binaryread(file, header_dtype) # Read and discard header
                         # Skip the data block based on total_uzf_data_points_per_record
                         file.seek(total_uzf_data_points_per_record * data_point_dtype.itemsize, os.SEEK_CUR)
-                    except EOFError: 
+                    except EOFError:
                         print(f"Warning: EOF reached while skipping to start_idx {start_idx}. No data will be loaded.")
                         return np.empty((0, nlay_uzf, self.nrows, self.ncols))
-                    except Exception as e: 
+                    except Exception as e:
                         print(f"Error while skipping to timestep {start_idx} in 'WaterContent' file: {e}")
                         return np.empty((0, nlay_uzf, self.nrows, self.ncols))
                 
@@ -219,10 +219,10 @@ class MODFLOWWaterContent: # Renamed to avoid direct conflict if imported alongs
                     # Check if end_idx is met
                     if end_idx is not None and timesteps_read_count >= (end_idx - start_idx):
                         break
-                        
+
                     try:
                         header_data = binaryread(file, header_dtype) # Read one header record
-                        
+
                         # Validate 'maxbound' from header if necessary.
                         # maxbound_from_header = header_data['maxbound']
                         # if maxbound_from_header != total_uzf_data_points_per_record:
@@ -231,25 +231,25 @@ class MODFLOWWaterContent: # Renamed to avoid direct conflict if imported alongs
 
                         # Initialize a 3D array for the current timestep's water content data
                         current_wc_3d_array = np.full((nlay_uzf, self.nrows, self.ncols), np.nan)
-                        
+
                         # Read water content data for each UZF layer and each active 2D UZF cell
                         for k_layer_idx in range(nlay_uzf):
                             for iuzno_2d_idx in range(self.nuzfcells_2d):
                                 wc_value_struct = binaryread(file, data_point_dtype) # Read one data point
                                 wc_value = wc_value_struct['data'] # Extract float from the structured scalar
-                                
+
                                 r_idx, c_idx = self.iuzno_dict_rev[iuzno_2d_idx] # Map to grid cell
                                 current_wc_3d_array[k_layer_idx, r_idx, c_idx] = wc_value
-                        
+
                         all_timesteps_data_list.append(current_wc_3d_array)
                         timesteps_read_count += 1
-                        
+
                     except EOFError: # Expected way to finish if end_idx is None (read till end)
                         # print("Info: Reached end of 'WaterContent' file.")
-                        break 
-                    except Exception as e: 
+                        break
+                    except Exception as e:
                         print(f"Error reading data at loaded timestep count {timesteps_read_count} (file index {start_idx + timesteps_read_count}): {e}")
-                        break 
+                        break
         
         except FileNotFoundError: # Should be caught by initial check, but defense-in-depth
             raise
@@ -260,7 +260,7 @@ class MODFLOWWaterContent: # Renamed to avoid direct conflict if imported alongs
         if not all_timesteps_data_list:
             # print("Warning: No data loaded. The specified range might be empty or past EOF.")
             return np.empty((0, nlay_uzf, self.nrows, self.ncols))
-            
+
         return np.array(all_timesteps_data_list)
     
     def calculate_saturation(self, water_content: np.ndarray, 
@@ -321,7 +321,7 @@ class MODFLOWWaterContent: # Renamed to avoid direct conflict if imported alongs
                 # Attempt to broadcast if porosity is static (e.g., 3D) and water_content is timed (e.g., 4D)
                 if porosity.ndim == water_content.ndim - 1 and water_content.shape[1:] == porosity.shape:
                     # Add time axis to porosity for broadcasting: (1, nlay, nrow, ncol)
-                    porosity_expanded = porosity[np.newaxis, ...] 
+                    porosity_expanded = porosity[np.newaxis, ...]
                     saturation_result = np.divide(water_content, porosity_expanded) # Handles porosity_expanded possibly containing 0
                 else:
                     raise ValueError(f"Porosity array dimensions ({porosity.ndim}) are not directly compatible "
@@ -371,14 +371,14 @@ class MODFLOWWaterContent: # Renamed to avoid direct conflict if imported alongs
             ("text", "S16"), ("maxbound", "<i4"), ("aux1", "<i4"), ("aux2", "<i4"),
         ])
         # Assuming data points are float64 (8 bytes) for skipping.
-        data_point_itemsize = np.dtype("<f8").itemsize 
+        data_point_itemsize = np.dtype("<f8").itemsize
 
         try:
             with open(wc_file_path, "rb") as file:
                 while True:
                     try:
                         header_data = binaryread(file, header_dtype) # Read one header record
-                        
+
                         kstp = int(header_data['kstp'])
                         kper = int(header_data['kper'])
                         pertim = float(header_data['pertim'])
@@ -386,18 +386,18 @@ class MODFLOWWaterContent: # Renamed to avoid direct conflict if imported alongs
                         maxbound_in_header = int(header_data['maxbound']) # Number of data points in the following block
 
                         timestep_info_list.append((kstp, kper, pertim, totim))
-                        
+
                         # Skip the data block using maxbound_in_header for accuracy
                         bytes_to_skip = maxbound_in_header * data_point_itemsize
                         file.seek(bytes_to_skip, os.SEEK_CUR)
-                            
-                    except EOFError: 
+
+                    except EOFError:
                         break # End of file reached cleanly
-                    except Exception as e: 
+                    except Exception as e:
                         print(f"Error reading timestep info or skipping data in 'WaterContent': {e}")
-                        break 
+                        break
         except Exception as e:
             print(f"Failed to open or process 'WaterContent' for timestep info: {e}")
-            return [] 
+            return []
 
         return timestep_info_list

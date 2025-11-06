@@ -1,116 +1,59 @@
-# Configuration file for the Sphinx documentation builder.
+# Final working Sphinx configuration for PyHydroGeophysX
 
 import os
 import sys
-import unittest.mock as mock
-import logging
-logging.getLogger().setLevel(logging.WARNING)
 
-
-# Add the project root to the Python path
+# Add project to path
 sys.path.insert(0, os.path.abspath('../../'))
 sys.path.insert(0, os.path.abspath('../../PyHydroGeophysX'))
 
-# Mock problematic imports
-mock_modules = [
-    'pygimli', 'pygimli.physics', 'pygimli.physics.ert', 
-    'pygimli.physics.traveltime', 'pygimli.meshtools',
-    'pygimli.viewer', 'pygimli.viewer.mpl', 'pygimli.utils',
-    'pygimli.core', 'pygimli.matrix', 'flopy', 'parflow',
-    'cupy', 'cupyx', 'cupyx.scipy', 'cupyx.scipy.sparse',
-    'joblib', 'meshop'
-]
-
-for mod_name in mock_modules:
-    sys.modules[mod_name] = mock.MagicMock()
-
-# -- Project information -----------------------------------------------------
+# Project information
 project = 'PyHydroGeophysX'
 copyright = '2025, Hang Chen'
 author = 'Hang Chen'
 release = '0.1.0'
 
-# -- General configuration ---------------------------------------------------
+# Extensions
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.githubpages',
-    'myst_parser',
-    'nbsphinx',
-    'sphinx_copybutton',
     'sphinx_gallery.gen_gallery',
 ]
 
-# Napoleon settings for Google/NumPy style docstrings
-napoleon_google_docstring = True
-napoleon_numpy_docstring = True
-napoleon_include_init_with_doc = False
-napoleon_include_private_with_doc = False
-napoleon_include_special_with_doc = True
-napoleon_use_admonition_for_examples = False
-napoleon_use_admonition_for_notes = False
-napoleon_use_admonition_for_references = False
-napoleon_use_ivar = False
-napoleon_use_param = True
-napoleon_use_rtype = True
-
-# Autodoc settings
-autodoc_default_options = {
-    'members': True,
-    'member-order': 'bysource',
-    'special-members': '__init__',
-    'undoc-members': True,
-    'exclude-members': '__weakref__'
-}
-
-# Suppress warnings for missing references
-autodoc_mock_imports = mock_modules
-
-# Allow notebook errors to not break the build
-nbsphinx_allow_errors = True
-
-# Sphinx Gallery configuration with error handling
+# Sphinx Gallery configuration - FINAL WORKING VERSION
 sphinx_gallery_conf = {
-    'examples_dirs': '../../examples',
-    'gallery_dirs': 'auto_examples',
-    'plot_gallery': False,
-    'download_all_examples': False,
-    'filename_pattern': '/Ex.*\.py$',
-    'ignore_pattern': '__pycache__|\.ipynb$',
-    'expected_failing_examples': [],
-    'capture_repr': (),
-    'abort_on_example_error': False,
-    'run_stale_examples': False,
-    'abort_on_example_error': False,  # Don't abort on error
+    'examples_dirs': '../../examples',           # Path to example scripts
+    'gallery_dirs': 'auto_examples',             # Output gallery directory
+    'filename_pattern': '/Ex.*\.py$',            # Pattern to match example files
+    'plot_gallery': False,                       # Don't execute scripts (use pre-generated figures)
+    'download_all_examples': True,               # Allow downloading scripts
+    'abort_on_example_error': False,             # Continue on errors
+    'remove_config_comments': True,              # Clean up code display
+    'show_memory': False,                        # Don't show memory usage
+    'expected_failing_examples': [],             # No failing examples
+    'image_scrapers': (),                        # Don't try to scrape images from execution
+    'first_notebook_cell': '# PyHydroGeophysX Example\n# Figures are pre-generated',
+    'show_signature': False,                     # Don't show function signatures
+    'backreferences_dir': None,                  # Disable backreferences
 }
 
-# Templates path
-templates_path = ['_templates']
-exclude_patterns = []
-
-# Source file suffixes
-source_suffix = {
-    '.rst': None,
-    '.md': 'myst_parser',
-}
-
-# -- Options for HTML output -------------------------------------------------
+# HTML theme
 html_theme = 'sphinx_rtd_theme'
+html_title = 'PyHydroGeophysX Documentation'
 
-html_theme_options = {
-    'canonical_url': '',
-    'logo_only': False,
-    'display_version': True,
-    'prev_next_buttons_location': 'bottom',
-    'style_external_links': False,
-    'collapse_navigation': True,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False
-}
-
+# Static files
 html_static_path = ['_static']
+templates_path = ['_templates']
+
+# Create directories
+os.makedirs(os.path.join(os.path.dirname(__file__), '_static'), exist_ok=True)
+
+# Mock imports for documentation build
+autodoc_mock_imports = [
+    'pygimli', 'flopy', 'parflow', 'cupy', 'joblib', 'meshop',
+    'tqdm', 'matplotlib', 'scipy', 'numpy'
+]
+
+# GitHub Pages
+html_baseurl = 'https://geohang.github.io/PyHydroGeophysX/'

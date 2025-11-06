@@ -6,32 +6,24 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+  <title>Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
       <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
       <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
       <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
       <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
-      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
 
   
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex8_MC_WC.html" />
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../_static/documentation_options.js?v=01f34227"></script>
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling" href="Ex5_SRT.html" />
-    <link rel="prev" title="Ex 6. Structure-Constrained Resistivity Inversion" href="Ex6_Structure_resinv.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -56,25 +48,15 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="Ex1_model_output.html">Ex 1. Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex7_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="EX4_TL_inversion.html">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex6_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex5_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex3_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex2_workflow.html">SyntaxError</a></li>
-</ul>
-</li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Examples Gallery</a></li>
 </ul>
 
         </div>
@@ -91,10 +73,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
       <li class="breadcrumb-item active">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/auto_examples/Ex8_MC_WC.ipynb.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/auto_examples/Ex8_MC_WC.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -102,29 +83,31 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="Ex-8.-Monte-Carlo-Uncertainty-Quantification-for-Water-Content-Estimation">
-<h1>Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation<a class="headerlink" href="#Ex-8.-Monte-Carlo-Uncertainty-Quantification-for-Water-Content-Estimation" title="Link to this heading"></a></h1>
-<p>This example demonstrates Monte Carlo uncertainty quantification for converting ERT resistivity models to water content estimates.</p>
-<p>The analysis includes:</p>
-<ol class="arabic simple">
-<li><p>Loading inverted resistivity models from time-lapse ERT</p></li>
-<li><p>Defining parameter distributions for different geological layers</p></li>
-<li><p>Monte Carlo sampling of petrophysical parameters</p></li>
-<li><p>Probabilistic water content estimation with uncertainty bounds</p></li>
-<li><p>Statistical analysis and visualization of results</p></li>
-<li><p>Time series extraction with confidence intervals</p></li>
-</ol>
-<p>Uncertainty quantification is essential for reliable hydrological interpretation of geophysical data, providing confidence bounds on water content estimates and identifying regions of high/low certainty.</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
-</pre></div>
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex8-mc-wc-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<section class="sphx-glr-example-title" id="ex-8-monte-carlo-uncertainty-quantification-for-water-content-estimation">
+<span id="sphx-glr-auto-examples-ex8-mc-wc-py"></span><h1>Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation<a class="headerlink" href="#ex-8-monte-carlo-uncertainty-quantification-for-water-content-estimation" title="Link to this heading"></a></h1>
+<p>This example demonstrates Monte Carlo uncertainty quantification for
+converting ERT resistivity models to water content estimates.</p>
+<p>The analysis includes:
+1. Loading inverted resistivity models from time-lapse ERT
+2. Defining parameter distributions for different geological layers
+3. Monte Carlo sampling of petrophysical parameters
+4. Probabilistic water content estimation with uncertainty bounds
+5. Statistical analysis and visualization of results
+6. Time series extraction with confidence intervals</p>
+<p>Uncertainty quantification is essential for reliable hydrological
+interpretation of geophysical data, providing confidence bounds on
+water content estimates and identifying regions of high/low certainty.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
 
 <span class="c1"># Setup package path for development</span>
 <span class="k">try</span><span class="p">:</span>
@@ -140,15 +123,15 @@
     <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
 
 <span class="c1"># Import PyHydroGeophysX modules</span>
-<span class="kn">from</span> <span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span> <span class="kn">import</span> <span class="n">resistivity_to_saturation</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">resistivity_to_saturation</span>
 
 <span class="c1"># Extract the inverted resistivity values</span>
-<span class="n">resistivity_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/resmodel.npy&quot;</span><span class="p">)</span>
-<span class="n">coverage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/all_coverage.npy&quot;</span><span class="p">)</span>
+<span class="n">resistivity_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;resmodel.npy&quot;</span><span class="p">))</span>
+<span class="n">coverage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;all_coverage.npy&quot;</span><span class="p">))</span>
 <span class="c1"># Extract cell markers from the mesh (to identify different geological layers)</span>
-<span class="n">cell_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy&quot;</span><span class="p">)</span>
-
-<span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/mesh_res.bms&quot;</span><span class="p">)</span>
+<span class="n">cell_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;index_marker.npy&quot;</span><span class="p">))</span>
+<span class="c1">#&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/Structure_WC/index_marker.npy&quot;</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span><span class="s2">&quot;Structure_WC&quot;</span><span class="p">,</span><span class="s2">&quot;mesh_res.bms&quot;</span><span class="p">))</span>
 
 <span class="c1"># Number of Monte Carlo realizations</span>
 <span class="n">n_realizations</span> <span class="o">=</span> <span class="mi">100</span>
@@ -265,50 +248,18 @@
     <span class="n">Saturation_all</span><span class="p">[</span><span class="n">mc_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">saturation</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-intense-fg ansi-bold">---------------------------------------------------------------------------</span>
-<span class="ansi-red-intense-fg ansi-bold">IndexError</span>                                Traceback (most recent call last)
-Cell <span class="ansi-green-intense-fg ansi-bold">In[1], line 123</span>
-<span class="ansi-green-fg">    120</span> mask_layer1 <span style="color: rgb(98,98,98)">=</span> cell_markers <span style="color: rgb(98,98,98)">==</span> <span style="color: rgb(98,98,98)">3</span>
-<span class="ansi-green-fg">    121</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> np<span style="color: rgb(98,98,98)">.</span>any(mask_layer1):
-<span class="ansi-green-fg">    122</span>     saturation[mask_layer1, t] <span style="color: rgb(98,98,98)">=</span> resistivity_to_saturation(
-<span class="ansi-green-intense-fg ansi-bold">--&gt; 123</span>         <span class="ansi-yellow-bg">resistivity_t</span><span class="ansi-yellow-bg">[</span><span class="ansi-yellow-bg">mask_layer1</span><span class="ansi-yellow-bg">]</span>,
-<span class="ansi-green-fg">    124</span>         layer1_params[<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">rhos</span><span style="color: rgb(175,0,0)">&#39;</span>],
-<span class="ansi-green-fg">    125</span>         layer1_params[<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">n</span><span style="color: rgb(175,0,0)">&#39;</span>],
-<span class="ansi-green-fg">    126</span>         layer1_params[<span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">sigma_sur</span><span style="color: rgb(175,0,0)">&#39;</span>]
-<span class="ansi-green-fg">    127</span>     )
-<span class="ansi-green-fg">    129</span> <span style="color: rgb(95,135,135)"># Layer 2 (marker 2)</span>
-<span class="ansi-green-fg">    130</span> mask_layer2 <span style="color: rgb(98,98,98)">=</span> cell_markers <span style="color: rgb(98,98,98)">==</span> <span style="color: rgb(98,98,98)">2</span>
-
-<span class="ansi-red-intense-fg ansi-bold">IndexError</span>: boolean index did not match indexed array along dimension 0; dimension is 4529 but corresponding boolean dimension is 4548
-</pre></div></div>
-</div>
 <p>Calculate statistics across all realizations</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">water_content_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">water_content_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">water_content_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">water_content_p10</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># 10th percentile</span>
 <span class="n">water_content_p50</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># Median</span>
 <span class="n">water_content_p90</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># 90th percentile</span>
 </pre></div>
 </div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18_r</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">pylab</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18_r</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pylab</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pylab</span>
 <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
           <span class="c1">#&#39;figure.figsize&#39;: (15, 5),</span>
          <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
@@ -368,53 +319,24 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[1], line 123</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_Ex8_MC_WC_4_0.png" src="../_images/auto_examples_Ex8_MC_WC_4_0.png" />
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-&lt;Figure size 640x480 with 0 Axes&gt;
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">WC_true</span> <span class="o">=</span> <span class="p">[]</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">WC_true</span> <span class="o">=</span> <span class="p">[]</span>
 
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span><span class="mi">361</span><span class="p">,</span><span class="mi">30</span><span class="p">):</span>
     <span class="c1"># Extract true water content values for the current timestep</span>
-    <span class="n">true_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/synwcmodel/synwcmodel&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;.npy&quot;</span><span class="p">)</span>
+
+    <span class="n">synwcmodel_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="s2">&quot;TL_measurements&quot;</span><span class="p">,</span> <span class="s2">&quot;synwcmodel&quot;</span><span class="p">)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;synwcmodel&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.npy&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">synwcmodel_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="n">true_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
 
     <span class="c1"># Store the true values for this timestep</span>
     <span class="n">WC_true</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">true_values</span><span class="p">)</span>
-<span class="n">mesh_true</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/mesh.bms&quot;</span><span class="p">)</span>
+<span class="n">mesh_true</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="s2">&quot;TL_measurements&quot;</span><span class="p">,</span> <span class="s2">&quot;mesh.bms&quot;</span><span class="p">))</span>
 <span class="n">WC_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">WC_true</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">WC_true</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-(12, 10664)
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
 <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span>
                 <span class="n">water_content_mean</span><span class="p">[:,</span> <span class="mi">6</span><span class="p">],</span>
@@ -436,29 +358,8 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[1], line 123</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">65</span><span class="p">],[</span><span class="mi">1608</span><span class="p">],</span><span class="s1">&#39;*&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-[&lt;matplotlib.lines.Line2D at 0x21d1e50b750&gt;]
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_Ex8_MC_WC_6_1.png" src="../_images/auto_examples_Ex8_MC_WC_6_1.png" />
-</div>
-</div>
 <p>Modified function to extract time series based on x AND y positions</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">extract_mc_time_series</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">values_all</span><span class="p">,</span> <span class="n">positions</span><span class="p">):</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">extract_mc_time_series</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">values_all</span><span class="p">,</span> <span class="n">positions</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Extract Monte Carlo time series at specific x,y positions</span>
 
@@ -493,7 +394,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[1], line 123</span>
     <span class="k">return</span> <span class="n">time_series</span><span class="p">,</span> <span class="n">cell_indices</span>
 
 
-<span class="k">def</span> <span class="nf">extract_true_values_at_positions</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">true_values</span><span class="p">,</span> <span class="n">positions</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_true_values_at_positions</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">true_values</span><span class="p">,</span> <span class="n">positions</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Extract true water content values at specific x,y positions.</span>
 
@@ -526,12 +427,7 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[1], line 123</span>
     <span class="k">return</span> <span class="n">true_values_at_positions</span><span class="p">,</span> <span class="n">cell_indices</span>
 </pre></div>
 </div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define positions to sample (x,y coordinates)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define positions to sample (x,y coordinates)</span>
 <span class="n">positions</span> <span class="o">=</span> <span class="p">[</span>
     <span class="p">(</span><span class="mi">80</span><span class="p">,</span> <span class="mi">1621</span><span class="p">),</span>  <span class="c1"># Example coordinates, adjust based on your model</span>
     <span class="p">(</span><span class="mi">40</span><span class="p">,</span> <span class="mi">1607</span><span class="p">),</span>
@@ -543,27 +439,8 @@ Cell <span class="ansi-green-intense-fg ansi-bold">In[1], line 123</span>
 <span class="n">Pos1_true</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-array([[0.08097493, 0.1418029 , 0.15169074, 0.1602892 , 0.16125829,
-        0.15085966, 0.19855799, 0.19492963, 0.14982612, 0.13781302,
-        0.10646818, 0.08267117],
-       [0.1031926 , 0.13886836, 0.15270618, 0.17643507, 0.15142438,
-        0.15627901, 0.19532394, 0.18606532, 0.1503809 , 0.13288194,
-        0.11554453, 0.10819158]])
-</pre></div></div>
-</div>
 <p>Plot time series with uncertainty bands</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
 
 <span class="n">measurement_times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span><span class="mi">361</span><span class="p">,</span><span class="mi">30</span><span class="p">)</span>  <span class="c1"># Assuming sequential timesteps</span>
 
@@ -595,20 +472,8 @@ array([[0.08097493, 0.1418029 , 0.15169074, 0.1602892 , 0.16125829,
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_Ex8_MC_WC_11_0.png" src="../_images/auto_examples_Ex8_MC_WC_11_0.png" />
-</div>
-</div>
 <p>Fractured bedrock layer</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define positions to sample (x,y coordinates)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define positions to sample (x,y coordinates)</span>
 <span class="n">positions</span> <span class="o">=</span> <span class="p">[</span>
     <span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">1604</span><span class="p">),</span>  <span class="c1"># Example coordinates, adjust based on your model</span>
     <span class="p">(</span><span class="mi">65</span><span class="p">,</span> <span class="mi">1608</span><span class="p">),</span>
@@ -620,27 +485,8 @@ array([[0.08097493, 0.1418029 , 0.15169074, 0.1602892 , 0.16125829,
 <span class="n">Pos2_true</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-array([[0.13900906, 0.13547279, 0.1329891 , 0.13214048, 0.13598835,
-        0.14280648, 0.1564236 , 0.1622005 , 0.1654367 , 0.15132865,
-        0.14727957, 0.1449224 ],
-       [0.13911318, 0.13543656, 0.13259384, 0.13040086, 0.13264936,
-        0.13840835, 0.15002008, 0.1623058 , 0.16410032, 0.15118506,
-        0.14593856, 0.14431303]])
-</pre></div></div>
-</div>
 <p>Plot time series with uncertainty bands</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
 
 <span class="n">measurement_times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span><span class="mi">361</span><span class="p">,</span><span class="mi">30</span><span class="p">)</span>  <span class="c1"># Assuming sequential timesteps</span>
 
@@ -672,12 +518,13 @@ array([[0.13900906, 0.13547279, 0.1329891 , 0.13214048, 0.13598835,
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
 </pre></div>
 </div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.000 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex8-mc-wc-py">
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/f372f3c7425b655b2109e1f2ff2fd638/Ex8_MC_WC.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">Ex8_MC_WC.py</span></code></a></p>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/auto_examples_Ex8_MC_WC_15_0.png" src="../_images/auto_examples_Ex8_MC_WC_15_0.png" />
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/86d8291c979739bd21bb6001424c741d/Ex8_MC_WC.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex8_MC_WC.ipynb</span></code></a></p>
 </div>
 </div>
 </section>
@@ -685,10 +532,7 @@ array([[0.13900906, 0.13547279, 0.1329891 , 0.13214048, 0.13598835,
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex6_Structure_resinv.html" class="btn btn-neutral float-left" title="Ex 6. Structure-Constrained Resistivity Inversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex5_SRT.html" class="btn btn-neutral float-right" title="Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 

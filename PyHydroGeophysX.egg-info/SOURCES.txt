@@ -1,10 +1,15 @@
 LICENSE
+MANIFEST.in
 README.md
+pyproject.toml
+requirements-dev.txt
+requirements.txt
 setup.py
 PyHydroGeophysX/__init__.py
 PyHydroGeophysX.egg-info/PKG-INFO
 PyHydroGeophysX.egg-info/SOURCES.txt
 PyHydroGeophysX.egg-info/dependency_links.txt
+PyHydroGeophysX.egg-info/not-zip-safe
 PyHydroGeophysX.egg-info/requires.txt
 PyHydroGeophysX.egg-info/top_level.txt
 PyHydroGeophysX/Geophy_modular/ERT_to_WC.py
@@ -16,7 +21,11 @@ PyHydroGeophysX/Hydro_modular/hydro_to_ert.py
 PyHydroGeophysX/Hydro_modular/hydro_to_srt.py
 PyHydroGeophysX/core/__init__.py
 PyHydroGeophysX/core/interpolation.py
+PyHydroGeophysX/core/kriging_3d.py
 PyHydroGeophysX/core/mesh_utils.py
+PyHydroGeophysX/core/plt_utils.py
+PyHydroGeophysX/data_processing/__init__.py
+PyHydroGeophysX/data_processing/ert_data_agent.py
 PyHydroGeophysX/forward/__init__.py
 PyHydroGeophysX/forward/ert_forward.py
 PyHydroGeophysX/forward/srt_forward.py

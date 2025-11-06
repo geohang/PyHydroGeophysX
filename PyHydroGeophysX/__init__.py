@@ -171,3 +171,39 @@ __all__ = [
     'velDEM',
     'vel_porous'
 ]
+
+# in PyHydroGeophysX/__init__.py
+from .data_processing import (
+    load_ert_resipy,
+    qc_and_visualize,
+    export_for_inversion,
+    LocalRef,
+)
+__all__ += [
+    "load_ert_resipy",
+    "qc_and_visualize",
+    "export_for_inversion",
+    "LocalRef",
+]
+
+# Multi-agent system (optional - requires openai package)
+try:
+    from .agents import (
+        AgentCoordinator,
+        ERTLoaderAgent,
+        ERTInversionAgent,
+        WaterContentAgent,
+        ReportAgent,
+        SeismicAgent
+    )
+    __all__ += [
+        "AgentCoordinator",
+        "ERTLoaderAgent",
+        "ERTInversionAgent",
+        "WaterContentAgent",
+        "ReportAgent",
+        "SeismicAgent"
+    ]
+except ImportError:
+    # Agents module requires openai package
+    pass

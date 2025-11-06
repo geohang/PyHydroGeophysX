@@ -1,0 +1,4 @@
+The data is from 
+Thayer, D., Parsekian, A. D., Hyde, K., Speckman, H., Beverly, D., Ewers, B., ... & Holbrook, W. S. (2018). Geophysical measurements to determine the hydrologic partitioning of snowmelt on a snow‐dominated subalpine hillslope. Water Resources Research, 54(6), 3788-3808.
+
+We thank the authors open source their datasets!

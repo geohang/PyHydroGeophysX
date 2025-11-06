@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ex 4. Time-Lapse ERT Inversion Techniques &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-binder.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-dataframe.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/sg_gallery-rendered-html.css" type="text/css" />
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/04_TL_inversion.html" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=2389946f"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Ex 6. Structure-Constrained Resistivity Inversion" href="06_Structure_resinv.html" />
+    <link rel="prev" title="Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion" href="07_structure_TLresinv.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PyHydroGeophysX
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_model_output.html">Ex 1. Loading and Processing Hydrological Model Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_structure_TLresinv.html">Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex 4. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_Structure_resinv.html">Ex 6. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_MC_WC.html">Ex 8. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_SRT.html">Ex 5. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_Time_lapse_measurement.html">Ex3. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_workflow.html">Ex 2. Complete Workflow: From Hydrological Models to Geophysical Inversion</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyHydroGeophysX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
+      <li class="breadcrumb-item active">Ex 4. Time-Lapse ERT Inversion Techniques</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/geohang/PyHydroGeophysX/blob/main/docs/source/auto_examples/04_TL_inversion.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-04-tl-inversion-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
+</div>
+<section class="sphx-glr-example-title" id="ex-4-time-lapse-ert-inversion-techniques">
+<span id="sphx-glr-auto-examples-04-tl-inversion-py"></span><h1>Ex 4. Time-Lapse ERT Inversion Techniques<a class="headerlink" href="#ex-4-time-lapse-ert-inversion-techniques" title="Permalink to this heading"></a></h1>
+<p>This example demonstrates different approaches for time-lapse electrical
+resistivity tomography (ERT) inversion using PyHydroGeophysX.</p>
+<p>The example includes:
+1. Full time-lapse inversion with temporal regularization
+2. Windowed time-lapse inversion for large datasets
+3. L1-norm regularized inversion for sharp boundary recovery
+4. Comparison of different inversion strategies
+5. Visualization of resistivity evolution over time</p>
+<p>Time-lapse ERT inversion is crucial for monitoring subsurface water
+content changes and understanding hydrological processes in watersheds.
+The temporal regularization helps maintain consistency between consecutive
+time steps while allowing for realistic changes.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">pygimli</span> <span class="k">as</span> <span class="nn">pg</span>
+<span class="kn">from</span> <span class="nn">pygimli.physics</span> <span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="kn">import</span> <span class="n">make_axes_locatable</span>
+
+<span class="c1"># Setup package path for development</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># For regular Python scripts</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+    <span class="c1"># For Jupyter notebooks</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="c1"># Add the parent directory to Python path</span>
+<span class="n">parent_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">current_dir</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.time_lapse</span> <span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
+<span class="kn">from</span> <span class="nn">PyHydroGeophysX.inversion.windowed</span> <span class="kn">import</span> <span class="n">WindowedTimeLapseERTInversion</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements/appres&quot;</span>
+
+<span class="c1"># List of ERT data files testing monthly time-lapse inversion</span>
+<span class="n">ert_files</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;synthetic_data30.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data60.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data90.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data120.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data150.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data180.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data210.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data240.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data270.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data300.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data330.dat&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;synthetic_data360.dat&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>## 1.Full L2 Time-Lapse Inversion</p>
+<p>#################### FUll Time-Lapse Inversion #####################</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Full paths to data files</span>
+<span class="n">data_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">ert_files</span><span class="p">]</span>
+
+<span class="c1"># Measurement times (can be timestamps or any sequential numbers representing time)</span>
+<span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">,</span><span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
+
+<span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
+
+<span class="c1"># Set up inversion parameters</span>
+<span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
+    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
+    <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>            <span class="c1"># Maximum iterations</span>
+    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>           <span class="c1"># Absolute data error (V)</span>
+    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>           <span class="c1"># Relative data error (5%)</span>
+    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># Lambda reduction rate</span>
+    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>               <span class="c1"># Minimum lambda value</span>
+    <span class="s2">&quot;inversion_type&quot;</span><span class="p">:</span> <span class="s2">&quot;L2&quot;</span>           <span class="c1"># &#39;L1&#39;, &#39;L2&#39;, or &#39;L1L2&#39;</span>
+<span class="p">}</span>
+
+<span class="c1"># Create the time-lapse inversion object</span>
+<span class="n">inversion</span> <span class="o">=</span> <span class="n">TimeLapseERTInversion</span><span class="p">(</span>
+    <span class="n">data_files</span><span class="o">=</span><span class="n">data_files</span><span class="p">,</span>
+    <span class="n">measurement_times</span><span class="o">=</span><span class="n">measurement_times</span><span class="p">,</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">inversion_params</span>
+<span class="p">)</span>
+
+<span class="c1"># Run the inversion</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting time-lapse inversion...&quot;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion complete!&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="n">cMax</span> <span class="o">=</span> <span class="mi">3000</span>
+                    <span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span><span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>## 2. Window L2 time-lapse inversion</p>
+<p>Measurement times (can be timestamps or any sequential numbers representing time)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
+
+<span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">ert_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
+
+<span class="c1"># Set up inversion parameters</span>
+<span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
+    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
+    <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>            <span class="c1"># Maximum iterations</span>
+    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>           <span class="c1"># Absolute data error (V)</span>
+    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>           <span class="c1"># Relative data error (5%)</span>
+    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># Lambda reduction rate</span>
+    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>               <span class="c1"># Minimum lambda value</span>
+    <span class="s2">&quot;inversion_type&quot;</span><span class="p">:</span> <span class="s2">&quot;L2&quot;</span>           <span class="c1"># &#39;L1&#39;, &#39;L2&#39;, or &#39;L1L2&#39;</span>
+<span class="p">}</span>
+
+<span class="c1"># Define the window size (number of timesteps to process together)</span>
+<span class="n">window_size</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># A window size of 3 means each window includes 3 consecutive measurements</span>
+
+<span class="c1"># Create the windowed time-lapse inversion object</span>
+<span class="n">inversion</span> <span class="o">=</span> <span class="n">WindowedTimeLapseERTInversion</span><span class="p">(</span>
+    <span class="n">data_dir</span><span class="o">=</span><span class="n">data_dir</span><span class="p">,</span>               <span class="c1"># Directory containing ERT data files</span>
+    <span class="n">ert_files</span><span class="o">=</span><span class="n">ert_files</span><span class="p">,</span>             <span class="c1"># List of ERT data filenames</span>
+    <span class="n">measurement_times</span><span class="o">=</span><span class="n">measurement_times</span><span class="p">,</span>  <span class="c1"># List of measurement times</span>
+    <span class="n">window_size</span><span class="o">=</span><span class="n">window_size</span><span class="p">,</span>         <span class="c1"># Size of sliding window</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>                       <span class="c1"># Mesh for inversion</span>
+    <span class="o">**</span><span class="n">inversion_params</span>               <span class="c1"># Pass the same inversion parameters</span>
+<span class="p">)</span>
+
+<span class="c1"># Run the inversion, optionally in parallel</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting windowed time-lapse inversion...&quot;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion complete!&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="k">as</span> <span class="nn">pylab</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+          <span class="c1">#&#39;figure.figsize&#39;: (15, 5),</span>
+         <span class="s1">&#39;axes.labelsize&#39;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;axes.titlesize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;xtick.labelsize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+         <span class="s1">&#39;ytick.labelsize&#39;</span><span class="p">:</span><span class="mi">13</span><span class="p">}</span>
+
+<span class="n">pylab</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">6</span><span class="p">])</span>
+
+<span class="c1"># Use tight_layout with adjusted parameters to reduce space</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">wspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">i</span> <span class="o">//</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">4</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Add common ylabel only to leftmost panels</span>
+    <span class="n">ylabel</span> <span class="o">=</span> <span class="s2">&quot;Elevation (m)&quot;</span> <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Add resistivity label only to the middle-right panel (row 1, col 3)</span>
+    <span class="n">resistivity_label</span> <span class="o">=</span> <span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span> <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">7</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Only show axis ticks on leftmost and bottom panels</span>
+    <span class="k">if</span> <span class="n">col</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+
+    <span class="k">if</span> <span class="n">row</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># Not bottom row</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Add &quot;distance (m)&quot; label to bottom row panels</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create the plot</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span>
+                      <span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span>
+                      <span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+                      <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+                      <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span>
+                      <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                      <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span>
+                      <span class="n">ylabel</span><span class="o">=</span><span class="n">ylabel</span><span class="p">,</span>
+                      <span class="n">label</span><span class="o">=</span><span class="n">resistivity_label</span><span class="p">,</span>
+                      <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                      <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                      <span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mf">1.2</span><span class="p">)</span>
+
+    <span class="c1"># Only keep colorbar for the middle-right panel (row 1, col 3)</span>
+    <span class="c1"># This corresponds to panel index 7 in a 0-based indexing system</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">7</span><span class="p">:</span>  <span class="c1"># Keep only the colorbar for panel 7</span>
+        <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>## 3. Full L1 Time-lapse Inversion</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">result</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="n">cMax</span> <span class="o">=</span> <span class="mi">3000</span>
+                    <span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span><span class="p">,</span><span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Full paths to data files</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">ert_files</span><span class="p">]</span>
+
+<span class="c1"># Measurement times (can be timestamps or any sequential numbers representing time)</span>
+<span class="n">measurement_times</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span> <span class="p">,</span><span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Adjust based on your actual acquisition times</span>
+
+<span class="c1"># Create a mesh for the inversion (or load an existing one)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_files</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">ert_manager</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">ert_manager</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span>
+
+<span class="c1"># Set up inversion parameters</span>
+<span class="n">inversion_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>              <span class="c1"># Regularization parameter</span>
+    <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>                   <span class="c1"># Temporal regularization parameter</span>
+    <span class="s2">&quot;decay_rate&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>               <span class="c1"># Temporal decay rate</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>                <span class="c1"># Solver method (&#39;cgls&#39;, &#39;lsqr&#39;, etc.)</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">),</span> <span class="c1"># Min/max resistivity values (ohm-m)</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>            <span class="c1"># Maximum iterations</span>
+    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>           <span class="c1"># Absolute data error (V)</span>
+    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>           <span class="c1"># Relative data error (5%)</span>
+    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># Lambda reduction rate</span>
+    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>               <span class="c1"># Minimum lambda value</span>
+    <span class="s2">&quot;inversion_type&quot;</span><span class="p">:</span> <span class="s2">&quot;L1&quot;</span>           <span class="c1"># &#39;L1&#39;, &#39;L2&#39;, or &#39;L1L2&#39;</span>
+<span class="p">}</span>
+
+<span class="c1"># Create the time-lapse inversion object</span>
+<span class="n">inversion</span> <span class="o">=</span> <span class="n">TimeLapseERTInversion</span><span class="p">(</span>
+    <span class="n">data_files</span><span class="o">=</span><span class="n">data_files</span><span class="p">,</span>
+    <span class="n">measurement_times</span><span class="o">=</span><span class="n">measurement_times</span><span class="p">,</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">inversion_params</span>
+<span class="p">)</span>
+
+<span class="c1"># Run the inversion</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting time-lapse inversion...&quot;</span><span class="p">)</span>
+<span class="n">result_L1</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Inversion complete!&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">palettable.lightbartlein.diverging</span> <span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span><span class="mi">6</span><span class="p">])</span>
+
+<span class="c1"># True resistivity model</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">result_L1</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span><span class="n">result_L1</span><span class="o">.</span><span class="n">final_models</span><span class="p">[:,</span><span class="n">i</span><span class="p">],</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">cMin</span><span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="n">cMax</span> <span class="o">=</span> <span class="mi">3000</span>
+                    <span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39; Resistivity ($\Omega$ m)&#39;</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span><span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">coverage</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">all_coverage</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">cbar</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.000 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-04-tl-inversion-py">
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/306bab2cfd7733bc786adf4b488f3d75/04_TL_inversion.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">04_TL_inversion.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/72335f249f0cef53cbd39a82acc1d22f/04_TL_inversion.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">04_TL_inversion.ipynb</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="07_structure_TLresinv.html" class="btn btn-neutral float-left" title="Ex 7. Structure-Constrained Time-Lapse Resistivity Inversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="06_Structure_resinv.html" class="btn btn-neutral float-right" title="Ex 6. Structure-Constrained Resistivity Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hang Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

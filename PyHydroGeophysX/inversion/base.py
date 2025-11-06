@@ -2,14 +2,17 @@
 Base classes for geophysical inversion frameworks.
 
 This module defines:
-- `InversionResult`: A base class to store and manage common results from an inversion process,
+
+- InversionResult: A base class to store and manage common results from an inversion process,
   including final model, predicted data, convergence history, and plotting utilities.
-- `TimeLapseInversionResult`: A specialized version of `InversionResult` for time-lapse studies,
+- TimeLapseInversionResult: A specialized version of InversionResult for time-lapse studies,
   handling multiple models over time and providing time-slice plotting and animation.
-- `InversionBase`: An abstract base class outlining the common structure and interface
+- InversionBase: An abstract base class outlining the common structure and interface
   for various geophysical inversion methods (e.g., ERT, SRT). It handles data, mesh,
   and basic parameter management.
 """
+
+
 import numpy as np
 import pygimli as pg
 import matplotlib.pyplot as plt # Used for plotting methods
@@ -57,18 +60,18 @@ class InversionResult:
                             The main data will be saved as `filename.pkl` (or just `filename` if user includes .pkl).
                             The mesh will be saved as `filename.bms` or `filename.pkl.bms`.
                             It's recommended to provide `filename` without `.pkl`.
-        
+
         Raises:
             IOError: If there's an error during file writing.
             pickle.PicklingError: If an object cannot be pickled.
         """
         import pickle # Local import for a standard library module is fine.
-        
+
         # Ensure filename doesn't inadvertently include .pkl if we append it later.
         base_filename, ext = os.path.splitext(filename)
         if ext.lower() == '.pkl':
             pickle_filename = filename
-            mesh_save_filename_base = base_filename 
+            mesh_save_filename_base = base_filename
         else: # No extension or different extension, assume filename is base
             pickle_filename = filename + ".pkl" # Standard extension for pickled files
             mesh_save_filename_base = filename
@@ -98,7 +101,7 @@ class InversionResult:
                 # Log error but continue to save other data if possible
                 print(f"Warning: Could not save mesh to '{mesh_specific_filename}'. Error: {e}")
                 data_to_save['mesh_file'] = None # Ensure it's None if saving failed
-        
+
         # Save the rest of the data using pickle
         try:
             with open(pickle_filename, 'wb') as f:
@@ -143,10 +146,10 @@ class InversionResult:
         # Load the main data dictionary using pickle
         with open(pickle_filename, 'rb') as f:
             loaded_data = pickle.load(f)
-        
+
         # Create a new instance of the class (allows loading into subclasses like TimeLapseInversionResult)
         result_instance = cls()
-        
+
         # Assign attributes from the loaded dictionary
         # Use .get() for robustness against missing keys if format changes, though direct access is fine if format is fixed.
         result_instance.final_model = loaded_data.get('final_model')
@@ -156,7 +159,7 @@ class InversionResult:
         result_instance.iteration_data_errors = loaded_data.get('iteration_data_errors', [])
         result_instance.iteration_chi2 = loaded_data.get('iteration_chi2', [])
         result_instance.meta = loaded_data.get('meta', {})
-        
+
         # Load the mesh if a mesh file path is stored in the data
         mesh_file_path = loaded_data.get('mesh_file')
         if mesh_file_path:
@@ -164,7 +167,7 @@ class InversionResult:
             if not os.path.isabs(mesh_file_path):
                 pickle_dir = os.path.dirname(os.path.abspath(pickle_filename))
                 mesh_file_path = os.path.join(pickle_dir, mesh_file_path)
-            
+
             if os.path.exists(mesh_file_path):
                 try:
                     result_instance.mesh = pg.load(mesh_file_path)
@@ -173,7 +176,7 @@ class InversionResult:
                     print(f"Warning: Could not load mesh from '{mesh_file_path}'. Error: {e}")
             else:
                 print(f"Warning: Mesh file '{mesh_file_path}' referenced in pickle file but not found.")
-        
+
         return result_instance
     
     def plot_model(self, ax: Optional[plt.Axes] = None, cmap: str = 'viridis', # Changed default cmap
@@ -218,7 +221,7 @@ class InversionResult:
                 # Create a mask where True means "mask out" (i.e., coverage < threshold)
                 mask = np.array(self.coverage) < coverage_threshold
                 model_to_display = np.ma.array(model_to_display, mask=mask)
-        
+
         # Use PyGIMLi's show function to plot the model on the mesh
         # `pg.show` can handle masked arrays automatically.
         # It returns the colorbar instance, which can be useful for customization.
@@ -227,7 +230,7 @@ class InversionResult:
         cb = pg.show(self.mesh, data=model_to_display, ax=ax, cMap=cmap, **kwargs)
         # Example: add a colorbar label if not automatically set by pg.show or if desired
         # if 'label' not in kwargs and cb is not None:
-        #     cb.set_label("Model Parameter Value") 
+        #     cb.set_label("Model Parameter Value")
         
         return fig, ax
     
@@ -266,7 +269,7 @@ class InversionResult:
         # Optional: Set x-axis to integer ticks if many iterations
         if len(iterations) > 10:
             ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
-            
+
         return fig, ax
 
 
@@ -338,7 +341,7 @@ class TimeLapseInversionResult(InversionResult):
                 print(f"Mesh saved to: {mesh_specific_filename}")
             except Exception as e:
                 print(f"Warning: Could not save mesh to '{mesh_specific_filename}'. Error: {e}")
-        
+
         try:
             with open(pickle_filename, 'wb') as f:
                 pickle.dump(data_to_save, f)
@@ -363,9 +366,9 @@ class TimeLapseInversionResult(InversionResult):
 
         with open(pickle_filename, 'rb') as f:
             loaded_data = pickle.load(f)
-        
+
         result_instance = cls() # Creates instance of TimeLapseInversionResult
-        
+
         # Load base attributes
         result_instance.final_model = loaded_data.get('final_model')
         result_instance.predicted_data = loaded_data.get('predicted_data')
@@ -374,7 +377,7 @@ class TimeLapseInversionResult(InversionResult):
         result_instance.iteration_data_errors = loaded_data.get('iteration_data_errors', [])
         result_instance.iteration_chi2 = loaded_data.get('iteration_chi2', []) # Base chi2 list
         result_instance.meta = loaded_data.get('meta', {})
-        
+
         # Load time-lapse specific attributes
         result_instance.final_models = loaded_data.get('final_models')
         result_instance.timesteps = loaded_data.get('timesteps')
@@ -396,7 +399,7 @@ class TimeLapseInversionResult(InversionResult):
                 print(f"Warning: Mesh file '{mesh_file_path}' not found.")
         return result_instance
 
-    def plot_time_slice(self, timestep_idx: int, ax: Optional[plt.Axes] = None, cmap: str = 'viridis', 
+    def plot_time_slice(self, timestep_idx: int, ax: Optional[plt.Axes] = None, cmap: str = 'viridis',
                        coverage_threshold: Optional[float] = None, **kwargs: Any) -> Tuple[plt.Figure, plt.Axes]:
         """
         Plot a single time slice (inverted model at a specific timestep) from the results.
@@ -430,7 +433,7 @@ class TimeLapseInversionResult(InversionResult):
         
         # Get the model slice for the specified timestep
         model_slice_to_plot = self.final_models[:, timestep_idx]
-        
+
         # Apply coverage masking if specified
         current_coverage_array: Optional[np.ndarray] = None
         if coverage_threshold is not None and self.all_coverage:
@@ -441,7 +444,7 @@ class TimeLapseInversionResult(InversionResult):
                 else:
                     mask = current_coverage_array < coverage_threshold
                     model_slice_to_plot = np.ma.array(model_slice_to_plot, mask=mask)
-            elif self.all_coverage and self.all_coverage[0] is not None and coverage_threshold is not None : 
+            elif self.all_coverage and self.all_coverage[0] is not None and coverage_threshold is not None :
                 # Fallback to first coverage if specific one not found (original behavior)
                 # This might be misleading if coverages vary significantly.
                 print(f"Warning: Coverage for timestep {timestep_idx} not found or incompatible. Attempting to use coverage from first timestep as fallback for masking.")
@@ -482,7 +485,7 @@ class TimeLapseInversionResult(InversionResult):
             dpi (int, optional): Dots Per Inch for the output animation. Defaults to 100.
             fps (int, optional): Frames Per Second for the animation. Defaults to 2.
             **kwargs (Any): Additional keyword arguments passed to `plot_time_slice` for each frame.
-        
+
         Raises:
             ValueError: If `final_models` or `mesh` is missing.
             ImportError: If `matplotlib.animation` cannot be imported.
@@ -501,14 +504,14 @@ class TimeLapseInversionResult(InversionResult):
             return
 
         fig, ax = plt.subplots(figsize=(10, 6)) # Adjust figsize as needed
-        
+
         # Animation update function: called for each frame
         def update_animation_frame(frame_index: int) -> List[plt.Artist]: # Return list of artists to draw
             ax.clear() # Clear previous frame's contents
             # Use self.plot_time_slice to draw the model for the current frame_index
             # All plot_time_slice arguments need to be passed.
             # kwargs from create_time_lapse_animation are passed through.
-            self.plot_time_slice(timestep_idx=frame_index, ax=ax, cmap=cmap, 
+            self.plot_time_slice(timestep_idx=frame_index, ax=ax, cmap=cmap,
                                  coverage_threshold=coverage_threshold, **kwargs)
             # FuncAnimation expects a list of artists that were updated
             # This includes images, collections (like contour lines), patches, lines, texts.
@@ -521,7 +524,7 @@ class TimeLapseInversionResult(InversionResult):
         # However, blit=True can be tricky with complex plots or changing axis limits/titles.
         # If issues occur, try blit=False.
         ani = animation.FuncAnimation(
-            fig, update_animation_frame, frames=num_timesteps, 
+            fig, update_animation_frame, frames=num_timesteps,
             blit=False, # Set to False for safety with pg.show and title changes per frame
             repeat=False # Don't repeat animation once done
         )
@@ -570,10 +573,10 @@ class InversionBase:
         self.mesh: Optional[pg.Mesh] = mesh
         self.result: InversionResult = InversionResult() # Initialize with a basic result container
                                                         # Subclasses might replace this with a more specific one (e.g. TimeLapseInversionResult)
-        
+
         # Store user-provided parameters, allowing them to override defaults.
-        self.parameters: Dict[str, Any] = kwargs 
-        
+        self.parameters: Dict[str, Any] = kwargs
+
         # Define default parameters common to many inversion types.
         # Subclasses can extend or override these.
         default_inversion_parameters: Dict[str, Any] = {
@@ -609,7 +612,7 @@ class InversionBase:
             # This part is highly dependent on the type of inversion (ERT, SRT, etc.)
             # and thus must be implemented in the specific subclass.
             raise NotImplementedError("Mesh creation or loading must be implemented in the setup() method of derived classes if mesh is not provided during initialization.")
-        
+
         # Other setup tasks like initializing forward operator,
         # regularization matrices, etc., would go here or in subclass's setup.
         self.result.mesh = self.mesh # Store mesh in result object
@@ -630,7 +633,7 @@ class InversionBase:
     def compute_jacobian(self, model: np.ndarray) -> np.ndarray:
         """
         Abstract method to compute the Jacobian matrix (sensitivity matrix).
-        
+
         The Jacobian J_ij = ∂d_i / ∂m_j relates changes in model parameters (m_j)
         to changes in observed data (d_i).
         

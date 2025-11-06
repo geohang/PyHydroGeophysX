@@ -6,24 +6,21 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PyHydroGeophysX &mdash; PyHydroGeophysX 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+  <title>PyHydroGeophysX &mdash; PyHydroGeophysX Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
       <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
       <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
       <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
       <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
 
   
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/api/modules.html" />
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../_static/documentation_options.js?v=01f34227"></script>
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
-      <script src="../_static/copybutton.js?v=f281be69"></script>
-      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -51,7 +48,7 @@
               <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -110,8 +107,16 @@
 <li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.core.html">PyHydroGeophysX.core package</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.core.html#submodules">Submodules</a></li>
 <li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.core.html#module-PyHydroGeophysX.core.interpolation">PyHydroGeophysX.core.interpolation module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.core.html#pyhydrogeophysx-core-kriging-3d-module">PyHydroGeophysX.core.kriging_3d module</a></li>
 <li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.core.html#module-PyHydroGeophysX.core.mesh_utils">PyHydroGeophysX.core.mesh_utils module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.core.html#module-PyHydroGeophysX.core">Module contents</a></li>
+<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.core.html#pyhydrogeophysx-core-plt-utils-module">PyHydroGeophysX.core.plt_utils module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.core.html#module-contents">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.data_processing.html">PyHydroGeophysX.data_processing package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.data_processing.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.data_processing.html#pyhydrogeophysx-data-processing-ert-data-agent-module">PyHydroGeophysX.data_processing.ert_data_agent module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.data_processing.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.forward.html">PyHydroGeophysX.forward package</a><ul>
@@ -155,154 +160,7 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="PyHydroGeophysX.html#module-PyHydroGeophysX">Module contents</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ProfileInterpolator"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ProfileInterpolator.__init__"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ProfileInterpolator.interpolate_layer_data"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator.interpolate_layer_data()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ProfileInterpolator.interpolate_3d_data"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator.interpolate_3d_data()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ProfileInterpolator.interpolate_to_mesh"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator.interpolate_to_mesh()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.interpolate_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_to_profile()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.setup_profile_coordinates"><code class="docutils literal notranslate"><span class="pre">setup_profile_coordinates()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.interpolate_structure_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_structure_to_profile()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.prepare_2D_profile_data"><code class="docutils literal notranslate"><span class="pre">prepare_2D_profile_data()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.interpolate_to_mesh"><code class="docutils literal notranslate"><span class="pre">interpolate_to_mesh()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.MeshCreator"><code class="docutils literal notranslate"><span class="pre">MeshCreator</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.MeshCreator.__init__"><code class="docutils literal notranslate"><span class="pre">MeshCreator.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.MeshCreator.create_from_layers"><code class="docutils literal notranslate"><span class="pre">MeshCreator.create_from_layers()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.MeshCreator.create_from_ert_data"><code class="docutils literal notranslate"><span class="pre">MeshCreator.create_from_ert_data()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.create_mesh_from_layers"><code class="docutils literal notranslate"><span class="pre">create_mesh_from_layers()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.MODFLOWWaterContent"><code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.MODFLOWWaterContent.__init__"><code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.MODFLOWWaterContent.load_timestep"><code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent.load_timestep()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.MODFLOWWaterContent.load_time_range"><code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent.load_time_range()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.MODFLOWWaterContent.get_timestep_info"><code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent.get_timestep_info()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTForwardModeling"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTForwardModeling.__init__"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTForwardModeling.set_data"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling.set_data()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTForwardModeling.set_mesh"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling.set_mesh()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTForwardModeling.forward"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling.forward()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTForwardModeling.forward_and_jacobian"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling.forward_and_jacobian()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTForwardModeling.get_coverage"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling.get_coverage()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTForwardModeling.create_synthetic_data"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling.create_synthetic_data()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ertforward"><code class="docutils literal notranslate"><span class="pre">ertforward()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ertforward2"><code class="docutils literal notranslate"><span class="pre">ertforward2()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ertforandjac"><code class="docutils literal notranslate"><span class="pre">ertforandjac()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ertforandjac2"><code class="docutils literal notranslate"><span class="pre">ertforandjac2()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionResult"><code class="docutils literal notranslate"><span class="pre">InversionResult</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionResult.__init__"><code class="docutils literal notranslate"><span class="pre">InversionResult.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionResult.save"><code class="docutils literal notranslate"><span class="pre">InversionResult.save()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionResult.load"><code class="docutils literal notranslate"><span class="pre">InversionResult.load()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionResult.plot_model"><code class="docutils literal notranslate"><span class="pre">InversionResult.plot_model()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionResult.plot_convergence"><code class="docutils literal notranslate"><span class="pre">InversionResult.plot_convergence()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TimeLapseInversionResult"><code class="docutils literal notranslate"><span class="pre">TimeLapseInversionResult</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TimeLapseInversionResult.__init__"><code class="docutils literal notranslate"><span class="pre">TimeLapseInversionResult.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TimeLapseInversionResult.plot_time_slice"><code class="docutils literal notranslate"><span class="pre">TimeLapseInversionResult.plot_time_slice()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TimeLapseInversionResult.create_time_lapse_animation"><code class="docutils literal notranslate"><span class="pre">TimeLapseInversionResult.create_time_lapse_animation()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionBase"><code class="docutils literal notranslate"><span class="pre">InversionBase</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionBase.__init__"><code class="docutils literal notranslate"><span class="pre">InversionBase.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionBase.setup"><code class="docutils literal notranslate"><span class="pre">InversionBase.setup()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionBase.run"><code class="docutils literal notranslate"><span class="pre">InversionBase.run()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionBase.compute_jacobian"><code class="docutils literal notranslate"><span class="pre">InversionBase.compute_jacobian()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.InversionBase.objective_function"><code class="docutils literal notranslate"><span class="pre">InversionBase.objective_function()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTInversion"><code class="docutils literal notranslate"><span class="pre">ERTInversion</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTInversion.__init__"><code class="docutils literal notranslate"><span class="pre">ERTInversion.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTInversion.setup"><code class="docutils literal notranslate"><span class="pre">ERTInversion.setup()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.ERTInversion.run"><code class="docutils literal notranslate"><span class="pre">ERTInversion.run()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TimeLapseERTInversion"><code class="docutils literal notranslate"><span class="pre">TimeLapseERTInversion</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TimeLapseERTInversion.__init__"><code class="docutils literal notranslate"><span class="pre">TimeLapseERTInversion.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TimeLapseERTInversion.setup"><code class="docutils literal notranslate"><span class="pre">TimeLapseERTInversion.setup()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TimeLapseERTInversion.run"><code class="docutils literal notranslate"><span class="pre">TimeLapseERTInversion.run()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.WindowedTimeLapseERTInversion"><code class="docutils literal notranslate"><span class="pre">WindowedTimeLapseERTInversion</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.WindowedTimeLapseERTInversion.__init__"><code class="docutils literal notranslate"><span class="pre">WindowedTimeLapseERTInversion.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.WindowedTimeLapseERTInversion.run"><code class="docutils literal notranslate"><span class="pre">WindowedTimeLapseERTInversion.run()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.generalized_solver"><code class="docutils literal notranslate"><span class="pre">generalized_solver()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.LinearSolver"><code class="docutils literal notranslate"><span class="pre">LinearSolver</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.LinearSolver.__init__"><code class="docutils literal notranslate"><span class="pre">LinearSolver.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.LinearSolver.solve"><code class="docutils literal notranslate"><span class="pre">LinearSolver.solve()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.CGLSSolver"><code class="docutils literal notranslate"><span class="pre">CGLSSolver</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.CGLSSolver.__init__"><code class="docutils literal notranslate"><span class="pre">CGLSSolver.__init__()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.LSQRSolver"><code class="docutils literal notranslate"><span class="pre">LSQRSolver</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.LSQRSolver.__init__"><code class="docutils literal notranslate"><span class="pre">LSQRSolver.__init__()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.RRLSQRSolver"><code class="docutils literal notranslate"><span class="pre">RRLSQRSolver</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.RRLSQRSolver.__init__"><code class="docutils literal notranslate"><span class="pre">RRLSQRSolver.__init__()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.RRLSSolver"><code class="docutils literal notranslate"><span class="pre">RRLSSolver</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.RRLSSolver.__init__"><code class="docutils literal notranslate"><span class="pre">RRLSSolver.__init__()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.direct_solver"><code class="docutils literal notranslate"><span class="pre">direct_solver()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TikhonvRegularization"><code class="docutils literal notranslate"><span class="pre">TikhonvRegularization</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TikhonvRegularization.__init__"><code class="docutils literal notranslate"><span class="pre">TikhonvRegularization.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TikhonvRegularization.create_regularization_matrix"><code class="docutils literal notranslate"><span class="pre">TikhonvRegularization.create_regularization_matrix()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.TikhonvRegularization.apply"><code class="docutils literal notranslate"><span class="pre">TikhonvRegularization.apply()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.IterativeRefinement"><code class="docutils literal notranslate"><span class="pre">IterativeRefinement</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.IterativeRefinement.__init__"><code class="docutils literal notranslate"><span class="pre">IterativeRefinement.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.IterativeRefinement.refine"><code class="docutils literal notranslate"><span class="pre">IterativeRefinement.refine()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.get_optimal_solver"><code class="docutils literal notranslate"><span class="pre">get_optimal_solver()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.BaseVelocityModel"><code class="docutils literal notranslate"><span class="pre">BaseVelocityModel</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.BaseVelocityModel.__init__"><code class="docutils literal notranslate"><span class="pre">BaseVelocityModel.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.BaseVelocityModel.calculate_velocity"><code class="docutils literal notranslate"><span class="pre">BaseVelocityModel.calculate_velocity()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.VRHModel"><code class="docutils literal notranslate"><span class="pre">VRHModel</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.VRHModel.__init__"><code class="docutils literal notranslate"><span class="pre">VRHModel.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.VRHModel.calculate_properties"><code class="docutils literal notranslate"><span class="pre">VRHModel.calculate_properties()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.VRHModel.calculate_velocity"><code class="docutils literal notranslate"><span class="pre">VRHModel.calculate_velocity()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.BrieModel"><code class="docutils literal notranslate"><span class="pre">BrieModel</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.BrieModel.__init__"><code class="docutils literal notranslate"><span class="pre">BrieModel.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.BrieModel.calculate_fluid_modulus"><code class="docutils literal notranslate"><span class="pre">BrieModel.calculate_fluid_modulus()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.BrieModel.calculate_saturated_modulus"><code class="docutils literal notranslate"><span class="pre">BrieModel.calculate_saturated_modulus()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.DEMModel"><code class="docutils literal notranslate"><span class="pre">DEMModel</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.DEMModel.__init__"><code class="docutils literal notranslate"><span class="pre">DEMModel.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.DEMModel.calculate_velocity"><code class="docutils literal notranslate"><span class="pre">DEMModel.calculate_velocity()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.HertzMindlinModel"><code class="docutils literal notranslate"><span class="pre">HertzMindlinModel</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.HertzMindlinModel.__init__"><code class="docutils literal notranslate"><span class="pre">HertzMindlinModel.__init__()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.HertzMindlinModel.calculate_velocity"><code class="docutils literal notranslate"><span class="pre">HertzMindlinModel.calculate_velocity()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.VRH_model"><code class="docutils literal notranslate"><span class="pre">VRH_model()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.satK"><code class="docutils literal notranslate"><span class="pre">satK()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.velDEM"><code class="docutils literal notranslate"><span class="pre">velDEM()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.html#PyHydroGeophysX.vel_porous"><code class="docutils literal notranslate"><span class="pre">vel_porous()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="PyHydroGeophysX.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>
