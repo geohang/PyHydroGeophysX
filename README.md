@@ -6,7 +6,7 @@ A comprehensive Python package for integrating hydrological model outputs with g
 
 - 🌊 **Hydrological Model Integration:** Seamless loading and processing of MODFLOW and ParFlow outputs  
 - 📊 **ERT Data Processing:** Standardized loading, quality control, and export of ERT field data with RESIPY integration  
-- 🤖 **Multi-Agent AI System:** GPT API-based automated workflow for "load ERT → invert → convert to water content → report" **NEW**
+- 🤖 **Multi-Agent AI System:** Automatic cross-modal geophysics agent supporting multiple LLM APIs (GPT, Gemini, Claude) for automated workflows processing ERT, seismic, and other geophysical data into hydrologic information **NEW**
 - 🪨 **Petrophysical Relationships:** Advanced models for converting between water content, saturation, resistivity, and seismic velocity  
 - ⚡ **Forward Modeling:** Complete ERT and SRT forward modeling capabilities with synthetic data generation  
 - 🔄 **Time-Lapse Inversion:** Sophisticated algorithms for time-lapse ERT inversion with temporal regularization  
@@ -117,7 +117,7 @@ The examples folder provides paired Jupyter notebooks (.ipynb) and Python script
 
 ## 0. Multi-Agent AI Workflow (NEW)
 
-Automate the complete ERT processing workflow using AI agents:
+Automatic cross-modal geophysics agent for subsurface hydrology. Automate geophysical data processing workflows (ERT, seismic, and more) using AI agents with support for multiple LLM APIs (GPT, Gemini, Claude):
 
 ```python
 from PyHydroGeophysX.agents import (
@@ -125,8 +125,8 @@ from PyHydroGeophysX.agents import (
     WaterContentAgent, ReportAgent, SeismicAgent
 )
 
-# Initialize coordinator with your OpenAI API key
-coordinator = AgentCoordinator(api_key='your-api-key')
+# Initialize coordinator with your LLM API key (supports OpenAI GPT, Google Gemini, Anthropic Claude)
+coordinator = AgentCoordinator(api_key='your-api-key', llm_provider='openai')  # or 'gemini', 'claude'
 
 # Register specialized agents
 coordinator.register_agent('ert_loader', ERTLoaderAgent())
@@ -160,11 +160,11 @@ if results['status'] == 'success':
 ```
 
 **Key Features:**
-- 🤖 AI-powered parameter selection and interpretation
-- 🔄 Fully automated workflow execution
+- 🤖 AI-powered parameter selection and interpretation with multiple LLM API support (GPT, Gemini, Claude)
+- 🔄 Fully automated workflow execution for cross-modal geophysical data
 - 📊 Automatic quality control and uncertainty quantification
 - 📝 Comprehensive report generation with visualizations
-- 🌊 Optional seismic integration for structural constraints
+- 🌊 Cross-modal integration (ERT, seismic, and other geophysical methods)
 
 See `examples/Ex_multi_agent_workflow.py` for complete examples.
 

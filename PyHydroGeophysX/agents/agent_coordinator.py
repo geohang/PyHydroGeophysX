@@ -2,7 +2,9 @@
 Agent Coordinator for Multi-Agent Workflow
 
 Coordinates the execution of multiple specialized agents to complete
-the full geophysical processing workflow.
+the full geophysical processing workflow. Supports cross-modal geophysical
+data processing (ERT, seismic, and more) with multiple LLM API providers
+(GPT, Gemini, Claude).
 """
 
 from typing import Dict, Any, List, Optional
@@ -15,21 +17,24 @@ class AgentCoordinator:
     """
     Coordinates multiple agents to execute a complete workflow.
     
-    The coordinator manages the workflow: 
-    "load ERT → invert → convert to water content → report"
-    with optional seismic data integration.
+    The coordinator manages cross-modal geophysical workflows such as: 
+    "load geophysical data → process → invert → convert to hydrologic parameters → report"
+    with support for multiple data types (ERT, seismic, etc.) and LLM providers (GPT, Gemini, Claude).
     """
     
-    def __init__(self, api_key: Optional[str] = None, output_dir: str = "results/agents"):
+    def __init__(self, api_key: Optional[str] = None, output_dir: str = "results/agents",
+                 llm_provider: str = "openai"):
         """
         Initialize the agent coordinator.
         
         Args:
-            api_key: OpenAI API key for agents
+            api_key: LLM API key for agents
             output_dir: Directory for saving results
+            llm_provider: LLM provider to use ('openai', 'gemini', or 'claude')
         """
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        self.api_key = api_key or self._get_default_api_key(llm_provider)
         self.output_dir = output_dir
+        self.llm_provider = llm_provider.lower()
         self.agents = {}
         self.workflow_state = {
             'status': 'initialized',
@@ -41,6 +46,16 @@ class AgentCoordinator:
         
         # Create output directory
         os.makedirs(output_dir, exist_ok=True)
+    
+    def _get_default_api_key(self, provider: str) -> Optional[str]:
+        """Get default API key based on provider."""
+        provider_env_map = {
+            'openai': 'OPENAI_API_KEY',
+            'gemini': 'GEMINI_API_KEY',
+            'claude': 'ANTHROPIC_API_KEY'
+        }
+        env_var = provider_env_map.get(provider.lower())
+        return os.getenv(env_var) if env_var else None
     
     def register_agent(self, agent_name: str, agent_instance):
         """

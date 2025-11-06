@@ -53,7 +53,9 @@ setup(
             "meshop",
         ],
         "agents": [
-            "openai>=1.0.0",  # For multi-agent AI system
+            "openai>=1.0.0",  # For OpenAI GPT models
+            "google-generativeai>=0.3.0",  # For Google Gemini models
+            "anthropic>=0.18.0",  # For Anthropic Claude models
             "markdown>=3.0",  # For HTML report generation
         ],
         "docs": [
@@ -76,7 +78,7 @@ setup(
         "all": [
             # Combines all optional dependencies
             "pygimli>=1.5", "resipy>=3.4.0", "flopy", "cupy", "parflow", "joblib", "meshop",
-            "openai>=1.0.0", "markdown>=3.0",
+            "openai>=1.0.0", "google-generativeai>=0.3.0", "anthropic>=0.18.0", "markdown>=3.0",
             "sphinx>=7.1.2", "sphinx-rtd-theme>=1.3.0", "myst-parser>=2.0.0",
             "nbsphinx>=0.9.1", "sphinx-copybutton>=0.5.2", "sphinx-gallery>=0.14.0",
             "palettable", "Pillow", "pytest>=6.0", "pytest-cov", "black", "flake8", "mypy",
