@@ -2,7 +2,9 @@
 Agent Coordinator for Multi-Agent Workflow
 
 Coordinates the execution of multiple specialized agents to complete
-the full geophysical processing workflow.
+the full geophysical processing workflow. Supports cross-modal geophysical
+data processing (ERT, seismic, and more) with multiple LLM API providers
+(GPT, Gemini, Claude).
 """
 
 from typing import Dict, Any, List, Optional
@@ -15,21 +17,24 @@ class AgentCoordinator:
     """
     Coordinates multiple agents to execute a complete workflow.
     
-    The coordinator manages the workflow: 
-    "load ERT → invert → convert to water content → report"
-    with optional seismic data integration.
+    The coordinator manages cross-modal geophysical workflows such as: 
+    "load geophysical data → process → invert → convert to hydrologic parameters → report"
+    with support for multiple data types (ERT, seismic, etc.) and LLM providers (GPT, Gemini, Claude).
     """
     
-    def __init__(self, api_key: Optional[str] = None, output_dir: str = "results/agents"):
+    def __init__(self, api_key: Optional[str] = None, output_dir: str = "results/agents",
+                 llm_provider: str = "openai"):
         """
         Initialize the agent coordinator.
         
         Args:
-            api_key: OpenAI API key for agents
+            api_key: LLM API key for agents
             output_dir: Directory for saving results
+            llm_provider: LLM provider to use ('openai', 'gemini', or 'claude')
         """
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        self.api_key = api_key or self._get_default_api_key(llm_provider)
         self.output_dir = output_dir
+        self.llm_provider = llm_provider.lower()
         self.agents = {}
         self.workflow_state = {
             'status': 'initialized',
@@ -41,6 +46,16 @@ class AgentCoordinator:
         
         # Create output directory
         os.makedirs(output_dir, exist_ok=True)
+    
+    def _get_default_api_key(self, provider: str) -> Optional[str]:
+        """Get default API key based on provider."""
+        provider_env_map = {
+            'openai': 'OPENAI_API_KEY',
+            'gemini': 'GEMINI_API_KEY',
+            'claude': 'ANTHROPIC_API_KEY'
+        }
+        env_var = provider_env_map.get(provider.lower())
+        return os.getenv(env_var) if env_var else None
     
     def register_agent(self, agent_name: str, agent_instance):
         """
@@ -65,6 +80,9 @@ class AgentCoordinator:
                 - petrophysical_params: Parameters for water content conversion
                 - use_seismic: Whether to include seismic processing (default: False)
                 - seismic_data: Optional seismic data file
+                - use_climate: Whether to include climate data (default: False)
+                - climate_config: Climate data configuration (coords/geometry, dates, etc.)
+                - ert_timestamps: Timestamps for ERT acquisitions (for climate alignment)
                 
         Returns:
             Dictionary containing workflow results
@@ -73,6 +91,20 @@ class AgentCoordinator:
         self.workflow_state['status'] = 'running'
         
         try:
+            # Step 0 (Optional): Fetch climate data if requested
+            if config.get('use_climate', False) and 'climate_config' in config:
+                self._log("Step 0: Fetching climate data")
+                self.workflow_state['current_step'] = 'fetch_climate'
+                
+                climate_config = config['climate_config']
+                # Add ERT timestamps if provided
+                if 'ert_timestamps' in config:
+                    climate_config['ert_timestamps'] = config['ert_timestamps']
+                
+                climate_results = self._execute_agent('climate_data', climate_config)
+                self.workflow_state['data']['climate_data'] = climate_results
+                self.workflow_state['completed_steps'].append('fetch_climate')
+            
             # Step 1: Load ERT data
             self._log("Step 1: Loading ERT data")
             self.workflow_state['current_step'] = 'load_ert'

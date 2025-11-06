@@ -8,7 +8,7 @@ The multi-agent system coordinates specialized AI agents to execute the complete
 
 **"load ERT → invert → convert to water content → report"**
 
-With optional seismic data integration for structure-constrained inversion.
+With optional seismic data integration for structure-constrained inversion and climate data integration for hydrologic context.
 
 ## Architecture
 
@@ -21,42 +21,65 @@ With optional seismic data integration for structure-constrained inversion.
 3. **WaterContentAgent**: Converts resistivity to water content using petrophysical models
 4. **ReportAgent**: Generates comprehensive reports with visualizations
 5. **SeismicAgent** (optional): Processes seismic refraction data for structural constraints
+6. **ClimateDataAgent** (optional): Fetches meteorological data and computes PET for hydrologic analysis
 
 ## Key Features
 
-- 🤖 **AI-Enhanced**: Each agent uses GPT API for intelligent parameter selection and interpretation
+- 🤖 **AI-Enhanced**: Each agent uses LLM API (GPT/Gemini/Claude) for intelligent parameter selection and interpretation
 - 🔄 **Automated Workflow**: Complete end-to-end processing with minimal user input
 - 📊 **Quality Control**: Automatic data validation and quality metrics
 - 🧪 **Uncertainty Quantification**: Monte Carlo analysis for water content estimates
 - 📈 **Comprehensive Reports**: Automatic generation of reports with visualizations
 - 🌊 **Seismic Integration**: Optional structure-constrained inversion using seismic data
+- ☁️ **Climate Integration**: Optional meteorological data and PET for hydrologic context
 
 ## Installation
 
-The multi-agent system requires the OpenAI package:
+The multi-agent system requires the LLM API packages:
 
 ```bash
+# For OpenAI GPT
 pip install openai>=1.0.0
+
+# For Google Gemini
+pip install google-generativeai>=0.3.0
+
+# For Anthropic Claude
+pip install anthropic>=0.18.0
+
+# For climate data integration
+pip install pydaymet>=0.16.0 pandas>=1.3.0 xarray>=0.19.0
 ```
 
-For full functionality, install PyHydroGeophysX with geophysics dependencies:
+For full functionality, install PyHydroGeophysX with all dependencies:
 
 ```bash
-pip install pyhydrogeophysx[geophysics]
+pip install pyhydrogeophysx[all]
 ```
 
 ## Configuration
 
-Set your OpenAI API key as an environment variable:
+Set your LLM API key as an environment variable based on the provider you want to use:
 
 ```bash
+# For OpenAI GPT
 export OPENAI_API_KEY='your-api-key-here'
+
+# For Google Gemini
+export GEMINI_API_KEY='your-api-key-here'
+
+# For Anthropic Claude
+export ANTHROPIC_API_KEY='your-api-key-here'
 ```
 
 Or pass it directly when creating agents:
 
 ```python
-coordinator = AgentCoordinator(api_key='your-api-key')
+# Choose your LLM provider
+coordinator = AgentCoordinator(
+    api_key='your-api-key',
+    llm_provider='openai'  # or 'gemini', 'claude'
+)
 ```
 
 **Note**: The system works without an API key, but LLM-enhanced features (parameter recommendations, interpretations) will be disabled.
@@ -124,7 +147,45 @@ config = {
 results = coordinator.execute_workflow(config)
 ```
 
+### With Climate Data Integration
+
+```python
+from PyHydroGeophysX.agents import ClimateDataAgent
+
+# Add climate agent
+coordinator.register_agent('climate_data', ClimateDataAgent())
+
+# Configure with climate data
+config = {
+    'data_file': 'data/ERT/survey.dat',
+    'instrument': 'E4D',
+    'use_climate': True,
+    'climate_config': {
+        'coords': (-105.3, 40.0),  # Site location (lon, lat)
+        'dates': ('2023-06-01', '2023-09-30'),  # Campaign period
+        'pet_method': 'penman_monteith',
+        'antecedent_days': [1, 3, 7]
+    },
+    'ert_timestamps': ['2023-06-15', '2023-07-15', '2023-08-15'],
+    'inversion_params': {'lambda': 20.0}
+}
+
+results = coordinator.execute_workflow(config)
+
+# Access climate data
+if results['status'] == 'success':
+    climate_data = results['results']['climate_data']
+    print(f"Climate features: {climate_data['derived_features'].keys()}")
+```
+
 ## Workflow Steps
+
+0. **Fetch Climate Data** (optional)
+   - Retrieves meteorological data from PyDaymet
+   - Computes PET using multiple methods
+   - Aligns climate data with ERT timestamps
+   - Generates derived features (antecedent precipitation, P-PET)
+   - LLM provides hydrologic context
 
 1. **Load ERT Data**
    - Loads data from commercial instruments (E4D, Syscal, ABEM, etc.)
@@ -150,6 +211,7 @@ results = coordinator.execute_workflow(config)
 5. **Generate Report**
    - Creates comprehensive markdown/HTML report
    - Generates visualization plots
+   - Includes climate context if available
    - LLM provides narrative summary
 
 ## Configuration Options
@@ -189,7 +251,22 @@ config = {
     # Seismic integration (optional)
     'use_seismic': bool,        # Enable seismic (default: False)
     'seismic_data': object,     # PyGIMLi travel time data
-    'velocity_threshold': float # Interface threshold m/s (default: 1200)
+    'velocity_threshold': float,# Interface threshold m/s (default: 1200)
+    
+    # Climate data integration (optional)
+    'use_climate': bool,        # Enable climate data (default: False)
+    'climate_config': {
+        'coords': tuple,        # (lon, lat) or list of tuples
+        'geometry': object,     # Polygon or bbox for gridded data
+        'dates': tuple,         # (start_date, end_date) or list of years
+        'crs': int,             # Coordinate system (default: 4326)
+        'variables': list,      # Variables to retrieve (default: all)
+        'pet_method': str,      # PET method or list of methods
+        'pet_params': dict,     # PET parameters (arid_correction, etc.)
+        'time_scale': str,      # 'daily', 'monthly', or 'annual'
+        'antecedent_days': list # Days for antecedent totals (default: [1,3,7])
+    },
+    'ert_timestamps': list      # ERT acquisition times for alignment
 }
 ```
 
@@ -218,6 +295,14 @@ config = {
 - Extracts velocity interfaces
 - Provides structural constraints for ERT
 - Interprets velocity structure
+
+### ClimateDataAgent
+- Fetches daily climate data from PyDaymet
+- Computes PET using multiple methods (Penman-Monteith, Priestley-Taylor, Hargreaves-Samani)
+- Aligns climate data with ERT timestamps
+- Generates derived features (antecedent precipitation, P-PET)
+- Supports both point and gridded data
+- Provides climate context for resistivity interpretation
 
 ### ReportAgent
 - Generates markdown and HTML reports
@@ -248,32 +333,51 @@ results/agents/
 
 ## Examples
 
-See `examples/Ex_multi_agent_workflow.py` for complete working examples:
+See example scripts for complete working examples:
 
 ```bash
-# Run standard ERT workflow
+# Standard ERT workflow
 python examples/Ex_multi_agent_workflow.py --mode ert
 
-# Run with seismic integration
+# With seismic integration
 python examples/Ex_multi_agent_workflow.py --mode seismic
+
+# Climate data integration with ERT
+python examples/Ex_climate_ert_integration.py
 ```
 
 ## LLM Features
 
-When an OpenAI API key is provided, agents can:
+When an LLM API key is provided (OpenAI/Gemini/Claude), agents can:
 
 1. **Recommend Parameters**: Suggest optimal inversion and petrophysical parameters
 2. **Interpret Results**: Provide expert interpretation of results
 3. **Quality Assessment**: Assess data quality and identify issues
 4. **Generate Reports**: Create narrative summaries and recommendations
+5. **Climate Context**: Explain resistivity changes in context of climate events
 
 ## Dependencies
 
-- `openai>=1.0.0` - For GPT API access (optional but recommended)
-- `pygimli>=1.5` - For geophysical modeling
+**Core:**
 - `numpy`, `scipy`, `matplotlib` - Standard scientific Python
 - `tqdm` - Progress bars
-- `markdown` - HTML report generation (optional)
+
+**LLM APIs (optional but recommended):**
+- `openai>=1.0.0` - For OpenAI GPT models
+- `google-generativeai>=0.3.0` - For Google Gemini models
+- `anthropic>=0.18.0` - For Anthropic Claude models
+
+**Geophysics:**
+- `pygimli>=1.5` - For geophysical modeling
+- `resipy>=3.4.0` - For ERT data processing
+
+**Climate data (optional):**
+- `pydaymet>=0.16.0` - For meteorological data retrieval
+- `pandas>=1.3.0` - For data manipulation
+- `xarray>=0.19.0` - For gridded data handling
+
+**Other:**
+- `markdown>=3.0` - HTML report generation (optional)
 
 ## Notes
 

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "PyHydroGeophysX"
 version = "0.2.0"
-description = "A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion"
+description = "A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, featuring an automatic cross-modal geophysics agent for subsurface hydrology"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
