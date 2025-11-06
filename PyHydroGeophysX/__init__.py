@@ -171,3 +171,17 @@ __all__ = [
     'velDEM',
     'vel_porous'
 ]
+
+# in PyHydroGeophysX/__init__.py
+from .data_processing import (
+    load_ert_resipy,
+    qc_and_visualize,
+    export_for_inversion,
+    LocalRef,
+)
+__all__ += [
+    "load_ert_resipy",
+    "qc_and_visualize",
+    "export_for_inversion",
+    "LocalRef",
+]
