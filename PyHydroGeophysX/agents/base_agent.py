@@ -18,7 +18,7 @@ class BaseAgent(ABC):
     with other agents through the coordinator.
     """
     
-    def __init__(self, name: str, api_key: Optional[str] = None, model: str = "gpt-4", 
+    def __init__(self, name: str, api_key: Optional[str] = None, model: Optional[str] = None, 
                  llm_provider: str = "openai"):
         """
         Initialize the base agent.
@@ -33,7 +33,7 @@ class BaseAgent(ABC):
         self.name = name
         self.llm_provider = llm_provider.lower()
         
-        # Set API key based on provider
+        # Set API key and default model based on provider
         if self.llm_provider == "openai":
             self.api_key = api_key or os.getenv('OPENAI_API_KEY')
             self.model = model or os.getenv('OPENAI_MODEL', 'gpt-4')
