@@ -6,13 +6,14 @@ A comprehensive Python package for integrating hydrological model outputs with g
 
 - 🌊 **Hydrological Model Integration:** Seamless loading and processing of MODFLOW and ParFlow outputs  
 - 📊 **ERT Data Processing:** Standardized loading, quality control, and export of ERT field data with RESIPY integration  
+- 🤖 **Multi-Agent AI System:** GPT API-based automated workflow for "load ERT → invert → convert to water content → report" **NEW**
 - 🪨 **Petrophysical Relationships:** Advanced models for converting between water content, saturation, resistivity, and seismic velocity  
 - ⚡ **Forward Modeling:** Complete ERT and SRT forward modeling capabilities with synthetic data generation  
 - 🔄 **Time-Lapse Inversion:** Sophisticated algorithms for time-lapse ERT inversion with temporal regularization  
 - 🏔️ **Structure-Constrained Inversion:** Integration of seismic velocity interfaces for constrained ERT inversion  
-- � **Uncertainty Quantification:** Monte Carlo methods for parameter uncertainty assessment  
+- 🔬 **Uncertainty Quantification:** Monte Carlo methods for parameter uncertainty assessment  
 - 🚀 **High Performance:** GPU acceleration support (CUDA/CuPy) and parallel processing capabilities  
-- � **Advanced Solvers:** Multiple linear solvers (CGLS, LSQR, RRLS) with optional GPU acceleration
+- 💡 **Advanced Solvers:** Multiple linear solvers (CGLS, LSQR, RRLS) with optional GPU acceleration
 
 ## 📋 Requirements
 
@@ -67,7 +68,14 @@ PyHydroGeophysX/
 ├── core/               # Core utilities
 │   ├── interpolation.py    # Profile interpolation tools
 │   └── mesh_utils.py       # Mesh creation and manipulation
-├── data_processing/    # Geophysical data processing **NEW**
+├── agents/             # Multi-agent AI system **NEW**
+│   ├── agent_coordinator.py    # Workflow orchestration
+│   ├── ert_loader_agent.py     # ERT data loading agent
+│   ├── ert_inversion_agent.py  # Inversion agent
+│   ├── water_content_agent.py  # Water content conversion agent
+│   ├── seismic_agent.py        # Seismic processing agent
+│   └── report_agent.py         # Report generation agent
+├── data_processing/    # Geophysical data processing
 │   └── ert_data_agent.py   # ERT data loading, QC, and export
 ├── model_output/       # Hydrological model interfaces
 │   ├── modflow_output.py   # MODFLOW data loading
@@ -93,6 +101,7 @@ PyHydroGeophysX/
 The examples folder provides paired Jupyter notebooks (.ipynb) and Python scripts (.py) for each workflow. Data used by examples is under examples/data, with outputs written to examples/results.
 
 - **Ex_ERT_data_process**: Loading, quality control, and export of field ERT data with RESIPY integration (notebook: Ex_ERT_data_process.ipynb).
+- **Ex_multi_agent_workflow**: Automated multi-agent workflow for ERT processing with optional seismic integration (script: Ex_multi_agent_workflow.py). **NEW**
 - Ex_model_output: Loading and processing hydrological model outputs (MODFLOW/ParFlow) (notebook: Ex_model_output.ipynb, script: Ex_model_output.py).
 - Ex_ERT_workflow: End‑to‑end ERT modeling and inversion workflow (notebook: Ex_ERT_workflow.ipynb, script: Ex_ERT_workflow.py).
 - Ex_Time_lapse_measurement: Generate synthetic time‑lapse ERT measurements and schedules (notebook: Ex_Time_lapse_measurement.ipynb, script: Ex_Time_lapse_measurement.py).
@@ -106,7 +115,60 @@ The examples folder provides paired Jupyter notebooks (.ipynb) and Python script
 
 ## 🚀 Quick Start
 
-## 0. ERT Field Data Processing
+## 0. Multi-Agent AI Workflow (NEW)
+
+Automate the complete ERT processing workflow using AI agents:
+
+```python
+from PyHydroGeophysX.agents import (
+    AgentCoordinator, ERTLoaderAgent, ERTInversionAgent,
+    WaterContentAgent, ReportAgent, SeismicAgent
+)
+
+# Initialize coordinator with your OpenAI API key
+coordinator = AgentCoordinator(api_key='your-api-key')
+
+# Register specialized agents
+coordinator.register_agent('ert_loader', ERTLoaderAgent())
+coordinator.register_agent('ert_inversion', ERTInversionAgent())
+coordinator.register_agent('water_content', WaterContentAgent())
+coordinator.register_agent('report', ReportAgent())
+
+# Optional: Add seismic agent for structure-constrained inversion
+coordinator.register_agent('seismic_processor', SeismicAgent())
+
+# Configure and execute workflow
+config = {
+    'data_file': 'data/ERT/survey.dat',
+    'instrument': 'E4D',
+    'inversion_params': {'lambda': 20.0, 'max_iterations': 10},
+    'run_uncertainty': True,
+    'n_realizations': 100,
+    # Optional seismic integration
+    'use_seismic': True,
+    'seismic_data': travel_time_data,
+    'velocity_threshold': 1200
+}
+
+# Run complete workflow
+results = coordinator.execute_workflow(config)
+
+# Access results
+if results['status'] == 'success':
+    print(f"Report: {results['results']['report']['report_file']}")
+    print(f"Water content: {results['results']['water_content']['water_content_mean']}")
+```
+
+**Key Features:**
+- 🤖 AI-powered parameter selection and interpretation
+- 🔄 Fully automated workflow execution
+- 📊 Automatic quality control and uncertainty quantification
+- 📝 Comprehensive report generation with visualizations
+- 🌊 Optional seismic integration for structural constraints
+
+See `examples/Ex_multi_agent_workflow.py` for complete examples.
+
+## 1. ERT Field Data Processing
 
 Load, quality control, and export field ERT data with RESIPY integration:
 
