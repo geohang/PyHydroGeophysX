@@ -404,6 +404,14 @@ Acknowledgments
 
 The ERT data processing module is built on `RESIPY <https://gitlab.com/hkex/resipy>`_, an intuitive open-source software for complex geoelectrical inversion/modeling developed by Guillaume Blanchy, Jimmy Boyd, and contributors.
 
-**Citation:**
+This module integrates with `pyGIMLi <https://www.pygimli.org/>`_, an open-source library for geophysical modeling and inversion developed by Carsten Rücker, Thomas Günther, Florian Wagner, and contributors.
+
+**Citations:**
+
+**RESIPY:**
 
 Blanchy, G., Saneiyan, S., Boyd, J., McLachlan, P., & Binley, A. (2020). ResIPy, an intuitive open source software for complex geoelectrical inversion/modeling. *Computers & Geosciences*, 137, 104423. https://doi.org/10.1016/j.cageo.2020.104423
+
+**pyGIMLi:**
+
+Rücker, C., Günther, T., & Wagner, F. M. (2017). pyGIMLi: An open-source library for modelling and inversion in geophysics. *Computers & Geosciences*, 109, 106-123. https://doi.org/10.1016/j.cageo.2017.07.011

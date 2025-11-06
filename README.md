@@ -350,8 +350,9 @@ If you use PyHydroGeophysX in your research, please cite:
 }
 ```
 
-Additionally, if you use the ERT data processing module, please cite RESIPY:
+Additionally, please cite the underlying libraries you use:
 
+**For ERT data processing (RESIPY):**
 ```bibtex
 @article{blanchy2020resipy,
   title={ResIPy, an intuitive open source software for complex geoelectrical inversion/modeling},
@@ -365,6 +366,35 @@ Additionally, if you use the ERT data processing module, please cite RESIPY:
 }
 ```
 
+**For geophysical modeling (pyGIMLi):**
+```bibtex
+@article{rucker2017pygimli,
+  title={pyGIMLi: An open-source library for modelling and inversion in geophysics},
+  author={R{\"u}cker, Carsten and G{\"u}nther, Thomas and Wagner, Florian M},
+  journal={Computers \& Geosciences},
+  volume={109},
+  pages={106--123},
+  year={2017},
+  publisher={Elsevier},
+  doi={10.1016/j.cageo.2017.07.011}
+}
+```
+
+**For hydrological modeling (ParFlow):**
+```bibtex
+@article{maxwell2015parflow,
+  title={A high-resolution simulation of groundwater and surface water over most of the continental US with the integrated hydrologic model ParFlow v3},
+  author={Maxwell, Reed M and Condon, Laura E and Kollet, Stefan J},
+  journal={Geoscientific Model Development},
+  volume={8},
+  number={3},
+  pages={923--937},
+  year={2015},
+  publisher={Copernicus GmbH},
+  doi={10.5194/gmd-8-923-2015}
+}
+```
+
 ## 📄 License
 
 This project is licensed under the Apache-2.0 license - see the LICENSE file for details.
@@ -372,8 +402,9 @@ This project is licensed under the Apache-2.0 license - see the LICENSE file for
 ## 🙏 Acknowledgments
 
 - **RESIPY** developers (Guillaume Blanchy, Jimmy Boyd, and contributors) for the excellent ERT data processing library that powers our field data workflows
-- **PyGIMLi** team for the outstanding geophysical modeling framework  
-- **MODFLOW** and **ParFlow** communities for hydrologic modeling tools  
+- **pyGIMLi** team (Carsten Rücker, Thomas Günther, Florian Wagner, and contributors) for the outstanding geophysical modeling and inversion framework  
+- **ParFlow** development team (Reed Maxwell, Laura Condon, Stefan Kollet, and contributors) for the integrated surface-subsurface hydrologic model
+- **MODFLOW** community (USGS and contributors) for the groundwater modeling standard
 - All open-source contributors and users providing valuable feedback  
 
 ## 📧 Contact

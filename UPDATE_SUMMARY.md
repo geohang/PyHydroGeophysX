@@ -229,14 +229,24 @@ pip install resipy
 
 ## Acknowledgments
 
-This update builds on the excellent RESIPY library for ERT data processing. Special thanks to:
+This update builds on excellent open-source libraries. Special thanks to:
+
 - **RESIPY development team** (Guillaume Blanchy, Jimmy Boyd, and contributors) for creating an intuitive and powerful ERT data processing framework
-- **PyGIMLi community** for the geophysical modeling infrastructure
+- **pyGIMLi team** (Carsten Rücker, Thomas Günther, Florian Wagner, and contributors) for the comprehensive geophysical modeling and inversion infrastructure
+- **ParFlow development team** (Reed Maxwell, Laura Condon, Stefan Kollet, and contributors) for the integrated hydrologic model
+- **MODFLOW community** (USGS and contributors) for the groundwater modeling standard
 - All contributors and users providing feedback
 
-**RESIPY Citation:**
+**Key Citations:**
 
+**RESIPY:**
 Blanchy, G., Saneiyan, S., Boyd, J., McLachlan, P., & Binley, A. (2020). ResIPy, an intuitive open source software for complex geoelectrical inversion/modeling. *Computers & Geosciences*, 137, 104423. https://doi.org/10.1016/j.cageo.2020.104423
+
+**pyGIMLi:**
+Rücker, C., Günther, T., & Wagner, F. M. (2017). pyGIMLi: An open-source library for modelling and inversion in geophysics. *Computers & Geosciences*, 109, 106-123. https://doi.org/10.1016/j.cageo.2017.07.011
+
+**ParFlow:**
+Maxwell, R. M., Condon, L. E., & Kollet, S. J. (2015). A high-resolution simulation of groundwater and surface water over most of the continental US with the integrated hydrologic model ParFlow v3. *Geoscientific Model Development*, 8(3), 923-937. https://doi.org/10.5194/gmd-8-923-2015
 
 ## Next Steps
 
