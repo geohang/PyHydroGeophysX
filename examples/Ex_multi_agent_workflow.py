@@ -70,7 +70,14 @@ def run_ert_workflow_example():
     
     # Select LLM provider: 'openai', 'gemini', or 'claude'
     llm_provider = 'openai'  # Change this to use different LLM provider
-    api_key = os.getenv('OPENAI_API_KEY')  # Adjust based on provider
+    
+    # Get API key based on provider
+    provider_env_map = {
+        'openai': 'OPENAI_API_KEY',
+        'gemini': 'GEMINI_API_KEY',
+        'claude': 'ANTHROPIC_API_KEY'
+    }
+    api_key = os.getenv(provider_env_map.get(llm_provider, 'OPENAI_API_KEY'))
     
     if not api_key:
         print(f"\n⚠️  Warning: API key for {llm_provider} not found in environment variables.")
@@ -215,7 +222,14 @@ def run_ert_with_seismic_example():
     
     # Initialize coordinator with chosen LLM provider
     llm_provider = 'openai'  # Can be 'openai', 'gemini', or 'claude'
-    api_key = os.getenv('OPENAI_API_KEY')
+    
+    # Get API key based on provider
+    provider_env_map = {
+        'openai': 'OPENAI_API_KEY',
+        'gemini': 'GEMINI_API_KEY',
+        'claude': 'ANTHROPIC_API_KEY'
+    }
+    api_key = os.getenv(provider_env_map.get(llm_provider, 'OPENAI_API_KEY'))
     coordinator = AgentCoordinator(api_key=api_key, llm_provider=llm_provider)
     
     # Register all agents (including seismic) - consistent with main example
