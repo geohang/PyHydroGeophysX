@@ -7,7 +7,16 @@ Specialized agent for generating comprehensive reports from workflow results.
 from typing import Dict, Any, Optional
 import os
 from datetime import datetime
+import pandas as pd
+import numpy as np
 from .base_agent import BaseAgent
+
+# Climate analysis thresholds (configurable constants)
+RAINFALL_THRESHOLD_MM = 5.0  # Significant rainfall threshold
+WET_PERIOD_THRESHOLD_MM = 25.0  # 7-day antecedent for wet periods
+DRY_PERIOD_THRESHOLD_MM = 5.0  # 7-day antecedent for dry periods
+PET_DEFICIT_THRESHOLD_MM = -2.0  # P-PET deficit indicating drying
+HIGH_TEMP_THRESHOLD_C = 30.0  # High temperature affecting measurements
 
 
 class ReportAgent(BaseAgent):
@@ -18,13 +27,14 @@ class ReportAgent(BaseAgent):
     with visualizations, statistics, and interpretations.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, llm_provider: str = "openai"):
         """Initialize Report Agent."""
-        super().__init__("report_generator", api_key)
+        super().__init__("report_generator", api_key, llm_provider=llm_provider)
         self.system_message = """You are an expert in technical report writing for 
 geophysical and hydrological studies. Your role is to synthesize results from ERT 
-data processing, inversion, and water content analysis into clear, informative 
-reports suitable for scientists and engineers."""
+data processing, inversion, water content analysis, and climate data into clear, informative 
+reports suitable for scientists and engineers. You should integrate climate insights 
+(precipitation, PET, temperature) to explain resistivity changes and provide data quality caveats."""
     
     def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -57,29 +67,38 @@ reports suitable for scientists and engineers."""
             # 2. Data Processing Summary
             data_summary = self._generate_data_summary(workflow_data)
             
-            # 3. Inversion Results Summary
+            # 3. Climate Data Summary (if available)
+            climate_summary = self._generate_climate_summary(workflow_data)
+            
+            # 4. Inversion Results Summary
             inversion_summary = self._generate_inversion_summary(workflow_data)
             
-            # 4. Water Content Analysis Summary
+            # 5. Water Content Analysis Summary
             wc_summary = self._generate_wc_summary(workflow_data)
             
-            # 5. Visualizations (create plots)
+            # 6. Climate-Resistivity Cross-Modal Analysis (if climate data available)
+            climate_ert_analysis = self._generate_climate_ert_analysis(workflow_data)
+            
+            # 7. Visualizations (create plots)
             visualization_files = self._generate_visualizations(workflow_data, output_dir)
             
-            # 6. Generate LLM-enhanced narrative report
+            # 8. Generate LLM-enhanced narrative report
             narrative_report = None
             if self.api_key:
                 self._log_execution("Generating narrative report with LLM")
                 narrative_report = self._generate_narrative_report(
-                    executive_summary, data_summary, inversion_summary, wc_summary
+                    executive_summary, data_summary, climate_summary, 
+                    inversion_summary, wc_summary, climate_ert_analysis
                 )
             
             # Compile full report
             full_report = self._compile_report(
                 executive_summary,
                 data_summary,
+                climate_summary,
                 inversion_summary,
                 wc_summary,
+                climate_ert_analysis,
                 narrative_report,
                 visualization_files
             )
@@ -205,6 +224,186 @@ reports suitable for scientists and engineers."""
         
         return summary
     
+    def _generate_climate_summary(self, workflow_data: Dict) -> str:
+        """Generate climate data summary section."""
+        summary = "\n## Climate Data Integration\n\n"
+        
+        if 'climate_data' not in workflow_data:
+            summary += "No climate data was integrated in this workflow.\n"
+            return summary
+        
+        climate = workflow_data['climate_data']
+        metadata = climate.get('metadata', {})
+        
+        summary += f"""
+### Climate Data Summary
+- Date Range: {metadata.get('dates', 'N/A')}
+- Variables: {', '.join(metadata.get('variables', []))}
+- PET Method: {metadata.get('pet_method', 'N/A')}
+- Region: {metadata.get('region', 'N/A')}
+"""
+        
+        # Add derived features info
+        if climate.get('derived_features'):
+            summary += "\n**Derived Features:**\n"
+            features = climate['derived_features']
+            # Count antecedent features
+            antecedent_features = [k for k in features.keys() if 'antecedent' in k]
+            if antecedent_features:
+                summary += f"- Antecedent precipitation totals computed\n"
+            
+            # Check for P-PET features
+            p_pet_features = [k for k in features.keys() if 'p_minus' in k]
+            if p_pet_features:
+                summary += f"- Water balance proxy (P-PET) computed\n"
+        
+        # Add ERT alignment info
+        if climate.get('ert_alignment'):
+            alignment = climate['ert_alignment']
+            if 'ert_timestamps' in alignment:
+                n_timestamps = len(alignment['ert_timestamps'])
+                summary += f"\n**ERT Alignment:** Climate data aligned to {n_timestamps} ERT acquisition times\n"
+        
+        return summary
+    
+    def _generate_climate_ert_analysis(self, workflow_data: Dict) -> str:
+        """
+        Generate cross-modal analysis linking climate features to resistivity changes.
+        
+        This provides the cross-modal reasoning that explains resistivity changes
+        in terms of climate forcings (rainfall, drying, etc.).
+        """
+        analysis = "\n## Cross-Modal Climate-ERT Analysis\n\n"
+        
+        if 'climate_data' not in workflow_data:
+            analysis += "Climate data not available for cross-modal analysis.\n"
+            return analysis
+        
+        climate = workflow_data['climate_data']
+        
+        analysis += """
+### Climate-Based Resistivity Interpretation
+
+This section provides climate-based context for interpreting resistivity changes,
+including detection of post-rainfall infiltration and high-PET drying periods.
+
+"""
+        
+        # Check if we have aligned data for event-based analysis
+        if climate.get('ert_alignment') and 'ert_aligned_data' in climate['ert_alignment']:
+            aligned_data = climate['ert_alignment']['ert_aligned_data']
+            
+            if isinstance(aligned_data, pd.DataFrame) and not aligned_data.empty:
+                analysis += "#### Event Detection and Classification\n\n"
+                
+                # Analyze precipitation events
+                if 'prcp' in aligned_data.columns:
+                    prcp_values = aligned_data['prcp'].values
+                    # Detect significant rainfall using threshold constant
+                    rainfall_events = prcp_values > RAINFALL_THRESHOLD_MM
+                    n_rainfall = np.count_nonzero(rainfall_events)
+                    
+                    if n_rainfall > 0:
+                        analysis += f"- **Rainfall Events:** {n_rainfall} ERT acquisition(s) occurred during or shortly after significant rainfall (>{RAINFALL_THRESHOLD_MM}mm)\n"
+                        analysis += "  - *Expected Impact:* Decreased resistivity due to increased moisture content\n"
+                        analysis += "  - *Data Quality Note:* Post-rainfall measurements may show transient infiltration patterns\n"
+                    else:
+                        analysis += "- **Rainfall Events:** No significant rainfall detected near ERT acquisitions\n"
+                
+                # Analyze antecedent conditions
+                antecedent_cols = [col for col in aligned_data.columns if 'antecedent' in col]
+                if antecedent_cols:
+                    analysis += f"\n- **Antecedent Moisture Conditions:** Available for {len(antecedent_cols)} time window(s)\n"
+                    
+                    # Check 7-day antecedent if available
+                    if 'prcp_antecedent_7d' in aligned_data.columns:
+                        antecedent_7d = aligned_data['prcp_antecedent_7d'].values
+                        # Classify as wet or dry periods using threshold constants
+                        # Note: Values between thresholds are normal conditions (not flagged)
+                        wet_periods = antecedent_7d > WET_PERIOD_THRESHOLD_MM
+                        dry_periods = antecedent_7d < DRY_PERIOD_THRESHOLD_MM
+                        
+                        if np.any(wet_periods):
+                            analysis += f"  - Wet periods (7-day total >{WET_PERIOD_THRESHOLD_MM}mm): {np.count_nonzero(wet_periods)} acquisition(s)\n"
+                        if np.any(dry_periods):
+                            analysis += f"  - Dry periods (7-day total <{DRY_PERIOD_THRESHOLD_MM}mm): {np.count_nonzero(dry_periods)} acquisition(s)\n"
+                
+                # Analyze water balance (P-PET)
+                p_pet_cols = [col for col in aligned_data.columns if 'p_minus' in col]
+                if p_pet_cols:
+                    analysis += f"\n- **Water Balance Analysis (P-PET):**\n"
+                    
+                    for p_pet_col in p_pet_cols:
+                        p_pet_values = aligned_data[p_pet_col].values
+                        # Positive P-PET indicates moisture surplus, negative indicates deficit
+                        surplus_periods = p_pet_values > 0
+                        deficit_periods = p_pet_values < PET_DEFICIT_THRESHOLD_MM  # Significant deficit
+                        
+                        n_surplus = np.count_nonzero(surplus_periods)
+                        n_deficit = np.count_nonzero(deficit_periods)
+                        
+                        if n_surplus > 0:
+                            analysis += f"  - Moisture surplus periods: {n_surplus} acquisition(s)\n"
+                            analysis += f"    *Expected:* Increasing moisture, decreasing resistivity\n"
+                        
+                        if n_deficit > 0:
+                            analysis += f"  - High PET drying periods: {n_deficit} acquisition(s)\n"
+                            analysis += f"    *Expected:* Soil desiccation, increasing resistivity\n"
+                            analysis += f"    *Caveat:* Inversion artifacts more likely during very dry conditions\n"
+                
+                # Temperature effects
+                if 'tmax' in aligned_data.columns:
+                    tmax_values = aligned_data['tmax'].values
+                    hot_periods = tmax_values > HIGH_TEMP_THRESHOLD_C  # High temperature threshold
+                    
+                    if np.any(hot_periods):
+                        analysis += f"\n- **Temperature Effects:**\n"
+                        analysis += f"  - High temperature periods (>{HIGH_TEMP_THRESHOLD_C}°C): {np.count_nonzero(hot_periods)} acquisition(s)\n"
+                        analysis += f"    *Note:* High temperatures may affect electrode contact and measurements\n"
+            else:
+                analysis += "*No aligned data available for detailed event analysis.*\n"
+        else:
+            analysis += "*ERT timestamps not provided - temporal climate analysis not performed.*\n"
+        
+        # Add data quality caveats section
+        analysis += """
+
+#### Data Quality and Inversion Diagnostics
+
+**Climate-Based Caveats:**
+"""
+        
+        if climate.get('ert_alignment'):
+            analysis += """
+- Resistivity inversions during or shortly after rainfall may exhibit enhanced sensitivity
+  to near-surface moisture variations, potentially masking deeper structures
+- Measurements during extended dry periods (high cumulative PET) may show increased
+  electrode contact resistance, affecting data quality
+- Seasonal variations in climate forcing should be considered when comparing 
+  time-lapse resistivity changes across different campaigns
+"""
+        else:
+            analysis += """
+- Climate data available but not temporally aligned with ERT acquisitions
+- Consider aligning future ERT campaigns with climate data for enhanced interpretation
+"""
+        
+        # Add inversion quality checks if available
+        if 'inversion_results' in workflow_data:
+            inv = workflow_data['inversion_results']
+            chi2 = inv.get('chi2')
+            if chi2 is not None:
+                analysis += f"\n**Inversion Quality Metrics:**\n"
+                analysis += f"- Chi-squared: {chi2:.3f}\n"
+                
+                # Provide climate-contextualized interpretation
+                if chi2 < 1.0:
+                    analysis += "  - Good data fit; climate effects likely well-captured\n"
+                elif chi2 > 2.0:
+                    analysis += "  - Elevated misfit; check for climate-induced measurement errors\n"
+        
+        return analysis
+    
     def _generate_visualizations(self, workflow_data: Dict, output_dir: str) -> Dict[str, str]:
         """Generate visualization plots."""
         import matplotlib.pyplot as plt
@@ -269,31 +468,36 @@ reports suitable for scientists and engineers."""
         return vis_files
     
     def _generate_narrative_report(self, exec_summary: str, data_summary: str,
-                                   inv_summary: str, wc_summary: str) -> str:
+                                   climate_summary: str, inv_summary: str, 
+                                   wc_summary: str, climate_ert_analysis: str) -> str:
         """Generate narrative report using LLM."""
         try:
-            combined_info = f"{exec_summary}\n{data_summary}\n{inv_summary}\n{wc_summary}"
+            combined_info = f"{exec_summary}\n{data_summary}\n{climate_summary}\n{inv_summary}\n{wc_summary}\n{climate_ert_analysis}"
             
             prompt = f"""Based on the following workflow results, write a cohesive narrative 
 summary (3-4 paragraphs) that:
 1. Describes the overall workflow and objectives
-2. Summarizes the key findings
-3. Highlights any notable patterns or anomalies
-4. Provides recommendations for next steps
+2. Integrates climate data insights with geophysical results
+3. Explains how climate features (rainfall, drying periods) relate to resistivity changes
+4. Summarizes the key findings with climate context
+5. Highlights any notable patterns, anomalies, or data quality caveats
+6. Provides recommendations for next steps
 
 Workflow Results:
 {combined_info}
 
-Write in a professional, technical style suitable for a geophysical survey report."""
+Write in a professional, technical style suitable for a geophysical survey report that 
+incorporates cross-modal climate-geophysics reasoning."""
             
             narrative = self.query_llm(prompt, self.system_message, 
-                                      temperature=0.6, max_tokens=500)
+                                      temperature=0.6, max_tokens=600)
             return f"\n## Narrative Summary\n\n{narrative}\n"
         except:
             return ""
     
     def _compile_report(self, exec_summary: str, data_summary: str,
-                       inv_summary: str, wc_summary: str, narrative: str,
+                       climate_summary: str, inv_summary: str, wc_summary: str, 
+                       climate_ert_analysis: str, narrative: str,
                        vis_files: Dict[str, str]) -> str:
         """Compile full report."""
         report = f"""# Geophysical Workflow Report
@@ -302,6 +506,8 @@ Generated by PyHydroGeophysX Multi-Agent System
 {exec_summary}
 {narrative if narrative else ''}
 {data_summary}
+{climate_summary}
+{climate_ert_analysis}
 {inv_summary}
 {wc_summary}
 
