@@ -74,6 +74,7 @@ PyHydroGeophysX/
 │   ├── ert_inversion_agent.py  # Inversion agent
 │   ├── water_content_agent.py  # Water content conversion agent
 │   ├── seismic_agent.py        # Seismic processing agent
+│   ├── climate_data_agent.py   # Climate data and PET agent **NEW**
 │   └── report_agent.py         # Report generation agent
 ├── data_processing/    # Geophysical data processing
 │   └── ert_data_agent.py   # ERT data loading, QC, and export
@@ -122,7 +123,7 @@ Automatic cross-modal geophysics agent for subsurface hydrology. Automate geophy
 ```python
 from PyHydroGeophysX.agents import (
     AgentCoordinator, ERTLoaderAgent, ERTInversionAgent,
-    WaterContentAgent, ReportAgent, SeismicAgent
+    WaterContentAgent, ReportAgent, SeismicAgent, ClimateDataAgent
 )
 
 # Initialize coordinator with your LLM API key (supports OpenAI GPT, Google Gemini, Anthropic Claude)
@@ -137,6 +138,9 @@ coordinator.register_agent('report', ReportAgent())
 # Optional: Add seismic agent for structure-constrained inversion
 coordinator.register_agent('seismic_processor', SeismicAgent())
 
+# Optional: Add climate agent for meteorological data integration **NEW**
+coordinator.register_agent('climate_data', ClimateDataAgent())
+
 # Configure and execute workflow
 config = {
     'data_file': 'data/ERT/survey.dat',
@@ -147,7 +151,16 @@ config = {
     # Optional seismic integration
     'use_seismic': True,
     'seismic_data': travel_time_data,
-    'velocity_threshold': 1200
+    'velocity_threshold': 1200,
+    # Optional climate data integration **NEW**
+    'use_climate': True,
+    'climate_config': {
+        'coords': (-105.3, 40.0),  # Site location (lon, lat)
+        'dates': ('2023-06-01', '2023-09-30'),
+        'pet_method': 'penman_monteith',
+        'antecedent_days': [1, 3, 7]
+    },
+    'ert_timestamps': ['2023-06-15', '2023-07-15', '2023-08-15']
 }
 
 # Run complete workflow
@@ -157,6 +170,8 @@ results = coordinator.execute_workflow(config)
 if results['status'] == 'success':
     print(f"Report: {results['results']['report']['report_file']}")
     print(f"Water content: {results['results']['water_content']['water_content_mean']}")
+    if 'climate_data' in results['results']:
+        print(f"Climate data: {results['results']['climate_data']['metadata']}")
 ```
 
 **Key Features:**
@@ -165,8 +180,9 @@ if results['status'] == 'success':
 - 📊 Automatic quality control and uncertainty quantification
 - 📝 Comprehensive report generation with visualizations
 - 🌊 Cross-modal integration (ERT, seismic, and other geophysical methods)
+- ☁️ Climate data integration with PET computation for hydrologic context **NEW**
 
-See `examples/Ex_multi_agent_workflow.py` for complete examples.
+See `examples/Ex_multi_agent_workflow.py` and `examples/Ex_climate_ert_integration.py` for complete examples.
 
 ## 1. ERT Field Data Processing
 
@@ -195,7 +211,57 @@ bert_path = export_for_inversion(ert, outdir="results/ert_data_process", fmt="pg
 # Creates: bert_data.dat (with electrode coordinates and measurements)
 ```
 
-## 1. Hydrological Model Integration
+## 1.5 Climate Data Integration (NEW)
+
+Fetch meteorological data and compute potential evapotranspiration (PET) for integration with ERT analysis:
+
+```python
+from PyHydroGeophysX.agents import ClimateDataAgent
+
+# Initialize climate agent
+climate_agent = ClimateDataAgent()
+
+# Fetch climate data for ERT site
+climate_config = {
+    'coords': (-105.3, 40.0),  # Site location (lon, lat)
+    'dates': ('2023-06-01', '2023-09-30'),  # Campaign period
+    'crs': 4326,
+    'variables': ['prcp', 'tmin', 'tmax', 'srad', 'vp', 'dayl'],
+    'pet_method': 'penman_monteith',  # or 'priestley_taylor', 'hargreaves_samani'
+    'pet_params': {
+        'arid_correction': True,  # For arid regions
+        'soil_heat_flux': 0,
+        'albedo': 0.23
+    },
+    'time_scale': 'daily',
+    'region': 'na',
+    'ert_timestamps': ['2023-06-15', '2023-07-15', '2023-08-15'],
+    'antecedent_days': [1, 3, 7]  # Compute antecedent precipitation
+}
+
+# Execute data retrieval
+results = climate_agent.execute(climate_config)
+
+# Access climate data
+climate_data = results['climate_data']  # Daily climate variables + PET
+derived_features = results['derived_features']  # Antecedent totals, P-PET
+ert_aligned = results['ert_alignment']  # Climate data at ERT timestamps
+
+# Get summary
+print(climate_agent.get_climate_summary())
+```
+
+**Climate Data Features:**
+- 🌡️ Daily meteorological variables (prcp, tmin, tmax, srad, vp, dayl)
+- 💧 PET computation with multiple methods (Penman-Monteith, Priestley-Taylor, Hargreaves-Samani)
+- 📊 Derived features: antecedent precipitation totals, P-PET water balance
+- 🎯 Temporal alignment with ERT acquisition timestamps
+- 🔬 PET method comparison for robustness assessment
+- 🏜️ Arid region corrections for improved estimates
+
+See `examples/Ex_climate_ert_integration.py` for complete examples.
+
+## 2. Hydrological Model Integration
 
 Load and process outputs from various hydrological models:
 
@@ -213,7 +279,7 @@ saturation_proc = ParflowSaturation("model_dir", "run_name")
 saturation = saturation_proc.load_timestep(100)
 ```
 
-## 2. Petrophysical Modeling
+## 3. Petrophysical Modeling
 
 Convert between hydrological and geophysical properties:
 
@@ -237,7 +303,7 @@ vp_high, vp_low = hm_model.calculate_velocity(
 )
 ```
 
-## 3. Forward Modeling
+## 4. Forward Modeling
 
 Generate synthetic geophysical data:
 
@@ -257,7 +323,7 @@ travel_times = srt_fwd.create_synthetic_data(
 )
 ```
 
-## 4. Time-Lapse Inversion
+## 5. Time-Lapse Inversion
 
 Perform sophisticated time-lapse ERT inversions:
 
@@ -281,7 +347,7 @@ windowed_inv = WindowedTimeLapseERTInversion(
 result = windowed_inv.run(window_parallel=True)
 ```
 
-## 5. Uncertainty Quantification
+## 6. Uncertainty Quantification
 
 Quantify uncertainty in water content estimates:
 

@@ -19,6 +19,7 @@ from .ert_inversion_agent import ERTInversionAgent
 from .water_content_agent import WaterContentAgent
 from .report_agent import ReportAgent
 from .seismic_agent import SeismicAgent
+from .climate_data_agent import ClimateDataAgent
 
 __all__ = [
     'AgentCoordinator',
@@ -26,5 +27,6 @@ __all__ = [
     'ERTInversionAgent',
     'WaterContentAgent',
     'ReportAgent',
-    'SeismicAgent'
+    'SeismicAgent',
+    'ClimateDataAgent'
 ]
