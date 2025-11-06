@@ -1,12 +1,16 @@
 """
-Example: Multi-Agent Workflow for ERT Processing
-=================================================
+Example: Multi-Agent Workflow for Geophysical Data Processing
+==============================================================
 
-This example demonstrates how to use the GPT API-based multi-agent system
-to automate the complete workflow:
-"load ERT → invert → convert to water content → report"
+This example demonstrates how to use the cross-modal geophysics agent system
+for subsurface hydrology to automate complete workflows, processing geophysical
+data (ERT, seismic, etc.) into hydrologic information.
 
-The system can optionally integrate seismic data for structure-constrained inversion.
+The system supports multiple LLM APIs (OpenAI GPT, Google Gemini, Anthropic Claude)
+and can handle various geophysical data types.
+
+Example workflow: "load geophysical data → process → invert → convert to 
+hydrologic parameters → report"
 
 Each agent is specialized for a specific task:
 1. ERTLoaderAgent: Loads and quality-checks ERT data
@@ -47,55 +51,61 @@ def run_ert_workflow_example():
     Run the complete ERT workflow using multi-agent system.
     
     This example demonstrates:
-    1. Setting up agents with OpenAI API
+    1. Setting up agents with LLM API (supports OpenAI GPT, Google Gemini, Anthropic Claude)
     2. Configuring workflow parameters
     3. Executing the complete workflow
     4. Accessing results
     """
     
     print("=" * 80)
-    print("Multi-Agent ERT Workflow Example")
+    print("Multi-Agent Geophysical Workflow Example")
+    print("Automatic Cross-Modal Geophysics Agent for Subsurface Hydrology")
     print("=" * 80)
     
-    # Note: Set your OpenAI API key as environment variable
-    # export OPENAI_API_KEY='your-api-key-here'
+    # Note: Set your LLM API key as environment variable
+    # For OpenAI: export OPENAI_API_KEY='your-api-key-here'
+    # For Gemini: export GEMINI_API_KEY='your-api-key-here'
+    # For Claude: export ANTHROPIC_API_KEY='your-api-key-here'
     # Or pass it directly when creating the coordinator
     
-    api_key = os.getenv('OPENAI_API_KEY')
+    # Select LLM provider: 'openai', 'gemini', or 'claude'
+    llm_provider = 'openai'  # Change this to use different LLM provider
+    api_key = os.getenv('OPENAI_API_KEY')  # Adjust based on provider
     
     if not api_key:
-        print("\n⚠️  Warning: OPENAI_API_KEY not found in environment variables.")
+        print(f"\n⚠️  Warning: API key for {llm_provider} not found in environment variables.")
         print("    The system will work but LLM-enhanced features will be disabled.")
-        print("    Set it with: export OPENAI_API_KEY='your-key'\n")
+        print(f"    Set it with: export {llm_provider.upper()}_API_KEY='your-key'\n")
     
     # Step 1: Initialize the coordinator
     print("\n[1/5] Initializing agent coordinator...")
     coordinator = AgentCoordinator(
         api_key=api_key,
-        output_dir="results/agents_workflow"
+        output_dir="results/agents_workflow",
+        llm_provider=llm_provider  # Supports 'openai', 'gemini', 'claude'
     )
     
     # Step 2: Register specialized agents
     print("[2/5] Registering specialized agents...")
     
     # Register ERT loader agent
-    ert_loader = ERTLoaderAgent(api_key=api_key)
+    ert_loader = ERTLoaderAgent(api_key=api_key, llm_provider=llm_provider)
     coordinator.register_agent('ert_loader', ert_loader)
     
     # Register ERT inversion agent
-    ert_inversion = ERTInversionAgent(api_key=api_key)
+    ert_inversion = ERTInversionAgent(api_key=api_key, llm_provider=llm_provider)
     coordinator.register_agent('ert_inversion', ert_inversion)
     
     # Register water content conversion agent
-    water_content = WaterContentAgent(api_key=api_key)
+    water_content = WaterContentAgent(api_key=api_key, llm_provider=llm_provider)
     coordinator.register_agent('water_content', water_content)
     
     # Register report generation agent
-    report_gen = ReportAgent(api_key=api_key)
+    report_gen = ReportAgent(api_key=api_key, llm_provider=llm_provider)
     coordinator.register_agent('report', report_gen)
     
     # Register seismic agent (optional)
-    seismic = SeismicAgent(api_key=api_key)
+    seismic = SeismicAgent(api_key=api_key, llm_provider=llm_provider)
     coordinator.register_agent('seismic_processor', seismic)
     
     print("   ✓ All agents registered")
@@ -195,23 +205,25 @@ def run_ert_with_seismic_example():
     Example with seismic data integration.
     
     This example shows how to include seismic refraction data
-    for structure-constrained ERT inversion.
+    for structure-constrained ERT inversion using cross-modal
+    geophysics agent system.
     """
     
     print("=" * 80)
-    print("Multi-Agent ERT Workflow with Seismic Integration")
+    print("Multi-Agent Cross-Modal Geophysical Workflow with Seismic Integration")
     print("=" * 80)
     
-    # Initialize coordinator
+    # Initialize coordinator with chosen LLM provider
+    llm_provider = 'openai'  # Can be 'openai', 'gemini', or 'claude'
     api_key = os.getenv('OPENAI_API_KEY')
-    coordinator = AgentCoordinator(api_key=api_key)
+    coordinator = AgentCoordinator(api_key=api_key, llm_provider=llm_provider)
     
     # Register all agents (including seismic) - consistent with main example
-    coordinator.register_agent('ert_loader', ERTLoaderAgent(api_key))
-    coordinator.register_agent('seismic_processor', SeismicAgent(api_key))
-    coordinator.register_agent('ert_inversion', ERTInversionAgent(api_key))
-    coordinator.register_agent('water_content', WaterContentAgent(api_key))
-    coordinator.register_agent('report', ReportAgent(api_key))
+    coordinator.register_agent('ert_loader', ERTLoaderAgent(api_key, llm_provider=llm_provider))
+    coordinator.register_agent('seismic_processor', SeismicAgent(api_key, llm_provider=llm_provider))
+    coordinator.register_agent('ert_inversion', ERTInversionAgent(api_key, llm_provider=llm_provider))
+    coordinator.register_agent('water_content', WaterContentAgent(api_key, llm_provider=llm_provider))
+    coordinator.register_agent('report', ReportAgent(api_key, llm_provider=llm_provider))
     
     # Configure workflow with seismic integration
     workflow_config = {
