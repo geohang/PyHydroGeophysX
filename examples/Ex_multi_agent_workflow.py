@@ -233,11 +233,11 @@ def run_ert_with_seismic_example():
     coordinator = AgentCoordinator(api_key=api_key, llm_provider=llm_provider)
     
     # Register all agents (including seismic) - consistent with main example
-    coordinator.register_agent('ert_loader', ERTLoaderAgent(api_key, llm_provider=llm_provider))
-    coordinator.register_agent('seismic_processor', SeismicAgent(api_key, llm_provider=llm_provider))
-    coordinator.register_agent('ert_inversion', ERTInversionAgent(api_key, llm_provider=llm_provider))
-    coordinator.register_agent('water_content', WaterContentAgent(api_key, llm_provider=llm_provider))
-    coordinator.register_agent('report', ReportAgent(api_key, llm_provider=llm_provider))
+    coordinator.register_agent('ert_loader', ERTLoaderAgent(api_key=api_key, llm_provider=llm_provider))
+    coordinator.register_agent('seismic_processor', SeismicAgent(api_key=api_key, llm_provider=llm_provider))
+    coordinator.register_agent('ert_inversion', ERTInversionAgent(api_key=api_key, llm_provider=llm_provider))
+    coordinator.register_agent('water_content', WaterContentAgent(api_key=api_key, llm_provider=llm_provider))
+    coordinator.register_agent('report', ReportAgent(api_key=api_key, llm_provider=llm_provider))
     
     # Configure workflow with seismic integration
     workflow_config = {

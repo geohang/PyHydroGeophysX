@@ -91,6 +91,9 @@ class BaseAgent(ABC):
                 return self._query_gemini(prompt, system_message, temperature, max_tokens)
             elif self.llm_provider == "claude":
                 return self._query_claude(prompt, system_message, temperature, max_tokens)
+            else:
+                # This should never happen due to __init__ validation, but handle it anyway
+                raise ValueError(f"Unsupported LLM provider: {self.llm_provider}")
         except ImportError as e:
             raise ImportError(
                 f"Required package for {self.llm_provider} not installed. "
