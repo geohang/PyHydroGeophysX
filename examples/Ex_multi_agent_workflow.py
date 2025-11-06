@@ -138,8 +138,9 @@ def run_ert_workflow_example():
         'use_climate': True,
         'climate_config': {
             # Site coordinates (longitude, latitude) for climate data retrieval
+            # TODO: Update these coordinates to match your actual site location!
             # Example: Adjust to your site location
-            'coords': (-105.3, 40.0),  # Example: Colorado location
+            'coords': (-105.3, 40.0),  # Example: Colorado location (MUST BE UPDATED)
             'dates': ('2021-09-01', '2021-11-30'),  # Date range covering ERT campaign
             'crs': 4326,  # WGS84 for coordinates
             'variables': ['prcp', 'tmin', 'tmax', 'srad', 'vp', 'dayl'],
@@ -152,9 +153,10 @@ def run_ert_workflow_example():
             'antecedent_days': [1, 3, 7, 14],  # Antecedent precipitation windows
         },
         # ERT acquisition timestamps for climate alignment
+        # TODO: Update these timestamps to match your actual ERT acquisition times!
         'ert_timestamps': [
-            '2021-10-08',  # Match your actual ERT acquisition dates
-            # Add more timestamps as needed
+            '2021-10-08',  # Example timestamp (MUST BE UPDATED)
+            # Add more timestamps as needed for your campaign
         ],
         
         # Inversion parameters
