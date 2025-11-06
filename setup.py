@@ -21,7 +21,7 @@ long_description = read_readme()
 
 setup(
     name="PyHydroGeophysX",
-    version="0.1.0",
+    version="0.2.0",
     author="Hang Chen",
     author_email="your_email@example.com",
     description="A Python package for hydrological-geophysical model integration and inversion.",
@@ -45,6 +45,7 @@ setup(
     extras_require={
         "geophysics": [
             "pygimli>=1.5",   # Optional, heavy dependencies for real geophysical usage
+            "resipy>=3.4.0",  # ERT data processing and inversion
             "flopy",
             "cupy",
             "parflow",
@@ -70,7 +71,7 @@ setup(
         ],
         "all": [
             # Combines all optional dependencies
-            "pygimli>=1.5", "flopy", "cupy", "parflow", "joblib", "meshop",
+            "pygimli>=1.5", "resipy>=3.4.0", "flopy", "cupy", "parflow", "joblib", "meshop",
             "sphinx>=7.1.2", "sphinx-rtd-theme>=1.3.0", "myst-parser>=2.0.0",
             "nbsphinx>=0.9.1", "sphinx-copybutton>=0.5.2", "sphinx-gallery>=0.14.0",
             "palettable", "Pillow", "pytest>=6.0", "pytest-cov", "black", "flake8", "mypy",

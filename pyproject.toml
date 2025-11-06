@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "PyHydroGeophysX"
-version = "0.1.0"
+version = "0.2.0"
 description = "A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -47,6 +47,7 @@ dependencies = [
 [project.optional-dependencies]
 geophysics = [
     "pygimli>=1.5",
+    "resipy>=3.4.0",
     "flopy",
     "joblib",
 ]
@@ -61,6 +62,7 @@ dev = [
 ]
 all = [
     "pygimli>=1.5",
+    "resipy>=3.4.0",
     "flopy",
     "joblib",
     "cupy",

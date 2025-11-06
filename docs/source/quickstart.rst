@@ -5,6 +5,7 @@ Welcome to **PyHydroGeophysX**—a Python package for integrating hydrological m
 
 Key Features
 ------------
+- **ERT data processing**: Load, QC, and export field ERT data with RESIPY integration
 - Hydrological model integration (MODFLOW, ParFlow)
 - Advanced petrophysical relationships (Archie, Waxman-Smits, DEM, Hertz-Mindlin)
 - Forward modeling and time-lapse inversion for ERT & SRT
@@ -37,6 +38,36 @@ For optional GPU and parallel processing:
 
    pip install cupy-cuda11x  # Replace '11x' with your CUDA version
    pip install joblib
+
+For ERT data processing (field data):
+.. code-block:: bash
+
+   pip install resipy
+
+ERT Field Data Processing
+--------------------------
+Load, quality control, and export field ERT data from commercial instruments:
+
+.. code-block:: python
+
+   from PyHydroGeophysX.data_processing.ert_data_agent import (
+       load_ert_resipy, qc_and_visualize, export_for_inversion, LocalRef
+   )
+
+   # Load ERT field data (supports E4D, Syscal, ABEM, Sting, ARES, and more)
+   ert = load_ert_resipy(
+       project_dir="data/ERT/E4D",
+       data_file="data/ERT/E4D/2021-10-08_1400.ohm",
+       instrument="E4D",
+       crs="local",
+       local_ref=LocalRef(origin_x=0.0, origin_y=0.0, azimuth_deg=90.0)
+   )
+
+   # Generate QC plots (histogram, pseudosection, summary stats)
+   artifacts = qc_and_visualize(ert, outdir="results/qc")
+
+   # Export to pyGIMLi/BERT format for inversion
+   bert_path = export_for_inversion(ert, outdir="results/inversion", fmt="pgimli")
 
 Basic Example: Hydrological Model Integration
 ---------------------------------------------

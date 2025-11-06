@@ -5,13 +5,14 @@ A comprehensive Python package for integrating hydrological model outputs with g
 ## 🌟 Key Features
 
 - 🌊 **Hydrological Model Integration:** Seamless loading and processing of MODFLOW and ParFlow outputs  
+- 📊 **ERT Data Processing:** Standardized loading, quality control, and export of ERT field data with RESIPY integration  
 - 🪨 **Petrophysical Relationships:** Advanced models for converting between water content, saturation, resistivity, and seismic velocity  
 - ⚡ **Forward Modeling:** Complete ERT and SRT forward modeling capabilities with synthetic data generation  
 - 🔄 **Time-Lapse Inversion:** Sophisticated algorithms for time-lapse ERT inversion with temporal regularization  
 - 🏔️ **Structure-Constrained Inversion:** Integration of seismic velocity interfaces for constrained ERT inversion  
-- 📊 **Uncertainty Quantification:** Monte Carlo methods for parameter uncertainty assessment  
+- � **Uncertainty Quantification:** Monte Carlo methods for parameter uncertainty assessment  
 - 🚀 **High Performance:** GPU acceleration support (CUDA/CuPy) and parallel processing capabilities  
-- 📈 **Advanced Solvers:** Multiple linear solvers (CGLS, LSQR, RRLS) with optional GPU acceleration
+- � **Advanced Solvers:** Multiple linear solvers (CGLS, LSQR, RRLS) with optional GPU acceleration
 
 ## 📋 Requirements
 
@@ -66,6 +67,8 @@ PyHydroGeophysX/
 ├── core/               # Core utilities
 │   ├── interpolation.py    # Profile interpolation tools
 │   └── mesh_utils.py       # Mesh creation and manipulation
+├── data_processing/    # Geophysical data processing **NEW**
+│   └── ert_data_agent.py   # ERT data loading, QC, and export
 ├── model_output/       # Hydrological model interfaces
 │   ├── modflow_output.py   # MODFLOW data loading
 │   └── parflow_output.py   # ParFlow data loading
@@ -89,6 +92,7 @@ PyHydroGeophysX/
 
 The examples folder provides paired Jupyter notebooks (.ipynb) and Python scripts (.py) for each workflow. Data used by examples is under examples/data, with outputs written to examples/results.
 
+- **Ex_ERT_data_process**: Loading, quality control, and export of field ERT data with RESIPY integration (notebook: Ex_ERT_data_process.ipynb).
 - Ex_model_output: Loading and processing hydrological model outputs (MODFLOW/ParFlow) (notebook: Ex_model_output.ipynb, script: Ex_model_output.py).
 - Ex_ERT_workflow: End‑to‑end ERT modeling and inversion workflow (notebook: Ex_ERT_workflow.ipynb, script: Ex_ERT_workflow.py).
 - Ex_Time_lapse_measurement: Generate synthetic time‑lapse ERT measurements and schedules (notebook: Ex_Time_lapse_measurement.ipynb, script: Ex_Time_lapse_measurement.py).
@@ -101,6 +105,33 @@ The examples folder provides paired Jupyter notebooks (.ipynb) and Python script
 
 
 ## 🚀 Quick Start
+
+## 0. ERT Field Data Processing
+
+Load, quality control, and export field ERT data with RESIPY integration:
+
+```python
+from PyHydroGeophysX.data_processing.ert_data_agent import (
+    load_ert_resipy, qc_and_visualize, export_for_inversion, LocalRef
+)
+
+# Load ERT field data from various instruments (E4D, Syscal, ABEM, etc.)
+ert = load_ert_resipy(
+    project_dir="data/ERT/E4D",
+    data_file="data/ERT/E4D/2021-10-08_1400.ohm",
+    instrument="E4D",
+    crs="local",
+    local_ref=LocalRef(origin_x=0.0, origin_y=0.0, azimuth_deg=90.0)
+)
+
+# Run quality control and generate diagnostic plots
+artifacts = qc_and_visualize(ert, outdir="results/ert_data_process")
+# Generates: rhoa_hist.png, pseudosection.png, data_summary.json
+
+# Export to pyGIMLi/BERT format for inversion
+bert_path = export_for_inversion(ert, outdir="results/ert_data_process", fmt="pgimli")
+# Creates: bert_data.dat (with electrode coordinates and measurements)
+```
 
 ## 1. Hydrological Model Integration
 
