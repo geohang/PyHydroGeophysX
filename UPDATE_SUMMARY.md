@@ -230,9 +230,13 @@ pip install resipy
 ## Acknowledgments
 
 This update builds on the excellent RESIPY library for ERT data processing. Special thanks to:
-- RESIPY development team
-- PyGIMLi community
+- **RESIPY development team** (Guillaume Blanchy, Jimmy Boyd, and contributors) for creating an intuitive and powerful ERT data processing framework
+- **PyGIMLi community** for the geophysical modeling infrastructure
 - All contributors and users providing feedback
+
+**RESIPY Citation:**
+
+Blanchy, G., Saneiyan, S., Boyd, J., McLachlan, P., & Binley, A. (2020). ResIPy, an intuitive open source software for complex geoelectrical inversion/modeling. *Computers & Geosciences*, 137, 104423. https://doi.org/10.1016/j.cageo.2020.104423
 
 ## Next Steps
 

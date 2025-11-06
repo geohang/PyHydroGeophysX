@@ -53,6 +53,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ert-field-data-processing">ERT Field Data Processing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#basic-example-hydrological-model-integration">Basic Example: Hydrological Model Integration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#petrophysical-modeling">Petrophysical Modeling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#forward-modeling-ert-srt">Forward Modeling (ERT/SRT)</a></li>
@@ -100,6 +101,7 @@
 <section id="key-features">
 <h2>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
 <ul class="simple">
+<li><p><strong>ERT data processing</strong>: Load, QC, and export field ERT data with RESIPY integration</p></li>
 <li><p>Hydrological model integration (MODFLOW, ParFlow)</p></li>
 <li><p>Advanced petrophysical relationships (Archie, Waxman-Smits, DEM, Hertz-Mindlin)</p></li>
 <li><p>Forward modeling and time-lapse inversion for ERT &amp; SRT</p></li>
@@ -133,6 +135,35 @@ pip install -e .</p>
 <div><p>pip install cupy-cuda11x  # Replace ‘11x’ with your CUDA version
 pip install joblib</p>
 </div></blockquote>
+<p>For ERT data processing (field data):
+.. code-block:: bash</p>
+<blockquote>
+<div><p>pip install resipy</p>
+</div></blockquote>
+</section>
+<section id="ert-field-data-processing">
+<h2>ERT Field Data Processing<a class="headerlink" href="#ert-field-data-processing" title="Link to this heading"></a></h2>
+<p>Load, quality control, and export field ERT data from commercial instruments:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.data_processing.ert_data_agent</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">load_ert_resipy</span><span class="p">,</span> <span class="n">qc_and_visualize</span><span class="p">,</span> <span class="n">export_for_inversion</span><span class="p">,</span> <span class="n">LocalRef</span>
+<span class="p">)</span>
+
+<span class="c1"># Load ERT field data (supports E4D, Syscal, ABEM, Sting, ARES, and more)</span>
+<span class="n">ert</span> <span class="o">=</span> <span class="n">load_ert_resipy</span><span class="p">(</span>
+    <span class="n">project_dir</span><span class="o">=</span><span class="s2">&quot;data/ERT/E4D&quot;</span><span class="p">,</span>
+    <span class="n">data_file</span><span class="o">=</span><span class="s2">&quot;data/ERT/E4D/2021-10-08_1400.ohm&quot;</span><span class="p">,</span>
+    <span class="n">instrument</span><span class="o">=</span><span class="s2">&quot;E4D&quot;</span><span class="p">,</span>
+    <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span>
+    <span class="n">local_ref</span><span class="o">=</span><span class="n">LocalRef</span><span class="p">(</span><span class="n">origin_x</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">origin_y</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">azimuth_deg</span><span class="o">=</span><span class="mf">90.0</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># Generate QC plots (histogram, pseudosection, summary stats)</span>
+<span class="n">artifacts</span> <span class="o">=</span> <span class="n">qc_and_visualize</span><span class="p">(</span><span class="n">ert</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="s2">&quot;results/qc&quot;</span><span class="p">)</span>
+
+<span class="c1"># Export to pyGIMLi/BERT format for inversion</span>
+<span class="n">bert_path</span> <span class="o">=</span> <span class="n">export_for_inversion</span><span class="p">(</span><span class="n">ert</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="s2">&quot;results/inversion&quot;</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;pgimli&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
 </section>
 <section id="basic-example-hydrological-model-integration">
 <h2>Basic Example: Hydrological Model Integration<a class="headerlink" href="#basic-example-hydrological-model-integration" title="Link to this heading"></a></h2>

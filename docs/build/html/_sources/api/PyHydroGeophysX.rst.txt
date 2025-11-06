@@ -10,6 +10,7 @@ Subpackages
    PyHydroGeophysX.Geophy_modular
    PyHydroGeophysX.Hydro_modular
    PyHydroGeophysX.core
+   PyHydroGeophysX.data_processing
    PyHydroGeophysX.forward
    PyHydroGeophysX.inversion
    PyHydroGeophysX.model_output

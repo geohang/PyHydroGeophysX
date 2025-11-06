@@ -24,7 +24,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="model_output package" href="model_output.html" />
+    <link rel="next" title="Data Processing Module" href="data_processing.html" />
     <link rel="prev" title="Quickstart" href="../quickstart.html" /> 
 </head>
 
@@ -55,6 +55,7 @@
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data_processing.html">Data Processing Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model_output.html">model_output package</a></li>
 <li class="toctree-l2"><a class="reference internal" href="petrophysics.html">petrophysics package</a></li>
 <li class="toctree-l2"><a class="reference internal" href="forward.html">forward package</a></li>
@@ -97,6 +98,19 @@
 <p>This section contains the complete API reference for PyHydroGeophysX.</p>
 <div class="toctree-wrapper compound">
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="data_processing.html">Data Processing Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data_processing.html#ert-data-agent">ERT Data Agent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="data_processing.html#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data_processing.html#data-structures">Data Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data_processing.html#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data_processing.html#workflow-example">Workflow Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data_processing.html#time-lapse-surveys">Time-Lapse Surveys</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data_processing.html#see-also">See Also</a></li>
+<li class="toctree-l3"><a class="reference internal" href="data_processing.html#acknowledgments">Acknowledgments</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="model_output.html">model_output package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="model_output.html#submodules">Submodules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model_output.html#module-model_output.base">model_output.base module</a><ul>
@@ -206,9 +220,39 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="core.html">core package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="core.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="core.html#core-interpolation-module">core.interpolation module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="core.html#core-mesh-utils-module">core.mesh_utils module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="core.html#module-contents">Module contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core.html#module-core.interpolation">core.interpolation module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.ProfileInterpolator"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.create_surface_lines"><code class="docutils literal notranslate"><span class="pre">create_surface_lines()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.interpolate_structure_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_structure_to_profile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.interpolate_to_mesh"><code class="docutils literal notranslate"><span class="pre">interpolate_to_mesh()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.interpolate_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_to_profile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.prepare_2D_profile_data"><code class="docutils literal notranslate"><span class="pre">prepare_2D_profile_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.setup_profile_coordinates"><code class="docutils literal notranslate"><span class="pre">setup_profile_coordinates()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="core.html#module-core.mesh_utils">core.mesh_utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.MeshCreator"><code class="docutils literal notranslate"><span class="pre">MeshCreator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.add_velocity_interface"><code class="docutils literal notranslate"><span class="pre">add_velocity_interface()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.createTriangles"><code class="docutils literal notranslate"><span class="pre">createTriangles()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.create_mesh_from_layers"><code class="docutils literal notranslate"><span class="pre">create_mesh_from_layers()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.extract_velocity_interface"><code class="docutils literal notranslate"><span class="pre">extract_velocity_interface()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.fill_holes_2d"><code class="docutils literal notranslate"><span class="pre">fill_holes_2d()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="core.html#module-core">Module contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.MeshCreator"><code class="docutils literal notranslate"><span class="pre">MeshCreator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.ProfileInterpolator"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.add_velocity_interface"><code class="docutils literal notranslate"><span class="pre">add_velocity_interface()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.create_mesh_from_layers"><code class="docutils literal notranslate"><span class="pre">create_mesh_from_layers()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.create_surface_lines"><code class="docutils literal notranslate"><span class="pre">create_surface_lines()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.extract_velocity_interface"><code class="docutils literal notranslate"><span class="pre">extract_velocity_interface()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolate_structure_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_structure_to_profile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolate_to_mesh"><code class="docutils literal notranslate"><span class="pre">interpolate_to_mesh()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolate_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_to_profile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.prepare_2D_profile_data"><code class="docutils literal notranslate"><span class="pre">prepare_2D_profile_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#core.setup_profile_coordinates"><code class="docutils literal notranslate"><span class="pre">setup_profile_coordinates()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -220,7 +264,7 @@
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="../quickstart.html" class="btn btn-neutral float-left" title="Quickstart" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="model_output.html" class="btn btn-neutral float-right" title="model_output package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="data_processing.html" class="btn btn-neutral float-right" title="Data Processing Module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

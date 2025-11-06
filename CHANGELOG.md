@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated main documentation index to include data processing
 - Added workflow examples for time-lapse ERT surveys
 - Documented all 14+ supported instrument types with usage examples
+- Added RESIPY citation in README and documentation
 
 ### Dependencies
 - Added `resipy>=3.4.0` as optional dependency under `geophysics` extras

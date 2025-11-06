@@ -342,11 +342,26 @@ If you use PyHydroGeophysX in your research, please cite:
 
 ```bibtex
 @software{chen2025pyhydrogeophysx,
-  author = {Chen, Hang, Niu, Qifei, Wu, Yuxin},
+  author = {Chen, Hang and Niu, Qifei and Wu, Yuxin},
   title = {PyHydroGeophysX: An Extensible Open-Source Platform for Bridging Hydrological Models and Geophysical Measurements},
   year = {2025},
   publisher = {Water Resources Research (under review)},
   url = {https://github.com/geohang/PyHydroGeophysX}
+}
+```
+
+Additionally, if you use the ERT data processing module, please cite RESIPY:
+
+```bibtex
+@article{blanchy2020resipy,
+  title={ResIPy, an intuitive open source software for complex geoelectrical inversion/modeling},
+  author={Blanchy, Guillaume and Saneiyan, Sina and Boyd, Jimmy and McLachlan, Paul and Binley, Andrew},
+  journal={Computers \& Geosciences},
+  volume={137},
+  pages={104423},
+  year={2020},
+  publisher={Elsevier},
+  doi={10.1016/j.cageo.2020.104423}
 }
 ```
 
@@ -356,8 +371,10 @@ This project is licensed under the Apache-2.0 license - see the LICENSE file for
 
 ## 🙏 Acknowledgments
 
-- PyGIMLi team for the excellent geophysical modeling framework  
-- MODFLOW and ParFlow communities for hydrologic modeling tools  
+- **RESIPY** developers (Guillaume Blanchy, Jimmy Boyd, and contributors) for the excellent ERT data processing library that powers our field data workflows
+- **PyGIMLi** team for the outstanding geophysical modeling framework  
+- **MODFLOW** and **ParFlow** communities for hydrologic modeling tools  
+- All open-source contributors and users providing valuable feedback  
 
 ## 📧 Contact
 

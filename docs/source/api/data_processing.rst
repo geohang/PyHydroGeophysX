@@ -398,3 +398,12 @@ See Also
 * :doc:`../quickstart`: Getting started guide
 * :doc:`inversion`: ERT inversion module
 * :doc:`../auto_examples/Ex_ERT_data_process`: Complete example notebook
+
+Acknowledgments
+~~~~~~~~~~~~~~~
+
+The ERT data processing module is built on `RESIPY <https://gitlab.com/hkex/resipy>`_, an intuitive open-source software for complex geoelectrical inversion/modeling developed by Guillaume Blanchy, Jimmy Boyd, and contributors.
+
+**Citation:**
+
+Blanchy, G., Saneiyan, S., Boyd, J., McLachlan, P., & Binley, A. (2020). ResIPy, an intuitive open source software for complex geoelectrical inversion/modeling. *Computers & Geosciences*, 137, 104423. https://doi.org/10.1016/j.cageo.2020.104423
