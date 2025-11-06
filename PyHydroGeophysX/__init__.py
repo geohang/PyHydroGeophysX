@@ -185,3 +185,25 @@ __all__ += [
     "export_for_inversion",
     "LocalRef",
 ]
+
+# Multi-agent system (optional - requires openai package)
+try:
+    from .agents import (
+        AgentCoordinator,
+        ERTLoaderAgent,
+        ERTInversionAgent,
+        WaterContentAgent,
+        ReportAgent,
+        SeismicAgent
+    )
+    __all__ += [
+        "AgentCoordinator",
+        "ERTLoaderAgent",
+        "ERTInversionAgent",
+        "WaterContentAgent",
+        "ReportAgent",
+        "SeismicAgent"
+    ]
+except ImportError:
+    # Agents module requires openai package
+    pass
