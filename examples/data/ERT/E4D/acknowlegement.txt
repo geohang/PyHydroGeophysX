@@ -1,0 +1,3 @@
+The data is from 
+Uhlemann, S., Peruzzo, L., Chou, C., Williams, K. H., Wielandt, S., Wang, C., ... & Dafflon, B. (2024). Variations in bedrock and vegetation cover modulate subsurface water flow dynamics of a mountainous hillslope. Water Resources Research, 60(2), e2023WR036137.
+We thank the authors open source their datasets!
