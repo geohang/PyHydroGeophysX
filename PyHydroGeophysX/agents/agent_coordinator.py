@@ -80,6 +80,9 @@ class AgentCoordinator:
                 - petrophysical_params: Parameters for water content conversion
                 - use_seismic: Whether to include seismic processing (default: False)
                 - seismic_data: Optional seismic data file
+                - use_climate: Whether to include climate data (default: False)
+                - climate_config: Climate data configuration (coords/geometry, dates, etc.)
+                - ert_timestamps: Timestamps for ERT acquisitions (for climate alignment)
                 
         Returns:
             Dictionary containing workflow results
@@ -88,6 +91,20 @@ class AgentCoordinator:
         self.workflow_state['status'] = 'running'
         
         try:
+            # Step 0 (Optional): Fetch climate data if requested
+            if config.get('use_climate', False) and 'climate_config' in config:
+                self._log("Step 0: Fetching climate data")
+                self.workflow_state['current_step'] = 'fetch_climate'
+                
+                climate_config = config['climate_config']
+                # Add ERT timestamps if provided
+                if 'ert_timestamps' in config:
+                    climate_config['ert_timestamps'] = config['ert_timestamps']
+                
+                climate_results = self._execute_agent('climate_data', climate_config)
+                self.workflow_state['data']['climate_data'] = climate_results
+                self.workflow_state['completed_steps'].append('fetch_climate')
+            
             # Step 1: Load ERT data
             self._log("Step 1: Loading ERT data")
             self.workflow_state['current_step'] = 'load_ert'
