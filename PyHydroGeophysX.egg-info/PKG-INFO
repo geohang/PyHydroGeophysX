@@ -78,6 +78,9 @@ A comprehensive Python package for integrating hydrological model outputs with g
 - Optional: CuPy (for GPU acceleration), joblib (for parallel processing)
 
 ## 🛠️ Installation
+### From PyPI (Recommended)
+
+pip install pyhydrogeophysx
 
 ### From Source
 
@@ -141,16 +144,18 @@ PyHydroGeophysX/
 
 ## 📖 Examples
 
-The `examples/` directory contains comprehensive tutorials:
+The examples folder provides paired Jupyter notebooks (.ipynb) and Python scripts (.py) for each workflow. Data used by examples is under examples/data, with outputs written to examples/results.
 
-- `Ex1_model_output.py`: Loading hydrological model outputs  
-- `Ex2_workflow.py`: Complete workflow from hydro models to geophysical inversion  
-- `Ex3_Time_lapse_measurement.py`: Creating synthetic time-lapse ERT data  
-- `Ex4_TL_inversion.py`: Time-lapse ERT inversion techniques  
-- `Ex5_SRT.py`: Seismic refraction tomography workflow  
-- `Ex6_Structure_resinv.py`: Structure-constrained resistivity inversion  
-- `Ex7_structure_TLresinv.py`: Structure-constrained time-lapse inversion  
-- `Ex8_MC_WC.py`: Monte Carlo uncertainty quantification
+- Ex_model_output: Loading and processing hydrological model outputs (MODFLOW/ParFlow) (notebook: Ex_model_output.ipynb, script: Ex_model_output.py).
+- Ex_ERT_workflow: End‑to‑end ERT modeling and inversion workflow (notebook: Ex_ERT_workflow.ipynb, script: Ex_ERT_workflow.py).
+- Ex_Time_lapse_measurement: Generate synthetic time‑lapse ERT measurements and schedules (notebook: Ex_Time_lapse_measurement.ipynb, script: Ex_Time_lapse_measurement.py).
+- Ex_TL_inversion: Time‑lapse ERT inversion with temporal regularization and windowed processing (notebook: Ex_TL_inversion.ipynb, script: Ex_TL_inversion.py).
+- Ex_Structure_resinv: Structure‑constrained resistivity inversion using seismic interfaces (notebook: Ex_Structure_resinv.ipynb, script: Ex_Structure_resinv.py).
+- Ex_structure_TLresinv: Structure‑constrained time‑lapse resistivity inversion (notebook: Ex_structure_TLresinv.ipynb, script: Ex_structure_TLresinv.py).
+- EX_SRT_forward: Seismic refraction tomography forward modeling and synthetic travel times (notebook: EX_SRT_forward.ipynb, script: EX_SRT_forward.py).
+- Ex_SRT_inv: Seismic refraction tomography inversion workflow (notebook: Ex_SRT_inv.ipynb, script: Ex_SRT_inv.py).
+- Ex_MC_Hydro: Monte Carlo uncertainty quantification for hydro‑to‑resistivity conversion (notebook: Ex_MC_Hydro.ipynb, script: Ex_MC_Hydro.py).
+
 
 ## 🚀 Quick Start
 
@@ -363,17 +368,17 @@ If you use PyHydroGeophysX in your research, please cite:
 
 ```bibtex
 @software{chen2025pyhydrogeophysx,
-  author = {Chen, Hang},
-  title = {PyHydroGeophysX: Integrating Hydrological and Geophysical Modeling},
+  author = {Chen, Hang, Niu, Qifei, Wu, Yuxin},
+  title = {PyHydroGeophysX: An Extensible Open-Source Platform for Bridging Hydrological Models and Geophysical Measurements},
   year = {2025},
-  publisher = {GitHub},
-  url = {https://github.com/yourusername/PyHydroGeophysX}
+  publisher = {Water Resources Research (under review)},
+  url = {https://github.com/geohang/PyHydroGeophysX}
 }
 ```
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the Apache-2.0 license - see the LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
@@ -383,7 +388,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📧 Contact
 
 Author: Hang Chen  
-Email: hchen8@lbl.gov
+Email: hangchen.work@gmail.com
 Issues: GitHub Issues  
 
 ---

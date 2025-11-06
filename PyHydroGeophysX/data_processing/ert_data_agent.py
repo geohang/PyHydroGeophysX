@@ -7,6 +7,8 @@ import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import tempfile
+import warnings
 
 # Optional dependency: RESIPY
 try:
@@ -146,43 +148,133 @@ def load_ert_resipy(
     assert _HAS_RESIPY, "RESIPY not installed. Please `pip install resipy`."
     ftype = _to_ftype(instrument)
 
-    prj = Project(project_dir)
-    Path(project_dir).mkdir(parents=True, exist_ok=True)
-    prj.createFolder(project_dir)
+    # Resolve relative paths to absolute paths based on current working directory
+    data_file_path = Path(data_file)
+    if not data_file_path.is_absolute():
+        data_file_path = Path.cwd() / data_file_path
+    
+    if not data_file_path.exists():
+        raise FileNotFoundError(f"Data file not found: {data_file_path}")
 
-    # Use explicit ftype for robust parsing
-    prj.importData(data_file, ftype=ftype)
+    # Prefer to use the requested project_dir, but RESIPY may attempt to
+    # remove/recreate the directory (calling shutil.rmtree) which can fail
+    # on Windows (OneDrive or open handles). Try to instantiate Project and
+    # if a PermissionError (or OSError with permission) occurs, fall back to
+    # a temporary directory and warn the user.
+    chosen_dir = project_dir
+    try:
+        prj = Project(chosen_dir)
+    except PermissionError:
+        warnings.warn(
+            f"RESIPY cannot prepare project directory '{project_dir}' (PermissionError). "
+            "Falling back to a temporary project directory.",
+            UserWarning
+        )
+        chosen_dir = tempfile.mkdtemp(prefix="resipy_")
+        prj = Project(chosen_dir)
+    except OSError as e:
+        # On some platforms, an OSError may be raised for permission issues
+        if getattr(e, 'winerror', None) == 5 or e.errno in (13,):
+            warnings.warn(
+                f"RESIPY cannot prepare project directory '{project_dir}' ({e}). "
+                "Falling back to a temporary project directory.",
+                UserWarning
+            )
+            chosen_dir = tempfile.mkdtemp(prefix="resipy_")
+            prj = Project(chosen_dir)
+        else:
+            raise
+    # Ensure the chosen folder exists on disk first
+    Path(chosen_dir).mkdir(parents=True, exist_ok=True)
+    # RESIPY's Project API has changed over time; some releases expose
+    # `createFolder`, others `create_folder` or similar. Try common names
+    # and call the first that exists. If none exists, that's fine because
+    # the filesystem folder was already created above.
+    for _fn in ("createFolder", "create_folder", "createProject", "create_project", "create"):
+        if hasattr(prj, _fn):
+            try:
+                getattr(prj, _fn)(chosen_dir)
+            except TypeError:
+                # Some implementations may not accept an argument; call without args
+                try:
+                    getattr(prj, _fn)()
+                except Exception:
+                    # If it still fails, ignore and continue — folder is present.
+                    pass
+            except Exception:
+                # Be tolerant of any other runtime errors from RESIPY initialization
+                # so that our loader remains usable across versions.
+                pass
+            break
+
+    # Use explicit ftype for robust parsing. RESIPY's Project class uses 
+    # method name 'createSurvey' to load data files and create a survey object.
+    prj.createSurvey(fname=str(data_file_path), ftype=ftype)
+    
+    # After createSurvey, data is stored in prj.surveys[0] (the first/only survey)
+    if not prj.surveys:
+        raise RuntimeError("No survey was created. Check that the data file format matches the specified instrument.")
+    
+    survey = prj.surveys[0]  # Get the first survey object
 
     # If no electrode coordinates, generate a simple line for quick testing
-    if spacing is not None and (prj.elec is None):
-        n_elec = int(np.max(prj.data[['a','b','m','n']].values)) + 1
+    if spacing is not None and (survey.elec is None or len(survey.elec) == 0):
+        n_elec = int(np.max(survey.df[['a','b','m','n']].values)) + 1
         elec = np.zeros((n_elec, 3))
         elec[:, 0] = np.arange(n_elec) * spacing
-        prj.setElec(elec)
+        survey.setElec(elec)
 
-    # Minimal QC
-    df = prj.data.copy().dropna(subset=['a','b','m','n'])
+    # Minimal QC - access data from survey.df (the dataframe in the Survey object)
+    df = survey.df.copy().dropna(subset=['a','b','m','n'])
     if 'i' in df.columns:
         df = df[df['i'].abs() > 0]
     if 'u' in df.columns:
         df = df[df['u'].abs() > 0]
     df = df.drop_duplicates(subset=['a','b','m','n'])
 
-    # Apparent resistivity (compute if missing)
-    if 'rhoa' not in df.columns:
+    # Apparent resistivity - RESIPY may use different column names
+    # Common names: 'app', 'rhoa', 'Rho', 'resist' (for measured resistance)
+    rhoa_col = None
+    for col_name in ['app', 'rhoa', 'Rho']:
+        if col_name in df.columns:
+            rhoa_col = col_name
+            break
+    
+    if rhoa_col is None:
+        # Try to compute from resistance and geometric factor
         try:
-            prj.computeRhoa()
-            df['rhoa'] = prj.data.loc[df.index, 'rhoa']
+            survey.computeK()  # Compute geometric factors first
+            if hasattr(survey, 'computeRhoa'):
+                survey.computeRhoa()
+                df = survey.df.loc[df.index].copy()
+                # Check again for apparent resistivity columns
+                for col_name in ['app', 'rhoa', 'Rho']:
+                    if col_name in df.columns:
+                        rhoa_col = col_name
+                        break
         except Exception:
-            df['rhoa'] = np.nan
+            pass
+    
+    # Use the found column or set to NaN
+    if rhoa_col:
+        df['rhoa'] = df[rhoa_col]
+    else:
+        df['rhoa'] = np.nan
 
     # Simple relative error model
     rel_err = np.full(len(df), 0.03)
-    if 'err' in df.columns:
-        rel_err = np.maximum(rel_err, df['err'].clip(0.005, 0.2).values)
+    # Check for error columns (different names for different instruments)
+    for err_col in ['resError', 'magErr', 'err', 'error', 'dev']:
+        if err_col in df.columns:
+            err_vals = df[err_col].values
+            # Use the error if it's reasonable (between 0.5% and 50%)
+            valid_err = np.where(np.isfinite(err_vals) & (err_vals > 0.005) & (err_vals < 0.5), 
+                                 err_vals, 0.03)
+            rel_err = np.maximum(rel_err, valid_err)
+            break
 
-    # Electrodes
-    elec_arr = np.array(prj.elec) if prj.elec is not None else \
+    # Electrodes - access from survey object
+    elec_arr = np.array(survey.elec) if survey.elec is not None else \
                np.zeros((int(df[['a','b','m','n']].values.max())+1, 3))
     electrodes = [Electrode(i+1, float(elec_arr[i,0]), float(elec_arr[i,1]), float(elec_arr[i,2]))
                   for i in range(elec_arr.shape[0])]
@@ -190,22 +282,27 @@ def load_ert_resipy(
     # Observations
     idx_to_pos = {idx: k for k, idx in enumerate(df.index)}
     observations: List[Observation] = []
+    
+    # Detect current and voltage column names (vary by instrument)
+    i_col = next((c for c in ['i', 'I', 'current'] if c in df.columns), None)
+    v_col = next((c for c in ['u', 'U', 'v', 'V', 'voltage', 'dV'] if c in df.columns), None)
+    
     for idx, r in df.iterrows():
         observations.append(Observation(
             quad=Quadruplet(int(r['a']), int(r['b']), int(r['m']), int(r['n'])),
-            app_res=float(r['rhoa']) if np.isfinite(r['rhoa']) else None,
-            dV=float(r['u']) if 'u' in r and np.isfinite(r['u']) else None,
-            I=float(r['i']) if 'i' in r and np.isfinite(r['i']) else None,
+            app_res=float(r['rhoa']) if 'rhoa' in r and np.isfinite(r['rhoa']) else None,
+            dV=float(r[v_col]) if v_col and v_col in r and np.isfinite(r[v_col]) else None,
+            I=float(r[i_col]) if i_col and i_col in r and np.isfinite(r[i_col]) else None,
             rel_err=float(rel_err[idx_to_pos[idx]]),
-            fid=str(r['id']) if 'id' in r else None
+            fid=str(r['id']) if 'id' in r else str(idx)
         ))
 
     crs_out = ("EPSG:%d" % epsg) if (crs != "local" and epsg) else crs
     meta = {
         "loader": "RESIPY",
         "ftype": ftype,
-        "project_dir": str(Path(project_dir).resolve()),
-        "data_file": str(Path(data_file).resolve()),
+        "project_dir": str(Path(chosen_dir).resolve()),
+        "data_file": str(data_file_path.resolve()),
         "epsg": epsg,
         "local_ref": (local_ref._asdict() if isinstance(local_ref, LocalRef) else None)
     }
@@ -229,7 +326,13 @@ def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> 
     - histogram of log10 apparent resistivity
     - observations parquet, electrodes CSV, standardized JSON
     """
-    Path(outdir).mkdir(parents=True, exist_ok=True)
+    # Handle paths starting with / on Windows by converting to relative path
+    outdir_path = Path(outdir)
+    if outdir.startswith('/') and not outdir_path.is_absolute():
+        # Remove leading / and treat as relative to cwd
+        outdir_path = Path.cwd() / outdir.lstrip('/')
+    
+    outdir_path.mkdir(parents=True, exist_ok=True)
 
     # Electrodes plot
     ex = [e.x for e in ert.electrodes]
@@ -237,7 +340,7 @@ def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> 
     plt.figure(figsize=(6, 2))
     plt.plot(ex, ez, 'k.-')
     plt.xlabel('x (m)'); plt.ylabel('z (m)')
-    p1 = str(Path(outdir) / "electrodes.png")
+    p1 = str(outdir_path / "electrodes.png")
     plt.tight_layout(); plt.savefig(p1, dpi=200); plt.close()
 
     # Apparent resistivity histogram
@@ -245,7 +348,7 @@ def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> 
     plt.figure(figsize=(4, 3))
     plt.hist(np.log10(vals), bins=40, color="#4C72B0")
     plt.xlabel('log10 apparent resistivity'); plt.ylabel('count')
-    p2 = str(Path(outdir) / "rhoa_hist.png")
+    p2 = str(outdir_path / "rhoa_hist.png")
     plt.tight_layout(); plt.savefig(p2, dpi=200); plt.close()
 
     # Flat tables
@@ -254,32 +357,72 @@ def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> 
         "app_res": o.app_res, "dV": o.dV, "I": o.I,
         "rel_err": o.rel_err, "fid": o.fid
     } for o in ert.observations]
-    pd.DataFrame(obs_rows).to_parquet(Path(outdir) / "observations.parquet", index=False)
-    pd.DataFrame([asdict(e) for e in ert.electrodes]).to_csv(Path(outdir) / "electrodes.csv", index=False)
-    ert.to_json(Path(outdir) / "ert_standard.json")
+    pd.DataFrame(obs_rows).to_parquet(outdir_path / "observations.parquet", index=False)
+    pd.DataFrame([asdict(e) for e in ert.electrodes]).to_csv(outdir_path / "electrodes.csv", index=False)
+    ert.to_json(outdir_path / "ert_standard.json")
 
     return {
-        "electrodes_png": str(Path(outdir)/"electrodes.png"),
-        "rhoa_hist_png": str(Path(outdir)/"rhoa_hist.png"),
-        "observations_parquet": str(Path(outdir)/"observations.parquet"),
-        "electrodes_csv": str(Path(outdir)/"electrodes.csv"),
-        "standard_json": str(Path(outdir)/"ert_standard.json"),
+        "electrodes_png": str(outdir_path/"electrodes.png"),
+        "rhoa_hist_png": str(outdir_path/"rhoa_hist.png"),
+        "observations_parquet": str(outdir_path/"observations.parquet"),
+        "electrodes_csv": str(outdir_path/"electrodes.csv"),
+        "standard_json": str(outdir_path/"ert_standard.json"),
     }
 
 def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert", fmt: str = "pgimli") -> str:
     """
     Export to inversion-ready formats:
-    - fmt='pgimli': ASCII columns [A B M N rhoa rel_err] for BERT/pyGIMLi.
+    - fmt='pgimli': Unified data format for pyGIMLi/BERT with electrode coordinates and measurements
     - fmt='resipy': return the RESIPY project directory for running prj.start().
     """
-    Path(outdir).mkdir(parents=True, exist_ok=True)
+    # Handle paths starting with / on Windows by converting to relative path
+    outdir_path = Path(outdir)
+    if outdir.startswith('/') and not outdir_path.is_absolute():
+        # Remove leading / and treat as relative to cwd
+        outdir_path = Path.cwd() / outdir.lstrip('/')
+    
+    outdir_path.mkdir(parents=True, exist_ok=True)
+    
     if fmt == "pgimli":
-        rows = [[o.quad.A, o.quad.B, o.quad.M, o.quad.N,
-                 (o.app_res if o.app_res is not None else np.nan),
-                 (o.rel_err if o.rel_err is not None else 0.03)]
-                for o in ert.observations]
-        path = Path(outdir) / "bert_data.dat"
-        np.savetxt(path, np.array(rows, dtype=float), fmt="%.6f")
+        path = outdir_path / "bert_data.dat"
+        
+        with open(path, 'w') as f:
+            # Write number of electrodes
+            f.write(f"{len(ert.electrodes)}\n")
+            
+            # Write electrode coordinates header and data
+            f.write("# x y z\n")
+            for elec in ert.electrodes:
+                f.write(f"{elec.x:.2f}\t{elec.y:.2f}\t{elec.z:.2f}\n")
+            
+            # Write number of measurements
+            f.write(f"{len(ert.observations)}\n")
+            
+            # Write measurement data header
+            f.write("# a b m n err i ip iperr k r rhoa u valid\n")
+            
+            # Write measurement data
+            for obs in ert.observations:
+                rhoa = obs.app_res if obs.app_res is not None else 0.0
+                err = obs.rel_err if obs.rel_err is not None else 0.03
+                i_val = obs.I if obs.I is not None else 0.0
+                u_val = obs.dV if obs.dV is not None else 0.0
+                
+                # Calculate geometric factor K from apparent resistivity and resistance
+                # K = rhoa / R, where R = dV / I
+                if i_val != 0 and u_val != 0:
+                    R = u_val / i_val if i_val != 0 else 0.0
+                    K = rhoa / R if R != 0 else 0.0
+                else:
+                    K = 0.0
+                    R = 0.0
+                
+                # Format: a b m n err i ip iperr k r rhoa u valid
+                # Note: IP parameters (ip, iperr) are set to 0 for DC-only data
+                f.write(f"{obs.quad.A}\t{obs.quad.B}\t{obs.quad.M}\t{obs.quad.N}\t")
+                f.write(f"{err:.14e}\t{i_val:.14e}\t0.00000000000000e+00\t0.00000000000000e+00\t")
+                f.write(f"{K:.14e}\t{R:.14e}\t{rhoa:.14e}\t{u_val:.14e}\t1\n")
+        
         return str(path)
     elif fmt == "resipy":
         return ert.metadata.get("project_dir", "")

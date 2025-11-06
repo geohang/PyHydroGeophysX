@@ -24,6 +24,8 @@ PyHydroGeophysX/core/interpolation.py
 PyHydroGeophysX/core/kriging_3d.py
 PyHydroGeophysX/core/mesh_utils.py
 PyHydroGeophysX/core/plt_utils.py
+PyHydroGeophysX/data_processing/__init__.py
+PyHydroGeophysX/data_processing/ert_data_agent.py
 PyHydroGeophysX/forward/__init__.py
 PyHydroGeophysX/forward/ert_forward.py
 PyHydroGeophysX/forward/srt_forward.py
