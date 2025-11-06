@@ -290,14 +290,21 @@ class ClimateDataAgent(BaseAgent):
                         try:
                             idx = df.index.get_indexer([ert_time], method='nearest')[0]
                             aligned_data.append(df.iloc[idx])
-                        except Exception:
+                        except (KeyError, IndexError, ValueError) as e:
                             # If time index doesn't exist, try matching dates
-                            df_copy = df.copy()
-                            if 'time' in df_copy.columns:
-                                df_copy['time'] = pd.to_datetime(df_copy['time'])
-                                df_copy = df_copy.set_index('time')
-                                idx = df_copy.index.get_indexer([ert_time], method='nearest')[0]
-                                aligned_data.append(df_copy.iloc[idx])
+                            self._log(f"Warning: Could not align timestamp {ert_time} using index: {str(e)}", level='WARN')
+                            try:
+                                df_copy = df.copy()
+                                if 'time' in df_copy.columns:
+                                    df_copy['time'] = pd.to_datetime(df_copy['time'])
+                                    df_copy = df_copy.set_index('time')
+                                    idx = df_copy.index.get_indexer([ert_time], method='nearest')[0]
+                                    aligned_data.append(df_copy.iloc[idx])
+                                else:
+                                    self._log(f"Warning: Cannot find 'time' column for alignment", level='WARN')
+                            except (KeyError, IndexError, ValueError) as e2:
+                                self._log(f"Warning: Failed to align timestamp {ert_time}: {str(e2)}", level='WARN')
+                                continue
                 
                 if aligned_data:
                     aligned['ert_aligned_data'] = pd.DataFrame(aligned_data)
@@ -370,9 +377,19 @@ class ClimateDataAgent(BaseAgent):
             pet_array = np.array(pet_values)
             comparison['method_mean'] = np.nanmean(pet_array, axis=0)
             comparison['method_std'] = np.nanstd(pet_array, axis=0)
-            comparison['coefficient_of_variation'] = np.nanmean(
-                comparison['method_std'] / (comparison['method_mean'] + 1e-10)
-            )
+            # Use appropriate epsilon for typical PET values (mm/day)
+            # and avoid division by values close to zero
+            mean_vals = comparison['method_mean']
+            std_vals = comparison['method_std']
+            # Only compute CV where mean is significantly above zero (> 0.1 mm/day)
+            # This threshold can be adjusted based on regional conditions
+            min_threshold = 0.1  # mm/day
+            valid_mask = mean_vals > min_threshold
+            if np.any(valid_mask):
+                cv_values = np.where(valid_mask, std_vals / mean_vals, np.nan)
+                comparison['coefficient_of_variation'] = np.nanmean(cv_values)
+            else:
+                comparison['coefficient_of_variation'] = np.nan
         
         return comparison
     

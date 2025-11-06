@@ -196,7 +196,7 @@ def example_pet_method_comparison():
     climate_agent = ClimateDataAgent()
     
     # Define location and date range
-    coords = (40.0, -105.3)  # Colorado example
+    coords = (-105.3, 40.0)  # Colorado example (lon, lat)
     start_date = "2023-06-01"
     end_date = "2023-08-31"
     
@@ -266,7 +266,7 @@ def example_climate_ert_event_analysis():
     climate_agent = ClimateDataAgent()
     
     # Define ERT site location
-    site_coords = (40.0, -105.3)
+    site_coords = (-105.3, 40.0)  # (lon, lat)
     
     # Campaign dates
     start_date = "2023-05-01"
@@ -348,7 +348,7 @@ def example_integrated_workflow():
     print("      'data_file': 'path/to/ert_data.dat',")
     print("      'use_climate': True,")
     print("      'climate_config': {")
-    print("          'coords': (40.0, -105.3),")
+    print("          'coords': (-105.3, 40.0),  # (lon, lat)")
     print("          'dates': ('2023-06-01', '2023-09-30'),")
     print("          'pet_method': 'penman_monteith',")
     print("      },")
