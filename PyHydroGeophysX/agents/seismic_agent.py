@@ -165,22 +165,24 @@ Return as: lam=XX, zWeight=XX, vTop=XX, vBottom=XX"""
             
             response = self.query_llm(prompt, self.system_message, temperature=0.3, max_tokens=200)
             
-            # Parse response (simple parsing)
+            # Parse response with robust error handling
             params = {'lam': 50, 'zWeight': 0.2, 'vTop': 500, 'vBottom': 5000}  # defaults
             
             try:
+                import re
                 for key in ['lam', 'zWeight', 'vTop', 'vBottom']:
-                    if f'{key}=' in response:
-                        value_str = response.split(f'{key}=')[1].split(',')[0].split()[0]
-                        params[key] = float(value_str)
-            except:
-                pass
+                    pattern = rf'{key}[=:\s]+(\d+\.?\d*)'
+                    match = re.search(pattern, response, re.IGNORECASE)
+                    if match:
+                        params[key] = float(match.group(1))
+            except (ValueError, AttributeError) as e:
+                self._log_execution(f"Could not parse LLM response: {e}, using defaults")
             
             self._log_execution(f"LLM recommended parameters: {params}")
             
             return params
-        except:
-            self._log_execution("Could not get LLM recommendations, using defaults")
+        except Exception as e:
+            self._log_execution(f"Could not get LLM recommendations: {e}, using defaults")
             return {'lam': 50, 'zWeight': 0.2, 'vTop': 500, 'vBottom': 5000}
     
     def _interpret_results(self, TT_manager, interface_data) -> str:

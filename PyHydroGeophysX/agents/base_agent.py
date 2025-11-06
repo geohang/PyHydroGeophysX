@@ -18,16 +18,18 @@ class BaseAgent(ABC):
     with other agents through the coordinator.
     """
     
-    def __init__(self, name: str, api_key: Optional[str] = None):
+    def __init__(self, name: str, api_key: Optional[str] = None, model: str = "gpt-4"):
         """
         Initialize the base agent.
         
         Args:
             name: Name identifier for this agent
             api_key: OpenAI API key (uses OPENAI_API_KEY env var if not provided)
+            model: OpenAI model to use (default: gpt-4, alternatives: gpt-3.5-turbo, gpt-4-turbo)
         """
         self.name = name
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        self.model = model or os.getenv('OPENAI_MODEL', 'gpt-4')
         self.context = {}
         self.results = {}
         
@@ -74,7 +76,7 @@ class BaseAgent(ABC):
             messages.append({"role": "user", "content": prompt})
             
             response = client.chat.completions.create(
-                model="gpt-4",
+                model=self.model,
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens

@@ -2,4 +2,3 @@ numpy>=1.19
 scipy>=1.5
 matplotlib>=3.2
 tqdm>=4.0
-openai>=1.0.0

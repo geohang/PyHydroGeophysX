@@ -140,7 +140,7 @@ reports suitable for scientists and engineers."""
             wc = workflow_data['water_content']
             import numpy as np
             mean_wc = wc.get('water_content_mean')
-            if mean_wc is not None and hasattr(mean_wc, '__iter__'):
+            if mean_wc is not None and isinstance(mean_wc, np.ndarray) and mean_wc.size > 0:
                 summary += f"- Mean water content: {np.mean(mean_wc):.3f}\n"
         
         return summary

@@ -77,7 +77,7 @@ different geological layers, and quantify uncertainties."""
                 self._log_execution("Requesting LLM recommendations for petrophysical parameters")
                 petro_params = self._get_recommended_petro_params(resistivity, cell_markers)
             
-            # Set up default layer distributions if not provided
+            # Set up default layer distributions (even if petro_params has some values)
             layer_distributions = self._setup_layer_distributions(petro_params, cell_markers)
             
             self._log_execution(f"Converting resistivity to water content for "
@@ -141,8 +141,15 @@ different geological layers, and quantify uncertainties."""
             }
             
             # Log summary statistics
-            mean_wc = np.mean(stats['mean'][coverage > 0]) if coverage is not None else np.mean(stats['mean'])
-            self._log_execution(f"Mean water content: {mean_wc:.3f}")
+            mean_wc_value = None
+            if isinstance(stats['mean'], np.ndarray):
+                if coverage is not None:
+                    mean_wc_value = np.mean(stats['mean'][coverage > 0])
+                else:
+                    mean_wc_value = np.mean(stats['mean'])
+            
+            if mean_wc_value is not None:
+                self._log_execution(f"Mean water content: {mean_wc_value:.3f}")
             
             return self.results
             

@@ -206,7 +206,7 @@ def run_ert_with_seismic_example():
     api_key = os.getenv('OPENAI_API_KEY')
     coordinator = AgentCoordinator(api_key=api_key)
     
-    # Register all agents (including seismic)
+    # Register all agents (including seismic) - consistent with main example
     coordinator.register_agent('ert_loader', ERTLoaderAgent(api_key))
     coordinator.register_agent('seismic_processor', SeismicAgent(api_key))
     coordinator.register_agent('ert_inversion', ERTInversionAgent(api_key))

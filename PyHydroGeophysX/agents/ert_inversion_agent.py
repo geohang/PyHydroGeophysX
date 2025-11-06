@@ -170,29 +170,30 @@ Return as: lambda=XX, max_iterations=YY"""
             
             response = self.query_llm(prompt, self.system_message, temperature=0.3, max_tokens=150)
             
-            # Parse response (simple parsing)
+            # Parse response with robust error handling
             params = {'lambda': 20.0, 'max_iterations': 10}  # defaults
             
-            if 'lambda=' in response:
-                try:
-                    lambda_str = response.split('lambda=')[1].split(',')[0].split()[0]
-                    params['lambda'] = float(lambda_str)
-                except:
-                    pass
-            
-            if 'max_iterations=' in response:
-                try:
-                    iter_str = response.split('max_iterations=')[1].split(',')[0].split()[0]
-                    params['max_iterations'] = int(iter_str)
-                except:
-                    pass
+            try:
+                import re
+                # Try to extract lambda value
+                lambda_match = re.search(r'lambda[=:\s]+(\d+\.?\d*)', response, re.IGNORECASE)
+                if lambda_match:
+                    params['lambda'] = float(lambda_match.group(1))
+                
+                # Try to extract max_iterations value
+                iter_match = re.search(r'max[_\s]*iterations[=:\s]+(\d+)', response, re.IGNORECASE)
+                if iter_match:
+                    params['max_iterations'] = int(iter_match.group(1))
+                    
+            except (ValueError, AttributeError) as e:
+                self._log_execution(f"Could not parse LLM response: {e}, using defaults")
             
             self._log_execution(f"LLM recommended: lambda={params['lambda']}, "
                               f"max_iterations={params['max_iterations']}")
             
             return params
-        except:
-            self._log_execution("Could not get LLM recommendations, using defaults")
+        except Exception as e:
+            self._log_execution(f"Could not get LLM recommendations: {e}, using defaults")
             return {'lambda': 20.0, 'max_iterations': 10}
     
     def _create_structured_mesh(self, ert_data, seismic_structure) -> Any:
