@@ -7,6 +7,10 @@ This gallery contains comprehensive examples demonstrating the capabilities of P
 
 The examples are organized to show the complete workflow from loading hydrological model data to performing geophysical inversions:
 
+**Data Processing:**
+
+* **Ex_ERT_data_process.py**: Loading, quality control, and exporting field ERT data from commercial instruments (E4D, Syscal, ABEM, etc.) using RESIPY integration
+
 **Basic Examples:**
 
 * **Ex_model_output.py**: Loading and processing MODFLOW and ParFlow model outputs
@@ -22,10 +26,11 @@ The examples are organized to show the complete workflow from loading hydrologic
 
 * **EX_SRT_forward.py**: Seismic refraction tomography (SRT) forward modeling
 * **EX_SRT_inv.py**: Seismic refraction tomography (SRT) inversion and analysis
+
 **Advanced Applications:**
 
 * **Ex_Structure_resinv.py**: Structure-constrained resistivity inversion
-* **Ex_MC_WC.py**: Monte Carlo uncertainty quantification for water content estimation
+* **Ex_MC_Hydro.py**: Monte Carlo uncertainty quantification for water content estimation
 
 Each example includes detailed comments and demonstrates best practices for watershed geophysical monitoring applications.
 
@@ -35,6 +40,23 @@ Each example includes detailed comments and demonstrates best practices for wate
     <div class="sphx-glr-thumbnails">
 
 .. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load, quality control, and export field ERT data using PyHydroGeophysX&#x27;s data_processing module with RESIPY integration.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_ERT_data_process_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Ex_ERT_data_process.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">ERT Field Data Processing with RESIPY</div>
+    </div>
+
 
 .. raw:: html
 
@@ -199,6 +221,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 .. toctree::
    :hidden:
 
+   /auto_examples/Ex_ERT_data_process
    /auto_examples/Ex_model_output
    /auto_examples/Ex_Structure_resinv
    /auto_examples/Ex_SRT_inv

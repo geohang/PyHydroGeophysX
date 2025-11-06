@@ -401,7 +401,7 @@ This project is licensed under the Apache-2.0 license - see the LICENSE file for
 
 ## 🙏 Acknowledgments
 
-- **RESIPY** developers (Guillaume Blanchy, Jimmy Boyd, and contributors) for the excellent ERT data processing library that powers our field data workflows
+- **RESIPY** developers (Blanchy, Guillaume and Saneiyan, Sina and Boyd, Jimmy and McLachlan, Paul and Binley, Andrew and contributors) for the excellent ERT data processing library that powers our field data workflows
 - **pyGIMLi** team (Carsten Rücker, Thomas Günther, Florian Wagner, and contributors) for the outstanding geophysical modeling and inversion framework  
 - **ParFlow** development team (Reed Maxwell, Laura Condon, Stefan Kollet, and contributors) for the integrated surface-subsurface hydrologic model
 - **MODFLOW** community (USGS and contributors) for the groundwater modeling standard

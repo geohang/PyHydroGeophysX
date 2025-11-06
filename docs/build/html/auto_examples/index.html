@@ -24,7 +24,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex. Loading and Processing Hydrological Model Outputs" href="Ex_model_output.html" />
+    <link rel="next" title="ERT Field Data Processing with RESIPY" href="Ex_ERT_data_process.html" />
     <link rel="prev" title="core package" href="../api/core.html" /> 
 </head>
 
@@ -59,6 +59,7 @@
 <p class="caption" role="heading"><span class="caption-text">Examples</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Examples Gallery</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="Ex_ERT_data_process.html">ERT Field Data Processing with RESIPY</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
@@ -100,6 +101,10 @@
 <h1>Examples Gallery<a class="headerlink" href="#examples-gallery" title="Link to this heading"></a></h1>
 <p>This gallery contains comprehensive examples demonstrating the capabilities of PyHydroGeophysX for integrating hydrological model outputs with geophysical forward modeling and inversion.</p>
 <p>The examples are organized to show the complete workflow from loading hydrological model data to performing geophysical inversions:</p>
+<p><strong>Data Processing:</strong></p>
+<ul class="simple">
+<li><p><strong>Ex_ERT_data_process.py</strong>: Loading, quality control, and exporting field ERT data from commercial instruments (E4D, Syscal, ABEM, etc.) using RESIPY integration</p></li>
+</ul>
 <p><strong>Basic Examples:</strong></p>
 <ul class="simple">
 <li><p><strong>Ex_model_output.py</strong>: Loading and processing MODFLOW and ParFlow model outputs</p></li>
@@ -119,10 +124,13 @@
 <p><strong>Advanced Applications:</strong></p>
 <ul class="simple">
 <li><p><strong>Ex_Structure_resinv.py</strong>: Structure-constrained resistivity inversion</p></li>
-<li><p><strong>Ex_MC_WC.py</strong>: Monte Carlo uncertainty quantification for water content estimation</p></li>
+<li><p><strong>Ex_MC_Hydro.py</strong>: Monte Carlo uncertainty quantification for water content estimation</p></li>
 </ul>
 <p>Each example includes detailed comments and demonstrates best practices for watershed geophysical monitoring applications.</p>
-<div class="sphx-glr-thumbnails"><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load and process outputs from different  hydrological models using PyHydroGeophysX. We show examples for both  ParFlow and MODFLOW models."><img alt="" src="../_images/sphx_glr_Ex_model_output_thumb.png" />
+<div class="sphx-glr-thumbnails"><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load, quality control, and export field ERT data using PyHydroGeophysX&#x27;s data_processing module with RESIPY integration."><img alt="" src="../_images/sphx_glr_Ex_ERT_data_process_thumb.png" />
+<p><a class="reference internal" href="Ex_ERT_data_process.html#sphx-glr-auto-examples-ex-ert-data-process-py"><span class="std std-ref">ERT Field Data Processing with RESIPY</span></a></p>
+  <div class="sphx-glr-thumbnail-title">ERT Field Data Processing with RESIPY</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load and process outputs from different  hydrological models using PyHydroGeophysX. We show examples for both  ParFlow and MODFLOW models."><img alt="" src="../_images/sphx_glr_Ex_model_output_thumb.png" />
 <p><a class="reference internal" href="Ex_model_output.html#sphx-glr-auto-examples-ex-model-output-py"><span class="std std-ref">Ex. Loading and Processing Hydrological Model Outputs</span></a></p>
   <div class="sphx-glr-thumbnail-title">Ex. Loading and Processing Hydrological Model Outputs</div>
 </div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to incorporate structural information from  seismic velocity models into ERT inversion for improved subsurface imaging."><img alt="" src="../_images/sphx_glr_Ex_Structure_resinv_thumb.png" />
@@ -166,7 +174,7 @@
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="../api/core.html" class="btn btn-neutral float-left" title="core package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex_model_output.html" class="btn btn-neutral float-right" title="Ex. Loading and Processing Hydrological Model Outputs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="Ex_ERT_data_process.html" class="btn btn-neutral float-right" title="ERT Field Data Processing with RESIPY" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
