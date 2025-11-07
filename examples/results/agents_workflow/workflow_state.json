@@ -1,10 +1,16 @@
 {
-  "status": "failed",
-  "current_step": "invert_ert",
+  "status": "completed",
+  "current_step": null,
   "completed_steps": [
-    "load_ert"
+    "load_ert",
+    "invert_ert",
+    "convert_to_wc",
+    "generate_report"
   ],
   "data_keys": [
-    "ert_data"
+    "ert_data",
+    "inversion_results",
+    "water_content",
+    "report"
   ]
 }

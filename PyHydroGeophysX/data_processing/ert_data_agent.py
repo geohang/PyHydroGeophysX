@@ -279,14 +279,41 @@ def load_ert_resipy(
 
     # Simple relative error model
     rel_err = np.full(len(df), 0.03)
+    
     # Check for error columns (different names for different instruments)
+    # Note: E4D format stores absolute errors in Ohms, need to convert to relative
     for err_col in ['resError', 'magErr', 'err', 'error', 'dev']:
         if err_col in df.columns:
             err_vals = df[err_col].values
-            # Use the error if it's reasonable (between 0.5% and 50%)
-            valid_err = np.where(np.isfinite(err_vals) & (err_vals > 0.005) & (err_vals < 0.5), 
-                                 err_vals, 0.03)
-            rel_err = np.maximum(rel_err, valid_err)
+            
+            # Check if this is E4D format (absolute errors in Ohms)
+            # E4D always stores absolute errors (in Ohms), need to convert to relative
+            # Detection: E4D instrument OR (error column is 'resError'/'magErr' AND resist column exists)
+            resist_col = next((c for c in ['resist', 'R', 'resistance'] if c in df.columns), None)
+            
+            if (instrument == 'E4D' or err_col in ['resError', 'magErr']) and resist_col and resist_col in df.columns:
+                # Convert absolute error to relative error
+                # For E4D: error column is absolute resistance error [Ohms]
+                # Need: relative error = abs_error / resistance
+                resist_vals = df[resist_col].values
+                # Calculate relative error, avoiding division by zero
+                rel_err_calc = np.where(
+                    (np.isfinite(err_vals)) & (np.isfinite(resist_vals)) & (resist_vals != 0),
+                    np.abs(err_vals / resist_vals),
+                    0.03
+                )
+                # Clamp to reasonable range (0.5% to 50%)
+                rel_err = np.clip(rel_err_calc, 0.005, 0.5)
+                print(f"   Converted E4D absolute errors to relative (mean: {np.mean(rel_err):.4f})")
+            else:
+                # Assume already relative error (e.g., Syscal, ABEM formats)
+                # Use the error if it's reasonable (between 0.5% and 50%)
+                valid_err = np.where(
+                    np.isfinite(err_vals) & (err_vals > 0.005) & (err_vals < 0.5), 
+                    err_vals, 
+                    0.03
+                )
+                rel_err = np.maximum(rel_err, valid_err)
             break
 
     # Electrodes - access from survey object
@@ -423,27 +450,28 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             for obs in ert.observations:
                 rhoa = obs.app_res if obs.app_res is not None else 0.0
                 err = obs.rel_err if obs.rel_err is not None else 0.03
-                i_val = obs.I if obs.I is not None else 0.0
-                u_val = obs.dV if obs.dV is not None else 0.0
                 
-                # Use pre-computed K-factor if available, otherwise calculate
+                # Use pre-computed K-factor if available, otherwise calculate from rhoa/R
+                # In pyGIMLi format: rhoa, K, and err are the key values
+                # i, u, r, ip, iperr are typically set to 0 when not used
                 if obs.K is not None and obs.K != 0.0:
                     K = obs.K
-                    R = rhoa / K if K != 0 else 0.0
-                elif i_val != 0 and u_val != 0 and rhoa != 0:
-                    # Calculate geometric factor K from apparent resistivity and resistance
-                    # K = rhoa / R, where R = dV / I
-                    R = u_val / i_val
-                    K = rhoa / R if R != 0 else 0.0
                 else:
-                    K = 0.0
-                    R = 0.0
+                    # If K not available, try to calculate from I/dV if available
+                    i_val = obs.I if obs.I is not None else 0.0
+                    u_val = obs.dV if obs.dV is not None else 0.0
+                    if i_val != 0 and u_val != 0 and rhoa != 0:
+                        R = u_val / i_val
+                        K = rhoa / R if R != 0 else 0.0
+                    else:
+                        K = 0.0
                 
                 # Format: a b m n err i ip iperr k r rhoa u valid
-                # Note: IP parameters (ip, iperr) are set to 0 for DC-only data
+                # Standard format: i, u, r, ip, iperr set to 0 when not used
+                # Only rhoa, K, and err are essential for inversion
                 f.write(f"{obs.quad.A}\t{obs.quad.B}\t{obs.quad.M}\t{obs.quad.N}\t")
-                f.write(f"{err:.14e}\t{i_val:.14e}\t0.00000000000000e+00\t0.00000000000000e+00\t")
-                f.write(f"{K:.14e}\t{R:.14e}\t{rhoa:.14e}\t{u_val:.14e}\t1\n")
+                f.write(f"{err:.14e}\t0.00000000000000e+00\t0.00000000000000e+00\t0.00000000000000e+00\t")
+                f.write(f"{K:.14e}\t0.00000000000000e+00\t{rhoa:.14e}\t0.00000000000000e+00\t1\n")
         
         return str(path)
     elif fmt == "resipy":

@@ -21,7 +21,7 @@ from tqdm import tqdm
 from typing import Dict, List, Optional, Tuple, Union, Callable
 
 
-from ..petrophysics.resistivity_models import resistivity_to_saturation
+from ..petrophysics.resistivity_models import resistivity_to_saturation2 as resistivity_to_saturation
 
 
 

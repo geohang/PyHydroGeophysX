@@ -14,6 +14,7 @@ a coordinator to execute the complete workflow.
 """
 
 from .agent_coordinator import AgentCoordinator
+from .context_input_agent import ContextInputAgent
 from .ert_loader_agent import ERTLoaderAgent
 from .ert_inversion_agent import ERTInversionAgent
 from .water_content_agent import WaterContentAgent
@@ -23,6 +24,7 @@ from .climate_data_agent import ClimateDataAgent
 
 __all__ = [
     'AgentCoordinator',
+    'ContextInputAgent',
     'ERTLoaderAgent',
     'ERTInversionAgent',
     'WaterContentAgent',
