@@ -1,0 +1,72 @@
+[
+  {
+    "timestamp": "2025-11-06T18:00:20.868972",
+    "level": "INFO",
+    "message": "Registered agent: climate_data"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:20.868972",
+    "level": "INFO",
+    "message": "Registered agent: ert_loader"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:20.868972",
+    "level": "INFO",
+    "message": "Registered agent: ert_inversion"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:20.868972",
+    "level": "INFO",
+    "message": "Registered agent: water_content"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:20.868972",
+    "level": "INFO",
+    "message": "Registered agent: report"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:20.868972",
+    "level": "INFO",
+    "message": "Registered agent: seismic_processor"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:26.415234",
+    "level": "INFO",
+    "message": "Starting workflow execution"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:26.415234",
+    "level": "INFO",
+    "message": "Step 1: Loading ERT data"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:26.415234",
+    "level": "INFO",
+    "message": "Executing agent: ert_loader"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:32.617754",
+    "level": "INFO",
+    "message": "Agent ert_loader completed successfully"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:32.617754",
+    "level": "INFO",
+    "message": "Step 2: Running ERT inversion"
+  },
+  {
+    "timestamp": "2025-11-06T18:00:32.618755",
+    "level": "INFO",
+    "message": "Executing agent: ert_inversion"
+  },
+  {
+    "timestamp": "2025-11-06T18:01:30.152479",
+    "level": "ERROR",
+    "message": "Agent ert_inversion failed: 'InversionResult' object has no attribute 'chi2'"
+  },
+  {
+    "timestamp": "2025-11-06T18:01:30.152479",
+    "level": "ERROR",
+    "message": "Workflow failed: 'InversionResult' object has no attribute 'chi2'"
+  }
+]

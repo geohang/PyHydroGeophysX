@@ -50,6 +50,7 @@ class Observation:
     dV: float | None = None        # potential difference (V)
     I: float | None = None         # injected current (A)
     rel_err: float | None = 0.03   # relative error fraction (e.g., 0.03)
+    K: float | None = None         # geometric factor
     fid: str | None = None         # field id/record id
 
 @dataclass
@@ -209,7 +210,22 @@ def load_ert_resipy(
 
     # Use explicit ftype for robust parsing. RESIPY's Project class uses 
     # method name 'createSurvey' to load data files and create a survey object.
-    prj.createSurvey(fname=str(data_file_path), ftype=ftype)
+    try:
+        prj.createSurvey(fname=str(data_file_path), ftype=ftype)
+    except ValueError as e:
+        # Check for NumPy compatibility issues with pyGIMLi
+        if "Buffer dtype mismatch" in str(e) or "dtype mismatch" in str(e).lower():
+            raise RuntimeError(
+                f"NumPy compatibility error with pyGIMLi/RESIPY: {str(e)}\n\n"
+                "This is a known issue with NumPy 2.x and pyGIMLi. Try:\n"
+                "  conda install numpy=1.26.4\n"
+                "or:\n"
+                "  pip install 'numpy<2.0'\n\n"
+                "If the error persists, you may also need to reinstall pygimli:\n"
+                "  conda install -c gimli -c conda-forge pygimli"
+            ) from e
+        else:
+            raise
     
     # After createSurvey, data is stored in prj.surveys[0] (the first/only survey)
     if not prj.surveys:
@@ -286,6 +302,7 @@ def load_ert_resipy(
     # Detect current and voltage column names (vary by instrument)
     i_col = next((c for c in ['i', 'I', 'current'] if c in df.columns), None)
     v_col = next((c for c in ['u', 'U', 'v', 'V', 'voltage', 'dV'] if c in df.columns), None)
+    k_col = next((c for c in ['K', 'k', 'geomFactor'] if c in df.columns), None)
     
     for idx, r in df.iterrows():
         observations.append(Observation(
@@ -294,6 +311,7 @@ def load_ert_resipy(
             dV=float(r[v_col]) if v_col and v_col in r and np.isfinite(r[v_col]) else None,
             I=float(r[i_col]) if i_col and i_col in r and np.isfinite(r[i_col]) else None,
             rel_err=float(rel_err[idx_to_pos[idx]]),
+            K=float(r[k_col]) if k_col and k_col in r and np.isfinite(r[k_col]) else None,
             fid=str(r['id']) if 'id' in r else str(idx)
         ))
 
@@ -408,10 +426,14 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
                 i_val = obs.I if obs.I is not None else 0.0
                 u_val = obs.dV if obs.dV is not None else 0.0
                 
-                # Calculate geometric factor K from apparent resistivity and resistance
-                # K = rhoa / R, where R = dV / I
-                if i_val != 0 and u_val != 0:
-                    R = u_val / i_val if i_val != 0 else 0.0
+                # Use pre-computed K-factor if available, otherwise calculate
+                if obs.K is not None and obs.K != 0.0:
+                    K = obs.K
+                    R = rhoa / K if K != 0 else 0.0
+                elif i_val != 0 and u_val != 0 and rhoa != 0:
+                    # Calculate geometric factor K from apparent resistivity and resistance
+                    # K = rhoa / R, where R = dV / I
+                    R = u_val / i_val
                     K = rhoa / R if R != 0 else 0.0
                 else:
                     K = 0.0

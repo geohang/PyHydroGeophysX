@@ -27,9 +27,10 @@ class ReportAgent(BaseAgent):
     with visualizations, statistics, and interpretations.
     """
     
-    def __init__(self, api_key: Optional[str] = None, llm_provider: str = "openai"):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,
+                 llm_provider: str = "openai"):
         """Initialize Report Agent."""
-        super().__init__("report_generator", api_key, llm_provider=llm_provider)
+        super().__init__("report_generator", api_key, model, llm_provider)
         self.system_message = """You are an expert in technical report writing for 
 geophysical and hydrological studies. Your role is to synthesize results from ERT 
 data processing, inversion, water content analysis, and climate data into clear, informative 

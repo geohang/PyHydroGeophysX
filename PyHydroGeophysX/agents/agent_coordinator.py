@@ -133,7 +133,7 @@ class AgentCoordinator:
             self.workflow_state['current_step'] = 'invert_ert'
             
             inversion_input = {
-                'ert_data': ert_data,
+                'ert_data': ert_data['ert_data'],  # Extract the actual ERT data object from result dict
                 'inversion_params': config.get('inversion_params', {}),
             }
             

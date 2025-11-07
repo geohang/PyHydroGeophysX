@@ -18,9 +18,10 @@ class ERTInversionAgent(BaseAgent):
     with optional structural constraints from seismic data.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,
+                 llm_provider: str = "openai"):
         """Initialize ERT Inversion Agent."""
-        super().__init__("ert_inversion", api_key)
+        super().__init__("ert_inversion", api_key, model, llm_provider)
         self.system_message = """You are an expert in electrical resistivity tomography (ERT) 
 inversion. Your role is to configure and execute ERT inversions, select appropriate 
 regularization parameters, and interpret inversion results. You understand smoothness 
@@ -65,8 +66,7 @@ constraints, structural constraints, and convergence criteria."""
             data_file = export_for_inversion(
                 ert_data, 
                 outdir=output_dir, 
-                fmt='pgimli',
-                filename='ert_data_for_inversion.dat'
+                fmt='pgimli'
             )
             
             # Get LLM recommendations for inversion parameters if API is available

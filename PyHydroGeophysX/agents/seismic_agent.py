@@ -18,9 +18,10 @@ class SeismicAgent(BaseAgent):
     and extract velocity interfaces for structural constraints.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,
+                 llm_provider: str = "openai"):
         """Initialize Seismic Agent."""
-        super().__init__("seismic_processor", api_key)
+        super().__init__("seismic_processor", api_key, model, llm_provider)
         self.system_message = """You are an expert in seismic refraction tomography (SRT). 
 Your role is to process seismic travel time data, perform velocity inversions, and 
 extract geological structure interfaces. You understand velocity-depth relationships 

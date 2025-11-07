@@ -1,0 +1,10 @@
+{
+  "status": "failed",
+  "current_step": "invert_ert",
+  "completed_steps": [
+    "load_ert"
+  ],
+  "data_keys": [
+    "ert_data"
+  ]
+}

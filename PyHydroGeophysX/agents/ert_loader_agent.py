@@ -17,9 +17,10 @@ class ERTLoaderAgent(BaseAgent):
     and prepare ERT data for inversion.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,
+                 llm_provider: str = "openai"):
         """Initialize ERT Loader Agent."""
-        super().__init__("ert_loader", api_key)
+        super().__init__("ert_loader", api_key, model, llm_provider)
         self.system_message = """You are an expert in electrical resistivity tomography (ERT) 
 data processing. Your role is to load and validate ERT field data from various commercial 
 instruments, perform quality control, and prepare data for inversion. You understand 
