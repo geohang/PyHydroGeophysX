@@ -1942,28 +1942,31 @@ Based on the time-lapse ERT monitoring and climate data integration:
                 # Top: Velocity with coverage
                 pg.show(velocity_mesh, velocity_model, ax=ax1, cMap='jet',
                        colorBar=True, label='Velocity (m/s)',
-                       coverage=seismic_coverage>0.5, cMin=500, cMax=5000)
-                ax1.set_title('1. Seismic Velocity Model (with Coverage)',
+                       coverage=seismic_coverage, cMin=500, cMax=3600)
+                ax1.set_title('Seismic Velocity Model ',
                             fontsize=13, fontweight='bold')
-                
+                ax1.set_xlabel('Distance (m)')
+                ax1.set_ylabel('Depth (m)' )                 
                 # Middle: Velocity with interface
                 pg.show(velocity_mesh, velocity_model, ax=ax2, cMap='jet',
-                       colorBar=True, label='Velocity (m/s)', cMin=500, cMax=5000)
+                       colorBar=True, label='Velocity (m/s)', cMin=500, cMax=3600,
+                       coverage=seismic_coverage)
                 ax2.plot(interface_x, interface_z, 'r-', linewidth=2,
                         label=f'Interface ({velocity_threshold} m/s)')
                 ax2.legend()
-                ax2.set_title(f'2. Extracted Interface at {velocity_threshold} m/s',
+                ax2.set_title(f'Extracted Interface at {velocity_threshold} m/s',
                             fontsize=13, fontweight='bold')
-                
+                ax2.set_xlabel('Distance (m)')
+                ax2.set_ylabel('Depth (m)' )               
                 # Bottom: Structure-constrained resistivity
                 pg.show(para_mesh, resistivity_model, ax=ax3, cMap='jet',
                        colorBar=True, label='Resistivity (Ωm)',
                        coverage=coverage_numeric>coverage_threshold,
                        logScale=True, cMin=10, cMax=2000)
-                ax3.set_title(f'3. Structure-Constrained Resistivity (Coverage > {coverage_threshold})',
+                ax3.set_title(f'Structure-Constrained Resistivity ',
                             fontsize=13, fontweight='bold')
                 ax3.set_xlabel('Distance (m)')
-                ax3.set_ylabel('Elevation (m)')
+                ax3.set_ylabel('Depth (m)')
                 
                 plt.tight_layout()
                 workflow_file = os.path.join(output_dir, 'complete_workflow.png')
@@ -1980,27 +1983,48 @@ Based on the time-lapse ERT monitoring and climate data integration:
                 coverage = structure_results['coverage']
                 coverage_numeric = np.array(coverage, dtype=float)
                 
+                # Ensure data matches mesh size
+                wc_mean_flat = water_content_mean.ravel()
+                wc_std_flat = water_content_std.ravel()
+                
+                # Handle size mismatch - pad or truncate to match mesh
+                mesh_cells = para_mesh.cellCount()
+                if len(wc_mean_flat) != mesh_cells:
+                    self._log_execution(f"Warning: Data size ({len(wc_mean_flat)}) != mesh size ({mesh_cells}), adjusting...")
+                    if len(wc_mean_flat) < mesh_cells:
+                        # Pad with NaN
+                        wc_mean_padded = np.full(mesh_cells, np.nan)
+                        wc_std_padded = np.full(mesh_cells, np.nan)
+                        wc_mean_padded[:len(wc_mean_flat)] = wc_mean_flat
+                        wc_std_padded[:len(wc_std_flat)] = wc_std_flat
+                        wc_mean_flat = wc_mean_padded
+                        wc_std_flat = wc_std_padded
+                    else:
+                        # Truncate
+                        wc_mean_flat = wc_mean_flat[:mesh_cells]
+                        wc_std_flat = wc_std_flat[:mesh_cells]
+                
                 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
                 
                 # Left: Mean water content
-                pg.show(para_mesh, water_content_mean.ravel(), ax=ax1,
+                pg.show(para_mesh, wc_mean_flat, ax=ax1,
                        cMap='Blues', colorBar=True, label='Water Content (-)',
                        coverage=coverage_numeric>coverage_threshold,
-                       cMin=0, cMax=0.35, logScale=False)
-                ax1.set_title(f'Mean Water Content (Coverage > {coverage_threshold})',
+                       cMin=0, cMax=0.5, logScale=False)
+                ax1.set_title(f'Mean Water Content ',
                             fontsize=13, fontweight='bold')
                 ax1.set_xlabel('Distance (m)')
-                ax1.set_ylabel('Elevation (m)')
+                ax1.set_ylabel('Depth (m)')
                 
                 # Right: Uncertainty
-                pg.show(para_mesh, water_content_std.ravel(), ax=ax2,
+                pg.show(para_mesh, wc_std_flat, ax=ax2,
                        cMap='Reds', colorBar=True, label='Uncertainty (std)',
                        coverage=coverage_numeric>coverage_threshold,
-                       cMin=0, cMax=0.05, logScale=False)
-                ax2.set_title(f'Water Content Uncertainty (Coverage > {coverage_threshold})',
+                       cMin=0, cMax=0.1, logScale=False)
+                ax2.set_title(f'Water Content Uncertainty',
                             fontsize=13, fontweight='bold')
                 ax2.set_xlabel('Distance (m)')
-                ax2.set_ylabel('Elevation (m)')
+                ax2.set_ylabel('Depth (m)')
                 
                 plt.tight_layout()
                 wc_file = os.path.join(output_dir, 'water_content_uncertainty.png')
