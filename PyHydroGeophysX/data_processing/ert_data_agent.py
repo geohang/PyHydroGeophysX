@@ -115,6 +115,7 @@ def load_ert_resipy(
     data_file: str,
     instrument: Instrument,
     spacing: Optional[float] = None,
+    electrode_file: Optional[str] = None,
     crs: str = "local",
     epsg: Optional[int] = None,
     local_ref: Optional[LocalRef] = None
@@ -134,6 +135,9 @@ def load_ert_resipy(
     spacing : float, optional
         If electrodes are missing, create an evenly spaced line with this spacing (meters).
         Use only for quick demos; prefer real surveyed coordinates when available.
+    electrode_file : str, optional
+        Path to external electrode coordinate file. If provided, electrode positions from this
+        file will be used instead of those in the data file. Format: space-separated x y z columns.
     crs : str
         "local" (default) for profile coordinates, or "EPSG:xxxx" for projected coords.
     epsg : int, optional
@@ -233,52 +237,116 @@ def load_ert_resipy(
     
     survey = prj.surveys[0]  # Get the first survey object
 
+    # Step 1: Load raw resistance values from DAS data (before any K computation)
+    # Get the raw dataframe with resistance values (R = V/I)
+    df = survey.df.copy().dropna(subset=['a','b','m','n'])
+    
+    # Detect resistance column (raw V/I values from instrument)
+    resist_col = next((c for c in ['resist', 'R', 'r', 'resistance'] if c in df.columns), None)
+    if resist_col is None:
+        raise RuntimeError("Cannot find resistance column in data. DAS-1 data should have 'resist' column.")
+    
+    print(f"   Loaded {len(df)} raw resistance measurements from {instrument}")
+
+    # Step 2: Update electrode positions from external file
+    if electrode_file is not None:
+        electrode_file_path = Path(electrode_file)
+        if not electrode_file_path.is_absolute():
+            electrode_file_path = Path.cwd() / electrode_file_path
+        
+        if not electrode_file_path.exists():
+            raise FileNotFoundError(f"Electrode file not found: {electrode_file_path}")
+        
+        # Load electrode coordinates from file
+        try:
+            elec_data = np.loadtxt(str(electrode_file_path))
+            if elec_data.ndim == 1:
+                elec_data = elec_data.reshape(-1, 3)
+            
+            # Set electrode positions in survey
+            if hasattr(survey, 'setElec'):
+                survey.setElec(elec_data)
+            else:
+                survey.elec = elec_data
+            print(f"   Updated electrode positions from {electrode_file_path.name}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to load electrode file '{electrode_file_path}': {e}") from e
+    
     # If no electrode coordinates, generate a simple line for quick testing
-    if spacing is not None and (survey.elec is None or len(survey.elec) == 0):
-        n_elec = int(np.max(survey.df[['a','b','m','n']].values)) + 1
+    elif spacing is not None and (survey.elec is None or len(survey.elec) == 0):
+        n_elec = int(np.max(df[['a','b','m','n']].values)) + 1
         elec = np.zeros((n_elec, 3))
         elec[:, 0] = np.arange(n_elec) * spacing
-        survey.setElec(elec)
+        if hasattr(survey, 'setElec'):
+            survey.setElec(elec)
+        else:
+            survey.elec = elec
 
-    # Minimal QC - access data from survey.df (the dataframe in the Survey object)
-    df = survey.df.copy().dropna(subset=['a','b','m','n'])
+    # Step 3: Basic QC filters on raw data
     if 'i' in df.columns:
         df = df[df['i'].abs() > 0]
     if 'u' in df.columns:
         df = df[df['u'].abs() > 0]
     df = df.drop_duplicates(subset=['a','b','m','n'])
-
-    # Apparent resistivity - RESIPY may use different column names
-    # Common names: 'app', 'rhoa', 'Rho', 'resist' (for measured resistance)
-    rhoa_col = None
-    for col_name in ['app', 'rhoa', 'Rho']:
-        if col_name in df.columns:
-            rhoa_col = col_name
-            break
     
-    if rhoa_col is None:
-        # Try to compute from resistance and geometric factor
-        try:
-            survey.computeK()  # Compute geometric factors first
-            if hasattr(survey, 'computeRhoa'):
-                survey.computeRhoa()
-                df = survey.df.loc[df.index].copy()
-                # Check again for apparent resistivity columns
-                for col_name in ['app', 'rhoa', 'Rho']:
-                    if col_name in df.columns:
-                        rhoa_col = col_name
-                        break
-        except Exception:
-            pass
+    initial_count = len(df)
+    print(f"   After basic QC filters: {initial_count} measurements")
     
-    # Use the found column or set to NaN
-    if rhoa_col:
-        df['rhoa'] = df[rhoa_col]
-    else:
-        df['rhoa'] = np.nan
+    # Step 3b: Apply DAS-specific quality filters
+    if instrument == 'DAS-1':
+        # DAS-1 quality thresholds
+        rec_threshold = 5      # max reciprocal error, %
+        ctc_threshold = 30000  # max contact resistance, ohm
+        stk_threshold = 20     # max stacking error, %
+        v_threshold = 1E-5     # min voltage, V
+        
+        # Detect DAS column names (RESIPY creates standardized names)
+        # reciprocalErrRel is in decimal form (0.05 = 5%), so convert to percentage
+        rec_col = 'reciprocalErrRel' if 'reciprocalErrRel' in df.columns else None
+        ctc_col = next((c for c in ['ContactR', 'ctc', 'contact_resistance'] if c in df.columns), None)
+        stk_col = next((c for c in ['stk', 'stack_err', 'stacking_error'] if c in df.columns), None)
+        v_col = next((c for c in ['u', 'U', 'v', 'V', 'voltage', 'dV'] if c in df.columns), None)
+        
+        # Apply reciprocal error filter (RESIPY provides this as decimal, e.g., 0.05 = 5%)
+        if rec_col and rec_col in df.columns:
+            before_rec = len(df)
+            # Filter: keep only measurements where reciprocal error < threshold
+            # reciprocalErrRel is in decimal form, so divide threshold by 100
+            df = df[df[rec_col] < (rec_threshold / 100.0)]
+            rec_filtered = before_rec - len(df)
+            if rec_filtered > 0:
+                print(f"   Applied reciprocal error filter (< {rec_threshold}%): removed {rec_filtered} measurements")
+        
+        # Apply other quality filters
+        if ctc_col and ctc_col in df.columns:
+            before_ctc = len(df)
+            df = df[df[ctc_col] < ctc_threshold]
+            ctc_filtered = before_ctc - len(df)
+            if ctc_filtered > 0:
+                print(f"   Applied contact resistance filter (< {ctc_threshold} Ω): removed {ctc_filtered} measurements")
+        
+        if stk_col and stk_col in df.columns:
+            before_stk = len(df)
+            df = df[df[stk_col] < stk_threshold]
+            stk_filtered = before_stk - len(df)
+            if stk_filtered > 0:
+                print(f"   Applied stacking error filter (< {stk_threshold}%): removed {stk_filtered} measurements")
+        
+        if v_col and v_col in df.columns:
+            before_v = len(df)
+            df = df[df[v_col].abs() > v_threshold]
+            v_filtered = before_v - len(df)
+            if v_filtered > 0:
+                print(f"   Applied voltage filter (> {v_threshold} V): removed {v_filtered} measurements")
+        
+        filtered_count = initial_count - len(df)
+        if filtered_count > 0:
+            print(f"   Total filtered with DAS quality thresholds: {filtered_count} measurements")
+    
+    print(f"   After all QC filters: {len(df)} measurements")
 
-    # Simple relative error model
-    rel_err = np.full(len(df), 0.03)
+    # Simple relative error model - default 5%
+    rel_err = np.full(len(df), 0.05)
     
     # Check for error columns (different names for different instruments)
     # Note: E4D format stores absolute errors in Ohms, need to convert to relative
@@ -288,10 +356,10 @@ def load_ert_resipy(
             
             # Check if this is E4D format (absolute errors in Ohms)
             # E4D always stores absolute errors (in Ohms), need to convert to relative
-            # Detection: E4D instrument OR (error column is 'resError'/'magErr' AND resist column exists)
+            # Detection: Only apply to E4D instrument explicitly
             resist_col = next((c for c in ['resist', 'R', 'resistance'] if c in df.columns), None)
             
-            if (instrument == 'E4D' or err_col in ['resError', 'magErr']) and resist_col and resist_col in df.columns:
+            if instrument == 'E4D' and resist_col and resist_col in df.columns:
                 # Convert absolute error to relative error
                 # For E4D: error column is absolute resistance error [Ohms]
                 # Need: relative error = abs_error / resistance
@@ -300,7 +368,7 @@ def load_ert_resipy(
                 rel_err_calc = np.where(
                     (np.isfinite(err_vals)) & (np.isfinite(resist_vals)) & (resist_vals != 0),
                     np.abs(err_vals / resist_vals),
-                    0.03
+                    0.05
                 )
                 # Clamp to reasonable range (0.5% to 50%)
                 rel_err = np.clip(rel_err_calc, 0.005, 0.5)
@@ -311,7 +379,7 @@ def load_ert_resipy(
                 valid_err = np.where(
                     np.isfinite(err_vals) & (err_vals > 0.005) & (err_vals < 0.5), 
                     err_vals, 
-                    0.03
+                    0.05
                 )
                 rel_err = np.maximum(rel_err, valid_err)
             break
@@ -326,20 +394,37 @@ def load_ert_resipy(
     idx_to_pos = {idx: k for k, idx in enumerate(df.index)}
     observations: List[Observation] = []
     
-    # Detect current and voltage column names (vary by instrument)
+    # Detect column names
     i_col = next((c for c in ['i', 'I', 'current'] if c in df.columns), None)
     v_col = next((c for c in ['u', 'U', 'v', 'V', 'voltage', 'dV'] if c in df.columns), None)
-    k_col = next((c for c in ['K', 'k', 'geomFactor'] if c in df.columns), None)
+    r_col = next((c for c in ['resist', 'R', 'r', 'resistance'] if c in df.columns), None)
     
-    for idx, r in df.iterrows():
+    for idx, row in df.iterrows():
+        # Get raw resistance (V/I from instrument)
+        if r_col and r_col in row and np.isfinite(row[r_col]):
+            resistance = float(row[r_col])
+        elif v_col and i_col and v_col in row and i_col in row:
+            # Calculate from V and I if resistance column not available
+            if row[i_col] != 0:
+                resistance = float(row[v_col] / row[i_col])
+            else:
+                continue  # Skip if current is zero
+        else:
+            continue  # Skip if no resistance data
+        
+        # For initial export, set app_res = resistance (k=1 placeholder)
+        # PyGIMLi will compute actual K and rhoa later
+        app_resistivity = resistance
+        k_value = 1.0
+        
         observations.append(Observation(
-            quad=Quadruplet(int(r['a']), int(r['b']), int(r['m']), int(r['n'])),
-            app_res=float(r['rhoa']) if 'rhoa' in r and np.isfinite(r['rhoa']) else None,
-            dV=float(r[v_col]) if v_col and v_col in r and np.isfinite(r[v_col]) else None,
-            I=float(r[i_col]) if i_col and i_col in r and np.isfinite(r[i_col]) else None,
+            quad=Quadruplet(int(row['a']), int(row['b']), int(row['m']), int(row['n'])),
+            app_res=app_resistivity,  # Raw resistance (k=1)
+            dV=float(row[v_col]) if v_col and v_col in row and np.isfinite(row[v_col]) else None,
+            I=float(row[i_col]) if i_col and i_col in row and np.isfinite(row[i_col]) else None,
             rel_err=float(rel_err[idx_to_pos[idx]]),
-            K=float(r[k_col]) if k_col and k_col in r and np.isfinite(r[k_col]) else None,
-            fid=str(r['id']) if 'id' in r else str(idx)
+            K=k_value,  # Placeholder k=1
+            fid=str(row['id']) if 'id' in row else str(idx)
         ))
 
     crs_out = ("EPSG:%d" % epsg) if (crs != "local" and epsg) else crs
@@ -348,6 +433,7 @@ def load_ert_resipy(
         "ftype": ftype,
         "project_dir": str(Path(chosen_dir).resolve()),
         "data_file": str(data_file_path.resolve()),
+        "electrode_file": str(Path(electrode_file).resolve()) if electrode_file else None,
         "epsg": epsg,
         "local_ref": (local_ref._asdict() if isinstance(local_ref, LocalRef) else None)
     }
@@ -438,40 +524,128 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             # Write electrode coordinates header and data
             f.write("# x y z\n")
             for elec in ert.electrodes:
-                f.write(f"{elec.x:.2f}\t{elec.y:.2f}\t{elec.z:.2f}\n")
+                f.write(f"{elec.x} {elec.y} {elec.z}\n")
             
             # Write number of measurements
             f.write(f"{len(ert.observations)}\n")
             
-            # Write measurement data header
-            f.write("# a b m n err i ip iperr k r rhoa u valid\n")
+            # Write measurement data header (matching reference format)
+            f.write("# a b m n r rhoa k\n")
             
             # Write measurement data
+            # Format: a b m n r rhoa k
+            # r = raw resistance (V/I from instrument)
+            # rhoa = apparent resistivity (r * K, but we set K=1 for PyGIMLi to recompute)
+            # k = 1 (placeholder, PyGIMLi will compute actual geometric factors)
             for obs in ert.observations:
-                rhoa = obs.app_res if obs.app_res is not None else 0.0
-                err = obs.rel_err if obs.rel_err is not None else 0.03
-                
-                # Use pre-computed K-factor if available, otherwise calculate from rhoa/R
-                # In pyGIMLi format: rhoa, K, and err are the key values
-                # i, u, r, ip, iperr are typically set to 0 when not used
-                if obs.K is not None and obs.K != 0.0:
-                    K = obs.K
+                # Extract raw resistance from voltage and current if available
+                if obs.I is not None and obs.dV is not None and obs.I != 0:
+                    R = abs(obs.dV / obs.I)
+                elif obs.app_res is not None:
+                    # Fall back to stored apparent resistivity (which is raw resistance when k=1)
+                    R = obs.app_res
                 else:
-                    # If K not available, try to calculate from I/dV if available
-                    i_val = obs.I if obs.I is not None else 0.0
-                    u_val = obs.dV if obs.dV is not None else 0.0
-                    if i_val != 0 and u_val != 0 and rhoa != 0:
-                        R = u_val / i_val
-                        K = rhoa / R if R != 0 else 0.0
-                    else:
-                        K = 0.0
+                    # Skip measurements without valid data
+                    continue
                 
-                # Format: a b m n err i ip iperr k r rhoa u valid
-                # Standard format: i, u, r, ip, iperr set to 0 when not used
-                # Only rhoa, K, and err are essential for inversion
-                f.write(f"{obs.quad.A}\t{obs.quad.B}\t{obs.quad.M}\t{obs.quad.N}\t")
-                f.write(f"{err:.14e}\t0.00000000000000e+00\t0.00000000000000e+00\t0.00000000000000e+00\t")
-                f.write(f"{K:.14e}\t0.00000000000000e+00\t{rhoa:.14e}\t0.00000000000000e+00\t1\n")
+                # For export with k=1, set rhoa = r
+                # (PyGIMLi will recompute K from electrode geometry and compute new rhoa)
+                rhoa = R
+                
+                # Always set k = 1 (matching reference format)
+                # PyGIMLi will compute actual K from electrode geometry
+                k = 1
+                
+                # Format: a b m n r rhoa k
+                f.write(f"{obs.quad.A} {obs.quad.B} {obs.quad.M} {obs.quad.N} ")
+                f.write(f"{R} {rhoa} {k}\n")
+        
+        print(f"   Exported data with k=1 to {path}")
+        
+        # Step 4: Use PyGIMLi to compute K with correct topography and recompute rhoa
+        print("   Recomputing geometric factors with PyGIMLi...")
+        try:
+            import pygimli as pg
+            import pygimli.physics.ert as ert_pg
+            
+            # Load the file we just created
+            data = ert_pg.load(str(path))
+            
+            # Compute geometric factors with topography using PyGIMLi
+            # This respects electrode z-coordinates (topography)
+            data['k'] = ert_pg.createGeometricFactors(data, numerical=True)
+            
+            # Filter by geometric factor threshold (for DAS data)
+            k_threshold = 1000  # max geometric factor, m
+            k_vals = np.array(data['k'])
+            k_valid = np.abs(k_vals) < k_threshold
+            n_k_filtered = np.sum(~k_valid)
+            if n_k_filtered > 0:
+                print(f"   Filtered {n_k_filtered} measurements with |K| >= {k_threshold} m")
+                remove_indices = np.where(~k_valid)[0]
+                for idx in sorted(remove_indices, reverse=True):
+                    data.remove(int(idx))
+            
+            # Recompute apparent resistivity with correct K
+            # rhoa = R * K
+            data['rhoa'] = data['r'] * data['k']
+            
+            # Filter extreme apparent resistivity values
+            rhoa_vals = np.array(data['rhoa'])
+            valid_mask = (np.isfinite(rhoa_vals)) & (rhoa_vals > 0.1) & (rhoa_vals < 1e6)
+            
+            # Calculate statistics for outlier detection
+            valid_rhoa = rhoa_vals[valid_mask]
+            if len(valid_rhoa) > 0:
+                rhoa_median = np.median(valid_rhoa)
+                rhoa_std = np.std(valid_rhoa)
+                # Filter outliers: keep values within median ± 3*std
+                lower_bound = max(0.1, rhoa_median - 3 * rhoa_std)
+                upper_bound = min(1e6, rhoa_median + 3 * rhoa_std)
+                valid_mask = valid_mask & (rhoa_vals >= lower_bound) & (rhoa_vals <= upper_bound)
+                
+                n_total = data.size()
+                n_filtered = n_total - np.sum(valid_mask)
+                if n_filtered > 0:
+                    print(f"   Filtered {n_filtered} measurements with extreme apparent resistivity")
+                    # Apply filter using PyGIMLi's remove method
+                    # Get indices to remove (where valid_mask is False)
+                    remove_indices = np.where(~valid_mask)[0]
+                    for idx in sorted(remove_indices, reverse=True):
+                        data.remove(int(idx))
+            
+            # Save the updated file with correct K values
+            print(f"   Final dataset: {data.size()} measurements with computed K")
+            
+            # Rewrite the file with updated K and rhoa values
+            temp_path = path.parent / (path.name + '.tmp')
+            with open(temp_path, 'w') as f:
+                # Write number of electrodes
+                f.write(f"{len(ert.electrodes)}\n")
+                
+                # Write electrode coordinates
+                f.write("# x y z\n")
+                for elec in ert.electrodes:
+                    f.write(f"{elec.x} {elec.y} {elec.z}\n")
+                
+                # Write number of measurements
+                f.write(f"{data.size()}\n")
+                
+                # Write measurement data with computed K
+                f.write("# a b m n r rhoa k\n")
+                for i in range(data.size()):
+                    f.write(f"{int(data['a'][i])} {int(data['b'][i])} {int(data['m'][i])} {int(data['n'][i])} ")
+                    f.write(f"{data['r'][i]} {data['rhoa'][i]} {data['k'][i]}\n")
+            
+            # Replace original file with updated version
+            temp_path.replace(path)
+            print(f"   Saved data with computed K to {path}")
+            
+        except Exception as e:
+            import traceback
+            print(f"   Warning: Could not recompute K with PyGIMLi: {e}")
+            print(f"   Traceback: {traceback.format_exc()}")
+            print(f"   File kept with k=1 placeholder values")
         
         return str(path)
     elif fmt == "resipy":

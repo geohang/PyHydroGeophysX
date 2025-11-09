@@ -40,6 +40,7 @@ setup(
         "scipy>=1.5",
         "matplotlib>=3.2",
         "tqdm>=4.0",
+        "pyarrow>=10.0",  # Required for parquet file support
         # Core dependencies only - heavy deps are optional
     ],
     extras_require={

@@ -36,9 +36,52 @@ class ContextInputAgent(BaseAgent):
         """
         super().__init__("ContextInputAgent", api_key, model, llm_provider)
     
+    def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the context input agent (parse natural language request).
+        
+        Args:
+            input_data: Dictionary containing:
+                - user_request: Natural language workflow description
+                - available_data: Optional dict with available files/instruments
+                
+        Returns:
+            Dictionary containing:
+                - status: 'success' or 'failed'
+                - workflow_config: Generated configuration
+                - explanation: Human-readable explanation
+        """
+        try:
+            user_request = input_data.get('user_request', '')
+            available_data = input_data.get('available_data')
+            
+            if not user_request:
+                raise ValueError("user_request is required")
+            
+            # Parse the request
+            workflow_config = self.parse_request(user_request, available_data)
+            
+            # Generate explanation
+            explanation = self.explain_config(workflow_config)
+            
+            return {
+                'status': 'success',
+                'workflow_config': workflow_config,
+                'explanation': explanation
+            }
+        except Exception as e:
+            return {
+                'status': 'failed',
+                'error': str(e)
+            }
+    
     def parse_request(self, user_request: str, available_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Parse natural language request into workflow configuration.
+        
+        Uses TWO focused prompts for better reliability:
+        1. Inversion configuration prompt (ERT-specific parameters)
+        2. Climate configuration prompt (meteorological parameters)
         
         Args:
             user_request: Natural language description of desired workflow
@@ -47,22 +90,131 @@ class ContextInputAgent(BaseAgent):
         Returns:
             Dict containing workflow_config ready for AgentCoordinator
         """
+        print("Parsing request with multi-stage extraction:")
+        print("  Stage 1: Extracting ERT inversion configuration...")
+        
         # Build context for LLM
         context = self._build_context(available_data)
         
-        # Create prompt for LLM
-        prompt = self._create_parsing_prompt(user_request, context)
+        # STAGE 1: Extract inversion configuration
+        inversion_prompt = self._create_inversion_prompt(user_request, context)
+        inversion_response = self.query_llm(inversion_prompt)
+        inversion_config = self._extract_config_from_response(inversion_response)
         
-        # Get LLM response
-        response = self.query_llm(prompt)
+        # STAGE 2: Extract data fusion configuration  
+        print("  Stage 2: Extracting data fusion configuration...")
+        fusion_prompt = self._create_data_fusion_prompt(user_request)
+        fusion_response = self.query_llm(fusion_prompt)
+        fusion_config = self._extract_config_from_response(fusion_response)
         
-        # Parse JSON from response
-        workflow_config = self._extract_config_from_response(response)
+        # STAGE 3: Extract climate configuration
+        print("  Stage 3: Extracting climate/site configuration...")
+        climate_prompt = self._create_climate_prompt(user_request)
+        climate_response = self.query_llm(climate_prompt)
+        climate_config = self._extract_config_from_response(climate_response)
+        
+        # Merge configurations
+        workflow_config = {**inversion_config, **fusion_config, **climate_config}
+        
+        # Fallback: Extract petrophysical parameters using regex if LLM missed them
+        if not workflow_config.get('petrophysical_params') or len(workflow_config.get('petrophysical_params', {})) == 0:
+            params = self._extract_params_regex(user_request)
+            if params:
+                workflow_config['petrophysical_params'] = params
         
         # Validate and set defaults
         workflow_config = self._validate_and_complete_config(workflow_config)
         
+        # Fallback: Extract ERT data files using regex if LLM missed them
+        # Also detect time-lapse mode if multiple files are found
+        extracted_files = self._extract_files_regex(user_request)
+        if extracted_files and len(extracted_files) > 1:
+            # Multiple files suggest time-lapse workflow
+            if workflow_config.get('inversion_mode') != 'time-lapse':
+                print(f"  ⚠️  Detected {len(extracted_files)} data files in request - setting inversion_mode to 'time-lapse'")
+                workflow_config['inversion_mode'] = 'time-lapse'
+            
+            if not workflow_config.get('time_lapse_files') or len(workflow_config.get('time_lapse_files', [])) == 0:
+                workflow_config['time_lapse_files'] = extracted_files
+                print(f"  ⚠️  LLM did not extract file list. Using regex fallback: found {len(extracted_files)} files")
+        
+        # Normalize time-lapse file paths if in time-lapse mode
+        if workflow_config.get('inversion_mode') == 'time-lapse':
+            workflow_config = self._normalize_timelapse_paths(workflow_config)
+        
+        # Process and normalize climate configuration if climate data is requested
+        if workflow_config.get('use_climate') or workflow_config.get('climate_config'):
+            workflow_config = self._normalize_climate_config(workflow_config)
+        
+        # Process and normalize data fusion configuration if multi-method analysis detected
+        if workflow_config.get('fusion_pattern'):
+            workflow_config = self._normalize_fusion_config(workflow_config)
+        
+        print("✓ Multi-stage extraction complete")
         return workflow_config
+    
+    def _extract_params_regex(self, text: str) -> Dict[str, float]:
+        """
+        Fallback method to extract petrophysical parameters using regex.
+        Looks for patterns like: rho_sat = 541, porosity = 0.37, n = 1.24, m = 1.5
+        """
+        import re
+        params = {}
+        
+        # Pattern to match: parameter_name = number (with optional decimal)
+        # Common parameter names: rho_sat, porosity, phi, n, m
+        patterns = {
+            'rho_sat': r'rho_sat\s*=\s*([\d.]+)',
+            'porosity': r'porosity\s*=\s*([\d.]+)',
+            'phi': r'phi\s*=\s*([\d.]+)',
+            'n': r'\bn\s*=\s*([\d.]+)',  # \b for word boundary
+            'm': r'\bm\s*=\s*([\d.]+)',
+        }
+        
+        for param_name, pattern in patterns.items():
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                try:
+                    value = float(match.group(1))
+                    # Map phi to porosity
+                    if param_name == 'phi':
+                        params['porosity'] = value
+                    else:
+                        params[param_name] = value
+                except ValueError:
+                    pass
+        
+        return params
+    
+    def _extract_files_regex(self, text: str) -> list:
+        """
+        Fallback method to extract ERT data file names using regex.
+        Looks for common ERT file patterns like:
+        - *.ohm (E4D format)
+        - *.dat (various formats)
+        - *.Data (DAS format)
+        - Files with dates in names (e.g., 2021-10-08_1400.ohm)
+        """
+        import re
+        files = []
+        
+        # Pattern to match common ERT file extensions
+        # Look for lines with bullet points or dashes followed by filenames
+        patterns = [
+            r'[-*•]\s+([^\s]+\.ohm)',  # Bullet + .ohm files
+            r'[-*•]\s+([^\s]+\.dat)',  # Bullet + .dat files
+            r'[-*•]\s+([^\s]+\.Data)',  # Bullet + .Data files
+            r'(\d{4}-\d{2}-\d{2}[^\s]*\.ohm)',  # Date-based .ohm files (anywhere)
+            r'(\d{4}-\d{2}-\d{2}[^\s]*\.dat)',  # Date-based .dat files (anywhere)
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.MULTILINE | re.IGNORECASE)
+            for match in matches:
+                if match not in files:  # Avoid duplicates
+                    files.append(match)
+        
+        return files
     
     def _build_context(self, available_data: Optional[Dict[str, Any]]) -> str:
         """Build context string about available data and options."""
@@ -78,9 +230,9 @@ class ContextInputAgent(BaseAgent):
         
         return "\n".join(context_parts) if context_parts else "No additional context provided."
     
-    def _create_parsing_prompt(self, user_request: str, context: str) -> str:
-        """Create prompt for LLM to parse user request."""
-        prompt = f"""You are an expert geophysicist helping configure an ERT (Electrical Resistivity Tomography) workflow.
+    def _create_inversion_prompt(self, user_request: str, context: str) -> str:
+        """Create focused prompt for ERT inversion configuration only."""
+        prompt = f"""You are an expert geophysicist configuring an ERT (Electrical Resistivity Tomography) inversion.
 
 User Request:
 {user_request}
@@ -88,65 +240,211 @@ User Request:
 Available Context:
 {context}
 
-Your task is to generate a workflow configuration in JSON format. The configuration should include:
+Extract ONLY ERT inversion configuration in JSON format:
 
-1. **Data source configuration**:
-   - data_file: Path to ERT data file
-   - project_dir: Project directory path
-   - instrument: One of ['E4D', 'Syscal', 'ABEM-Lund', 'Protocol DC', 'BERT', 'Sting', 'ARES', 'Custom']
+1. **Data source**:
+   - data_file: Path to ERT data file (REQUIRED - extract from text)
+   - project_dir: Project directory path (extract folder path, e.g., "data/ERT/E4D")
+   - instrument: One of ['DAS-1', 'Syscal', 'ABEM-Lund', 'Protocol DC', 'BERT', 'Sting', 'ARES', 'E4D', 'Custom']
+     * Match EXACT instrument name from request
+     * "E4D" → use "E4D", "DAS" → use "DAS-1", "Syscal" → use "Syscal"
    - crs: Coordinate system ('local' or 'EPSG:XXXX')
 
-2. **Inversion type** (determine from request):
-   - inversion_mode: 'standard' or 'time-lapse'
-   - If time-lapse:
-     - time_lapse_files: List of data files in temporal order
-     - baseline_file: Optional baseline/background file
-     - time_lapse_method: 'difference' or 'ratio' or 'joint'
-     - temporal_regularization: Optional temporal smoothing weight
+2. **Inversion type**:
+   - inversion_mode: 'standard' OR 'time-lapse'
+   - If time-lapse (keywords: time-lapse, temporal, monitoring, 4D, repeated surveys):
+     * time_lapse_files: List of ALL data files in temporal order (extract all filenames)
+     * time_lapse_method: 'difference', 'ratio', or 'joint'
+     * temporal_regularization: Temporal smoothing weight (extract if mentioned)
 
 3. **Inversion parameters**:
-   - lambda: Regularization parameter (default: 20.0, range: 1-100)
-   - max_iterations: Maximum iterations (default: 10, range: 5-30)
-   - method: Solver method ('cgls' is default)
+   - lambda: Regularization parameter (extract if mentioned, default: 15-20)
+   - max_iterations: Maximum iterations (extract if mentioned, default: 10)
+   - method: Solver method (extract if mentioned, default: 'cgls')
    - use_gpu: Boolean for GPU acceleration
 
-4. **Petrophysical parameters** (if water content conversion requested):
-   - Auto-suggest or use defaults if not specified
-   - Include layer-specific parameters if mentioned
+4. **Petrophysical parameters** (ONLY if water content conversion mentioned):
+   - Extract explicit values: rho_sat, porosity, n, m
+   - Example: "rho_sat = 541" → {{"rho_sat": 541}}
+   - Return empty dict {{}} if not mentioned
 
-5. **Climate data integration** (if mentioned):
-   - use_climate: Boolean
-   - climate_config with coords, dates, variables, pet_method
-
-6. **Seismic constraints** (if mentioned):
-   - use_seismic: Boolean
-   - velocity_threshold: Velocity threshold in m/s
-
-7. **Uncertainty quantification**:
-   - run_uncertainty: Boolean (default: True if requested)
-   - n_realizations: Number of Monte Carlo runs (default: 100)
-
-Important:
-- Detect if user wants TIME-LAPSE inversion (keywords: time-lapse, temporal, monitoring, time series, repeated, 4D)
-- For time-lapse, set inversion_mode to 'time-lapse' and include time_lapse_files list
-- Use reasonable defaults where information is missing
+IMPORTANT:
+- Focus ONLY on inversion/ERT parameters
+- DO NOT extract climate, meteorological, or site information
 - Return ONLY valid JSON, no explanatory text
+- For time-lapse: extract ALL filenames mentioned in numbered lists or bullet points
 
-Example time-lapse config:
+Example output:
 {{
   "inversion_mode": "time-lapse",
-  "time_lapse_files": ["data1.ohm", "data2.ohm", "data3.ohm"],
-  "baseline_file": "data1.ohm",
+  "time_lapse_files": ["2021-10-08_1400.ohm", "2021-11-08_1230.ohm", "2021-12-08_1230.ohm"],
   "time_lapse_method": "difference",
-  "temporal_regularization": 10.0,
-  "data_file": "data1.ohm",
+  "temporal_regularization": 15.0,
+  "data_file": "2021-10-08_1400.ohm",
   "project_dir": "data/ERT/E4D",
   "instrument": "E4D",
-  "inversion_params": {{"lambda": 20.0, "max_iterations": 10}}
+  "inversion_params": {{"lambda": 15.0, "max_iterations": 10, "method": "cgls"}}
 }}
 
-Generate the JSON configuration now:"""
-        
+Generate JSON now:"""
+        return prompt
+    
+    def _create_data_fusion_prompt(self, user_request: str) -> str:
+        """Create focused prompt for data fusion configuration."""
+        prompt = f"""You are extracting multi-method geophysical data fusion configuration from a request.
+
+User Request:
+{user_request}
+
+Extract ONLY data fusion parameters in JSON format:
+
+1. **Data fusion type** (if multi-method analysis mentioned):
+   - fusion_pattern: 'full_integration', 'structure_constraint', 'cross_validation', or null
+   - methods: List of methods ['seismic', 'ert', 'petrophysics']
+   
+2. **Seismic data** (if mentioned):
+   - seismic_file: Path to seismic data file
+   - velocity_threshold: Velocity threshold for interface extraction (m/s)
+   - seismic_params:
+     * lam: Regularization (default: 50)
+     * zWeight: Vertical smoothing weight (default: 0.2)
+     * vTop: Top layer velocity constraint (default: 500)
+     * vBottom: Bottom layer velocity constraint (default: 5000)
+     
+3. **ERT data** (if mentioned):
+   - ert_file: Path to ERT data file
+   - ert_params:
+     * lambda: Regularization parameter (extract if mentioned)
+     * max_iterations: Maximum iterations (default: 20)
+     * limits: [min_rho, max_rho] resistivity limits
+     
+4. **Mesh parameters** (if mentioned):
+   - mesh_quality: Mesh quality parameter (default: 31)
+   - mesh_params:
+     * paraDepth: Parameter domain depth
+     * paraDX: Parameter spacing
+     * paraMaxCellSize: Maximum cell size
+     
+5. **Petrophysical parameters** (if mentioned):
+   - n_realizations: Number of Monte Carlo realizations (default: 100)
+   - layer_params: Layer-specific parameters dict
+     * Extract for each layer (e.g., "regolith", "fractured_bedrock"):
+       - rho_sat_range: [min, max] (Ωm)
+       - n_range: [min, max] (cementation exponent)
+       - porosity_range: [min, max] (-)
+       
+6. **Output settings**:
+   - output_dir: Output directory path
+   - coverage_threshold: Coverage threshold for plotting (default: -1.0)
+
+IMPORTANT:
+- Focus ONLY on data fusion parameters
+- Return null for fusion_pattern if NOT multi-method
+- Return ONLY valid JSON, no explanatory text
+- Extract layer names exactly as mentioned (e.g., "regolith", "fractured_bedrock")
+
+Example output (full data fusion):
+{{
+  "fusion_pattern": "full_integration",
+  "methods": ["seismic", "ert", "petrophysics"],
+  "seismic_file": "data/Seismic/srtfieldline2.dat",
+  "ert_file": "data/ERT/Bert/fielddataline2.dat",
+  "velocity_threshold": 1000,
+  "seismic_params": {{"lam": 50, "zWeight": 0.2, "vTop": 500, "vBottom": 5000}},
+  "ert_params": {{"lambda": 20, "max_iterations": 20, "limits": [1.0, 10000.0]}},
+  "mesh_quality": 31,
+  "n_realizations": 100,
+  "layer_params": {{
+    "regolith": {{
+      "rho_sat_range": [50, 250],
+      "n_range": [1.3, 2.2],
+      "porosity_range": [0.25, 0.35]
+    }},
+    "fractured_bedrock": {{
+      "rho_sat_range": [165, 350],
+      "n_range": [2.0, 2.2],
+      "porosity_range": [0.2, 0.3]
+    }}
+  }},
+  "output_dir": "results/data_fusion_field",
+  "coverage_threshold": -1.0
+}}
+
+Example output (no fusion):
+{{
+  "fusion_pattern": null
+}}
+
+Generate JSON now:"""
+        return prompt
+    
+    def _create_climate_prompt(self, user_request: str) -> str:
+        """Create focused prompt for climate data configuration only."""
+        prompt = f"""You are extracting climate/meteorological data requirements from a geophysical monitoring request.
+
+User Request:
+{user_request}
+
+Extract ONLY climate data configuration in JSON format:
+
+1. **Climate data required?**
+   - use_climate: true if request mentions: climate, weather, precipitation, temperature, ET, evapotranspiration, meteorological
+   - use_climate: false otherwise
+
+2. **If use_climate = true**, extract climate_config:
+   - coords: [longitude, latitude] in decimal degrees
+     * Extract from text: "38.92584°N, -106.97998°W" → [-106.97998, 38.92584]
+     * Longitude first (negative for W), latitude second (positive for N)
+   - dates: [start_date, end_date] in "YYYY-MM-DD" format
+     * Extract explicit date range if mentioned
+     * Format: "September 2021 to March 2022" → ["2021-09-01", "2022-03-31"]
+   - variables: List of climate variables mentioned
+     * Common: ["prcp", "tmin", "tmax", "srad", "vp", "dayl"]
+     * Extract if explicitly requested
+   - pet_method: PET calculation method if mentioned
+     * "Penman-Monteith" → "penman_monteith"
+     * "Hargreaves" → "hargreaves"
+   - time_scale: "daily" or "monthly" (extract if mentioned)
+   - antecedent_days: List of antecedent periods if mentioned
+     * "7-day and 14-day cumulative" → [7, 14]
+
+3. **Site information** (if provided):
+   - name: Site name
+   - location: Location description
+   - coordinates: Formatted coordinate string (e.g., "38.92584°N, -106.97998°W")
+   - elevation: Elevation with units (e.g., "3,150 meters")
+
+IMPORTANT:
+- Focus ONLY on climate/meteorological/site parameters
+- DO NOT extract inversion or ERT parameters
+- If no climate data mentioned, return {{"use_climate": false}}
+- Return ONLY valid JSON, no explanatory text
+
+Example output (climate requested):
+{{
+  "use_climate": true,
+  "climate_config": {{
+    "coords": [-106.97998, 38.92584],
+    "dates": ["2021-09-01", "2022-03-31"],
+    "variables": ["prcp", "tmin", "tmax", "srad", "dayl"],
+    "pet_method": "penman_monteith",
+    "time_scale": "daily",
+    "antecedent_days": [7, 14]
+  }},
+  "site_info": {{
+    "name": "Mt. Snodgrass Monitoring Site",
+    "location": "Near Crested Butte, Colorado, USA",
+    "coordinates": "38.92584°N, -106.97998°W",
+    "elevation": "3,150 meters"
+  }}
+}}
+
+Example output (no climate):
+{{
+  "use_climate": false
+}}
+
+Generate JSON now:"""
         return prompt
     
     def _extract_config_from_response(self, response: str) -> Dict[str, Any]:
@@ -182,9 +480,32 @@ Generate the JSON configuration now:"""
     
     def _validate_and_complete_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Validate configuration and add missing defaults."""
+        # First, flatten nested structures if present
+        # Handle 'data_source' nested structure
+        if 'data_source' in config and isinstance(config['data_source'], dict):
+            data_source = config.pop('data_source')
+            # Extract nested fields to top level if not already present
+            for key in ['instrument', 'data_file', 'electrode_file', 'project_dir', 'crs']:
+                if key in data_source and key not in config:
+                    config[key] = data_source[key]
+        
+        # Handle 'inversion_type' nested structure
+        if 'inversion_type' in config and isinstance(config['inversion_type'], dict):
+            inversion_type = config.pop('inversion_type')
+            if 'inversion_mode' in inversion_type and 'inversion_mode' not in config:
+                config['inversion_mode'] = inversion_type['inversion_mode']
+        
+        # Handle 'uncertainty_quantification' nested structure
+        if 'uncertainty_quantification' in config and isinstance(config['uncertainty_quantification'], dict):
+            uncertainty = config.pop('uncertainty_quantification')
+            if 'run_uncertainty' in uncertainty and 'run_uncertainty' not in config:
+                config['run_uncertainty'] = uncertainty['run_uncertainty']
+            if 'n_realizations' in uncertainty and 'n_realizations' not in config:
+                config['n_realizations'] = uncertainty['n_realizations']
+        
         # Set defaults
         defaults = {
-            'instrument': 'E4D',
+            'instrument': 'Syscal',  # Changed from E4D to more common instrument
             'crs': 'local',
             'inversion_mode': 'standard',  # or 'time-lapse'
             'inversion_params': {
@@ -249,6 +570,285 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
         
         explanation = self.query_llm(prompt)
         return explanation
+    
+    def _normalize_timelapse_paths(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalize file paths for time-lapse inversion workflows.
+        
+        When time-lapse mode is detected, this method ensures all file paths
+        are properly formatted with the correct base directory and that filenames
+        are extracted from any full paths provided.
+        
+        Args:
+            config: Workflow configuration with time-lapse files
+            
+        Returns:
+            Updated configuration with normalized paths
+        """
+        from pathlib import Path
+        
+        # Extract or set base data directory
+        if 'project_dir' in config:
+            base_data_dir = Path(config['project_dir'])
+        else:
+            # Try to infer from data_file or time_lapse_files
+            if 'data_file' in config:
+                base_data_dir = Path(config['data_file']).parent
+            elif 'time_lapse_files' in config and config['time_lapse_files']:
+                base_data_dir = Path(config['time_lapse_files'][0]).parent
+            else:
+                # Default to common E4D location
+                base_data_dir = Path('data/ERT/E4D')
+        
+        # Clean up project_dir (remove leading ./)
+        if str(base_data_dir).startswith('./'):
+            base_data_dir = Path(str(base_data_dir)[2:])
+        
+        # Ensure project_dir is set
+        config['project_dir'] = str(base_data_dir)
+        
+        # Normalize baseline_file if present
+        if 'baseline_file' in config:
+            baseline_name = Path(config['baseline_file']).name
+            config['baseline_file'] = str(base_data_dir / baseline_name)
+            # Set data_file to match baseline
+            config['data_file'] = config['baseline_file']
+        elif 'data_file' in config:
+            # Use data_file as baseline
+            data_file_name = Path(config['data_file']).name
+            config['data_file'] = str(base_data_dir / data_file_name)
+            config['baseline_file'] = config['data_file']
+        
+        # Normalize time_lapse_files list
+        if 'time_lapse_files' in config and config['time_lapse_files']:
+            normalized_files = []
+            for file_path in config['time_lapse_files']:
+                # Extract just the filename
+                filename = Path(file_path).name
+                # Construct full path with base directory
+                full_path = str(base_data_dir / filename)
+                normalized_files.append(full_path)
+            
+            config['time_lapse_files'] = normalized_files
+            
+            # If baseline_file not set, use first time-lapse file
+            if 'baseline_file' not in config:
+                config['baseline_file'] = config['time_lapse_files'][0]
+                config['data_file'] = config['baseline_file']
+        
+        # Normalize electrode_file if present
+        if 'electrode_file' in config:
+            electrode_name = Path(config['electrode_file']).name
+            config['electrode_file'] = str(base_data_dir / electrode_name)
+        
+        return config
+    
+    def _normalize_climate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalize and validate climate data configuration.
+        
+        Ensures climate_config has all required fields with proper formatting.
+        If dates are not specified, infers them from ERT survey dates.
+        
+        Args:
+            config: Workflow configuration with climate settings
+            
+        Returns:
+            Updated configuration with normalized climate_config
+        """
+        from pathlib import Path
+        from datetime import datetime, timedelta
+        
+        # Ensure use_climate flag is set
+        if 'climate_config' in config and not config.get('use_climate'):
+            config['use_climate'] = True
+        
+        # Initialize climate_config if not present
+        if 'climate_config' not in config:
+            config['climate_config'] = {}
+        
+        climate_cfg = config['climate_config']
+        
+        # Set default climate variables if not specified
+        if 'variables' not in climate_cfg:
+            climate_cfg['variables'] = ["prcp", "tmin", "tmax", "srad", "vp", "dayl"]
+        
+        # Set default PET method
+        if 'pet_method' not in climate_cfg:
+            climate_cfg['pet_method'] = "penman_monteith"
+        
+        # Set default time scale
+        if 'time_scale' not in climate_cfg:
+            climate_cfg['time_scale'] = "daily"
+        
+        # Set default region
+        if 'region' not in climate_cfg:
+            climate_cfg['region'] = "na"
+        
+        # Set default antecedent days
+        if 'antecedent_days' not in climate_cfg:
+            climate_cfg['antecedent_days'] = [1, 3, 7, 14, 30]
+        
+        # Set default CRS
+        if 'crs' not in climate_cfg:
+            climate_cfg['crs'] = 4326  # WGS84
+        
+        # Infer dates from ERT survey if not provided
+        if 'dates' not in climate_cfg or not climate_cfg['dates']:
+            dates = self._infer_climate_dates(config)
+            if dates:
+                climate_cfg['dates'] = dates
+        
+        # Set default output path if not specified
+        if 'output' not in climate_cfg:
+            # Use site name if available, otherwise default
+            site_name = config.get('site_info', {}).get('name', 'site').lower().replace(' ', '_')
+            climate_cfg['output'] = f"data/climate/{site_name}_climate.csv"
+        
+        # Ensure output directory exists in path
+        output_path = Path(climate_cfg['output'])
+        climate_cfg['output'] = str(output_path)
+        
+        return config
+    
+    def _infer_climate_dates(self, config: Dict[str, Any]) -> Optional[List[str]]:
+        """
+        Infer climate date range from ERT survey dates.
+        
+        Args:
+            config: Workflow configuration
+            
+        Returns:
+            [start_date, end_date] in "YYYY-MM-DD" format, or None if cannot infer
+        """
+        from datetime import datetime, timedelta
+        import re
+        
+        dates = []
+        
+        # Try to extract dates from time-lapse files
+        if config.get('inversion_mode') == 'time-lapse' and config.get('time_lapse_files'):
+            for filepath in config['time_lapse_files']:
+                # Look for date patterns: YYYY-MM-DD, YYYYMMDD, YYYY_MM_DD
+                date_match = re.search(r'(\d{4})[_-]?(\d{2})[_-]?(\d{2})', filepath)
+                if date_match:
+                    try:
+                        date_str = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
+                        date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                        dates.append(date_obj)
+                    except ValueError:
+                        continue
+        
+        # If we found dates, extend range by buffer period
+        if dates:
+            min_date = min(dates)
+            max_date = max(dates)
+            
+            # Add 1 month buffer before and after
+            start_date = min_date - timedelta(days=30)
+            end_date = max_date + timedelta(days=30)
+            
+            return [start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")]
+        
+        return None
+    
+    def _normalize_fusion_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalize and validate data fusion configuration.
+        
+        Ensures all fusion-related parameters are properly formatted and
+        have sensible defaults.
+        
+        Args:
+            config: Workflow configuration with fusion settings
+            
+        Returns:
+            Updated configuration with normalized fusion parameters
+        """
+        from pathlib import Path
+        
+        # Set default fusion parameters
+        fusion_defaults = {
+            'coverage_threshold': -1.0,
+            'mesh_quality': 31,
+            'n_realizations': 100
+        }
+        
+        for key, value in fusion_defaults.items():
+            if key not in config:
+                config[key] = value
+        
+        # Normalize file paths
+        if 'seismic_file' in config:
+            seismic_path = Path(config['seismic_file'])
+            if not seismic_path.is_absolute():
+                config['seismic_file'] = str(seismic_path)
+        
+        if 'ert_file' in config:
+            ert_path = Path(config['ert_file'])
+            if not ert_path.is_absolute():
+                config['ert_file'] = str(ert_path)
+        
+        # Set default seismic parameters
+        if 'seismic_params' not in config:
+            config['seismic_params'] = {}
+        
+        seismic_defaults = {
+            'lam': 50,
+            'zWeight': 0.2,
+            'vTop': 500,
+            'vBottom': 5000
+        }
+        
+        for key, value in seismic_defaults.items():
+            if key not in config['seismic_params']:
+                config['seismic_params'][key] = value
+        
+        # Set default ERT parameters for fusion
+        if 'ert_params' not in config:
+            config['ert_params'] = {}
+        
+        ert_defaults = {
+            'lambda': 20,
+            'max_iterations': 20,
+            'limits': [1.0, 10000.0]
+        }
+        
+        for key, value in ert_defaults.items():
+            if key not in config['ert_params']:
+                config['ert_params'][key] = value
+        
+        # Set default mesh parameters
+        if 'mesh_params' not in config:
+            config['mesh_params'] = {}
+        
+        mesh_defaults = {
+            'paraDepth': 22.0,
+            'paraDX': 0.5,
+            'paraMaxCellSize': 5
+        }
+        
+        for key, value in mesh_defaults.items():
+            if key not in config['mesh_params']:
+                config['mesh_params'][key] = value
+        
+        # Set default output directory
+        if 'output_dir' not in config:
+            config['output_dir'] = 'results/data_fusion'
+        
+        # Ensure methods list exists
+        if 'methods' not in config:
+            # Infer from available data
+            methods = []
+            if config.get('seismic_file'):
+                methods.append('seismic')
+            if config.get('ert_file') or config.get('data_file'):
+                methods.append('ert')
+            if config.get('layer_params') or config.get('n_realizations'):
+                methods.append('petrophysics')
+            config['methods'] = methods
+        
+        return config
     
     def suggest_improvements(self, config: Dict[str, Any], 
                            site_conditions: Optional[str] = None) -> str:

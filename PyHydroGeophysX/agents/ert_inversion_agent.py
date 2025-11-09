@@ -306,7 +306,7 @@ Provide a brief interpretation (2-3 sentences) about:
         self._log_execution("Starting time-lapse ERT inversion")
         
         try:
-            from PyHydroGeophysX.inversion.time_lapse import TimeLapseInversion
+            from PyHydroGeophysX.inversion.time_lapse import TimeLapseERTInversion
             from PyHydroGeophysX.data_processing.ert_data_agent import export_for_inversion
             import pygimli as pg
             
@@ -341,26 +341,48 @@ Provide a brief interpretation (2-3 sentences) about:
                 shutil.move(data_file, new_file)
                 data_files.append(new_file)
             
-            # Set inversion parameters
-            lambda_val = inversion_params.get('lambda', 20.0)
-            max_iterations = inversion_params.get('max_iterations', 10)
+            # Set inversion parameters following Ex_TL_inversion.py pattern
+            lambda_val = inversion_params.get('lambda', 50.0)
+            alpha = temporal_reg  # Temporal regularization parameter
+            decay_rate = inversion_params.get('decay_rate', 0.0)
             method = inversion_params.get('method', 'cgls')
-            use_gpu = inversion_params.get('use_gpu', False)
+            model_constraints = inversion_params.get('model_constraints', (0.001, 1e4))
+            max_iterations = inversion_params.get('max_iterations', 15)
+            absoluteUError = inversion_params.get('absoluteUError', 0.0)
+            relativeError = inversion_params.get('relativeError', 0.05)
+            lambda_rate = inversion_params.get('lambda_rate', 1.0)
+            lambda_min = inversion_params.get('lambda_min', 1.0)
+            inversion_type = inversion_params.get('inversion_type', 'L2')
             
-            self._log_execution(f"Inversion parameters: lambda={lambda_val}, "
-                              f"max_iter={max_iterations}, method={method}")
+            self._log_execution(f"Inversion parameters: lambda={lambda_val}, alpha={alpha}, "
+                              f"max_iter={max_iterations}, method={method}, type={inversion_type}")
+            
+            # Create measurement times (sequential indices if not provided)
+            measurement_times = input_data.get('measurement_times', list(range(1, len(time_lapse_data) + 1)))
+            
+            # Create mesh for inversion
+            from pygimli.physics import ert
+            data = ert.load(data_files[0])
+            ert_manager = ert.ERTManager(data)
+            mesh = ert_manager.createMesh(data=data, quality=31, paraMaxCellSize=25,paraDepth=28)
             
             # Perform time-lapse inversion
             self._log_execution("Running time-lapse inversion...")
-            tl_inversion = TimeLapseInversion(
+            tl_inversion = TimeLapseERTInversion(
                 data_files=data_files,
+                measurement_times=measurement_times,
+                mesh=mesh,
                 lambda_val=lambda_val,
+                alpha=alpha,
+                decay_rate=decay_rate,
                 method=method,
-                use_gpu=use_gpu,
+                model_constraints=model_constraints,
                 max_iterations=max_iterations,
-                temporal_regularization=temporal_reg,
-                baseline_index=baseline_idx,
-                time_lapse_method=tl_method
+                absoluteUError=absoluteUError,
+                relativeError=relativeError,
+                lambda_rate=lambda_rate,
+                lambda_min=lambda_min,
+                inversion_type=inversion_type
             )
             
             tl_result = tl_inversion.run()
@@ -381,14 +403,16 @@ Provide a brief interpretation (2-3 sentences) about:
                 'status': 'success',
                 'inversion_mode': 'time-lapse',
                 'time_lapse_result': tl_result,
-                'baseline_model': tl_result.baseline_model,
-                'time_lapse_models': tl_result.time_lapse_models,
-                'changes': tl_result.changes if hasattr(tl_result, 'changes') else None,
+                'final_models': tl_result.final_models,  # 2D array: cells x timesteps
+                'baseline_model': tl_result.final_models[:, 0] if tl_result.final_models is not None else None,
+                'time_lapse_models': [tl_result.final_models[:, i] for i in range(tl_result.final_models.shape[1])] if tl_result.final_models is not None else [],
                 'mesh': tl_result.mesh,
                 'method': tl_method,
                 'temporal_regularization': temporal_reg,
-                'n_timesteps': len(time_lapse_data),
-                'chi2_values': tl_result.chi2_values if hasattr(tl_result, 'chi2_values') else None,
+                'n_timesteps': tl_result.final_models.shape[1] if tl_result.final_models is not None else len(time_lapse_data),
+                'chi2_values': tl_result.all_chi2 if hasattr(tl_result, 'all_chi2') else None,
+                'coverage': tl_result.all_coverage if hasattr(tl_result, 'all_coverage') else [],
+                'timesteps': tl_result.timesteps if hasattr(tl_result, 'timesteps') else measurement_times,
                 'interpretation': interpretation,
                 'output_dir': output_dir
             }

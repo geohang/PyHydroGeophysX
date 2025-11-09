@@ -211,7 +211,8 @@ def extract_velocity_interface(mesh, velocity_data, threshold=1200, interval=4.0
 
 
 
-def add_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2, boundary=1):
+def add_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2, boundary=1,
+                          paraDepth=30.0, paraDX=None, paraMaxCellSize=30):
     """
     Add a velocity interface line to the geometry and create a mesh with different markers:
     - Outside survey area: marker = 1
@@ -223,15 +224,26 @@ def add_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2, boundary
         smooth_x, smooth_z: Arrays with x and z coordinates of the velocity interface
         paraBoundary: Parameter boundary size (default: 2)
         boundary: Boundary marker (default: 1)
+        paraDepth: Depth of parameter domain (default: 30.0)
+        paraDX: Horizontal mesh refinement (default: None)
+        paraMaxCellSize: Maximum cell size in parameter domain (default: 30)
         
     Returns:
         markers: Array with cell markers
         meshafter: The created mesh with updated markers
     """
     # Create the initial parameter mesh
-    geo = mt.createParaMeshPLC(ertData, quality=32, paraMaxCellSize=30,
-                               paraBoundary=paraBoundary, paraDepth=30.0,
-                               boundaryMaxCellSize=500)
+    mesh_kwargs = {
+        'quality': 32,
+        'paraMaxCellSize': paraMaxCellSize,
+        'paraBoundary': paraBoundary,
+        'paraDepth': paraDepth,
+        'boundaryMaxCellSize': 500
+    }
+    if paraDX is not None:
+        mesh_kwargs['paraDX'] = paraDX
+    
+    geo = mt.createParaMeshPLC(ertData, **mesh_kwargs)
     
     # Stack x and z coordinates for the interface
     interface_points = np.vstack((smooth_x, smooth_z)).T
