@@ -198,6 +198,7 @@ different geological materials and quantify uncertainties."""
                 'water_content_p90': water_content_p90,
                 'saturation_mean': saturation_mean,
                 'saturation_std': saturation_std,
+                'cell_markers': cell_markers,  # Include the markers used for layer-specific analysis
                 'layer_params': layer_params,
                 'params_used': mc_results['params_used'],
                 'statistics': {
