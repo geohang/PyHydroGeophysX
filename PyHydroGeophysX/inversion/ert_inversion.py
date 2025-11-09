@@ -39,6 +39,13 @@ class ERTInversion(InversionBase):
         # Load ERT data
         data = ert.load(data_file)
         
+        # Compute geometric factors numerically from electrode positions
+        # This ensures accurate K values based on actual electrode geometry
+        # Check if K values are missing, all zeros, or all ones (placeholder values)
+        if 'k' not in data.dataMap() or len(data['k']) == 0 or np.allclose(data['k'], 0) or np.allclose(data['k'], 1):
+            print("   Computing geometric factors from electrode positions...")
+            data['k'] = ert.createGeometricFactors(data, numerical=True)
+        
         # Call parent initializer
         super().__init__(data, mesh, **kwargs)
         
