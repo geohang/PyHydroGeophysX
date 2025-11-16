@@ -37,7 +37,7 @@ def process_seismic_tomography(ttData, mesh=None, **kwargs):
         'quality': 31,
         'paraDepth': 30.0,
         'verbose': 1,
-        'limits': [100., 6000.]
+        'limits': [400., 10000.]
     }
     
     # Update with user-provided parameters

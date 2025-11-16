@@ -109,10 +109,18 @@ and how to identify layer boundaries."""
                 self._log_execution("Generating interpretation of seismic results")
                 interpretation = self._interpret_results(TT_manager, interface_data)
             
+            # Get coverage for visualization (required by ReportAgent)
+            try:
+                coverage = TT_manager.standardizedCoverage()
+            except:
+                # Fallback: create default coverage array
+                coverage = np.ones(TT_manager.paraDomain.cellCount())
+            
             self.results = {
                 'status': 'success',
                 'velocity_model': TT_manager.model.array(),
                 'mesh': TT_manager.paraDomain,
+                'coverage': coverage,  # Required for visualization
                 'interface_coords': (interface_x, interface_z),
                 'interface_data': interface_data,
                 'velocity_threshold': velocity_threshold,

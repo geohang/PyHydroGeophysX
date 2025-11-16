@@ -52,6 +52,7 @@ different data formats, coordinate systems, and common data quality issues."""
             data_file = input_data.get('data_file')
             instrument = input_data.get('instrument', 'E4D')
             project_dir = input_data.get('project_dir', '.')
+            electrode_file = input_data.get('electrode_file')  # Extract electrode file
             crs = input_data.get('crs', 'local')
             quality_check = input_data.get('quality_check', True)
             
@@ -59,6 +60,8 @@ different data formats, coordinate systems, and common data quality issues."""
                 raise ValueError("data_file is required")
             
             self._log_execution(f"Loading data from {data_file} ({instrument} format)")
+            if electrode_file:
+                self._log_execution(f"Using electrode file: {electrode_file}")
             
             # Set up coordinate reference
             local_ref = LocalRef(origin_x=0.0, origin_y=0.0, azimuth_deg=90.0)
@@ -68,6 +71,7 @@ different data formats, coordinate systems, and common data quality issues."""
                 project_dir=project_dir,
                 data_file=data_file,
                 instrument=instrument,
+                electrode_file=electrode_file,  # Pass electrode file
                 crs=crs,
                 local_ref=local_ref if crs == 'local' else None
             )

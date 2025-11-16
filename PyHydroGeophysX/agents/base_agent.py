@@ -209,26 +209,40 @@ class BaseAgent(ABC):
         Returns: results dict, execution plan, interpretation, report files
         """
         # 1. Infer workflow type from configuration keys
-        fusion_keys = {'fusion_pattern', 'methods', 'seismic_file', 'ert_file', 'velocity_threshold'}
-        time_lapse_keys = {'timelapse', 'timelapse_files', 'timelapse_params', 'climate_config'}
-        direct_ert_keys = {'ert_file', 'petrophysics_only', 'direct_ert', 'petrophysical_params'}
-
+        # More specific detection: check for unique indicators of each workflow
         config_keys = set(workflow_config.keys())
+        print(f'\nDetecting workflow type from config keys: {config_keys}')
+        
+        # Normalize key names: ContextInputAgent may use 'data_file' or 'ert_file'
+        if 'data_file' in workflow_config and 'ert_file' not in workflow_config:
+            workflow_config['ert_file'] = workflow_config['data_file']
+            print(f"  → Normalized 'data_file' to 'ert_file'")
 
-        if fusion_keys & config_keys:
-            workflow_type = 'data_fusion'
-        elif time_lapse_keys & config_keys:
+        # Detect workflow type with priority order
+        # Time-lapse: check for time-lapse specific keys
+        if ('timelapse_files' in config_keys or 
+            'timelapse_params' in config_keys or 
+            'climate_config' in config_keys):
             workflow_type = 'time_lapse'
-        elif direct_ert_keys & config_keys:
+            
+        # Data fusion: check for fusion-specific indicators WITH actual values
+        # Note: ContextInputAgent may add 'fusion_pattern' or 'methods' keys even for ERT-only requests
+        # We need to check if they have meaningful (non-None, non-empty) values
+        elif (workflow_config.get('velocity_threshold') or  # Has velocity threshold
+              (workflow_config.get('ert_file') and workflow_config.get('seismic_file')) or  # Has both files
+              (workflow_config.get('fusion_pattern') and 
+               workflow_config.get('fusion_pattern') not in [None, 'None', '']) or  # Has valid fusion pattern
+              (workflow_config.get('methods') and 
+               len(workflow_config.get('methods', [])) > 1 and  # Has multiple methods
+               'seismic' in workflow_config.get('methods', []))):  # Including seismic
+            workflow_type = 'data_fusion'
+            
+        # Direct ERT: single ERT file without real fusion indicators
+        elif workflow_config.get('ert_file'):
             workflow_type = 'direct_ert'
+            
         else:
-            # Default to data fusion if we have ERT and seismic files
-            if workflow_config.get('ert_file') and workflow_config.get('seismic_file'):
-                workflow_type = 'data_fusion'
-            elif workflow_config.get('ert_file'):
-                workflow_type = 'direct_ert'
-            else:
-                raise ValueError('Could not infer workflow type from config!')
+            raise ValueError('Could not infer workflow type from config! Please provide at least ert_file or data_file.')
 
         print(f'\n===== WORKFLOW TYPE: {workflow_type.upper()} =====')
         execution_plan = None
@@ -333,19 +347,100 @@ class BaseAgent(ABC):
             eval_agent = InversionEvaluationAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
 
             print('Running time-lapse ERT workflow...')
+            
+            # Set execution plan for time-lapse workflow
+            execution_plan = [
+                {'step': 'Load Time-Lapse ERT Data', 'agent': 'ERTLoaderAgent', 
+                 'description': 'Load multiple ERT datasets for time-lapse monitoring', 
+                 'outputs': ['ert_data_list']},
+                {'step': 'Fetch Climate Data', 'agent': 'ClimateDataAgent', 
+                 'description': 'Fetch meteorological data (precipitation, temperature, PET) via conda environment', 
+                 'outputs': ['climate_data']},
+                {'step': 'Time-Lapse Inversion', 'agent': 'ERTInversionAgent', 
+                 'description': 'Run time-lapse inversion with temporal regularization', 
+                 'outputs': ['resistivity_changes', 'temporal_models']},
+                {'step': 'Evaluate Inversion Quality', 'agent': 'InversionEvaluationAgent', 
+                 'description': 'Assess inversion quality and optimize parameters if needed', 
+                 'outputs': ['quality_metrics', 'optimized_results']},
+                {'step': 'Generate Time-Lapse Report', 'agent': 'ReportAgent', 
+                 'description': 'Create comprehensive report with climate correlation analysis', 
+                 'outputs': ['html_report', 'visualizations', 'climate_resistivity_correlation']}
+            ]
+            
+            interpretation = (
+                "Time-lapse ERT workflow monitors temporal changes in subsurface resistivity "
+                "to track moisture dynamics, infiltration, and hydrological processes. "
+                "Climate data integration enables correlation of resistivity changes with "
+                "precipitation, temperature, and evapotranspiration patterns."
+            )
 
-            # Load time-lapse data files
-            time_lapse_files = workflow_config.get('timelapse_files', [])
+            # Load time-lapse data files (check both naming conventions)
+            time_lapse_files = workflow_config.get('time_lapse_files') or workflow_config.get('timelapse_files', [])
             if not time_lapse_files:
                 raise ValueError('No time-lapse files specified in configuration')
+            
+            print(f'  → Found {len(time_lapse_files)} time-lapse files')
+
+            # Get electrode file for topography (if provided)
+            electrode_file = workflow_config.get('electrode_file')
+            if electrode_file:
+                electrode_file_path = Path(electrode_file)
+                project_dir = workflow_config.get('project_dir', '.')
+                
+                # Normalize electrode file path
+                if not electrode_file_path.exists():
+                    if project_dir and project_dir != '.':
+                        combined_path = Path(project_dir) / electrode_file_path.name
+                        if combined_path.exists():
+                            electrode_file_path = combined_path
+                        else:
+                            if len(combined_path.parts) > 0 and combined_path.parts[0] == 'examples':
+                                combined_path = Path(*combined_path.parts[1:])
+                                if combined_path.exists():
+                                    electrode_file_path = combined_path
+                    if not electrode_file_path.exists() and len(electrode_file_path.parts) > 0 and electrode_file_path.parts[0] == 'examples':
+                        alt_path = Path(*electrode_file_path.parts[1:])
+                        if alt_path.exists():
+                            electrode_file_path = alt_path
+                
+                electrode_file = str(electrode_file_path)
+                print(f'  → Using electrode file: {electrode_file_path.name}')
 
             time_lapse_data = []
             for i, data_file in enumerate(time_lapse_files):
+                # Normalize each time-lapse file path
+                data_file_path = Path(data_file)
+                project_dir = workflow_config.get('project_dir', '.')
+                
+                if not data_file_path.exists():
+                    # Try combining with project_dir
+                    if project_dir and project_dir != '.':
+                        combined_path = Path(project_dir) / data_file_path.name
+                        if combined_path.exists():
+                            data_file_path = combined_path
+                            print(f'  → Resolved: {project_dir} + {data_file_path.name}')
+                        else:
+                            # Handle duplicate 'examples/' prefix
+                            if len(combined_path.parts) > 0 and combined_path.parts[0] == 'examples':
+                                combined_path = Path(*combined_path.parts[1:])
+                                if combined_path.exists():
+                                    data_file_path = combined_path
+                    
+                    # Try removing 'examples/' prefix if present
+                    if not data_file_path.exists() and len(data_file_path.parts) > 0 and data_file_path.parts[0] == 'examples':
+                        alt_path = Path(*data_file_path.parts[1:])
+                        if alt_path.exists():
+                            data_file_path = alt_path
+                            print(f'  → Removed examples/ prefix')
+                
+                data_file = str(data_file_path)
                 print(f'Loading dataset {i+1}/{len(time_lapse_files)}: {Path(data_file).name}')
+                
                 result = ert_loader.execute({
                     'data_file': data_file,
                     'instrument': workflow_config.get('instrument', 'E4D'),
                     'project_dir': workflow_config.get('project_dir', '.'),
+                    'electrode_file': electrode_file,  # Pass electrode file for topography
                     'crs': workflow_config.get('crs', 'local')
                 })
                 if result['status'] != 'success':
@@ -355,6 +450,86 @@ class BaseAgent(ABC):
 
             if len(time_lapse_data) < 2:
                 raise ValueError(f'Need at least 2 datasets for time-lapse, got {len(time_lapse_data)}')
+
+            # Fetch climate data if requested
+            climate_results = None
+            if workflow_config.get('use_climate', False) or workflow_config.get('climate_config'):
+                print('\nFetching climate data for correlation analysis...')
+                from .climate_data_agent import ClimateDataAgent
+                import json
+                
+                climate_agent = ClimateDataAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+                
+                climate_config = workflow_config.get('climate_config', {})
+                if climate_config:
+                    # Save climate config to JSON file for conda environment
+                    climate_config_file = output_dir / 'climate_config.json'
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    # Prepare climate config for saving
+                    config_to_save = {
+                        'coords': climate_config.get('coords'),
+                        'dates': climate_config.get('dates'),
+                        'variables': climate_config.get('variables', ['prcp', 'tmin', 'tmax', 'srad', 'dayl']),
+                        'pet_method': climate_config.get('pet_method', 'penman_monteith'),
+                        'time_scale': climate_config.get('time_scale', 'daily'),
+                        'region': climate_config.get('region', 'na'),
+                        'crs': climate_config.get('crs', 4326),
+                        'output': str(output_dir / 'climate_data.csv')
+                    }
+                    
+                    with open(climate_config_file, 'w') as f:
+                        json.dump(config_to_save, f, indent=2)
+                    
+                    print(f"  → Climate config saved: {climate_config_file.name}")
+                    
+                    # Fetch climate data using separate conda environment
+                    fetch_result = climate_agent.fetch_climate_data_with_conda(
+                        config_file=str(climate_config_file),
+                        conda_path=None,  # Auto-detect
+                        env_name="climate_fetch"
+                    )
+                    
+                    if fetch_result.get('success'):
+                        csv_path = Path(fetch_result['csv_path'])
+                        print(f"  ✓ Climate data fetched: {csv_path.name}")
+                        
+                        # Load the fetched climate data from CSV
+                        import re
+                        from datetime import datetime, timedelta
+                        
+                        # Extract ERT dates from filenames
+                        ert_dates = []
+                        for fname in time_lapse_files:
+                            match = re.search(r'(\d{4}-\d{2}-\d{2})', str(fname))
+                            if match:
+                                ert_dates.append(match.group(1))
+                        
+                        if ert_dates:
+                            # Load climate data with extended range for visualization
+                            first_date = datetime.strptime(ert_dates[0], '%Y-%m-%d')
+                            last_date = datetime.strptime(ert_dates[-1], '%Y-%m-%d')
+                            start_date = (first_date - timedelta(days=30)).strftime('%Y-%m-%d')
+                            end_date = (last_date + timedelta(days=30)).strftime('%Y-%m-%d')
+                            
+                            climate_input = {
+                                'csv_file': str(csv_path),
+                                'ert_timestamps': ert_dates,
+                                'start_date': start_date,
+                                'end_date': end_date
+                            }
+                            
+                            climate_results = climate_agent.execute(climate_input)
+                            
+                            if climate_results.get('data_source') == 'pre_fetched_csv':
+                                workflow_config['climate_data'] = climate_results
+                                print(f"  ✓ Climate data loaded from CSV")
+                            else:
+                                print(f"  ⚠️  Could not load climate CSV: {climate_results.get('error', 'Unknown error')}")
+                        else:
+                            print("  ⚠️  Could not extract dates from time-lapse filenames")
+                    else:
+                        print(f"  ⚠️  Climate data fetch failed: {fetch_result.get('message', 'Unknown error')}")
 
             # Run time-lapse inversion
             inversion_input = {
@@ -371,7 +546,13 @@ class BaseAgent(ABC):
                 'output_dir': str(output_dir / 'inversion')
             }
 
+            print('\nRunning time-lapse inversion...')
             results = ert_inversion.execute(inversion_input)
+            
+            print(f"  → Inversion status: {results.get('status')}")
+            if results.get('status') == 'success':
+                print(f"  → Number of timesteps: {results.get('n_timesteps', 'N/A')}")
+                print(f"  → Chi² values: {results.get('chi2_values', 'N/A')}")
 
             # Evaluate and optimize inversion quality if successful
             evaluation_results = None
@@ -479,11 +660,28 @@ class BaseAgent(ABC):
                     'comparison_data': comparison_df,
                     'evaluation_results': evaluation_results,
                     'workflow_config': workflow_config,
+                    'time_lapse_method': workflow_config.get('time_lapse_method', 'difference'),
                     'output_dir': str(output_dir)
                 }
+                
+                print('\n' + '='*70)
+                print('GENERATING TIME-LAPSE REPORT')
+                print('='*70)
+                print(f"  → Output directory: {output_dir}")
+                print(f"  → Time-lapse method: {workflow_config.get('time_lapse_method', 'difference')}")
+                print(f"  → Climate data available: {workflow_config.get('climate_data') is not None}")
+                
                 report_results = report_agent.generate_timelapse_report(report_input)
+                
                 if report_results.get('status') == 'success':
                     report_files = report_results.get('visualization_files', {})
+                    print('\n✓ Report generation completed successfully!')
+                    print(f"  → Generated {len(report_files)} visualization files")
+                    print(f"  → Report file: {report_results.get('report_file')}")
+                    print(f"  → HTML file: {report_results.get('html_file')}")
+                else:
+                    print(f'\n❌ Report generation failed: {report_results.get("error", "Unknown error")}')
+                    print(f"  → Check logs for details")
 
         elif workflow_type == 'direct_ert':
             # Use ERT agents for direct ERT to water content conversion
@@ -502,12 +700,72 @@ class BaseAgent(ABC):
             data_file = workflow_config.get('ert_file')
             if not data_file:
                 raise ValueError('No ERT file specified in configuration')
+            
+            # Normalize path: handle various scenarios
+            data_file_path = Path(data_file)
+            project_dir = workflow_config.get('project_dir', '.')
+            
+            # Try to find the file in different locations
+            if not data_file_path.exists():
+                # Scenario 1: Try combining project_dir + data_file
+                if project_dir and project_dir != '.':
+                    combined_path = Path(project_dir) / data_file_path.name
+                    if combined_path.exists():
+                        data_file_path = combined_path
+                        print(f'  → Combined path: {project_dir} + {data_file_path.name} = {data_file_path}')
+                    else:
+                        # Scenario 2: Maybe project_dir has 'examples/' prefix but we're in examples/
+                        if combined_path.parts[0] == 'examples':
+                            combined_path = Path(*combined_path.parts[1:])
+                            if combined_path.exists():
+                                data_file_path = combined_path
+                                print(f'  → Fixed duplicate: {data_file_path}')
+                
+                # Scenario 3: Try removing 'examples/' prefix from original path
+                if not data_file_path.exists() and data_file_path.parts[0] == 'examples':
+                    alt_path = Path(*data_file_path.parts[1:])
+                    if alt_path.exists():
+                        data_file_path = alt_path
+                        print(f'  → Removed examples/ prefix: {data_file_path}')
+            
+            data_file = str(data_file_path)
+            
+            # Update project_dir to match the data file location
+            if not project_dir or project_dir == '.':
+                workflow_config['project_dir'] = str(data_file_path.parent)
+            else:
+                # Make sure project_dir matches where the file actually is
+                workflow_config['project_dir'] = str(data_file_path.parent)
 
+            # Handle electrode file if provided
+            electrode_file = workflow_config.get('electrode_file')
+            if electrode_file:
+                electrode_file_path = Path(electrode_file)
+                # Normalize electrode file path similar to data_file
+                if not electrode_file_path.exists():
+                    # Try combining with project_dir
+                    if project_dir and project_dir != '.':
+                        combined_path = Path(project_dir) / electrode_file_path.name
+                        if combined_path.exists():
+                            electrode_file_path = combined_path
+                        elif combined_path.parts[0] == 'examples':
+                            combined_path = Path(*combined_path.parts[1:])
+                            if combined_path.exists():
+                                electrode_file_path = combined_path
+                    # Try removing 'examples/' prefix
+                    if not electrode_file_path.exists() and electrode_file_path.parts[0] == 'examples':
+                        alt_path = Path(*electrode_file_path.parts[1:])
+                        if alt_path.exists():
+                            electrode_file_path = alt_path
+                electrode_file = str(electrode_file_path)
+                print(f'  → Electrode file: {electrode_file_path.name}')
+            
             print(f'Loading ERT data: {Path(data_file).name}')
             load_result = ert_loader.execute({
                 'data_file': data_file,
                 'instrument': workflow_config.get('instrument', 'DAS-1'),
                 'project_dir': workflow_config.get('project_dir', '.'),
+                'electrode_file': electrode_file,
                 'crs': workflow_config.get('crs', 'local')
             })
 
@@ -547,12 +805,10 @@ class BaseAgent(ABC):
 
             # Convert to water content
             petro_input = {
-                'resistivity_model': inversion_results['resistivity_model'],
-                'mesh': inversion_results['mesh'],
-                'cell_markers': inversion_results.get('cell_markers'),
+                'inversion_results': inversion_results,  # Pass the entire inversion_results dict
                 'petrophysical_params': workflow_config.get('petrophysical_params', {}),
-                'geological_context': workflow_config.get('geological_context', 'generic subsurface materials'),
-                'n_realizations': workflow_config.get('n_realizations', 200),
+                'uncertainty_analysis': workflow_config.get('run_uncertainty', True),
+                'n_realizations': workflow_config.get('n_realizations', 100),
                 'output_dir': str(output_dir / 'petrophysics')
             }
 

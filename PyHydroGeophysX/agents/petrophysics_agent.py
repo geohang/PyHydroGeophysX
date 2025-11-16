@@ -115,7 +115,13 @@ different geological materials and quantify uncertainties."""
             self._log_execution(f"Found {len(unique_layers)} geological layers: {unique_layers}")
             
             # Determine information level for uncertainty scaling
-            info_level = self._assess_information_level(geological_context, petrophysical_params)
+            # If layer_params are provided (from natural language), that's high information
+            if layer_params is not None and len(layer_params) > 0:
+                info_level = 'high'
+                self._log_execution(f"Layer-specific parameters provided: {list(layer_params.keys())}")
+            else:
+                info_level = self._assess_information_level(geological_context, petrophysical_params)
+            
             self._log_execution(f"Information level: {info_level}")
             
             # Get layer parameters

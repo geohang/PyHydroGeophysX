@@ -1,6 +1,13 @@
 PyHydroGeophysX Documentation
 ==============================
 
+.. image:: _static/logo.png
+   :alt: PyHydroGeophysX Logo
+   :align: center
+   :width: 400px
+
+|
+
 .. image:: https://img.shields.io/badge/python-3.8+-blue.svg
    :target: https://www.python.org/downloads/
    :alt: Python Version

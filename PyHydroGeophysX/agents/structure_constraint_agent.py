@@ -105,9 +105,9 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
                     lam=seismic_params.get('lam', 50),
                     zWeight=seismic_params.get('zWeight', 0.2),
                     vTop=seismic_params.get('vTop', 500),
-                    vBottom=seismic_params.get('vBottom', 5000),
+                    vBottom=seismic_params.get('vBottom', 8000),
                     verbose=1,
-                    limits=[100., 6000.]
+                    limits=[500.,10000.]
                 )
                 
                 velocity_model = TT.model.array()
@@ -228,13 +228,20 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
             coverage_filtered = coverage_array[valid_mask]
             self._log_execution(f"Filtered coverage: {len(coverage_filtered)} cells from {len(coverage_array)} total")
             
+            # Map layer markers from mesh to para_domain (will be done later in the code)
+            # For now, save the original markers
+            
             # Save results
             np.save(os.path.join(output_dir, 'resistivity_model.npy'), 
                    np.array(resistivity_model))
             np.save(os.path.join(output_dir, 'coverage.npy'), 
                    np.array(coverage_filtered))
-            np.save(os.path.join(output_dir, 'cell_markers.npy'),
+            # Save original para_domain cell IDs for reference
+            np.save(os.path.join(output_dir, 'para_cell_ids.npy'),
                    np.array(para_domain.cellMarkers()))
+            # Save mesh markers for reference
+            np.save(os.path.join(output_dir, 'mesh_cell_markers.npy'),
+                   np.array(mesh_with_interface.cellMarkers()))
             mesh_with_interface.save(os.path.join(output_dir, 'constrained_mesh.bms'))
             
             self._log_execution("Results saved to disk")
@@ -254,13 +261,63 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
             res_std = np.std(resistivity_model)
             res_range = [np.min(resistivity_model), np.max(resistivity_model)]
             
+            # Map layer markers from mesh_with_interface to para_domain
+            # para_domain has unique cell IDs, not layer markers
+            # mesh_with_interface has layer markers (2=regolith, 3=fractured bedrock)
+            
+            mesh_markers = np.array(mesh_with_interface.cellMarkers())
+            self._log_execution(f"Mesh with interface: {mesh_with_interface.cellCount()} cells, markers: {np.unique(mesh_markers)}")
+            self._log_execution(f"Para domain: {para_domain.cellCount()} cells")
+            
+            # Map layer markers to para_domain cells based on cell center positions
+            para_layer_markers = np.zeros(para_domain.cellCount(), dtype=int)
+            
+            # Get cell centers
+            para_centers = para_domain.cellCenters()
+            mesh_centers = mesh_with_interface.cellCenters()
+            
+            self._log_execution(f"Mapping layer markers from mesh to para_domain...")
+            
+            # For each para_domain cell, find closest mesh cell and copy its marker
+            # Only copy markers 2 and 3 (layer markers), ignore 1 (background)
+            from scipy.spatial import cKDTree
+            tree = cKDTree(mesh_centers)
+            
+            for i in range(para_domain.cellCount()):
+                para_center = para_centers[i]
+                # Find closest mesh cell
+                dist, idx = tree.query(para_center)
+                mesh_marker = mesh_markers[idx]
+                
+                # Map mesh markers to para domain
+                # mesh marker 1 (background) -> para marker 2 (will be simplified later)
+                # mesh marker 2 (regolith) -> para marker 2
+                # mesh marker 3 (fractured bedrock) -> para marker 3
+                if mesh_marker == 3:
+                    para_layer_markers[i] = 3
+                else:
+                    para_layer_markers[i] = 2
+            
+            unique_para_markers = np.unique(para_layer_markers)
+            self._log_execution(f"Mapped para_domain layer markers: {unique_para_markers}")
+            self._log_execution(f"  Marker 2 (regolith): {np.sum(para_layer_markers == 2)} cells")
+            self._log_execution(f"  Marker 3 (bedrock): {np.sum(para_layer_markers == 3)} cells")
+            
+            # Save mapped layer markers
+            np.save(os.path.join(output_dir, 'cell_markers.npy'), para_layer_markers)
+            self._log_execution(f"Saved mapped layer markers to {output_dir}/cell_markers.npy")
+            
+            # Verify shapes match
+            if len(resistivity_model) != len(para_layer_markers):
+                self._log_execution(f"WARNING: Size mismatch! resistivity: {len(resistivity_model)}, markers: {len(para_layer_markers)}", level='WARN')
+            
             self.results = {
                 'status': 'success',
                 'resistivity_model': np.array(resistivity_model),
                 'mesh': para_domain,
                 'constrained_mesh': mesh_with_interface,
                 'coverage': coverage_filtered,
-                'cell_markers': np.array(para_domain.cellMarkers()),
+                'cell_markers': para_layer_markers,  # Mapped layer markers (2, 3) matching resistivity_model size
                 'interface_coords': interface_coords,
                 'seismic_results': seismic_results,  # Include seismic results if computed
                 'velocity_threshold': velocity_threshold,  # Store threshold used
@@ -273,8 +330,8 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
                     'mean_resistivity': res_mean,
                     'std_resistivity': res_std,
                     'resistivity_range': res_range,
-                    'num_cells': mesh_with_interface.cellCount(),
-                    'num_layers': len(np.unique(markers))
+                    'num_cells': para_domain.cellCount(),  # Use para_domain count (matches resistivity)
+                    'num_layers': len(np.unique(para_layer_markers))
                 },
                 'interpretation': interpretation,
                 'output_dir': output_dir

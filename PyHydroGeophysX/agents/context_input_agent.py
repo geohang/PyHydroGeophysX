@@ -122,6 +122,13 @@ class ContextInputAgent(BaseAgent):
             if params:
                 workflow_config['petrophysical_params'] = params
         
+        # Fallback: Extract electrode file using regex if LLM missed it
+        if not workflow_config.get('electrode_file'):
+            electrode_file = self._extract_electrode_file_regex(user_request)
+            if electrode_file:
+                workflow_config['electrode_file'] = electrode_file
+                print(f"  ⚠️  LLM did not extract electrode file. Using regex fallback: {electrode_file}")
+        
         # Validate and set defaults
         workflow_config = self._validate_and_complete_config(workflow_config)
         
@@ -185,6 +192,31 @@ class ContextInputAgent(BaseAgent):
                     pass
         
         return params
+    
+    def _extract_electrode_file_regex(self, text: str) -> str:
+        """
+        Fallback method to extract electrode file path using regex.
+        Looks for patterns like:
+        - "electrode file in path/to/electrodes.dat"
+        - "electrode file: electrodes.dat"
+        - "electrodes at path/electrodes.dat"
+        """
+        import re
+        
+        # Pattern 1: "electrode file in/at/: <path>"
+        patterns = [
+            r'electrode[s]?\s+file\s+(?:in|at|:)\s+([^\s,]+\.dat)',
+            r'electrode[s]?\s+(?:in|at|:)\s+([^\s,]+\.dat)',
+            r'using\s+electrode[s]?\s+file\s+([^\s,]+\.dat)',
+            r'with\s+electrode[s]?\s+file\s+([^\s,]+\.dat)',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                return match.group(1)
+        
+        return None
     
     def _extract_files_regex(self, text: str) -> list:
         """

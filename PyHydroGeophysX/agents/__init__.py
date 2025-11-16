@@ -14,6 +14,7 @@ a coordinator to execute the complete workflow.
 """
 
 from .agent_coordinator import AgentCoordinator
+from .base_agent import BaseAgent
 from .context_input_agent import ContextInputAgent
 from .ert_loader_agent import ERTLoaderAgent
 from .ert_inversion_agent import ERTInversionAgent
@@ -28,6 +29,7 @@ from .petrophysics_agent import PetrophysicsAgent
 
 __all__ = [
     'AgentCoordinator',
+    'BaseAgent',
     'ContextInputAgent',
     'ERTLoaderAgent',
     'ERTInversionAgent',
