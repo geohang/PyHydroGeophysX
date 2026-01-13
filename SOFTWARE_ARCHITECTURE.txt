@@ -1,37 +1,83 @@
-# PyHydroGeophysX Software Architecture for SoftwareX Paper
+# PyHydroGeophysX Software Architecture
 
-## Overview
+## 1. Architectural Overview
 
-PyHydroGeophysX is a modular Python platform for integrating hydrological models with geophysical measurements. The architecture enables bidirectional workflows between hydrological modeling and geophysical monitoring domains.
+PyHydroGeophysX employs a modular, layered architecture designed to facilitate bidirectional integration between hydrological models and geophysical measurements. The software is organized into seven functional modules distributed across four logical layers: Data I/O, Core Processing, Geophysical Modeling, and Integration (Figure X). This architecture enables flexible workflows while maintaining clear separation of concerns between different functional components.
 
-## Software Architecture
+The design philosophy prioritizes extensibility and interoperability. Each module exposes well-defined interfaces, allowing new hydrological model formats or geophysical methods to be incorporated without modifications to existing code. The platform leverages established open-source libraries—PyGIMLi for electrical and seismic methods, SimPEG for electromagnetic methods, FloPy for MODFLOW, and PFTools for ParFlow—ensuring compatibility with community standards and benefiting from ongoing development in these foundational packages.
 
-The package consists of **7 functional modules** organized around two main data flow directions:
+## 2. Module Architecture
+
+### 2.1 Data I/O Layer
+
+The Data I/O layer provides interfaces for importing data from both hydrological models and geophysical field instruments.
+
+**model_output**: This module handles the extraction of state variables from numerical hydrological models. For MODFLOW simulations, the module interfaces with FloPy to read binary output files containing head distributions, which are subsequently converted to water content and saturation fields using user-specified storage parameters. For ParFlow simulations, the module utilizes PFTools to access pressure and saturation outputs from the distributed binary file format. The module implements an abstract base class (`HydroModelOutput`) that defines a consistent interface for loading single timesteps or time ranges, enabling straightforward extension to additional hydrological modeling platforms.
+
+**data_processing**: This module manages the import and quality control of geophysical field data. The current implementation focuses on electrical resistivity tomography (ERT) data, supporting multiple instrument formats including Syscal, ABEM, Sting, and E4D through integration with the ResIPy library. The module provides automated quality control procedures including reciprocal error analysis, contact resistance checking, and outlier detection. Processed data are exported in standardized formats compatible with the inversion module.
+
+### 2.2 Core Processing Layer
+
+The Core Processing layer provides fundamental computational utilities required by both forward and inverse modeling workflows.
+
+**core**: This module implements spatial operations including mesh generation, coordinate interpolation, and geostatistical analysis. Two-dimensional mesh generation supports the creation of unstructured triangular meshes with topographic boundaries and internal layer constraints. Three-dimensional mesh generation utilizes GMSH for tetrahedral discretization with electrode positioning. The interpolation submodule provides tools for mapping hydrological model outputs (typically on structured grids) onto geophysical meshes (typically unstructured). For three-dimensional applications, the module includes kriging functionality based on GSTools for spatial estimation of properties between measurement profiles.
+
+**petrophysics**: This module implements constitutive relationships that transform between hydrological state variables and geophysical properties. For electrical methods, the module provides the Waxman-Smits model relating water content, porosity, and pore fluid conductivity to bulk electrical resistivity, with provisions for surface conductivity effects in clay-bearing formations. For seismic methods, the module implements rock physics models including the Voigt-Reuss-Hill averaging scheme for mineral mixtures, the Differential Effective Medium (DEM) theory for cracked media, and the Hertz-Mindlin contact theory with Hashin-Shtrikman bounds for granular materials. These petrophysical transforms operate bidirectionally, supporting both forward prediction of geophysical responses from hydrological states and inverse estimation of hydrological properties from geophysical measurements.
+
+**solvers**: This module provides linear algebra solvers optimized for geophysical inverse problems. Implemented algorithms include Conjugate Gradient Least Squares (CGLS), LSQR, and regularized variants (RRLS). The module supports optional GPU acceleration through CuPy for large-scale three-dimensional problems, with automatic fallback to CPU computation when GPU resources are unavailable.
+
+### 2.3 Geophysical Modeling Layer
+
+The Geophysical Modeling layer implements forward simulation and inverse estimation for multiple geophysical methods.
+
+**forward**: This module generates synthetic geophysical data from physical property distributions. For electrical resistivity tomography, the module wraps PyGIMLi's finite element solver to compute apparent resistivity responses for arbitrary electrode configurations on two-dimensional or three-dimensional meshes. For seismic refraction tomography, the module implements eikonal-based travel time computation. For time-domain electromagnetic (TDEM) methods, the module interfaces with SimPEG to simulate transient responses for layered Earth models, enabling integration of airborne or ground-based electromagnetic data with hydrological simulations.
+
+**inversion**: This module recovers subsurface property distributions from geophysical observations. The ERT inversion implements Occam-style smoothness-constrained inversion with options for L1 or L2 model regularization. Time-lapse inversion extends the single-time framework with temporal regularization, enforcing smoothness of property changes between successive measurement times while allowing for sharp spatial boundaries. A windowed time-lapse algorithm enables processing of long monitoring sequences by inverting overlapping temporal windows, reducing memory requirements while maintaining temporal continuity. Structure-constrained inversion incorporates velocity interfaces derived from seismic tomography as internal mesh boundaries, allowing discontinuous resistivity variations across lithological contacts. TDEM inversion utilizes SimPEG's optimization framework to recover layered conductivity profiles.
+
+### 2.4 Integration Layer
+
+The Integration layer provides high-level workflows that combine multiple modules for complete hydrological-geophysical analysis.
+
+**Hydro_modular**: This module implements forward workflows from hydrological models to synthetic geophysical data. Given hydrological simulation outputs, the module chains petrophysical transformation with geophysical forward modeling to predict observable geophysical responses. This capability supports survey design optimization, sensitivity analysis, and validation of geophysical monitoring strategies against process-based hydrological predictions.
+
+**Geophy_modular**: This module implements inverse workflows from geophysical observations to hydrological property estimates. Key functionality includes extraction of structural interfaces from seismic velocity tomograms for constraining ERT inversion, conversion of inverted resistivity distributions to water content with uncertainty quantification through Monte Carlo sampling of petrophysical parameters, and joint interpretation of multiple geophysical datasets. The Monte Carlo framework propagates uncertainty in petrophysical parameters (e.g., cementation exponent, surface conductivity) to derived hydrological quantities, providing confidence bounds on water content estimates.
+
+## 3. Data Flow
+
+The architecture supports three primary workflow patterns:
+
+**Forward Modeling Workflow (HM → GM)**: Hydrological model outputs are loaded through `model_output`, interpolated to geophysical mesh coordinates via `core`, transformed to geophysical properties using `petrophysics`, and passed to `forward` to generate synthetic observations. This workflow enables prediction of geophysical responses from hydrological simulations.
+
+**Inverse Modeling Workflow (GM → HM)**: Field geophysical data are imported through `data_processing`, inverted using `inversion` with meshes and regularization from `core` and numerical solutions from `solvers`, and transformed to hydrological properties via `petrophysics` within `Geophy_modular`. This workflow enables estimation of hydrological properties from geophysical measurements.
+
+**Coupled Analysis Workflow**: Forward and inverse capabilities are combined for model validation, data assimilation, or uncertainty quantification. Hydrological predictions are compared against inverted geophysical observations, or synthetic studies assess the resolution and uncertainty of geophysical monitoring under realistic heterogeneity.
+
+## 4. Software Architecture Diagram
 
 ```
                     ┌─────────────────────────────────────────────────────────────┐
                     │                      PyHydroGeophysX                         │
                     │                                                              │
   HYDROLOGICAL      │  ┌─────────────────────────────────────────────────────┐    │      GEOPHYSICAL
-     MODELS         │  │                     MODEL I/O                        │    │      FIELD DATA
+     MODELS         │  │                   DATA I/O LAYER                     │    │      FIELD DATA
                     │  │                                                      │    │
    ┌─────────┐      │  │   ┌──────────────┐          ┌──────────────┐        │    │      ┌─────────┐
-   │ MODFLOW │ ────▶│  │   │ model_output │          │data_processing│  ◀────│────│───── │ERT Data │
-   │ ParFlow │      │  │   │              │          │               │        │    │      │(ResIPy) │
-   └─────────┘      │  │   │ Water Content│          │ Load & QC     │        │    │      └─────────┘
-                    │  │   │ Saturation   │          │ Export        │        │    │
+   │ MODFLOW │─────▶│  │   │ model_output │          │data_processing│ ◀─────│────│───── │ERT Data │
+   │ ParFlow │      │  │   │              │          │               │        │    │      │         │
+   └─────────┘      │  │   │ Water Content│          │ Loading & QC  │        │    │      └─────────┘
+                    │  │   │ Saturation   │          │ Format Export │        │    │
                     │  │   │ Porosity     │          │               │        │    │
                     │  │   └──────┬───────┘          └───────┬───────┘        │    │
                     │  └──────────┼──────────────────────────┼────────────────┘    │
                     │             │                          │                      │
                     │             ▼                          ▼                      │
                     │  ┌──────────────────────────────────────────────────────┐    │
-                    │  │                        CORE                           │    │
+                    │  │                 CORE PROCESSING LAYER                 │    │
                     │  │                                                       │    │
                     │  │   ┌────────────┐  ┌────────────┐  ┌────────────┐     │    │
                     │  │   │    core    │  │petrophysics│  │  solvers   │     │    │
                     │  │   │            │  │            │  │            │     │    │
-                    │  │   │ Mesh (2D/3D)│ │ Resistivity│  │ CGLS, LSQR │     │    │
+                    │  │   │ Mesh 2D/3D │  │ Resistivity│  │ CGLS, LSQR │     │    │
                     │  │   │Interpolation│ │ Velocity   │  │ GPU Support│     │    │
                     │  │   │ Kriging    │  │ Models     │  │            │     │    │
                     │  │   └────────────┘  └────────────┘  └────────────┘     │    │
@@ -39,25 +85,28 @@ The package consists of **7 functional modules** organized around two main data 
                     │                             │                                 │
                     │             ┌───────────────┴───────────────┐                │
                     │             ▼                               ▼                 │
-                    │  ┌─────────────────────┐      ┌─────────────────────┐        │
-                    │  │       forward       │      │      inversion      │        │
-                    │  │                     │      │                     │        │
-                    │  │  ERT Forward        │      │  ERT Inversion      │        │
-                    │  │  Seismic Forward    │◀────▶│  Time-Lapse         │        │
-                    │  │  TDEM Forward       │      │  TDEM Inversion     │        │
-                    │  │                     │      │                     │        │
-                    │  └─────────────────────┘      └─────────────────────┘        │
+                    │  ┌──────────────────────────────────────────────────────┐    │
+                    │  │              GEOPHYSICAL MODELING LAYER               │    │
+                    │  │                                                       │    │
+                    │  │   ┌───────────────────┐    ┌───────────────────┐     │    │
+                    │  │   │      forward      │    │     inversion     │     │    │
+                    │  │   │                   │    │                   │     │    │
+                    │  │   │  ERT Forward      │    │  ERT Inversion    │     │    │
+                    │  │   │  Seismic Forward  │◀──▶│  Time-Lapse       │     │    │
+                    │  │   │  TDEM Forward     │    │  TDEM Inversion   │     │    │
+                    │  │   └───────────────────┘    └───────────────────┘     │    │
+                    │  └──────────────────────────────────────────────────────┘    │
                     │                                                              │
                     │  ┌──────────────────────────────────────────────────────┐    │
-                    │  │                   INTEGRATION                         │    │
+                    │  │                   INTEGRATION LAYER                   │    │
                     │  │                                                       │    │
                     │  │   ┌──────────────┐          ┌──────────────┐          │    │
                     │  │   │Hydro_modular │          │Geophy_modular│          │    │
                     │  │   │              │          │              │          │    │
-                    │  │   │ Hydro → ERT  │          │ ERT → Water  │          │    │
-                    │  │   │ Hydro → SRT  │          │   Content    │          │    │
-                    │  │   │              │          │ Structure    │          │    │
-                    │  │   │              │          │ Integration  │          │    │
+                    │  │   │  HM → GM     │          │  GM → HM     │          │    │
+                    │  │   │  Workflows   │          │  Workflows   │          │    │
+                    │  │   │              │          │  Monte Carlo │          │    │
+                    │  │   │              │          │  UQ          │          │    │
                     │  │   └──────────────┘          └──────────────┘          │    │
                     │  └──────────────────────────────────────────────────────┘    │
                     │                                                              │
@@ -66,56 +115,34 @@ The package consists of **7 functional modules** organized around two main data 
                          ┌──────────────────────────┴──────────────────────────┐
                          ▼                          ▼                          ▼
                 ┌───────────────┐          ┌───────────────┐          ┌───────────────┐
-                │ FloPy/PFTools │          │   PyGIMLi     │          │    SimPEG     │
-                │(MODFLOW/ParFlow)│         │  (ERT, SRT)   │          │    (TDEM)     │
+                │ FloPy/PFTools │          │    PyGIMLi    │          │    SimPEG     │
+                │(MODFLOW/ParFlow)│        │  (ERT, SRT)   │          │    (TDEM)     │
                 └───────────────┘          └───────────────┘          └───────────────┘
+                         
+                                      EXTERNAL DEPENDENCIES
 ```
 
-## Module Descriptions
+## 5. External Dependencies
 
-| Module | Purpose | Key Capabilities |
-|--------|---------|------------------|
-| **model_output** | Hydrological model interface | MODFLOW/ParFlow water content, saturation, porosity |
-| **data_processing** | Field data handling | ERT data loading, quality control, format export |
-| **core** | Spatial utilities | 2D/3D mesh creation, interpolation, kriging |
-| **petrophysics** | Property transformation | Resistivity models (Waxman-Smits), velocity models (DEM, Hertz-Mindlin) |
-| **forward** | Forward simulation | ERT, Seismic, TDEM synthetic data generation |
-| **inversion** | Inverse modeling | Single-time, time-lapse, structure-constrained inversion |
-| **solvers** | Numerical computation | Linear solvers with optional GPU acceleration |
-| **Hydro_modular** | HM → GM workflow | Direct hydrological to geophysical conversion |
-| **Geophy_modular** | GM → HM workflow | Geophysical interpretation, structure integration, uncertainty quantification |
+| Library | Version | Role in PyHydroGeophysX |
+|---------|---------|-------------------------|
+| PyGIMLi | ≥1.3 | Finite element ERT/SRT forward modeling and inversion |
+| SimPEG | ≥0.18 | TDEM forward modeling and inversion |
+| FloPy | ≥3.3 | MODFLOW binary output file reading |
+| PFTools | ≥1.0 | ParFlow output file reading |
+| NumPy | ≥1.20 | Array operations and numerical computing |
+| SciPy | ≥1.7 | Optimization, interpolation, linear algebra |
+| Matplotlib | ≥3.4 | Visualization |
+| ResIPy | ≥3.0 | ERT field data import (optional) |
+| CuPy | ≥10.0 | GPU-accelerated linear algebra (optional) |
+| GSTools | ≥1.3 | Geostatistical kriging (optional) |
 
-## Data Flow Patterns
+## 6. Design Principles
 
-**Forward Direction (HM → GM):**
-```
-Hydro Model → model_output → petrophysics → forward → Synthetic Geophysical Data
-```
+**Modularity**: Each module operates independently with well-defined inputs and outputs, facilitating unit testing, maintenance, and selective usage of package components.
 
-**Inverse Direction (GM → HM):**
-```
-Field Data → data_processing → core (mesh) → inversion → Geophy_modular → Hydrological Properties
-```
+**Extensibility**: Abstract base classes define interfaces for hydrological model readers (`HydroModelOutput`), inversion algorithms (`InversionBase`), and petrophysical models (`BaseVelocityModel`), enabling extension to new data sources or methodologies without modifying core code.
 
-**Coupled Workflow:**
-```
-Hydro Model ↔ petrophysics ↔ forward ↔ inversion ↔ Comparison/Validation
-```
+**Interoperability**: By building upon established community libraries rather than reimplementing fundamental algorithms, PyHydroGeophysX maintains compatibility with existing workflows and benefits from ongoing improvements in foundational packages.
 
-## External Dependencies
-
-| Library | Role |
-|---------|------|
-| PyGIMLi | ERT/Seismic forward modeling and inversion |
-| SimPEG | TDEM forward modeling and inversion |
-| FloPy | MODFLOW model output interface |
-| PFTools | ParFlow model output interface |
-| NumPy/SciPy | Numerical operations |
-| ResIPy | Field ERT data loading (optional) |
-| CuPy | GPU acceleration (optional) |
-
-## Design Principles
-
-- **Modular**: Independent modules with clear interfaces
-- **Extensible**: New hydrological models or geophysical methods can be added
-- **Interoperable**: Built on established open-source geophysical libraries
+**Reproducibility**: Result classes (`InversionResult`, `TimeLapseInversionResult`) encapsulate complete outputs including models, meshes, convergence history, and metadata, supporting serialization for archival and reproducible analysis.
