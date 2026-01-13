@@ -602,6 +602,20 @@ Additionally, please cite the underlying libraries you use:
 }
 ```
 
+**For electromagnetic modeling (SimPEG):**
+```bibtex
+@article{cockett2015simpeg,
+  title={SimPEG: An open source framework for simulation and gradient based parameter estimation in geophysical applications},
+  author={Cockett, Rowan and Kang, Seogi and Heagy, Lindsey J and Pidlisecky, Adam and Oldenburg, Douglas W},
+  journal={Computers \& Geosciences},
+  volume={85},
+  pages={142--154},
+  year={2015},
+  publisher={Elsevier},
+  doi={10.1016/j.cageo.2015.09.015}
+}
+```
+
 ## 📄 License
 
 This project is licensed under the Apache-2.0 license - see the LICENSE file for details.
@@ -610,6 +624,7 @@ This project is licensed under the Apache-2.0 license - see the LICENSE file for
 
 - **RESIPY** developers (Blanchy, Guillaume and Saneiyan, Sina and Boyd, Jimmy and McLachlan, Paul and Binley, Andrew and contributors) for the excellent ERT data processing library that powers our field data workflows
 - **pyGIMLi** team (Carsten Rücker, Thomas Günther, Florian Wagner, and contributors) for the outstanding geophysical modeling and inversion framework  
+- **SimPEG** team (Rowan Cockett, Seogi Kang, Lindsey Heagy, Adam Pidlisecky, Douglas Oldenburg, and contributors) for the powerful simulation and parameter estimation framework enabling TDEM forward modeling and inversion
 - **ParFlow** development team (Reed Maxwell, Laura Condon, Stefan Kollet, and contributors) for the integrated surface-subsurface hydrologic model
 - **MODFLOW** community (USGS and contributors) for the groundwater modeling standard
 - All open-source contributors and users providing valuable feedback  
