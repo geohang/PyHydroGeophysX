@@ -14,6 +14,13 @@ from PyHydroGeophysX.inversion.ert_inversion import (
     ERTInversion
 )
 
+# Import TDEM inversion classes
+from PyHydroGeophysX.inversion.tdem_inversion import (
+    TDEMInversion,
+    TDEMInversionResult,
+    run_tdem_inversion
+)
+
 # Import time-lapse inversion classes
 from PyHydroGeophysX.inversion.time_lapse import (
     TimeLapseERTInversion
@@ -32,6 +39,11 @@ __all__ = [
     
     # ERT inversion
     'ERTInversion',
+    
+    # TDEM inversion
+    'TDEMInversion',
+    'TDEMInversionResult',
+    'run_tdem_inversion',
     
     # Time-lapse inversion
     'TimeLapseERTInversion',

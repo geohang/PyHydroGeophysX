@@ -283,10 +283,12 @@ def load_ert_resipy(
             survey.elec = elec
 
     # Step 3: Basic QC filters on raw data
-    if 'i' in df.columns:
-        df = df[df['i'].abs() > 0]
-    if 'u' in df.columns:
-        df = df[df['u'].abs() > 0]
+    # Skip i/u filters for BERT format - these columns contain zeros in BERT/PyGIMLi format
+    if instrument != 'BERT':
+        if 'i' in df.columns:
+            df = df[df['i'].abs() > 0]
+        if 'u' in df.columns:
+            df = df[df['u'].abs() > 0]
     df = df.drop_duplicates(subset=['a','b','m','n'])
     
     initial_count = len(df)
@@ -398,32 +400,39 @@ def load_ert_resipy(
     i_col = next((c for c in ['i', 'I', 'current'] if c in df.columns), None)
     v_col = next((c for c in ['u', 'U', 'v', 'V', 'voltage', 'dV'] if c in df.columns), None)
     r_col = next((c for c in ['resist', 'R', 'r', 'resistance'] if c in df.columns), None)
+    # BERT/PyGIMLi format uses 'rhoa' for apparent resistivity directly
+    rhoa_col = next((c for c in ['rhoa', 'rhoA', 'Rhoa', 'app_res'] if c in df.columns), None)
     
     for idx, row in df.iterrows():
-        # Get raw resistance (V/I from instrument)
-        if r_col and r_col in row and np.isfinite(row[r_col]):
-            resistance = float(row[r_col])
+        app_resistivity = None
+        k_value = 1.0
+        
+        # For BERT format, rhoa column contains apparent resistivity directly
+        if rhoa_col and rhoa_col in row and np.isfinite(row[rhoa_col]):
+            app_resistivity = float(row[rhoa_col])
+            # If K column exists, use it
+            if 'k' in row and np.isfinite(row['k']):
+                k_value = float(row['k'])
+        # Get raw resistance (V/I from instrument) for other formats
+        elif r_col and r_col in row and np.isfinite(row[r_col]):
+            app_resistivity = float(row[r_col])
         elif v_col and i_col and v_col in row and i_col in row:
             # Calculate from V and I if resistance column not available
             if row[i_col] != 0:
-                resistance = float(row[v_col] / row[i_col])
+                app_resistivity = float(row[v_col] / row[i_col])
             else:
                 continue  # Skip if current is zero
-        else:
-            continue  # Skip if no resistance data
         
-        # For initial export, set app_res = resistance (k=1 placeholder)
-        # PyGIMLi will compute actual K and rhoa later
-        app_resistivity = resistance
-        k_value = 1.0
+        if app_resistivity is None:
+            continue  # Skip if no resistance/rhoa data
         
         observations.append(Observation(
             quad=Quadruplet(int(row['a']), int(row['b']), int(row['m']), int(row['n'])),
-            app_res=app_resistivity,  # Raw resistance (k=1)
+            app_res=app_resistivity,  # Apparent resistivity (or raw resistance with k=1)
             dV=float(row[v_col]) if v_col and v_col in row and np.isfinite(row[v_col]) else None,
             I=float(row[i_col]) if i_col and i_col in row and np.isfinite(row[i_col]) else None,
             rel_err=float(rel_err[idx_to_pos[idx]]),
-            K=k_value,  # Placeholder k=1
+            K=k_value,  # Geometric factor if available
             fid=str(row['id']) if 'id' in row else str(idx)
         ))
 
@@ -507,10 +516,11 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
     - fmt='resipy': return the RESIPY project directory for running prj.start().
     """
     # Handle paths starting with / on Windows by converting to relative path
+    outdir_str = str(outdir)  # Convert to string first
     outdir_path = Path(outdir)
-    if outdir.startswith('/') and not outdir_path.is_absolute():
+    if outdir_str.startswith('/') and not outdir_path.is_absolute():
         # Remove leading / and treat as relative to cwd
-        outdir_path = Path.cwd() / outdir.lstrip('/')
+        outdir_path = Path.cwd() / outdir_str.lstrip('/')
     
     outdir_path.mkdir(parents=True, exist_ok=True)
     
@@ -529,41 +539,62 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             # Write number of measurements
             f.write(f"{len(ert.observations)}\n")
             
+            # Check if error data exists (use rel_err attribute)
+            has_error_data = any(obs.rel_err is not None and obs.rel_err > 0 for obs in ert.observations)
+            
             # Write measurement data header (matching reference format)
-            f.write("# a b m n r rhoa k\n")
+            if has_error_data:
+                f.write("# a b m n r rhoa k err\n")
+            else:
+                f.write("# a b m n r rhoa k\n")
             
             # Write measurement data
-            # Format: a b m n r rhoa k
+            # Format: a b m n r rhoa k [err]
             # r = raw resistance (V/I from instrument)
-            # rhoa = apparent resistivity (r * K, but we set K=1 for PyGIMLi to recompute)
-            # k = 1 (placeholder, PyGIMLi will compute actual geometric factors)
+            # rhoa = apparent resistivity (r * K)
+            # k = geometric factor
+            # err = relative error (optional)
             for obs in ert.observations:
+                # Determine if we have true apparent resistivity or raw resistance
+                # For BERT/PyGIMLi format: obs.K > 1 means app_res is already apparent resistivity
+                # For DAS-1 and others: obs.K == 1 means app_res is raw resistance
+                
                 # Extract raw resistance from voltage and current if available
                 if obs.I is not None and obs.dV is not None and obs.I != 0:
                     R = abs(obs.dV / obs.I)
+                    rhoa = R  # Will be recomputed below
+                    k = 1  # PyGIMLi will compute K
                 elif obs.app_res is not None:
-                    # Fall back to stored apparent resistivity (which is raw resistance when k=1)
-                    R = obs.app_res
+                    # Check if K was stored (BERT format has K > 1)
+                    if obs.K is not None and obs.K > 1:
+                        # app_res is already apparent resistivity (rhoa = R * K)
+                        # Compute R by dividing by K
+                        R = obs.app_res / obs.K
+                        rhoa = obs.app_res  # Keep original rhoa
+                        k = obs.K  # Keep original K
+                    else:
+                        # app_res is raw resistance (K was 1 or not stored)
+                        R = obs.app_res
+                        rhoa = R  # Will be recomputed by PyGIMLi
+                        k = 1  # PyGIMLi will compute K
                 else:
                     # Skip measurements without valid data
                     continue
                 
-                # For export with k=1, set rhoa = r
-                # (PyGIMLi will recompute K from electrode geometry and compute new rhoa)
-                rhoa = R
-                
-                # Always set k = 1 (matching reference format)
-                # PyGIMLi will compute actual K from electrode geometry
-                k = 1
-                
-                # Format: a b m n r rhoa k
+                # Format: a b m n r rhoa k [err]
+                # Note: obs.quad uses 1-based electrode indices (matching PyGIMLi format)
                 f.write(f"{obs.quad.A} {obs.quad.B} {obs.quad.M} {obs.quad.N} ")
-                f.write(f"{R} {rhoa} {k}\n")
+                if has_error_data:
+                    err_val = obs.rel_err if (obs.rel_err is not None and obs.rel_err > 0) else 0.05  # Default 5% error
+                    f.write(f"{R} {rhoa} {k} {err_val}\n")
+                else:
+                    f.write(f"{R} {rhoa} {k}\n")
         
-        print(f"   Exported data with k=1 to {path}")
+        print(f"   Exported data to {path}")
         
-        # Step 4: Use PyGIMLi to compute K with correct topography and recompute rhoa
-        print("   Recomputing geometric factors with PyGIMLi...")
+        # Step 4: Load and validate the exported data
+        # Only recompute K if it was not already provided (k=1 placeholder)
+        print("   Validating geometric factors...")
         try:
             import pygimli as pg
             import pygimli.physics.ert as ert_pg
@@ -571,9 +602,23 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             # Load the file we just created
             data = ert_pg.load(str(path))
             
-            # Compute geometric factors with topography using PyGIMLi
-            # This respects electrode z-coordinates (topography)
-            data['k'] = ert_pg.createGeometricFactors(data, numerical=True)
+            # Check if K was already provided (not all k=1)
+            k_vals = np.array(data['k'])
+            has_valid_k = np.any(k_vals > 1.5)  # If any K > 1.5, assume K was provided
+            
+            if has_valid_k:
+                print(f"   K factors already provided (range: [{k_vals.min():.1f}, {k_vals.max():.1f}])")
+                # No need to recompute - just validate
+            else:
+                # Compute geometric factors with topography using PyGIMLi
+                print("   Recomputing geometric factors with PyGIMLi...")
+                data['k'] = ert_pg.createGeometricFactors(data, numerical=True)
+                
+                # Recompute apparent resistivity with correct K
+                # rhoa = R * K
+                data['rhoa'] = data['r'] * data['k']
+                k_vals = np.array(data['k'])
+                print(f"   Computed K range: [{k_vals.min():.1f}, {k_vals.max():.1f}]")
             
             # Filter by geometric factor threshold (for DAS data)
             k_threshold = 1000  # max geometric factor, m
@@ -631,11 +676,21 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
                 # Write number of measurements
                 f.write(f"{data.size()}\n")
                 
-                # Write measurement data with computed K
-                f.write("# a b m n r rhoa k\n")
+                # Write measurement data with computed K and error
+                # Check if error data exists
+                has_err = 'err' in data.dataMap() and len(data['err']) == data.size()
+                if has_err:
+                    f.write("# a b m n r rhoa k err\n")
+                else:
+                    f.write("# a b m n r rhoa k\n")
+                    
                 for i in range(data.size()):
-                    f.write(f"{int(data['a'][i])} {int(data['b'][i])} {int(data['m'][i])} {int(data['n'][i])} ")
-                    f.write(f"{data['r'][i]} {data['rhoa'][i]} {data['k'][i]}\n")
+                    # PyGIMLi uses 0-based indices internally, but file format uses 1-based
+                    f.write(f"{int(data['a'][i]) + 1} {int(data['b'][i]) + 1} {int(data['m'][i]) + 1} {int(data['n'][i]) + 1} ")
+                    if has_err:
+                        f.write(f"{data['r'][i]} {data['rhoa'][i]} {data['k'][i]} {data['err'][i]}\n")
+                    else:
+                        f.write(f"{data['r'][i]} {data['rhoa'][i]} {data['k'][i]}\n")
             
             # Replace original file with updated version
             temp_path.replace(path)
