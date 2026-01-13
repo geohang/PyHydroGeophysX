@@ -1,0 +1,161 @@
+# PyHydroGeophysX Software Architecture for SoftwareX Paper
+
+## Overview
+
+PyHydroGeophysX is a modular Python framework designed to bridge hydrological models with geophysical measurements. The software follows a layered architecture with clear separation of concerns, enabling seamless integration between hydrological model outputs and geophysical forward modeling, inversion, and interpretation workflows.
+
+## Architecture Diagram Description
+
+The architecture consists of 8 main modules organized in 4 functional layers:
+
+### Layer 1: Data Input Layer
+├── **Model Output Module** (model_output/)
+│   - Base class: HydroModelOutput (abstract)
+│   - Implementations: MODFLOWWaterContent, MODFLOWPorosity, ParflowSaturation, ParflowPorosity
+│   - Purpose: Load and process hydrological model outputs (water content, saturation, porosity)
+│   - External dependencies: MODFLOW binary files, ParFlow outputs
+│
+├── **Data Processing Module** (data_processing/)
+│   - Functions: load_ert_resipy(), qc_and_visualize(), export_for_inversion()
+│   - Data structures: StandardERT, Electrode, Observation, Quadruplet
+│   - Purpose: Load, quality control, and standardize field ERT data
+│   - External dependency: ResIPy library (optional)
+
+### Layer 2: Core Processing Layer
+├── **Core Utilities Module** (core/)
+│   - Interpolation: ProfileInterpolator, interpolate_to_profile(), interpolate_to_mesh()
+│   - Mesh creation: MeshCreator, create_mesh_from_layers(), Mesh3DCreator
+│   - 3D Kriging: krige_seismic_velocity_3d(), estimate_directional_variograms()
+│   - Purpose: Spatial interpolation, mesh generation, and coordinate transformations
+│   - External dependencies: PyGIMLi (mesh), GSTools (kriging), GMSH (3D mesh)
+│
+├── **Petrophysics Module** (petrophysics/)
+│   - Resistivity models: water_content_to_resistivity(), resistivity_to_saturation(), WS_Model()
+│   - Velocity models: VRHModel, DEMModel, HertzMindlinModel, BrieModel
+│   - Purpose: Petrophysical relationships converting between hydrological and geophysical properties
+│   - Key models: Waxman-Smits, Archie, Voigt-Reuss-Hill, Differential Effective Medium
+
+### Layer 3: Geophysical Modeling Layer
+├── **Forward Modeling Module** (forward/)
+│   - ERT Forward: ERTForwardModeling, ertforward(), ertforandjac()
+│   - SRT Forward: SeismicForwardModeling
+│   - TDEM Forward: TDEMForwardModeling, TDEMSurveyConfig
+│   - Purpose: Generate synthetic geophysical data from physical property models
+│   - External dependencies: PyGIMLi (ERT/SRT), SimPEG (TDEM)
+│
+├── **Inversion Module** (inversion/)
+│   - Base classes: InversionBase, InversionResult, TimeLapseInversionResult
+│   - ERT Inversion: ERTInversion
+│   - Time-lapse: TimeLapseERTInversion, WindowedTimeLapseERTInversion
+│   - TDEM Inversion: TDEMInversion
+│   - Purpose: Recover subsurface properties from geophysical measurements
+│   - Features: Spatial regularization, temporal regularization, GPU acceleration
+│
+├── **Solvers Module** (solvers/)
+│   - Linear solvers: CGLSSolver, LSQRSolver, RRLSSolver, RRLSQRSolver
+│   - Regularization: TikhonvRegularization, IterativeRefinement
+│   - Purpose: Numerical solution of inverse problems
+│   - Features: CPU and GPU (CuPy) implementations
+
+### Layer 4: Integration Layer
+├── **Hydro-Modular** (Hydro_modular/)
+│   - hydro_to_ert(): Convert hydrological models to ERT forward models
+│   - hydro_to_srt(): Convert hydrological models to SRT forward models
+│   - Purpose: Direct transformation from hydrological to geophysical domains
+│
+├── **Geophy-Modular** (Geophy_modular/)
+│   - Seismic processing: process_seismic_tomography(), extract_velocity_structure()
+│   - Structure integration: create_ert_mesh_with_structure(), integrate_velocity_interface()
+│   - ERT to WC: ERTtoWC (Monte Carlo uncertainty quantification)
+│   - Purpose: Cross-modal geophysical data integration and interpretation
+
+## Data Flow
+
+1. **Hydrological Input Path:**
+   Model Output → Petrophysics → Forward Modeling → Synthetic Data
+   
+2. **Field Data Input Path:**
+   Data Processing → Core (Mesh) → Inversion → Recovered Model
+   
+3. **Integrated Workflow:**
+   Hydro Model → Petrophysics → Forward → Add Noise → Inversion → Compare with Truth
+   
+4. **Joint Interpretation:**
+   Seismic Data → Velocity Structure → Constrained ERT Mesh → ERT Inversion → Water Content
+
+## Key Design Patterns
+
+1. **Abstract Base Classes:** HydroModelOutput, InversionBase, BaseVelocityModel define interfaces
+2. **Strategy Pattern:** Multiple petrophysical models (Archie, Waxman-Smits) interchangeable
+3. **Factory Pattern:** MeshCreator, Mesh3DCreator for flexible mesh generation
+4. **Result Objects:** InversionResult, TimeLapseInversionResult encapsulate outputs with save/load
+
+## External Dependencies
+
+- **PyGIMLi:** Core geophysical modeling and inversion framework
+- **SimPEG:** TDEM forward and inverse modeling
+- **NumPy/SciPy:** Numerical computations
+- **ResIPy:** Field ERT data loading (optional)
+- **CuPy:** GPU acceleration (optional)
+- **GSTools/PyVista:** 3D kriging and visualization (optional)
+
+## Module Interaction Summary
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              PyHydroGeophysX                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐                                         │
+│  │ Model Output │  │    Data      │  ← DATA INPUT LAYER                     │
+│  │   (MODFLOW,  │  │  Processing  │                                         │
+│  │   ParFlow)   │  │  (ERT Field) │                                         │
+│  └──────┬───────┘  └──────┬───────┘                                         │
+│         │                 │                                                  │
+│         ▼                 ▼                                                  │
+│  ┌──────────────────────────────────────────┐                               │
+│  │              Core Utilities               │ ← CORE PROCESSING LAYER      │
+│  │  (Interpolation, Mesh, Kriging)          │                               │
+│  └──────────────────┬───────────────────────┘                               │
+│                     │                                                        │
+│         ┌───────────┴───────────┐                                           │
+│         ▼                       ▼                                            │
+│  ┌──────────────┐        ┌──────────────┐                                   │
+│  │ Petrophysics │        │   Solvers    │                                   │
+│  │ (Resistivity,│        │ (CGLS, LSQR, │                                   │
+│  │  Velocity)   │        │  GPU Accel.) │                                   │
+│  └──────┬───────┘        └──────┬───────┘                                   │
+│         │                       │                                            │
+│         ▼                       ▼                                            │
+│  ┌──────────────┐        ┌──────────────┐                                   │
+│  │   Forward    │───────▶│  Inversion   │ ← GEOPHYSICAL MODELING LAYER      │
+│  │  (ERT, SRT,  │        │  (ERT, TDEM, │                                   │
+│  │   TDEM)      │        │  Time-Lapse) │                                   │
+│  └──────┬───────┘        └──────┬───────┘                                   │
+│         │                       │                                            │
+│         ▼                       ▼                                            │
+│  ┌─────────────────────────────────────────┐                                │
+│  │          Integration Modules             │ ← INTEGRATION LAYER           │
+│  │  ┌───────────────┐  ┌─────────────────┐ │                                │
+│  │  │ Hydro_modular │  │  Geophy_modular │ │                                │
+│  │  │ (hydro→ERT/   │  │ (Structure      │ │                                │
+│  │  │  SRT)         │  │  Integration,   │ │                                │
+│  │  │               │  │  ERT→WC, UQ)    │ │                                │
+│  │  └───────────────┘  └─────────────────┘ │                                │
+│  └─────────────────────────────────────────┘                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                              EXTERNAL DEPENDENCIES
+          ┌───────────────────────────────────────────────────┐
+          │  PyGIMLi  │  SimPEG  │  NumPy/SciPy  │  ResIPy   │
+          │  (ERT/SRT)│  (TDEM)  │  (Numerics)   │  (Data)   │
+          └───────────────────────────────────────────────────┘
+
+## Supported Workflows
+
+1. **Hydrological Model to Synthetic ERT:** MODFLOW/ParFlow → Waxman-Smits → ERT Forward
+2. **Field ERT Processing:** Load Data → QC → Export → Inversion → Water Content
+3. **Time-Lapse Monitoring:** Multi-timestep ERT → Temporal Regularization → Dynamic Changes
+4. **Structure-Constrained Inversion:** Seismic → Velocity Interface → Constrained ERT Mesh
+5. **Uncertainty Quantification:** Monte Carlo Petrophysics → Statistical Water Content Estimates
+6. **3D ERT Modeling:** 3D Mesh Creation → MODFLOW Integration → 3D Forward/Inverse
+7. **TDEM Integration:** Layered Earth → TDEM Forward → Inversion Comparison
+
