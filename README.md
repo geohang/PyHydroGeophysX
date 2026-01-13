@@ -2,13 +2,18 @@
   <img src="logo.png" alt="PyHydroGeophysX Logo" width="400">
 </div>
 
+# PyHydroGeophysX
+
+A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, specializing in electrical resistivity tomography (ERT) and seismic refraction tomography (SRT) for watershed monitoring applications.
+
 <div align="center">
   <img src="frame.png" alt="HydroGeophysX Framework" width="600">
 </div>
 
-# PyHydroGeophysX
+*HydroGeophysX bridges the strengths and limitations of hydrologic modeling and geophysical monitoring, enabling process-based survey design, inversion constraints, and model calibration. This integrative approach supports advanced watershed studies and critical zone science.*
 
-A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, specializing in electrical resistivity tomography (ERT) and seismic refraction tomography (SRT) for watershed monitoring applications.
+For a detailed conceptual framework and application, see:
+Chen, H., Niu, Q., Mendieta, A., Bradford, J., & McNamara, J. (2023). Geophysics‐informed hydrologic modeling of a mountain headwater catchment for studying hydrological partitioning in the critical zone. Water Resources Research, 59(12), e2023WR035280. https://doi.org/10.1029/2023WR035280
 
 ## 🌟 Key Features
 
