@@ -2,83 +2,118 @@
 
 ## Overview
 
-PyHydroGeophysX is an open-source Python platform that bridges hydrological models with geophysical measurements, enabling bidirectional integration between these two complementary approaches for subsurface characterization.
+PyHydroGeophysX is a modular Python platform for integrating hydrological models with geophysical measurements. The architecture enables bidirectional workflows between hydrological modeling and geophysical monitoring domains.
 
-## High-Level Architecture
+## Software Architecture
 
-The software architecture centers on **four core functional modules** that enable bidirectional data flow between hydrological modeling (HM) and geophysical monitoring (GM) domains:
+The package consists of **7 functional modules** organized around two main data flow directions:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           PyHydroGeophysX                                │
-│                                                                          │
-│    ┌────────────────────────────────────────────────────────────┐       │
-│    │                    Core Modules                             │       │
-│    │                                                             │       │
-│    │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │       │
-│    │  │   Model     │  │Petrophysics │  │    Geophysical      │ │       │
-│    │  │   I/O       │  │   Engine    │  │    Modeling         │ │       │
-│    │  │             │  │             │  │                     │ │       │
-│    │  │ • MODFLOW   │  │ • Resistivity│ │ • Forward Modeling  │ │       │
-│    │  │ • ParFlow   │  │ • Velocity  │  │ • Inversion         │ │       │
-│    │  │ • ERT Data  │  │ • Relations │  │ • Time-Lapse        │ │       │
-│    │  │ • (Future)  │  │ • (Future)  │  │ • (Future methods)  │ │       │
-│    │  └─────────────┘  └─────────────┘  └─────────────────────┘ │       │
-│    │                                                             │       │
-│    │  ┌─────────────────────────────────────────────────────────┐│       │
-│    │  │              Utilities & Infrastructure                 ││       │
-│    │  │    Mesh Generation • Interpolation • Solvers • I/O     ││       │
-│    │  └─────────────────────────────────────────────────────────┘│       │
-│    └────────────────────────────────────────────────────────────┘       │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-                                   │
-                    ┌──────────────┴──────────────┐
-                    ▼                              ▼
-           External Dependencies           Future Extensions
-           • PyGIMLi                       • Additional hydro models  
-           • SimPEG                        • New geophysical methods
-           • NumPy/SciPy                   • Machine learning integration
+                    ┌─────────────────────────────────────────────────────────────┐
+                    │                      PyHydroGeophysX                         │
+                    │                                                              │
+  HYDROLOGICAL      │  ┌─────────────────────────────────────────────────────┐    │      GEOPHYSICAL
+     MODELS         │  │                     MODEL I/O                        │    │      FIELD DATA
+                    │  │                                                      │    │
+   ┌─────────┐      │  │   ┌──────────────┐          ┌──────────────┐        │    │      ┌─────────┐
+   │ MODFLOW │ ────▶│  │   │ model_output │          │data_processing│  ◀────│────│───── │ERT Data │
+   │ ParFlow │      │  │   │              │          │               │        │    │      │(ResIPy) │
+   └─────────┘      │  │   │ Water Content│          │ Load & QC     │        │    │      └─────────┘
+                    │  │   │ Saturation   │          │ Export        │        │    │
+                    │  │   │ Porosity     │          │               │        │    │
+                    │  │   └──────┬───────┘          └───────┬───────┘        │    │
+                    │  └──────────┼──────────────────────────┼────────────────┘    │
+                    │             │                          │                      │
+                    │             ▼                          ▼                      │
+                    │  ┌──────────────────────────────────────────────────────┐    │
+                    │  │                        CORE                           │    │
+                    │  │                                                       │    │
+                    │  │   ┌────────────┐  ┌────────────┐  ┌────────────┐     │    │
+                    │  │   │    core    │  │petrophysics│  │  solvers   │     │    │
+                    │  │   │            │  │            │  │            │     │    │
+                    │  │   │ Mesh (2D/3D)│ │ Resistivity│  │ CGLS, LSQR │     │    │
+                    │  │   │Interpolation│ │ Velocity   │  │ GPU Support│     │    │
+                    │  │   │ Kriging    │  │ Models     │  │            │     │    │
+                    │  │   └────────────┘  └────────────┘  └────────────┘     │    │
+                    │  └──────────────────────────┬────────────────────────────┘    │
+                    │                             │                                 │
+                    │             ┌───────────────┴───────────────┐                │
+                    │             ▼                               ▼                 │
+                    │  ┌─────────────────────┐      ┌─────────────────────┐        │
+                    │  │       forward       │      │      inversion      │        │
+                    │  │                     │      │                     │        │
+                    │  │  ERT Forward        │      │  ERT Inversion      │        │
+                    │  │  Seismic Forward    │◀────▶│  Time-Lapse         │        │
+                    │  │  TDEM Forward       │      │  TDEM Inversion     │        │
+                    │  │                     │      │                     │        │
+                    │  └─────────────────────┘      └─────────────────────┘        │
+                    │                                                              │
+                    │  ┌──────────────────────────────────────────────────────┐    │
+                    │  │                   INTEGRATION                         │    │
+                    │  │                                                       │    │
+                    │  │   ┌──────────────┐          ┌──────────────┐          │    │
+                    │  │   │Hydro_modular │          │Geophy_modular│          │    │
+                    │  │   │              │          │              │          │    │
+                    │  │   │ Hydro → ERT  │          │ ERT → Water  │          │    │
+                    │  │   │ Hydro → SRT  │          │   Content    │          │    │
+                    │  │   │              │          │ Structure    │          │    │
+                    │  │   │              │          │ Integration  │          │    │
+                    │  │   └──────────────┘          └──────────────┘          │    │
+                    │  └──────────────────────────────────────────────────────┘    │
+                    │                                                              │
+                    └──────────────────────────────────────────────────────────────┘
+                                                    │
+                                    ┌───────────────┴───────────────┐
+                                    ▼                               ▼
+                           ┌───────────────┐               ┌───────────────┐
+                           │   PyGIMLi     │               │    SimPEG     │
+                           │  (ERT, SRT)   │               │    (TDEM)     │
+                           └───────────────┘               └───────────────┘
 ```
 
-## Core Modules
+## Module Descriptions
 
-### 1. Model I/O
-Handles input/output for both hydrological model outputs and geophysical field data.
-- Hydrological: MODFLOW, ParFlow (extensible to other models)
-- Geophysical: ERT field data with quality control
+| Module | Purpose | Key Capabilities |
+|--------|---------|------------------|
+| **model_output** | Hydrological model interface | MODFLOW/ParFlow water content, saturation, porosity |
+| **data_processing** | Field data handling | ERT data loading, quality control, format export |
+| **core** | Spatial utilities | 2D/3D mesh creation, interpolation, kriging |
+| **petrophysics** | Property transformation | Resistivity models (Waxman-Smits), velocity models (DEM, Hertz-Mindlin) |
+| **forward** | Forward simulation | ERT, Seismic, TDEM synthetic data generation |
+| **inversion** | Inverse modeling | Single-time, time-lapse, structure-constrained inversion |
+| **solvers** | Numerical computation | Linear solvers with optional GPU acceleration |
+| **Hydro_modular** | HM → GM workflow | Direct hydrological to geophysical conversion |
+| **Geophy_modular** | GM → HM workflow | Geophysical interpretation, structure integration, uncertainty quantification |
 
-### 2. Petrophysics Engine
-Transforms between hydrological properties and geophysical properties.
-- Water content ↔ Electrical resistivity
-- Saturation ↔ Seismic velocity
+## Data Flow Patterns
 
-### 3. Geophysical Modeling
-Forward and inverse modeling capabilities for geophysical methods.
-- Forward simulation: ERT, Seismic, TDEM
-- Inversion: Single-time, time-lapse, structure-constrained
+**Forward Direction (HM → GM):**
+```
+Hydro Model → model_output → petrophysics → forward → Synthetic Geophysical Data
+```
 
-### 4. Utilities & Infrastructure
-Supporting functions for spatial operations and numerical computations.
-- Mesh generation (2D/3D)
-- Spatial interpolation
-- Linear solvers
+**Inverse Direction (GM → HM):**
+```
+Field Data → data_processing → core (mesh) → inversion → Geophy_modular → Hydrological Properties
+```
 
-## Bidirectional Workflows
+**Coupled Workflow:**
+```
+Hydro Model ↔ petrophysics ↔ forward ↔ inversion ↔ Comparison/Validation
+```
 
-**HM → GM (Hydrological to Geophysical):**
-- Survey design optimization
-- Process-based forward modeling
-- Synthetic data generation for validation
+## External Dependencies
 
-**GM → HM (Geophysical to Hydrological):**
-- Spatial property estimation
-- Structure identification
-- Model calibration constraints
+| Library | Role |
+|---------|------|
+| PyGIMLi | ERT/Seismic forward modeling and inversion |
+| SimPEG | TDEM forward modeling and inversion |
+| NumPy/SciPy | Numerical operations |
+| ResIPy | Field ERT data loading (optional) |
+| CuPy | GPU acceleration (optional) |
 
-## Design Philosophy
+## Design Principles
 
-- **Modular**: Each component is independent and interchangeable
-- **Extensible**: New models and methods can be added without modifying core
-- **Interoperable**: Leverages established libraries (PyGIMLi, SimPEG)
-- **Open**: Designed for community contributions and customization
+- **Modular**: Independent modules with clear interfaces
+- **Extensible**: New hydrological models or geophysical methods can be added
+- **Interoperable**: Built on established open-source geophysical libraries
