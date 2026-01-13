@@ -63,12 +63,12 @@ The package consists of **7 functional modules** organized around two main data 
                     │                                                              │
                     └──────────────────────────────────────────────────────────────┘
                                                     │
-                                    ┌───────────────┴───────────────┐
-                                    ▼                               ▼
-                           ┌───────────────┐               ┌───────────────┐
-                           │   PyGIMLi     │               │    SimPEG     │
-                           │  (ERT, SRT)   │               │    (TDEM)     │
-                           └───────────────┘               └───────────────┘
+                         ┌──────────────────────────┴──────────────────────────┐
+                         ▼                          ▼                          ▼
+                ┌───────────────┐          ┌───────────────┐          ┌───────────────┐
+                │ FloPy/PFTools │          │   PyGIMLi     │          │    SimPEG     │
+                │(MODFLOW/ParFlow)│         │  (ERT, SRT)   │          │    (TDEM)     │
+                └───────────────┘          └───────────────┘          └───────────────┘
 ```
 
 ## Module Descriptions
@@ -108,6 +108,8 @@ Hydro Model ↔ petrophysics ↔ forward ↔ inversion ↔ Comparison/Validation
 |---------|------|
 | PyGIMLi | ERT/Seismic forward modeling and inversion |
 | SimPEG | TDEM forward modeling and inversion |
+| FloPy | MODFLOW model output interface |
+| PFTools | ParFlow model output interface |
 | NumPy/SciPy | Numerical operations |
 | ResIPy | Field ERT data loading (optional) |
 | CuPy | GPU acceleration (optional) |
