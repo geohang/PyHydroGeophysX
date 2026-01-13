@@ -2,6 +2,10 @@
   <img src="logo.png" alt="PyHydroGeophysX Logo" width="400">
 </div>
 
+<div align="center">
+  <img src="frame.png" alt="HydroGeophysX Framework" width="600">
+</div>
+
 # PyHydroGeophysX
 
 A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, specializing in electrical resistivity tomography (ERT) and seismic refraction tomography (SRT) for watershed monitoring applications.
