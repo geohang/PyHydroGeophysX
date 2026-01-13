@@ -32,6 +32,11 @@ The examples are organized to show the complete workflow from loading hydrologic
 * **Ex_Structure_resinv.py**: Structure-constrained resistivity inversion
 * **Ex_MC_Hydro.py**: Monte Carlo uncertainty quantification for water content estimation
 
+**3D and Electromagnetic Methods (NEW):**
+
+* **Ex_3D_ERT_forward.ipynb**: 3D ERT forward modeling with MODFLOW integration, mesh creation using Mesh3DCreator, and PyVista visualization
+* **Ex_TDEM_workflow.ipynb**: Time-Domain Electromagnetic (TDEM) forward modeling and inversion from hydrological models using SimPEG
+
 Each example includes detailed comments and demonstrates best practices for watershed geophysical monitoring applications.
 
 

@@ -15,14 +15,17 @@ PyHydroGeophysX Documentation
 Welcome to PyHydroGeophysX
 ---------------------------
 
-A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, specializing in electrical resistivity tomography (ERT) and seismic refraction tomography (SRT) for watershed monitoring applications.
+A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, specializing in electrical resistivity tomography (ERT), seismic refraction tomography (SRT), and time-domain electromagnetics (TDEM) for watershed monitoring applications.
 
 🌟 Key Features
 ---------------
 
 * **Hydrological Model Integration**: Seamless loading and processing of MODFLOW and ParFlow outputs
+* **Multi-Agent AI System**: Automated cross-modal geophysics workflows with LLM support (GPT, Gemini, Claude) **NEW**
+* **3D ERT Modeling**: Complete 3D mesh creation, forward modeling, and visualization with topography and MODFLOW integration **NEW**
+* **TDEM Forward & Inversion**: Time-Domain Electromagnetic (TDEM) forward modeling and inversion using SimPEG **NEW**
 * **Petrophysical Relationships**: Advanced models for converting between water content, saturation, resistivity, and seismic velocity
-* **Forward Modeling**: Complete ERT and SRT forward modeling capabilities
+* **Forward Modeling**: Complete ERT, SRT, and TDEM forward modeling capabilities
 * **Time-Lapse Inversion**: Sophisticated algorithms for time-lapse ERT inversion with temporal regularization
 * **Structure-Constrained Inversion**: Integration of seismic velocity interfaces for constrained ERT inversion
 * **Uncertainty Quantification**: Monte Carlo methods for parameter uncertainty assessment
