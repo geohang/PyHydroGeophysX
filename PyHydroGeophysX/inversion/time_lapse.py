@@ -4,10 +4,11 @@ Time-lapse ERT inversion functionality.
 import numpy as np
 import pygimli as pg
 from pygimli.physics import ert
-from scipy.sparse import diags, csr_matrix
+import scipy.sparse as sp
+from scipy.sparse import diags, csr_matrix, block_diag as sparse_block_diag, lil_matrix
 from scipy.sparse.linalg import lsqr
 from typing import Optional, Union, List, Dict, Any, Tuple
-from scipy.linalg import block_diag
+from scipy.linalg import block_diag as dense_block_diag
 
 
 from .base import InversionBase, TimeLapseInversionResult
@@ -15,7 +16,8 @@ from ..forward.ert_forward import ertforward2, ertforandjac2
 from ..solvers.solver import generalized_solver
 
 
-def _calculate_jacobian(fwd_operators, model, mesh, size):
+def _calculate_jacobian(fwd_operators, model, mesh, size, as_sparse: bool = False,
+                        dtype=np.float64):
     """
     Calculate Jacobian matrix for multi-time model.
     
@@ -32,18 +34,21 @@ def _calculate_jacobian(fwd_operators, model, mesh, size):
     model_reshaped = np.reshape(model, (-1, size), order='F')
     obs = []
     
+    jac_blocks = []
+    
     for i in range(size):
         dr, Jr = ertforandjac2(fwd_operators[i], model_reshaped[:, i], mesh)
+        dr = dr.astype(dtype, copy=False)
         obs.append(dr)
-        if i == 0:
-            J = Jr
-        else:
-            J = block_diag(J, Jr)
+        jac_blocks.append(csr_matrix(Jr, dtype=dtype) if as_sparse else Jr.astype(dtype, copy=False))
     
     # Stack observations
-    obs_stacked = obs[0].reshape(-1, 1)
-    for i in range(size - 1):
-        obs_stacked = np.vstack((obs_stacked, obs[i + 1].reshape(-1, 1)))
+    obs_stacked = np.vstack([o.reshape(-1, 1) for o in obs]).astype(dtype, copy=False)
+    
+    if as_sparse:
+        J = sparse_block_diag(jac_blocks, format="csr", dtype=dtype)
+    else:
+        J = dense_block_diag(*jac_blocks).astype(dtype, copy=False)
     
     return obs_stacked, J
 
@@ -122,6 +127,7 @@ class TimeLapseERTInversion(InversionBase):
                 - relativeError: Relative data error
                 - lambda_rate: Lambda reduction rate
                 - lambda_min: Minimum lambda value
+                - save_memory: Use sparse operators to reduce RAM consumption
         """
         # Load ERT data
         self.data_files = data_files
@@ -149,12 +155,16 @@ class TimeLapseERTInversion(InversionBase):
             'lambda_min': 1.0,
             'inversion_type': 'L2',  # 'L1', 'L2', or 'L1L2'
             'model_constraints':(0.0001,10000.0),  # min and max resistivity
+            'save_memory': False,  # use sparse operators to reduce RAM
         }
         
         # Update parameters with time-lapse defaults
         for key, value in tl_defaults.items():
             if key not in self.parameters:
                 self.parameters[key] = value
+        
+        self.use_sparse = bool(self.parameters.get('save_memory', False))
+        self.dtype = np.float32 if self.use_sparse else np.float64
         
         # Number of timesteps
         self.size = len(data_files)
@@ -222,8 +232,8 @@ class TimeLapseERTInversion(InversionBase):
         for i in range(self.size - 1):
             rhos_temp = np.hstack((rhos_temp, rhos[i + 1]))
         
-        rhos_temp = rhos_temp.reshape((-1, 1))
-        self.rhos1 = np.log(rhos_temp)
+        rhos_temp = rhos_temp.reshape((-1, 1)).astype(self.dtype, copy=False)
+        self.rhos1 = np.log(rhos_temp).astype(self.dtype, copy=False)
 
         del rhos_temp  # Delete after use
         del rhos  # Delete after use
@@ -231,7 +241,13 @@ class TimeLapseERTInversion(InversionBase):
         # Data error and weighting matrix
         dataerr = np.array(dataerr)
         err_temp = np.hstack(dataerr)
-        self.Wd = np.diag(1.0 / np.log(err_temp + 1))
+        data_weights = (1.0 / np.log(err_temp + 1)).astype(self.dtype, copy=False)
+        if self.use_sparse:
+            self.Wd = diags(data_weights, dtype=self.dtype)
+            self.Wd_sq = self.Wd.multiply(self.Wd).astype(self.dtype, copy=False)
+        else:
+            self.Wd = np.diag(data_weights)
+            self.Wd_sq = (self.Wd.T @ self.Wd).astype(self.dtype, copy=False)
         
         # Create model regularization matrix
         rm = self.fwd_operators[0].regionManager()
@@ -239,33 +255,44 @@ class TimeLapseERTInversion(InversionBase):
         rm.setConstraintType(1)
         rm.fillConstraints(Ctmp)
         Wm_r = pg.utils.sparseMatrix2coo(Ctmp)
-        cw = rm.constraintWeights().array()
+        cw = rm.constraintWeights().array().astype(self.dtype, copy=False)
         Wm_r = diags(cw).dot(Wm_r)
-        Wm_r = Wm_r.todense()
         
-        # Create block diagonal spatial regularization matrix
-        self.Wm = block_diag(*[Wm_r for _ in range(self.size)])
+        if self.use_sparse:
+            Wm_r = Wm_r.tocsr().astype(self.dtype, copy=False)
+            self.Wm = sparse_block_diag([Wm_r for _ in range(self.size)], format="csr", dtype=self.dtype)
+        else:
+            Wm_dense = Wm_r.todense().astype(self.dtype, copy=False)
+            self.Wm = dense_block_diag(*[Wm_dense for _ in range(self.size)]).astype(self.dtype, copy=False)
         
         # Create temporal regularization matrix
         cell_count = self.fwd_operators[0].paraDomain.cellCount()
         tdiff = np.diff(self.measurement_times)
-        w_temp = np.ones(cell_count) * np.exp(-self.parameters['decay_rate'] * tdiff[0])
+        w_temp = (np.ones(cell_count) * np.exp(-self.parameters['decay_rate'] * tdiff[0])).astype(self.dtype, copy=False)
         
         for i in range(self.size - 2):
             w_temp = np.hstack((
                 w_temp,
-                np.ones(cell_count) * np.exp(-self.parameters['decay_rate'] * tdiff[i + 1])
+                (np.ones(cell_count) * np.exp(-self.parameters['decay_rate'] * tdiff[i + 1])).astype(self.dtype, copy=False)
             ))
         
-        Wt = np.zeros((cell_count * (self.size - 1), cell_count * self.size))
-        for i in range(self.size - 1):
-            idx = i * cell_count
-            Wt[idx:idx + cell_count, idx:idx + 2*cell_count] = np.hstack([
-                np.eye(cell_count),
-                -np.eye(cell_count)
-            ])
-        
-        self.Wt = diags(w_temp).dot(Wt)
+        if self.use_sparse:
+            Wt = lil_matrix((cell_count * (self.size - 1), cell_count * self.size), dtype=self.dtype)
+            for i in range(self.size - 1):
+                idx = i * cell_count
+                Wt[idx:idx + cell_count, idx:idx + cell_count] = np.eye(cell_count, dtype=self.dtype)
+                Wt[idx:idx + cell_count, idx + cell_count:idx + 2*cell_count] = -np.eye(cell_count, dtype=self.dtype)
+            self.Wt = diags(w_temp, dtype=self.dtype).dot(Wt.tocsr())
+        else:
+            Wt = np.zeros((cell_count * (self.size - 1), cell_count * self.size), dtype=self.dtype)
+            for i in range(self.size - 1):
+                idx = i * cell_count
+                Wt[idx:idx + cell_count, idx:idx + 2*cell_count] = np.hstack([
+                    np.eye(cell_count, dtype=self.dtype),
+                    -np.eye(cell_count, dtype=self.dtype)
+                ])
+            
+            self.Wt = diags(w_temp).dot(Wt)
     
     def run(self, initial_model: Optional[np.ndarray] = None) -> TimeLapseInversionResult:
         """
@@ -280,6 +307,30 @@ class TimeLapseERTInversion(InversionBase):
         # Make sure setup has been called
         if not self.fwd_operators:
             self.setup()
+        
+        use_sparse = self.use_sparse
+
+        def _as_col(vec):
+            arr = np.asarray(vec)
+            if arr.dtype != self.dtype:
+                arr = arr.astype(self.dtype, copy=False)
+            return arr.reshape(-1, 1) if arr.ndim == 1 else arr
+
+        def _matvec(mat, vec):
+            res = mat.dot(_as_col(vec)) if sp.issparse(mat) else mat @ _as_col(vec)
+            res_arr = np.asarray(res)
+            return res_arr if res_arr.ndim > 1 else res_arr.reshape(-1, 1)
+
+        def _ttm(mat, vec):
+            return _matvec(mat.transpose(), _matvec(mat, vec))
+
+        def _apply_data_weights(weight_mat, vec):
+            weighted = _matvec(self.Wd, vec)
+            weighted = _matvec(weight_mat, weighted)
+            return _matvec(self.Wd.transpose(), weighted)
+
+        def _quad(weighted_vec, vec):
+            return float(_as_col(vec).T @ _as_col(weighted_vec))
         
         # Initialize result object
         result = TimeLapseInversionResult()
@@ -298,14 +349,14 @@ class TimeLapseERTInversion(InversionBase):
                     # Use default value if no apparent resistivity data
                     initial_rhos.append(100.0)
             
-            mr = np.log(np.repeat(initial_rhos, cell_count).reshape(-1, 1))
+            mr = np.log(np.repeat(initial_rhos, cell_count).reshape(-1, 1)).astype(self.dtype, copy=False)
         else:
             # Use provided initial model
             if initial_model.shape != (cell_count, self.size):
                 raise ValueError(f"Initial model should have shape ({cell_count}, {self.size})")
             
             # Flatten in column-major order and log-transform
-            mr = np.log(initial_model.flatten(order='F').reshape(-1, 1))
+            mr = np.log(initial_model.flatten(order='F').reshape(-1, 1)).astype(self.dtype, copy=False)
         
         # Reference model is the initial model
         mr_R = mr.copy()
@@ -348,23 +399,31 @@ class TimeLapseERTInversion(InversionBase):
                 print(f'-------------------ERT Iteration: {nn} ---------------------------')
                 
                 # Forward modeling and Jacobian computation
-                dr, Jr = _calculate_jacobian(self.fwd_operators, mr, self.mesh, self.size)
+                dr, Jr = _calculate_jacobian(
+                    self.fwd_operators, mr, self.mesh, self.size,
+                    as_sparse=use_sparse, dtype=self.dtype
+                )
                 dr = dr.reshape(-1, 1)
                 
                 # Data misfit calculation
-                dataerror_ert = self.rhos1 - dr
+                dataerror_ert = _as_col(self.rhos1 - dr)
                 
                 # Handle different norms
                 if inversion_type == 'L2':
                     # Standard L2 norm
-                    fdert = float(dataerror_ert.T @ self.Wd.T @ self.Wd @ dataerror_ert)
-                    fmert = float(Lambda * (mr.T @ self.Wm.T @ self.Wm @ mr))
-                    ftert = float(alpha * (mr.T @ self.Wt.T @ self.Wt @ mr))
+                    data_weighted = _matvec(self.Wd_sq, dataerror_ert)
+                    fdert = _quad(data_weighted, dataerror_ert)
                     
                     # Gradient computation with memory management
-                    grad_data = Jr.T @ self.Wd.T @ self.Wd @ dataerror_ert*-1
-                    grad_model = Lambda * self.Wm.T @ self.Wm @ mr
-                    grad_temporal = alpha * self.Wt.T @ self.Wt @ mr
+                    grad_data = -_matvec(Jr.transpose(), data_weighted)
+                    
+                    model_term = _ttm(self.Wm, mr)
+                    fmert = Lambda * _quad(model_term, mr)
+                    grad_model = Lambda * model_term
+                    
+                    temp_term = _ttm(self.Wt, mr)
+                    ftert = alpha * _quad(temp_term, mr)
+                    grad_temporal = alpha * temp_term
                         
 
 
@@ -373,21 +432,26 @@ class TimeLapseERTInversion(InversionBase):
                     # L1 norm using IRLS
                     Rd = diags(1.0 / np.sqrt(dataerror_ert.flatten()**2 + l1_epsilon))
                     
-                    model_diff = self.Wm @ mr
+                    model_diff = _matvec(self.Wm, mr)
                     Rs = diags(1.0 / np.sqrt(model_diff.flatten()**2 + l1_epsilon))
                     
-                    temp_diff = self.Wt @ mr
+                    temp_diff = _matvec(self.Wt, mr)
                     Rt = diags(1.0 / np.sqrt(temp_diff.flatten()**2 + l1_epsilon))
                     
                     # Objective functions with weighted L1 norms
-                    fdert = float(dataerror_ert.T @ (self.Wd.T @ Rd @ self.Wd) @ dataerror_ert)
-                    fmert = float(Lambda * (model_diff.T @ Rs @ model_diff))
-                    ftert = float(alpha * (temp_diff.T @ Rt @ temp_diff))
+                    data_weighted = _apply_data_weights(Rd, dataerror_ert)
+                    fdert = _quad(data_weighted, dataerror_ert)
+                    
+                    model_weighted = _matvec(Rs, model_diff)
+                    fmert = Lambda * _quad(model_weighted, model_diff)
+                    
+                    temp_weighted = _matvec(Rt, temp_diff)
+                    ftert = alpha * _quad(temp_weighted, temp_diff)
                     
                     # Gradient computation
-                    grad_data = Jr.T @ self.Wd.T @ Rd @ self.Wd @ dataerror_ert*-1
-                    grad_model = Lambda * self.Wm.T @ Rs @ (self.Wm @ mr)
-                    grad_temporal = alpha * self.Wt.T @ Rt @ (self.Wt @ mr)
+                    grad_data = -_matvec(Jr.transpose(), data_weighted)
+                    grad_model = Lambda * _matvec(self.Wm.transpose(), model_weighted)
+                    grad_temporal = alpha * _matvec(self.Wt.transpose(), temp_weighted)
                     
                 else:  # L1L2 hybrid
                     # Compute hybrid L1-L2 weights for data misfit
@@ -404,25 +468,30 @@ class TimeLapseERTInversion(InversionBase):
                     Rd = diags(data_weights)
                     
                     # Model and temporal weights (pure L1)
-                    model_diff = self.Wm @ mr
+                    model_diff = _matvec(self.Wm, mr)
                     model_weights = 1.0 / np.sqrt(model_diff.flatten()**2 + l1_epsilon)
                     model_weights = np.maximum(model_weights, 1e-10)
                     Rs = diags(model_weights)
                     
-                    temp_diff = self.Wt @ mr
+                    temp_diff = _matvec(self.Wt, mr)
                     temp_weights = 1.0 / np.sqrt(temp_diff.flatten()**2 + l1_epsilon)
                     temp_weights = np.maximum(temp_weights, 1e-10)
                     Rt = diags(temp_weights)
                     
                     # Objective functions
-                    fdert = float(dataerror_ert.T @ (self.Wd.T @ Rd @ self.Wd) @ dataerror_ert)
-                    fmert = float(Lambda * (model_diff.T @ Rs @ model_diff))
-                    ftert = float(alpha * (temp_diff.T @ Rt @ temp_diff))
+                    data_weighted = _apply_data_weights(Rd, dataerror_ert)
+                    fdert = _quad(data_weighted, dataerror_ert)
+                    
+                    model_weighted = _matvec(Rs, model_diff)
+                    fmert = Lambda * _quad(model_weighted, model_diff)
+                    
+                    temp_weighted = _matvec(Rt, temp_diff)
+                    ftert = alpha * _quad(temp_weighted, temp_diff)
                     
                     # Gradient computation
-                    grad_data = Jr.T @ self.Wd.T @ Rd @ self.Wd @ dataerror_ert*-1
-                    grad_model = Lambda * self.Wm.T @ Rs @ (self.Wm @ mr)
-                    grad_temporal = alpha * self.Wt.T @ Rt @ (self.Wt @ mr)
+                    grad_data = -_matvec(Jr.transpose(), data_weighted)
+                    grad_model = Lambda * _matvec(self.Wm.transpose(), model_weighted)
+                    grad_temporal = alpha * _matvec(self.Wt.transpose(), temp_weighted)
                 
                 # Total gradient
                 gc_r = grad_data + grad_model + grad_temporal
@@ -431,7 +500,7 @@ class TimeLapseERTInversion(InversionBase):
                 ftot = fdert + fmert + ftert
                 
                 # Compute chi-squared and check convergence
-                chi2_ert = float(dataerror_ert.T @ self.Wd.T @ self.Wd @ dataerror_ert) / len(dr)
+                chi2_ert = _quad(_matvec(self.Wd_sq, dataerror_ert), dataerror_ert) / len(dr)
                 dPhi = abs(chi2_ert - chi2_old) / chi2_old if nn > 0 else 1.0
                 chi2_old = chi2_ert
                 
@@ -450,20 +519,40 @@ class TimeLapseERTInversion(InversionBase):
                 # Compute Hessian (or approximation)
                 if inversion_type == 'L2':
                     # Standard Gauss-Newton Hessian
-                    H = (Jr.T @ self.Wd.T @ self.Wd @ Jr + 
-                         Lambda * self.Wm.T @ self.Wm + 
-                         alpha * self.Wt.T @ self.Wt)
+                    if use_sparse:
+                        H = (Jr.transpose().dot(self.Wd_sq.dot(Jr)) + 
+                             Lambda * self.Wm.transpose().dot(self.Wm) + 
+                             alpha * self.Wt.transpose().dot(self.Wt))
+                    else:
+                        H = (Jr.T @ self.Wd_sq @ Jr + 
+                             Lambda * self.Wm.T @ self.Wm + 
+                             alpha * self.Wt.T @ self.Wt)
                 elif inversion_type == 'L1':
                     # IRLS modified Hessian
-                    H = (Jr.T @ self.Wd.T @ Rd @ self.Wd @ Jr + 
-                         Lambda * self.Wm.T @ Rs @ self.Wm + 
-                         alpha * self.Wt.T @ Rt @ self.Wt)
+                    if use_sparse:
+                        weighted_J = Rd.dot(self.Wd.dot(Jr))
+                        weighted_J = self.Wd.transpose().dot(weighted_J)
+                        H = (Jr.transpose().dot(weighted_J) + 
+                             Lambda * self.Wm.transpose().dot(Rs.dot(self.Wm)) + 
+                             alpha * self.Wt.transpose().dot(Rt.dot(self.Wt)))
+                    else:
+                        H = (Jr.T @ self.Wd.T @ Rd @ self.Wd @ Jr + 
+                             Lambda * self.Wm.T @ Rs @ self.Wm + 
+                             alpha * self.Wt.T @ Rt @ self.Wt)
                 else:  # L1L2
                     # Hybrid Hessian with damping
-                    H = (Jr.T @ self.Wd.T @ Rd @ self.Wd @ Jr + 
-                         Lambda * self.Wm.T @ Rs @ self.Wm + 
-                         alpha * self.Wt.T @ Rt @ self.Wt + 
-                         l1_epsilon * np.eye(Jr.shape[1]))
+                    if use_sparse:
+                        weighted_J = Rd.dot(self.Wd.dot(Jr))
+                        weighted_J = self.Wd.transpose().dot(weighted_J)
+                        H = (Jr.transpose().dot(weighted_J) + 
+                             Lambda * self.Wm.transpose().dot(Rs.dot(self.Wm)) + 
+                             alpha * self.Wt.transpose().dot(Rt.dot(self.Wt)) + 
+                             l1_epsilon * sp.eye(Jr.shape[1], format='csr', dtype=self.dtype))
+                    else:
+                        H = (Jr.T @ self.Wd.T @ Rd @ self.Wd @ Jr + 
+                             Lambda * self.Wm.T @ Rs @ self.Wm + 
+                             alpha * self.Wt.T @ Rt @ self.Wt + 
+                             l1_epsilon * np.eye(Jr.shape[1]))
                 
                 # After using Jr for gradient computation
                 del Jr  # No longer needed
@@ -499,19 +588,25 @@ class TimeLapseERTInversion(InversionBase):
                         try:
                             dr_new = _calculate_forward(self.fwd_operators, mr1, self.mesh, self.size)
                             dr_new = dr_new.reshape(-1, 1)
-                            dataerror_new = self.rhos1 - dr_new
+                            dataerror_new = _as_col(self.rhos1 - dr_new)
                             
                             # Compute new objective function
                             if inversion_type == 'L2':
-                                fdert_new = float(dataerror_new.T @ self.Wd.T @ self.Wd @ dataerror_new)
-                                fmert_new = float(Lambda * (mr1.T @ self.Wm.T @ self.Wm @ mr1))
-                                ftert_new = float(alpha * (mr1.T @ self.Wt.T @ self.Wt @ mr1))
+                                data_weighted_new = _matvec(self.Wd_sq, dataerror_new)
+                                fdert_new = _quad(data_weighted_new, dataerror_new)
+                                model_term_new = _ttm(self.Wm, mr1)
+                                fmert_new = Lambda * _quad(model_term_new, mr1)
+                                temp_term_new = _ttm(self.Wt, mr1)
+                                ftert_new = alpha * _quad(temp_term_new, mr1)
                             else:  # L1
-                                fdert_new = float(dataerror_new.T @ (self.Wd.T @ Rd @ self.Wd) @ dataerror_new)
-                                model_diff_new = self.Wm @ mr1
-                                fmert_new = float(Lambda * (model_diff_new.T @ Rs @ model_diff_new))
-                                temp_diff_new = self.Wt @ mr1
-                                ftert_new = float(alpha * (temp_diff_new.T @ Rt @ temp_diff_new))
+                                data_weighted_new = _apply_data_weights(Rd, dataerror_new)
+                                fdert_new = _quad(data_weighted_new, dataerror_new)
+                                model_diff_new = _matvec(self.Wm, mr1)
+                                model_weighted_new = _matvec(Rs, model_diff_new)
+                                fmert_new = Lambda * _quad(model_weighted_new, model_diff_new)
+                                temp_diff_new = _matvec(self.Wt, mr1)
+                                temp_weighted_new = _matvec(Rt, temp_diff_new)
+                                ftert_new = alpha * _quad(temp_weighted_new, temp_diff_new)
                             
                             ftot_new = fdert_new + fmert_new + ftert_new
                             
@@ -549,8 +644,8 @@ class TimeLapseERTInversion(InversionBase):
         
         # Process final results
         # Reshape to (cells, timesteps)
-        final_model = np.reshape(mr, (-1, self.size), order='F')
-        final_model = np.exp(final_model)
+        final_model = np.reshape(mr, (-1, self.size), order='F').astype(self.dtype, copy=False)
+        final_model = np.exp(final_model).astype(self.dtype if self.use_sparse else np.float64, copy=False)
         
         # Compute coverage for middle time step
         mid_idx = self.size // 2
