@@ -27,3 +27,4 @@ weasyprint>=60.0
 
 # Utilities
 requests>=2.28
+joblib>=1.3
