@@ -737,19 +737,19 @@ def _load_ert_embedded_parsers(
         if elec_array.ndim == 1:
             elec_array = elec_array.reshape(-1, 1)
         n_cols = elec_array.shape[1]
-        electrodes = pd.DataFrame({
+        electrodes_df = pd.DataFrame({
             'x': elec_array[:, 0],
             'y': elec_array[:, 1] if n_cols > 1 else 0.0,
             'z': elec_array[:, 2] if n_cols > 2 else 0.0,
         })
     else:
-        electrodes = pd.DataFrame({
+        electrodes_df = pd.DataFrame({
             'x': elec_array['x'] if 'x' in elec_array.columns else elec_array.iloc[:, 0],
             'y': elec_array['y'] if 'y' in elec_array.columns else 0.0,
             'z': elec_array['z'] if 'z' in elec_array.columns else 0.0,
         })
         if 'label' in elec_array.columns:
-            electrodes['label'] = elec_array['label']
+            electrodes_df['label'] = elec_array['label']
             label_map = {str(lbl).strip(): idx + 1 for idx, lbl in enumerate(pd.unique(elec_array['label']))}
     
     # Build observations dataframe with standardized columns
@@ -808,6 +808,26 @@ def _load_ert_embedded_parsers(
         observations['error'] = 0.05  # Default 5%
     
     observations['valid'] = True
+
+    # Convert to dataclass lists for downstream compatibility
+    electrodes_list = [
+        Electrode(i + 1, float(row['x']), float(row['y']), float(row['z']))
+        for i, row in electrodes_df.iterrows()
+    ]
+
+    obs_list: List[Observation] = []
+    for idx, row in observations.iterrows():
+        app_res_val = float(row['rhoa']) if np.isfinite(row['rhoa']) else None
+        rel_err_val = float(row['error']) if np.isfinite(row['error']) else 0.05
+        obs_list.append(Observation(
+            quad=Quadruplet(int(row['a']), int(row['b']), int(row['m']), int(row['n'])),
+            app_res=app_res_val,
+            dV=None,
+            I=None,
+            rel_err=rel_err_val,
+            K=1.0,
+            fid=str(idx)
+        ))
     
     # Build metadata
     metadata = {
@@ -815,10 +835,12 @@ def _load_ert_embedded_parsers(
         'loader': 'local_parsers_resipy_fallback',
         'parser_used': parser_name,
         'instrument': instrument,
-        'n_electrodes': len(electrodes),
-        'n_measurements': len(observations),
+        'n_electrodes': len(electrodes_list),
+        'n_measurements': len(obs_list),
         'acknowledgement': 'Parsing logic adapted from ResIPy (https://gitlab.com/hkex/resipy) under GPL-3.0',
     }
+    if label_map is not None:
+        metadata['electrode_label_map'] = label_map
     
     if local_ref is not None:
         metadata['local_origin_x'] = local_ref.origin_x
@@ -829,8 +851,8 @@ def _load_ert_embedded_parsers(
         metadata['epsg'] = epsg
     
     return StandardERT(
-        electrodes=electrodes,
-        observations=observations,
+        electrodes=electrodes_list,
+        observations=obs_list,
         crs=crs,
         instrument=instrument,
         metadata=metadata
@@ -891,7 +913,7 @@ def _load_ert_pygimli(
         sensors = np.hstack([sensors, np.zeros((len(sensors), 1))])
     
     # Build electrodes dataframe
-    electrodes = pd.DataFrame({
+    electrodes_df = pd.DataFrame({
         'x': sensors[:, 0],
         'y': sensors[:, 1] if sensors.shape[1] > 1 else 0.0,
         'z': sensors[:, 2] if sensors.shape[1] > 2 else 0.0,
@@ -929,7 +951,7 @@ def _load_ert_pygimli(
         error = np.ones(n_data) * 0.05  # Default 5% error
     
     # Build observations dataframe
-    observations = pd.DataFrame({
+    observations_df = pd.DataFrame({
         'a': a.astype(int),
         'b': b.astype(int),
         'm': m.astype(int),
@@ -938,14 +960,32 @@ def _load_ert_pygimli(
         'error': error,
         'valid': np.ones(n_data, dtype=bool)
     })
+
+    # Convert to dataclass lists for consistency
+    electrodes_list = [
+        Electrode(i + 1, float(row['x']), float(row['y']), float(row['z']))
+        for i, row in electrodes_df.iterrows()
+    ]
+    observations_list = [
+        Observation(
+            quad=Quadruplet(int(row['a']), int(row['b']), int(row['m']), int(row['n'])),
+            app_res=float(row['rhoa']) if np.isfinite(row['rhoa']) else None,
+            dV=None,
+            I=None,
+            rel_err=float(row['error']) if np.isfinite(row['error']) else 0.05,
+            K=1.0,
+            fid=str(idx)
+        )
+        for idx, row in observations_df.iterrows()
+    ]
     
     # Build metadata
     metadata = {
         'source_file': str(data_file_path),
         'loader': 'pygimli_fallback',
         'instrument': instrument,
-        'n_electrodes': len(electrodes),
-        'n_measurements': len(observations),
+        'n_electrodes': len(electrodes_list),
+        'n_measurements': len(observations_list),
     }
     
     if local_ref is not None:
@@ -957,8 +997,8 @@ def _load_ert_pygimli(
         metadata['epsg'] = epsg
     
     return StandardERT(
-        electrodes=electrodes,
-        observations=observations,
+        electrodes=electrodes_list,
+        observations=observations_list,
         crs=crs,
         instrument=instrument,
         metadata=metadata
@@ -1360,9 +1400,15 @@ def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> 
     
     outdir_path.mkdir(parents=True, exist_ok=True)
 
-    # Electrodes plot
-    ex = [e.x for e in ert.electrodes]
-    ez = [e.z for e in ert.electrodes]
+    # Electrodes plot (accept dataclasses or dict-like)
+    if ert.electrodes and hasattr(ert.electrodes[0], "x"):
+        ex = [e.x for e in ert.electrodes]
+        ez = [e.z for e in ert.electrodes]
+    else:
+        # Fallback if electrodes are dict-like/Series
+        elec_df = pd.DataFrame(ert.electrodes)
+        ex = elec_df['x'].tolist()
+        ez = elec_df.get('z', pd.Series(np.zeros(len(elec_df)))).tolist()
     plt.figure(figsize=(6, 2))
     plt.plot(ex, ez, 'k.-')
     plt.xlabel('x (m)'); plt.ylabel('z (m)')
@@ -1370,9 +1416,10 @@ def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> 
     plt.tight_layout(); plt.savefig(p1, dpi=200); plt.close()
 
     # Apparent resistivity histogram
-    vals = [o.app_res for o in ert.observations if o.app_res is not None and np.isfinite(o.app_res)]
+    vals = [o.app_res for o in ert.observations if o.app_res is not None and np.isfinite(o.app_res) and o.app_res > 0]
     plt.figure(figsize=(4, 3))
-    plt.hist(np.log10(vals), bins=40, color="#4C72B0")
+    if len(vals) > 0:
+        plt.hist(np.log10(vals), bins=40, color="#4C72B0")
     plt.xlabel('log10 apparent resistivity'); plt.ylabel('count')
     p2 = str(outdir_path / "rhoa_hist.png")
     plt.tight_layout(); plt.savefig(p2, dpi=200); plt.close()
