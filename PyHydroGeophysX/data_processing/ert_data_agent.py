@@ -96,109 +96,109 @@ def _bertParser(fname):
     Modified from ResIPy project (GPL-3.0).
     Original authors: Guillaume Blanchy, Jimmy Boyd, et al.
     """
-    with open(fname, "r") as f:
-        dump = f.readlines()
-    
+    try:
+        with open(fname, "r") as f:
+            dump = f.readlines()
+    except Exception as e:
+        raise ValueError(f"Could not read file {fname}: {e}")
+
+    if not dump:
+        raise ValueError(f"File {fname} is empty")
+
     line = 0
-    
-    # Skip comment lines
-    while line < len(dump) and dump[line].strip().startswith('#'):
-        line += 1
-    
-    if line >= len(dump):
-        raise ValueError("File appears to be empty or only contains comments")
-    
     numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+'
-    
-    # Check for number of electrodes line
-    numElec = re.findall(numStr, dump[line])
-    if len(numElec) == 1:
-        line += 1
-    
-    # Check for electrode headers
-    if line < len(dump):
-        elecHeaders = re.findall(r'#|x|y|z', dump[line])
-        if len(elecHeaders) != 0:
-            line += 1
-    
-    # Read electrode positions
-    elec_list = []
-    if line < len(dump):
-        elecLocs0 = re.findall(numStr, dump[line].split('#')[0])
-        elecLocs_line = elecLocs0.copy()
-        while len(elecLocs_line) == len(elecLocs0) and len(elecLocs_line) > 0:
-            elecLine_input_raw = dump[line].split('#')[0]
-            elecLocs_line = re.findall(numStr, elecLine_input_raw)
-            if len(elecLocs_line) == len(elecLocs0):
-                elec_list.append(elecLocs_line)
-            line += 1
-            if line >= len(dump):
-                break
-    
-    if not elec_list:
-        raise ValueError("Could not parse electrode positions")
-    
-    elec = np.array(elec_list).astype(float)
-    
-    # Ensure 3D coordinates (x, y, z)
-    if elec.shape[1] < 3:
-        if elec.shape[1] == 2:
-            elec = np.c_[elec[:, 0], np.zeros(len(elec)), elec[:, 1]]
-        else:
-            elec = np.c_[elec[:, 0], np.zeros(len(elec)), np.zeros(len(elec))]
-    
-    # Find data section
-    while line < len(dump):
-        vals = re.findall(numStr, dump[line].split('#')[0])
-        if len(vals) >= 4:
-            break
-        line += 1
-    
-    if line >= len(dump):
-        raise ValueError("Could not find data section")
-    
-    # Get headers from line before data
-    headers = re.findall(r'[A-Za-z\/]+', dump[line-1]) if line > 0 else ['a', 'b', 'm', 'n', 'r']
-    
-    # Read data
+
+    # Skip comment lines and find data start
+    data_start_line = 0
+    for i, line_content in enumerate(dump):
+        clean_line = line_content.strip()
+        if clean_line and not clean_line.startswith('#') and not clean_line.startswith('*'):
+            try:
+                # Try to parse as numbers
+                vals = re.findall(numStr, clean_line)
+                if len(vals) >= 4:  # A B M N minimum
+                    data_start_line = i
+                    break
+            except:
+                continue
+
+    if data_start_line == 0:
+        raise ValueError("Could not find data section in file")
+
+    # Try to read as CSV first (more common format)
+    try:
+        df = pd.read_csv(fname, comment='#', sep=r'\s+', engine='python')
+        if len(df.columns) >= 4:
+            # Assume first 4 columns are A B M N
+            col_names = ['a', 'b', 'm', 'n'] + [f'col_{i}' for i in range(4, len(df.columns))]
+            df.columns = col_names[:len(df.columns)]
+
+            # Convert ABMN to int
+            for col in ['a', 'b', 'm', 'n']:
+                if col in df.columns:
+                    df[col] = df[col].astype(int)
+
+            # Build electrode positions from unique values
+            array = df[['a', 'b', 'm', 'n']].values
+            unique_elec = np.sort(np.unique(array.flatten()))
+            n_elec = len(unique_elec)
+
+            # Assume regular spacing starting from 0
+            spacing = 1.0 if n_elec <= 1 else np.min(np.diff(unique_elec))
+            elec = np.c_[np.arange(n_elec) * spacing, np.zeros(n_elec), np.zeros(n_elec)]
+
+            # Add IP column if missing
+            if 'ip' not in df.columns:
+                df['ip'] = np.nan
+
+            return elec, df
+
+    except Exception as csv_error:
+        # Fall back to line-by-line parsing
+        pass
+
+    # Manual parsing for more complex formats
     df_list = []
-    for val_line in dump[line:]:
-        vals = re.findall(numStr, val_line.split('#')[0])
-        if len(vals) < 4:
-            break
-        df_list.append([float(v) for v in vals])
-    
+    for line_content in dump[data_start_line:]:
+        clean_line = line_content.strip().split('#')[0]  # Remove comments
+        if not clean_line:
+            continue
+
+        vals = re.findall(numStr, clean_line)
+        if len(vals) >= 4:  # Need at least A B M N
+            df_list.append([float(v) for v in vals])
+
     if not df_list:
-        raise ValueError("Could not parse measurement data")
-    
+        raise ValueError("Could not parse any measurement data")
+
     # Create DataFrame
     df = pd.DataFrame(df_list)
-    
-    # Assign column names
-    if len(headers) >= len(df.columns):
-        df.columns = headers[:len(df.columns)]
-    else:
-        default_headers = ['a', 'b', 'm', 'n', 'r', 'err', 'ip'][:len(df.columns)]
-        df.columns = default_headers
-    
-    # Standardize column names
-    col_map = {
-        'r': 'resist', 'R': 'resist', 'rho': 'resist', 'Rho': 'resist',
-        'rhoa': 'app', 'Rhoa': 'app', 'Ra': 'app',
-        'err': 'dev', 'ERR': 'dev', 'Err': 'dev',
-        'ip': 'ip', 'IP': 'ip', 'M': 'ip'
-    }
-    df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
-    
-    # Ensure ABMN are integers
+
+    # Assign default column names
+    default_headers = ['a', 'b', 'm', 'n', 'resist', 'dev', 'ip']
+    df.columns = default_headers[:len(df.columns)]
+
+    # Convert ABMN to int
     for col in ['a', 'b', 'm', 'n']:
         if col in df.columns:
             df[col] = df[col].astype(int)
-    
+
+    # Build electrode positions
+    array = df[['a', 'b', 'm', 'n']].values
+    unique_elec = np.sort(np.unique(array.flatten()))
+    n_elec = len(unique_elec)
+
+    # Assume regular spacing
+    if n_elec > 1:
+        spacing = np.min(np.diff(unique_elec))
+        elec = np.c_[unique_elec, np.zeros(n_elec), np.zeros(n_elec)]
+    else:
+        elec = np.array([[0, 0, 0]])
+
     # Add IP column if missing
     if 'ip' not in df.columns:
         df['ip'] = np.nan
-    
+
     return elec, df
 
 
@@ -208,17 +208,27 @@ def _syscalParser(fname):
     Modified from ResIPy project (GPL-3.0).
     Original authors: Guillaume Blanchy, Jimmy Boyd, et al.
     """
-    df = pd.read_csv(fname, skipinitialspace=True, engine='python', encoding_errors='ignore')
+    try:
+        # Try reading as CSV first
+        df = pd.read_csv(fname, skipinitialspace=True, engine='python', encoding_errors='ignore')
+    except Exception:
+        raise ValueError(f"Could not read {fname} as CSV")
+
+    if df.empty:
+        raise ValueError(f"No data found in {fname}")
+
     headers = df.columns
-    
+
     # Standardize column names based on format version
+    rename_map = {}
+
     if 'Spa.1' in headers:
-        df = df.rename(columns={
+        rename_map.update({
             'Spa.1': 'a', 'Spa.2': 'b', 'Spa.3': 'm', 'Spa.4': 'n',
             'In': 'i', 'Vp': 'vp', 'Dev.': 'dev', 'M': 'ip', 'Sp': 'sp'
         })
-    elif 'xA(m)' in headers or 'xA (m)' in headers:
-        rename_map = {
+    elif any('xA' in h for h in headers):
+        rename_map.update({
             'xA(m)': 'a', 'xB(m)': 'b', 'xM(m)': 'm', 'xN(m)': 'n',
             'xA (m)': 'a', 'xB (m)': 'b', 'xM (m)': 'm', 'xN (m)': 'n',
             'Dev.': 'dev', 'Dev. Rho (%)': 'dev',
@@ -226,39 +236,71 @@ def _syscalParser(fname):
             'VMN (mV)': 'vp', 'IAB (mA)': 'i',
             'yA (m)': 'ya', 'yB (m)': 'yb', 'yM (m)': 'ym', 'yN (m)': 'yn',
             'zA (m)': 'za', 'zB (m)': 'zb', 'zM (m)': 'zm', 'zN (m)': 'zn'
-        }
-        df = df.rename(columns=rename_map)
-    
-    # Calculate resistance
-    if 'vp' in df.columns and 'i' in df.columns:
+        })
+
+    # Apply renaming
+    df = df.rename(columns={k: v for k, v in rename_map.items() if k in headers})
+
+    # Calculate resistance if needed
+    if 'vp' in df.columns and 'i' in df.columns and 'resist' not in df.columns:
         df['resist'] = df['vp'] / df['i']
-    
+
+    # Ensure we have the basic columns
+    required_cols = ['a', 'b', 'm', 'n']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        # Assume first 4 columns are A B M N
+        if len(df.columns) >= 4:
+            df.columns = ['a', 'b', 'm', 'n'] + list(df.columns[4:])
+        else:
+            raise ValueError(f"Missing required columns: {missing_cols}")
+
+    # Convert ABMN to int
+    for col in ['a', 'b', 'm', 'n']:
+        if col in df.columns:
+            try:
+                df[col] = df[col].astype(int)
+            except:
+                # If conversion fails, keep as is
+                pass
+
     # Process electrode positions
-    if 'ya' in df.columns:  # 3D format
-        xarray = df[['a', 'b', 'm', 'n']].values.flatten() if 'xa' not in df.columns else df[['xa', 'xb', 'xm', 'xn']].values.flatten()
-        yarray = df[['ya', 'yb', 'ym', 'yn']].values.flatten()
-        zarray = df[['za', 'zb', 'zm', 'zn']].values.flatten() if 'za' in df.columns else np.zeros_like(xarray)
-        arrayFull = np.c_[xarray, yarray, zarray]
-        elec = np.unique(arrayFull, axis=0)
-    else:  # 2D format
+    try:
+        if 'ya' in df.columns:  # 3D format
+            xarray = df[['a', 'b', 'm', 'n']].values.flatten() if 'xa' not in df.columns else df[['xa', 'xb', 'xm', 'xn']].values.flatten()
+            yarray = df[['ya', 'yb', 'ym', 'yn']].values.flatten()
+            zarray = df[['za', 'zb', 'zm', 'zn']].values.flatten() if 'za' in df.columns else np.zeros_like(xarray)
+            arrayFull = np.c_[xarray, yarray, zarray]
+            elec = np.unique(arrayFull, axis=0)
+        else:  # 2D format
+            array = df[['a', 'b', 'm', 'n']].values
+            val = np.sort(np.unique(array.flatten()))
+            elecLabel = 1 + np.arange(len(val))
+            searchsortedArr = np.searchsorted(val, array)
+            newval = elecLabel[searchsortedArr]
+            df[['a', 'b', 'm', 'n']] = newval
+
+            zval = np.zeros_like(val)
+            if 'za' in df.columns:
+                zarray = df[['za', 'zb', 'zm', 'zn']].values
+                zvalflat = np.c_[searchsortedArr.flatten(), zarray.flatten()]
+                zval = np.unique(zvalflat[zvalflat[:, 0].argsort()], axis=0)[:, 1]
+
+            elec = np.c_[val, np.zeros_like(val), zval]
+    except Exception as e:
+        # Fallback: simple electrode array
         array = df[['a', 'b', 'm', 'n']].values
         val = np.sort(np.unique(array.flatten()))
-        elecLabel = 1 + np.arange(len(val))
-        searchsortedArr = np.searchsorted(val, array)
-        newval = elecLabel[searchsortedArr]
-        df[['a', 'b', 'm', 'n']] = newval
-        
-        zval = np.zeros_like(val)
-        if 'za' in df.columns:
-            zarray = df[['za', 'zb', 'zm', 'zn']].values
-            zvalflat = np.c_[searchsortedArr.flatten(), zarray.flatten()]
-            zval = np.unique(zvalflat[zvalflat[:, 0].argsort()], axis=0)[:, 1]
-        
-        elec = np.c_[val, np.zeros_like(val), zval]
-    
+        n_elec = len(val)
+        if n_elec > 0:
+            spacing = 1.0
+            elec = np.c_[np.arange(n_elec) * spacing, np.zeros(n_elec), np.zeros(n_elec)]
+        else:
+            elec = np.array([[0, 0, 0]])
+
     if 'ip' not in df.columns:
         df['ip'] = np.nan
-    
+
     return elec, df
 
 
@@ -268,38 +310,49 @@ def _protocolParser(fname, ip=False):
     Modified from ResIPy project (GPL-3.0).
     Original authors: Guillaume Blanchy, Jimmy Boyd, et al.
     """
-    with open(fname, 'r') as f:
-        lines = f.readlines()
-    
+    try:
+        with open(fname, 'r') as f:
+            lines = f.readlines()
+    except Exception as e:
+        raise ValueError(f"Could not read file {fname}: {e}")
+
     # Find data start
     data_start = 0
     for i, line in enumerate(lines):
-        if line.strip() and not line.startswith('#') and not line.startswith('*'):
+        clean_line = line.strip()
+        if clean_line and not clean_line.startswith('#') and not clean_line.startswith('*'):
             try:
-                vals = [float(x) for x in line.split()]
+                vals = clean_line.split()
                 if len(vals) >= 4:
+                    # Try to convert to numbers
+                    float_vals = [float(x) for x in vals[:4]]  # Check first 4 values
                     data_start = i
                     break
             except ValueError:
                 continue
-    
+
+    if data_start == 0:
+        raise ValueError("Could not find data section")
+
     # Parse data
     data_list = []
     for line in lines[data_start:]:
-        if line.strip() and not line.startswith('#'):
+        clean_line = line.strip()
+        if clean_line and not clean_line.startswith('#') and not clean_line.startswith('*'):
             try:
-                vals = [float(x) for x in line.split()]
+                vals = clean_line.split()
                 if len(vals) >= 4:
-                    data_list.append(vals)
+                    num_vals = [float(x) for x in vals]
+                    data_list.append(num_vals)
             except ValueError:
                 continue
-    
+
     if not data_list:
-        raise ValueError("Could not parse data from file")
-    
+        raise ValueError("Could not parse any measurement data")
+
     # Create DataFrame
     df = pd.DataFrame(data_list)
-    
+
     # Assign columns based on number of values
     ncols = df.shape[1]
     if ncols >= 6:
@@ -308,27 +361,37 @@ def _protocolParser(fname, ip=False):
         df.columns = ['a', 'b', 'm', 'n', 'resist'][:ncols]
     else:
         df.columns = ['a', 'b', 'm', 'n'][:ncols]
-    
+
     # Convert ABMN to int
     for col in ['a', 'b', 'm', 'n']:
         if col in df.columns:
-            df[col] = df[col].astype(int)
-    
+            try:
+                df[col] = df[col].astype(int)
+            except:
+                pass  # Keep as float if conversion fails
+
     # Build electrode array
-    array = df[['a', 'b', 'm', 'n']].values
-    unique_elec = np.sort(np.unique(array.flatten()))
-    n_elec = len(unique_elec)
-    
-    # Assume regular spacing
-    if n_elec > 1:
-        spacing = np.min(np.diff(unique_elec))
-        elec = np.c_[unique_elec, np.zeros(n_elec), np.zeros(n_elec)]
-    else:
-        elec = np.array([[0, 0, 0]])
-    
+    try:
+        array = df[['a', 'b', 'm', 'n']].values
+        unique_elec = np.sort(np.unique(array.flatten()))
+        n_elec = len(unique_elec)
+
+        # Assume regular spacing
+        if n_elec > 1:
+            spacing = np.min(np.diff(unique_elec))
+            elec = np.c_[unique_elec, np.zeros(n_elec), np.zeros(n_elec)]
+        else:
+            elec = np.array([[0, 0, 0]])
+    except Exception:
+        # Fallback electrode array
+        n_measurements = len(df)
+        n_elec = int(np.max(df[['a', 'b', 'm', 'n']].values.flatten()) if 'a' in df.columns else 4)
+        spacing = 1.0
+        elec = np.c_[np.arange(1, n_elec + 1) * spacing, np.zeros(n_elec), np.zeros(n_elec)]
+
     if 'ip' not in df.columns:
         df['ip'] = np.nan
-    
+
     return elec, df
 
 
@@ -469,15 +532,30 @@ def _load_ert_embedded_parsers(
     
     # Select appropriate parser based on instrument
     parser_func = _EMBEDDED_PARSER_MAP.get(instrument, _bertParser)
-    
+    parser_name = instrument  # Use instrument name for error message
+
     if parser_func is None:
         parser_func = _bertParser  # Default fallback
-    
+        parser_name = "BERT (fallback)"
+
     # Parse the data file
     try:
+        print(f"[PyHydroGeophysX] Attempting to parse ERT data with {parser_name} parser...")
         elec_array, df = parser_func(str(data_file_path))
+        print(f"[PyHydroGeophysX] Successfully parsed {len(df)} measurements and {len(elec_array)} electrodes")
     except Exception as e:
-        raise ValueError(f"Failed to parse ERT data with {parser_name}: {e}")
+        print(f"[PyHydroGeophysX] Parser {parser_name} failed: {e}")
+        # Try fallback parsers if this one fails
+        if parser_func != _bertParser:
+            print(f"[PyHydroGeophysX] Trying BERT parser as fallback...")
+            try:
+                elec_array, df = _bertParser(str(data_file_path))
+                print(f"[PyHydroGeophysX] BERT parser fallback succeeded")
+                parser_name = "BERT (fallback)"
+            except Exception as e2:
+                raise ValueError(f"Failed to parse ERT data with {parser_name} (primary) and BERT (fallback): {e} // {e2}")
+        else:
+            raise ValueError(f"Failed to parse ERT data with {parser_name}: {e}")
     
     # Build electrodes dataframe
     if isinstance(elec_array, np.ndarray):
