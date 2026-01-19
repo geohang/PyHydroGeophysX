@@ -227,6 +227,12 @@ reports suitable for scientists and engineers. You should integrate climate insi
         import numpy as np
         summary = "\n## Water Content Analysis\n\n"
         
+        # Check if petrophysics was skipped
+        if workflow_data.get('skip_petrophysics', False):
+            summary += "Water content conversion was not requested for this workflow.\n"
+            summary += "Only resistivity inversion results are available.\n"
+            return summary
+        
         if 'water_content' in workflow_data:
             wc = workflow_data['water_content']
             
@@ -284,33 +290,61 @@ reports suitable for scientists and engineers. You should integrate climate insi
                     }
                 }
             if layer_params:
-                summary += f"\n### Petrophysical Parameters (means +/- std)\n"
+                # Check if user provided explicit parameters or defaults were used
+                user_provided_params = workflow_data.get('petrophysical_params', {}) or wc.get('petrophysical_params', {})
+                if not user_provided_params:
+                    summary += f"\n### Petrophysical Parameters (Defaults Applied)\n"
+                    summary += "**Note:** No explicit petrophysical parameters were provided. Default Archie parameters were used based on geological layer type.\n\n"
+                else:
+                    summary += f"\n### Petrophysical Parameters (User-Specified)\n"
+                    summary += f"**User input parameters:** {user_provided_params}\n\n"
+                
+                summary += "**Parameters used per layer (means +/- std):**\n"
                 for marker, params in layer_params.items():
                     if not isinstance(params, dict):
                         # If params is a scalar (e.g., rho_sat), skip to avoid attribute errors
                         continue
+                    
+                    # Determine layer name
+                    layer_name = f"Layer {marker}"
+                    if marker in [0, '0', 'regolith', 'Regolith']:
+                        layer_name = "Regolith"
+                    elif marker in [1, '1', 'bedrock', 'Bedrock']:
+                        layer_name = "Bedrock"
+                    elif marker in [2, '2']:
+                        layer_name = "Layer 2 (Regolith)"
+                    elif marker in [3, '3']:
+                        layer_name = "Layer 3 (Bedrock)"
+                    
                     use_rho_sat = params.get('use_rho_sat', False)
                     
                     def fmt(comp: str) -> str:
                         if isinstance(params.get(comp), dict):
-                            return f"{params[comp].get('mean','N/A')}+/-{params[comp].get('std','N/A')}"
+                            mean_val = params[comp].get('mean', 'N/A')
+                            std_val = params[comp].get('std', 'N/A')
+                            if mean_val != 'N/A' and std_val != 'N/A':
+                                return f"{mean_val:.3f} ± {std_val:.3f}"
+                            return f"{mean_val}"
                         return str(params.get(comp, 'N/A'))
                     
                     if use_rho_sat:
                         summary += (
-                            f"- Marker {marker}: "
-                            f"rho_sat={fmt('rho_sat')}, "
+                            f"- **{layer_name}**: "
+                            f"ρ_sat={fmt('rho_sat')} Ωm, "
                             f"n={fmt('n')}, "
-                            f"phi={fmt('porosity')}\n"
+                            f"φ={fmt('porosity')}\n"
                         )
                     else:
                         summary += (
-                            f"- Marker {marker}: "
+                            f"- **{layer_name}**: "
                             f"m={fmt('m')}, "
                             f"n={fmt('n')}, "
-                            f"phi={fmt('porosity')}, "
-                            f"rho_sat={fmt('rho_sat')}\n"
+                            f"φ={fmt('porosity')}, "
+                            f"ρ_sat={fmt('rho_sat')} Ωm\n"
                         )
+            else:
+                summary += "\n### Petrophysical Parameters\n"
+                summary += "Default Archie parameters were applied for the resistivity-to-water-content conversion.\n"
             
             summary += f"\n**Interpretation:** {wc.get('interpretation', 'N/A')}\n"
         
@@ -497,7 +531,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
         return analysis
     
     def _generate_visualizations(self, workflow_data: Dict, output_dir: str) -> Dict[str, str]:
-        """Generate visualization plots."""
+        """Generate visualization plots with dynamic colormap limits based on data."""
         import matplotlib.pyplot as plt
         import matplotlib
         import numpy as np
@@ -507,6 +541,50 @@ including detection of post-rainfall infiltration and high-PET drying periods.
         matplotlib.rcParams['font.size'] = 12
         
         vis_files = {}
+        
+        def compute_colormap_limits(data, log_scale=False, percentile_range=(2, 98)):
+            """
+            Compute optimal colormap min/max based on data values.
+            
+            Args:
+                data: Array of values
+                log_scale: If True, compute limits for log-scale display
+                percentile_range: Tuple of (min_percentile, max_percentile) to use
+                
+            Returns:
+                Tuple of (cMin, cMax)
+            """
+            data_flat = np.array(data).ravel()
+            # Remove NaN and Inf values
+            data_clean = data_flat[np.isfinite(data_flat)]
+            
+            if len(data_clean) == 0:
+                return (1, 1000) if log_scale else (0, 1)
+            
+            # For log scale, also remove non-positive values
+            if log_scale:
+                data_clean = data_clean[data_clean > 0]
+                if len(data_clean) == 0:
+                    return (1, 1000)
+            
+            # Use percentiles to exclude outliers
+            cMin = np.percentile(data_clean, percentile_range[0])
+            cMax = np.percentile(data_clean, percentile_range[1])
+            
+            # Ensure minimum spread for log scale
+            if log_scale:
+                cMin = max(cMin, 1e-3)  # Prevent too-small values
+                if cMax / cMin < 10:  # Ensure at least one order of magnitude
+                    cMax = cMin * 100
+            else:
+                # For linear scale, round to nice values
+                spread = cMax - cMin
+                if spread < 0.01:
+                    spread = 0.1
+                cMin = max(0, cMin - spread * 0.05)
+                cMax = cMax + spread * 0.05
+            
+            return (cMin, cMax)
         
         try:
             # 1. Resistivity model plot with coverage masking
@@ -522,6 +600,11 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                         coverage = inv.get('coverage')
                         coverage_mask = coverage > -1.0 if coverage is not None else None
                         
+                        # Compute dynamic colormap limits for resistivity
+                        res_model = np.array(inv['resistivity_model'])
+                        cMin_res, cMax_res = compute_colormap_limits(res_model, log_scale=True)
+                        self._log_execution(f"Resistivity colormap: {cMin_res:.1f} to {cMax_res:.1f} Ωm")
+                        
                         # Plot with coverage masking
                         ax, cbar = pg.show(
                             inv['mesh'],
@@ -529,8 +612,8 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                             ax=ax,
                             fig=fig,
                             cMap='jet',
-                            cMin=100,
-                            cMax=10000,
+                            cMin=cMin_res,
+                            cMax=cMax_res,
                             logScale=True,
                             label=r'Resistivity ($\Omega$ m)',
                             pad=0.3,
@@ -550,8 +633,8 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                     except Exception as e:
                         self._log_execution(f"Could not generate resistivity plot: {e}")
             
-            # 2. Water content plot with coverage masking
-            if 'water_content' in workflow_data:
+            # 2. Water content plot with coverage masking (only if petrophysics was run)
+            if 'water_content' in workflow_data and not workflow_data.get('skip_petrophysics', False):
                 wc = workflow_data['water_content']
                 if 'mesh' in wc and 'water_content_mean' in wc:
                     try:
@@ -570,6 +653,13 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                             coverage = inv.get('coverage')
                         coverage_mask = coverage > -1.0 if coverage is not None else None
                         
+                        # Compute dynamic colormap limits for water content
+                        cMin_wc, cMax_wc = compute_colormap_limits(wc_mean, log_scale=False)
+                        # Ensure water content is bounded [0, 1] 
+                        cMin_wc = max(0.0, cMin_wc)
+                        cMax_wc = min(1.0, cMax_wc) if cMax_wc > 0 else 0.5
+                        self._log_execution(f"Water content colormap: {cMin_wc:.3f} to {cMax_wc:.3f}")
+                        
                         ax, cbar = pg.show(
                             wc['mesh'],
                             wc_mean,
@@ -577,8 +667,8 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                             fig=fig,
                             cMap='Blues',
                             label='Water Content (-)',
-                            cMin=0.0,
-                            cMax=0.4,
+                            cMin=cMin_wc,
+                            cMax=cMax_wc,
                             pad=0.3,
                             orientation='vertical',
                             coverage=coverage_mask
@@ -614,6 +704,11 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                                 coverage = inv.get('coverage')
                             coverage_mask = coverage > -1.0 if coverage is not None else None
                             
+                            # Compute dynamic colormap limits for uncertainty
+                            cMin_std, cMax_std = compute_colormap_limits(wc_std, log_scale=False)
+                            cMin_std = max(0.0, cMin_std)
+                            self._log_execution(f"Uncertainty colormap: {cMin_std:.4f} to {cMax_std:.4f}")
+                            
                             ax, cbar = pg.show(
                                 wc['mesh'],
                                 wc_std,
@@ -621,8 +716,8 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                                 fig=fig,
                                 cMap='Reds',
                                 label=r'Uncertainty ($\sigma$)',
-                                cMin=0.0,
-                                cMax=0.1,
+                                cMin=cMin_std,
+                                cMax=cMax_std,
                                 pad=0.3,
                                 orientation='vertical',
                                 coverage=coverage_mask
@@ -2335,6 +2430,236 @@ All workflow parameters were extracted from the natural language request:
 """
         
         return report
+    
+    def _save_html_report(self, markdown_content: str, output_dir: str, 
+                          filename: str = 'workflow_report') -> Optional[str]:
+        """
+        Convert markdown report to HTML.
+        
+        Args:
+            markdown_content: Report in markdown format
+            output_dir: Output directory
+            filename: Output filename without extension
+            
+        Returns:
+            Path to HTML file or None if conversion failed
+        """
+        try:
+            import markdown
+            
+            # Convert markdown to HTML
+            html_body = markdown.markdown(
+                markdown_content, 
+                extensions=['tables', 'fenced_code', 'codehilite', 'toc']
+            )
+            
+            # Wrap in HTML template with styling
+            html_template = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyHydroGeophysX Report</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #f9fafb;
+            color: #1f2937;
+        }}
+        h1 {{ color: #0f4c75; border-bottom: 2px solid #0f4c75; padding-bottom: 0.5rem; }}
+        h2 {{ color: #1b4f72; margin-top: 2rem; }}
+        h3 {{ color: #2874a6; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+        th {{ background-color: #0f4c75; color: white; }}
+        tr:nth-child(even) {{ background-color: #f2f2f2; }}
+        code {{ background-color: #e5e7eb; padding: 2px 6px; border-radius: 3px; }}
+        pre {{ background-color: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 5px; overflow-x: auto; }}
+        img {{ max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; margin: 1rem 0; }}
+        .toc {{ background-color: #eef2f7; padding: 1rem; border-radius: 5px; margin-bottom: 2rem; }}
+        blockquote {{ border-left: 4px solid #0f4c75; margin: 1rem 0; padding-left: 1rem; color: #4b5563; }}
+        hr {{ border: none; border-top: 1px solid #d1d5db; margin: 2rem 0; }}
+    </style>
+</head>
+<body>
+{html_body}
+</body>
+</html>"""
+            
+            html_file = os.path.join(output_dir, f'{filename}.html')
+            with open(html_file, 'w', encoding='utf-8') as f:
+                f.write(html_template)
+            
+            self._log_execution(f"HTML report saved: {html_file}")
+            return html_file
+            
+        except ImportError:
+            self._log_execution("markdown package not installed, skipping HTML conversion", level='WARNING')
+            return None
+        except Exception as e:
+            self._log_execution(f"Failed to save HTML report: {e}", level='WARNING')
+            return None
+    
+    def _save_pdf_report(self, markdown_content: str, output_dir: str, 
+                         visualization_files: Optional[Dict[str, str]] = None,
+                         filename: str = 'workflow_report') -> Optional[str]:
+        """
+        Convert markdown report to PDF.
+        
+        Tries multiple PDF generation methods:
+        1. weasyprint (requires weasyprint package)
+        2. pdfkit (requires pdfkit and wkhtmltopdf)
+        3. markdown-pdf (requires md2pdf)
+        
+        Args:
+            markdown_content: Report in markdown format
+            output_dir: Output directory
+            visualization_files: Dict of visualization files to embed
+            filename: Output filename without extension
+            
+        Returns:
+            Path to PDF file or None if conversion failed
+        """
+        pdf_file = os.path.join(output_dir, f'{filename}.pdf')
+        
+        # First, get HTML content
+        html_content = None
+        try:
+            import markdown
+            html_body = markdown.markdown(
+                markdown_content, 
+                extensions=['tables', 'fenced_code', 'toc']
+            )
+            
+            # Create HTML with embedded images using absolute paths
+            html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: auto; }}
+        h1 {{ color: #0f4c75; border-bottom: 2px solid #0f4c75; padding-bottom: 10px; }}
+        h2 {{ color: #1b4f72; margin-top: 30px; }}
+        h3 {{ color: #2874a6; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 15px 0; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+        th {{ background-color: #0f4c75; color: white; }}
+        tr:nth-child(even) {{ background-color: #f2f2f2; }}
+        code {{ background-color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-family: monospace; }}
+        img {{ max-width: 100%; height: auto; margin: 10px 0; }}
+        hr {{ border: none; border-top: 1px solid #ccc; margin: 20px 0; }}
+        @page {{ margin: 2cm; }}
+    </style>
+</head>
+<body>
+{html_body}
+</body>
+</html>"""
+        except ImportError:
+            self._log_execution("markdown package not installed", level='WARNING')
+            return None
+        
+        # Method 1: Try weasyprint
+        try:
+            from weasyprint import HTML
+            HTML(string=html_content, base_url=output_dir).write_pdf(pdf_file)
+            self._log_execution(f"PDF report saved (weasyprint): {pdf_file}")
+            return pdf_file
+        except ImportError:
+            pass
+        except Exception as e:
+            self._log_execution(f"weasyprint failed: {e}", level='WARNING')
+        
+        # Method 2: Try pdfkit
+        try:
+            import pdfkit
+            pdfkit.from_string(html_content, pdf_file, options={'encoding': 'UTF-8'})
+            self._log_execution(f"PDF report saved (pdfkit): {pdf_file}")
+            return pdf_file
+        except ImportError:
+            pass
+        except Exception as e:
+            self._log_execution(f"pdfkit failed: {e}", level='WARNING')
+        
+        # Method 3: Try md2pdf
+        try:
+            from md2pdf.core import md2pdf as convert_md2pdf
+            convert_md2pdf(
+                pdf_file,
+                md_content=markdown_content,
+                css_file_path=None,
+                base_url=output_dir
+            )
+            self._log_execution(f"PDF report saved (md2pdf): {pdf_file}")
+            return pdf_file
+        except ImportError:
+            pass
+        except Exception as e:
+            self._log_execution(f"md2pdf failed: {e}", level='WARNING')
+        
+        # Method 4: Try fpdf2 (basic text-based PDF)
+        try:
+            from fpdf import FPDF
+            
+            pdf = FPDF()
+            pdf.set_auto_page_break(auto=True, margin=15)
+            pdf.add_page()
+            pdf.set_font('Helvetica', size=10)
+            
+            # Parse markdown to simple text
+            lines = markdown_content.split('\n')
+            for line in lines:
+                # Handle headers
+                if line.startswith('# '):
+                    pdf.set_font('Helvetica', 'B', 16)
+                    pdf.multi_cell(0, 10, line[2:])
+                    pdf.set_font('Helvetica', size=10)
+                elif line.startswith('## '):
+                    pdf.set_font('Helvetica', 'B', 14)
+                    pdf.multi_cell(0, 8, line[3:])
+                    pdf.set_font('Helvetica', size=10)
+                elif line.startswith('### '):
+                    pdf.set_font('Helvetica', 'B', 12)
+                    pdf.multi_cell(0, 7, line[4:])
+                    pdf.set_font('Helvetica', size=10)
+                elif line.startswith('**') and line.endswith('**'):
+                    pdf.set_font('Helvetica', 'B', 10)
+                    pdf.multi_cell(0, 6, line.strip('*'))
+                    pdf.set_font('Helvetica', size=10)
+                elif line.startswith('- '):
+                    pdf.multi_cell(0, 5, '  • ' + line[2:])
+                elif line.startswith('!['):
+                    # Try to embed image
+                    try:
+                        import re
+                        match = re.search(r'!\[.*?\]\((.*?)\)', line)
+                        if match:
+                            img_path = match.group(1)
+                            if not os.path.isabs(img_path):
+                                img_path = os.path.join(output_dir, img_path)
+                            if os.path.exists(img_path):
+                                pdf.image(img_path, w=180)
+                    except Exception:
+                        pass
+                elif line.strip():
+                    pdf.multi_cell(0, 5, line)
+                else:
+                    pdf.ln(3)
+            
+            pdf.output(pdf_file)
+            self._log_execution(f"PDF report saved (fpdf2): {pdf_file}")
+            return pdf_file
+        except ImportError:
+            pass
+        except Exception as e:
+            self._log_execution(f"fpdf2 failed: {e}", level='WARNING')
+        
+        self._log_execution("No PDF library available. Install weasyprint, pdfkit, md2pdf, or fpdf2", level='WARNING')
+        return None
     
     def _log_execution(self, message: str, level: str = 'INFO'):
         """Log execution message."""

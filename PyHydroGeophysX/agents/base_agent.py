@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional
 import os
 import json
 from pathlib import Path
+import numpy as np
 
 
 class BaseAgent(ABC):
@@ -233,8 +234,28 @@ class BaseAgent(ABC):
             print(f"  → Normalized 'data_file' to 'ert_file'")
 
         # Detect workflow type with priority order
+        user_request_lower = workflow_config.get('user_request', '').lower()
+        
+        # TDEM: check for TDEM-specific keys
+        if (workflow_config.get('tdem_file') or 
+            workflow_config.get('tdem_data') or
+            'tdem' in user_request_lower or
+            'tem ' in user_request_lower or
+            'electromagnetic' in user_request_lower):
+            workflow_type = 'tdem'
+        
+        # Seismic: check for seismic-specific keys (standalone seismic refraction)
+        elif (workflow_config.get('seismic_file') and not workflow_config.get('ert_file') or
+              workflow_config.get('seismic_only', False) or
+              ('seismic' in user_request_lower and 'ert' not in user_request_lower and 
+               'resistivity' not in user_request_lower and 'fusion' not in user_request_lower) or
+              'srt inversion' in user_request_lower or
+              'seismic refraction' in user_request_lower or
+              'travel time' in user_request_lower):
+            workflow_type = 'seismic'
+            
         # Time-lapse: check for time-lapse specific keys
-        if ('timelapse_files' in config_keys or 
+        elif ('timelapse_files' in config_keys or 
             'timelapse_params' in config_keys or 
             'climate_config' in config_keys):
             workflow_type = 'time_lapse'
@@ -256,7 +277,9 @@ class BaseAgent(ABC):
             workflow_type = 'direct_ert'
             
         else:
-            raise ValueError('Could not infer workflow type from config! Please provide at least ert_file or data_file.')
+            # Could not determine workflow type - check if this is an out-of-scope request
+            workflow_type = 'custom'
+            print("  → No standard workflow detected, will attempt custom code generation")
 
         print(f'\n===== WORKFLOW TYPE: {workflow_type.upper()} =====')
         execution_plan = None
@@ -284,6 +307,7 @@ class BaseAgent(ABC):
                 'output_dir': workflow_config.get('output_dir', str(output_dir))
             }
 
+            update_progress("Planning data fusion workflow", 0.15, "Analyzing multi-method integration")
             print('Getting data fusion execution plan...')
             plan_result = fusion_agent.execute(fusion_input)
             execution_plan = plan_result.get('execution_plan')
@@ -301,8 +325,53 @@ class BaseAgent(ABC):
                 print(f"    Description: {step['description']}")
                 print(f"    Outputs: {', '.join(step['outputs'])}")
 
+            update_progress("Executing data fusion workflow", 0.30, "Processing seismic and ERT data")
             print('\nExecuting complete data fusion workflow...')
             results = fusion_agent.execute_full_workflow(fusion_input)
+            update_progress("Data fusion complete", 0.75, "Generating report")
+            
+            # Update interpretation with detailed results
+            if results.get('status') == 'success':
+                import numpy as np
+                
+                # Build layer parameters summary
+                layer_params = workflow_config.get('layer_params', {})
+                params_summary = ""
+                if layer_params:
+                    for layer_name, params in layer_params.items():
+                        params_summary += f"\n  - {layer_name}: "
+                        if 'rho_sat_range' in params:
+                            params_summary += f"ρ_sat={params['rho_sat_range']}, "
+                        if 'porosity_range' in params:
+                            params_summary += f"φ={params['porosity_range']}, "
+                        if 'n_range' in params:
+                            params_summary += f"n={params['n_range']}"
+                
+                # Get water content stats if available
+                wc_stats = ""
+                if 'water_content_mean' in results:
+                    wc_mean = results['water_content_mean']
+                    wc_std = results.get('water_content_std', np.zeros_like(wc_mean))
+                    wc_stats = f"\n- Mean water content: {np.nanmean(wc_mean):.3f} ± {np.nanmean(wc_std):.3f}"
+                    wc_stats += f"\n- Water content range: {np.nanmin(wc_mean):.3f} - {np.nanmax(wc_mean):.3f}"
+                
+                interpretation = f"""Data Fusion workflow completed successfully.
+
+**Multi-Method Integration:**
+- Seismic file: {workflow_config.get('seismic_file', 'N/A')}
+- ERT file: {workflow_config.get('ert_file', 'N/A')}
+- Velocity threshold: {workflow_config.get('velocity_threshold', 1200)} m/s
+- Fusion pattern: {workflow_config.get('fusion_pattern', 'full_integration')}
+
+**Petrophysical Parameters:**{params_summary if params_summary else ' Default Archie parameters applied'}
+
+**Water Content Results:**{wc_stats if wc_stats else ' Not computed'}
+
+**Key Benefits:**
+- Seismic-derived structure constrains ERT inversion
+- Layer-specific petrophysics improves accuracy
+- Monte Carlo provides uncertainty quantification
+"""
 
             # Generate comprehensive report with layer-specific statistics
             if results.get('status') == 'success':
@@ -369,6 +438,7 @@ class BaseAgent(ABC):
             ert_inversion = ERTInversionAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
             eval_agent = InversionEvaluationAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
 
+            update_progress("Starting time-lapse workflow", 0.15, "Loading multiple ERT datasets")
             print('Running time-lapse ERT workflow...')
             
             # Set execution plan for time-lapse workflow
@@ -390,12 +460,8 @@ class BaseAgent(ABC):
                  'outputs': ['html_report', 'visualizations', 'climate_resistivity_correlation']}
             ]
             
-            interpretation = (
-                "Time-lapse ERT workflow monitors temporal changes in subsurface resistivity "
-                "to track moisture dynamics, infiltration, and hydrological processes. "
-                "Climate data integration enables correlation of resistivity changes with "
-                "precipitation, temperature, and evapotranspiration patterns."
-            )
+            # Initial interpretation - will be updated with actual results later
+            interpretation = None  # Will be set after inversion completes
 
             # Load time-lapse data files (check both naming conventions)
             time_lapse_files = workflow_config.get('time_lapse_files') or workflow_config.get('timelapse_files', [])
@@ -473,6 +539,8 @@ class BaseAgent(ABC):
 
             if len(time_lapse_data) < 2:
                 raise ValueError(f'Need at least 2 datasets for time-lapse, got {len(time_lapse_data)}')
+            
+            update_progress("Data loaded", 0.30, f"Loaded {len(time_lapse_data)} time-lapse datasets")
 
             # Fetch climate data if requested
             climate_results = None
@@ -555,6 +623,7 @@ class BaseAgent(ABC):
                         print(f"  ⚠️  Climate data fetch failed: {fetch_result.get('message', 'Unknown error')}")
 
             # Run time-lapse inversion
+            update_progress("Running time-lapse inversion", 0.45, "This may take several minutes...")
             inversion_input = {
                 'time_lapse_data': time_lapse_data,
                 'inversion_mode': 'time-lapse',
@@ -571,6 +640,7 @@ class BaseAgent(ABC):
 
             print('\nRunning time-lapse inversion...')
             results = ert_inversion.execute(inversion_input)
+            update_progress("Inversion complete", 0.65, f"Processed {results.get('n_timesteps', 'N/A')} time steps")
             
             print(f"  → Inversion status: {results.get('status')}")
             if results.get('status') == 'success':
@@ -603,6 +673,32 @@ class BaseAgent(ABC):
                 if evaluation_results.get('status') == 'success' and evaluation_results.get('attempts', 1) > 1:
                     print('✓ Inversion was optimized! Using improved results.')
                     results = evaluation_results['final_results']
+            
+            # Build detailed interpretation after inversion
+            if results.get('status') == 'success':
+                n_timesteps = results.get('n_timesteps', len(time_lapse_data))
+                chi2_values = results.get('chi2_values', [])
+                chi2_summary = f"{min(chi2_values):.3f} - {max(chi2_values):.3f}" if chi2_values else "N/A"
+                
+                interpretation = f"""Time-lapse ERT monitoring workflow completed successfully.
+
+**Survey Summary:**
+- Number of time steps: {n_timesteps}
+- Data files processed: {len(time_lapse_files)}
+
+**Inversion Results:**
+- Chi-squared range: {chi2_summary}
+- Temporal regularization: {workflow_config.get('temporal_regularization', 10.0)}
+- Inversion method: {workflow_config.get('time_lapse_method', 'difference')}
+
+**Climate Integration:**
+- Climate data: {'Available' if workflow_config.get('climate_data') else 'Not requested'}
+
+**Key Findings:**
+Time-lapse resistivity changes capture subsurface moisture dynamics over the monitoring period.
+Decreasing resistivity indicates increased soil moisture (wetting events).
+Increasing resistivity indicates soil drying (evapotranspiration or drainage).
+"""
 
             # Generate comprehensive report with climate integration if available
             if results.get('status') == 'success':
@@ -687,6 +783,7 @@ class BaseAgent(ABC):
                     'output_dir': str(output_dir)
                 }
                 
+                update_progress("Generating report", 0.85, "Creating visualizations and analysis")
                 print('\n' + '='*70)
                 print('GENERATING TIME-LAPSE REPORT')
                 print('='*70)
@@ -695,6 +792,7 @@ class BaseAgent(ABC):
                 print(f"  → Climate data available: {workflow_config.get('climate_data') is not None}")
                 
                 report_results = report_agent.generate_timelapse_report(report_input)
+                update_progress("Report complete", 0.95, "Saving files")
                 
                 if report_results.get('status') == 'success':
                     report_files = {}
@@ -718,11 +816,11 @@ class BaseAgent(ABC):
             # Use ERT agents for direct ERT workflow
             from .ert_loader_agent import ERTLoaderAgent
             from .ert_inversion_agent import ERTInversionAgent
-            from .water_content_agent import WaterContentAgent
+            from .petrophysics_agent import PetrophysicsAgent
             from .inversion_evaluation_agent import InversionEvaluationAgent
             ert_loader = ERTLoaderAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
             ert_inversion = ERTInversionAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
-            water_content_agent = WaterContentAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+            petrophysics_agent = PetrophysicsAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
             eval_agent = InversionEvaluationAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
 
             # Detect if user wants water content conversion
@@ -857,11 +955,14 @@ class BaseAgent(ABC):
 
             if inversion_results.get('status') != 'success':
                 raise ValueError(f'Inversion failed: {inversion_results.get("error")}')
+            
+            chi2_value = inversion_results.get('chi2', 'N/A')
+            update_progress("Inversion complete", 0.55, f"Chi² = {chi2_value}")
 
             # Evaluate inversion quality
             evaluation_results = None
             if inversion_results.get('status') == 'success':
-                print('Evaluating inversion quality...')
+                update_progress("Evaluating inversion quality", 0.60, "Checking convergence and data fit")
                 eval_input = {
                     'inversion_results': inversion_results,
                     'ert_data': ert_data,
@@ -869,29 +970,53 @@ class BaseAgent(ABC):
                 }
                 evaluation_results = eval_agent.execute(eval_input)
 
-            # If request is only for ERT imaging (no water content), return early
-            only_ert = workflow_config.get('convert_to_water_content') is False
-            if only_ert:
+            # If skipping petrophysics (ERT-only mode)
+            if skip_petrophysics:
+                update_progress("Preparing ERT results", 0.75, "Skipping water content conversion")
                 results = {
                     'status': 'success',
                     'ert_data': ert_data,
                     'inversion_results': inversion_results,
-                    'evaluation_results': evaluation_results
+                    'evaluation_results': evaluation_results,
+                    'skip_petrophysics': True
                 }
+                
+                # Set execution plan for ERT-only workflow
+                execution_plan = [
+                    {'step': 'Load ERT Data', 'agent': 'ERTLoaderAgent', 
+                     'description': 'Load ERT data file', 'outputs': ['ert_data']},
+                    {'step': 'Run Inversion', 'agent': 'ERTInversionAgent', 
+                     'description': 'Invert for resistivity model', 'outputs': ['resistivity_model', 'mesh']},
+                    {'step': 'Evaluate Quality', 'agent': 'InversionEvaluationAgent', 
+                     'description': 'Assess inversion quality', 'outputs': ['quality_score']},
+                    {'step': 'Generate Report', 'agent': 'ReportAgent', 
+                     'description': 'Create summary report', 'outputs': ['report']}
+                ]
+                interpretation = "ERT inversion completed. Resistivity model generated without water content conversion."
             else:
                 # Convert to water content
+                update_progress("Converting to water content", 0.65, "Running Monte Carlo petrophysics")
+                
+                # Get mesh and cell markers from inversion results
+                mesh = inversion_results.get('mesh')
+                cell_markers = np.array(mesh.cellMarkers()) if mesh else np.zeros(len(inversion_results.get('resistivity_model', [])))
+                
                 petro_input = {
-                    'inversion_results': inversion_results,  # Pass the entire inversion_results dict
+                    'resistivity_model': inversion_results.get('resistivity_model'),
+                    'mesh': mesh,
+                    'cell_markers': cell_markers,
                     'petrophysical_params': workflow_config.get('petrophysical_params', {}),
-                    'uncertainty_analysis': workflow_config.get('run_uncertainty', True),
                     'n_realizations': workflow_config.get('n_realizations', 100),
+                    'geological_context': workflow_config.get('geological_context', 'generic watershed'),
                     'output_dir': str(output_dir / 'petrophysics')
                 }
 
-                petro_results = water_content_agent.execute(petro_input)
+                petro_results = petrophysics_agent.execute(petro_input)
 
                 if petro_results.get('status') != 'success':
                     raise ValueError(f'Petrophysics conversion failed: {petro_results.get("error")}')
+                
+                update_progress("Petrophysics complete", 0.75, "Water content model generated")
 
                 # Combine results
                 results = {
@@ -902,13 +1027,61 @@ class BaseAgent(ABC):
                     'petrophysics_results': petro_results,
                     'petrophysical_params': workflow_config.get('petrophysical_params', {}),
                     'water_content_mean': petro_results.get('water_content_mean'),
-                    'water_content_std': petro_results.get('water_content_std')
+                    'water_content_std': petro_results.get('water_content_std'),
+                    'skip_petrophysics': False
                 }
+                
+                # Set execution plan for full workflow
+                execution_plan = [
+                    {'step': 'Load ERT Data', 'agent': 'ERTLoaderAgent', 
+                     'description': 'Load ERT data file', 'outputs': ['ert_data']},
+                    {'step': 'Run Inversion', 'agent': 'ERTInversionAgent', 
+                     'description': 'Invert for resistivity model', 'outputs': ['resistivity_model', 'mesh']},
+                    {'step': 'Evaluate Quality', 'agent': 'InversionEvaluationAgent', 
+                     'description': 'Assess inversion quality', 'outputs': ['quality_score']},
+                    {'step': 'Convert to Water Content', 'agent': 'PetrophysicsAgent', 
+                     'description': 'Apply petrophysics with Monte Carlo', 'outputs': ['water_content', 'uncertainty']},
+                    {'step': 'Generate Report', 'agent': 'ReportAgent', 
+                     'description': 'Create comprehensive report', 'outputs': ['report']}
+                ]
+                
+                # Build detailed interpretation including petrophysical parameters used
+                layer_params_used = petro_results.get('layer_params_used', {})
+                params_summary = ""
+                if layer_params_used:
+                    for layer_name, params in layer_params_used.items():
+                        params_summary += f"\n  - {layer_name}: "
+                        if 'rho_sat' in params:
+                            params_summary += f"ρ_sat={params['rho_sat']:.1f}Ωm, "
+                        if 'porosity' in params:
+                            params_summary += f"φ={params['porosity']:.2f}, "
+                        if 'n' in params:
+                            params_summary += f"n={params['n']:.2f}, "
+                        if 'm' in params:
+                            params_summary += f"m={params['m']:.2f}"
+                
+                interpretation = f"""ERT inversion and petrophysical conversion completed successfully.
+
+**Inversion Results:**
+- Chi-squared misfit: {inversion_results.get('chi2', 'N/A'):.3f}
+- Iterations: {inversion_results.get('iterations', 'N/A')}
+
+**Petrophysical Conversion:**
+- Monte Carlo realizations: {workflow_config.get('n_realizations', 100)}
+- Parameters used:{params_summary if params_summary else ' Default Archie parameters'}
+
+**Water Content Statistics:**
+- Mean water content range: {np.nanmin(petro_results.get('water_content_mean', [0])):.3f} - {np.nanmax(petro_results.get('water_content_mean', [0])):.3f}
+- Uncertainty (std): {np.nanmean(petro_results.get('water_content_std', [0])):.3f}
+"""
 
             # Generate comprehensive report
             if results.get('status') == 'success':
+                update_progress("Generating report", 0.85, "Creating visualizations and summary")
                 from .report_agent import ReportAgent
                 report_agent = ReportAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+                
+                # Build workflow_data based on whether petrophysics was run
                 workflow_data = {
                     'ert_data': {
                         'n_electrodes': len(ert_data.electrodes),
@@ -927,7 +1100,13 @@ class BaseAgent(ABC):
                     'evaluation_results': {
                         'quality_score': evaluation_results.get('quality_score') if evaluation_results else None
                     },
-                    'water_content': {
+                    'skip_petrophysics': skip_petrophysics
+                }
+                
+                # Only include water content and petrophysics data if conversion was performed
+                if not skip_petrophysics:
+                    petro_results = results.get('petrophysics_results', {})
+                    workflow_data['water_content'] = {
                         'mesh': inversion_results['mesh'],
                         'water_content_mean': petro_results.get('water_content_mean'),
                         'water_content_std': petro_results.get('water_content_std'),
@@ -935,16 +1114,19 @@ class BaseAgent(ABC):
                         'layer_params': petro_results.get('layer_params', {}),
                         'petrophysical_params': workflow_config.get('petrophysical_params', {}),
                         'n_realizations': workflow_config.get('n_realizations', 200)
-                    },
-                    'petrophysics_results': petro_results,
-                    'petrophysical_params': workflow_config.get('petrophysical_params', {})
-                }
+                    }
+                    workflow_data['petrophysics_results'] = petro_results
+                    workflow_data['petrophysical_params'] = workflow_config.get('petrophysical_params', {})
+                
                 report_input = {
                     'workflow_data': workflow_data,
                     'config': workflow_config,
                     'output_dir': str(output_dir)
                 }
                 report_results = report_agent.execute(report_input)
+                
+                update_progress("Report complete", 0.95, "Saving files")
+                
                 if report_results.get('status') == 'success':
                     report_files = {}
                     if report_results.get('report_file'):
@@ -956,6 +1138,492 @@ class BaseAgent(ABC):
                     for vis_name, vis_path in (report_results.get('visualization_files') or {}).items():
                         report_files[f'visualization_{vis_name}'] = vis_path
 
+        elif workflow_type == 'tdem':
+            # Use TDEMAgent for Time-Domain Electromagnetic workflow
+            from .tdem_agent import TDEMAgent
+            tdem_agent = TDEMAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+            
+            update_progress("Starting TDEM workflow", 0.15, "Configuring electromagnetic inversion")
+            print('Running TDEM workflow...')
+            
+            # Set execution plan for TDEM workflow
+            execution_plan = [
+                {'step': 'Load TDEM Data', 'agent': 'TDEMAgent', 
+                 'description': 'Load time-domain electromagnetic sounding data', 
+                 'outputs': ['times', 'dobs', 'uncertainties']},
+                {'step': 'Run TDEM Inversion', 'agent': 'TDEMAgent', 
+                 'description': 'Invert for 1D conductivity model using SimPEG', 
+                 'outputs': ['conductivity_model', 'chi2']},
+                {'step': 'Generate Visualization', 'agent': 'TDEMAgent', 
+                 'description': 'Create result plots and interpretation', 
+                 'outputs': ['visualization_files', 'interpretation']},
+            ]
+            
+            interpretation = (
+                "TDEM (Time-Domain Electromagnetic) workflow processes electromagnetic sounding data "
+                "to recover subsurface conductivity structure. Uses SimPEG for 1D layered Earth inversion."
+            )
+            
+            # Get TDEM data file with path resolution
+            tdem_file = workflow_config.get('tdem_file') or workflow_config.get('data_file')
+            if tdem_file:
+                tdem_file_path = Path(tdem_file)
+                if not tdem_file_path.exists():
+                    # Try to find in uploaded_files
+                    uploaded_files = workflow_config.get('uploaded_files', {})
+                    if tdem_file_path.name in uploaded_files:
+                        tdem_file = uploaded_files[tdem_file_path.name]
+                        tdem_file_path = Path(tdem_file)
+                        print(f'  → Found TDEM file in uploads: {tdem_file_path.name}')
+                    else:
+                        # Try project_dir
+                        project_dir = workflow_config.get('project_dir', '.')
+                        if project_dir and project_dir != '.':
+                            combined_path = Path(project_dir) / tdem_file_path.name
+                            if combined_path.exists():
+                                tdem_file_path = combined_path
+                                tdem_file = str(tdem_file_path)
+                
+                if not tdem_file_path.exists():
+                    raise ValueError(f"TDEM data file not found: {tdem_file}")
+                
+                print(f'  → TDEM file: {tdem_file_path.name}')
+                tdem_file = str(tdem_file_path)
+            
+            # Prepare TDEM input
+            tdem_input = {
+                'mode': workflow_config.get('tdem_mode', 'inversion'),
+                'data_file': tdem_file,
+                'source_radius': workflow_config.get('source_radius', 10.0),
+                'n_layers': workflow_config.get('n_layers', 20),
+                'min_thickness': workflow_config.get('min_thickness', 0.5),
+                'max_thickness': workflow_config.get('max_thickness', 10.0),
+                'starting_conductivity': workflow_config.get('starting_conductivity', 0.001),
+                'use_irls': workflow_config.get('use_irls', True),
+                'max_iterations': workflow_config.get('max_iterations', 50),
+                'output_dir': str(output_dir / 'tdem'),
+                'verbose': True
+            }
+            
+            # Handle forward modeling mode
+            if tdem_input['mode'] == 'forward':
+                tdem_input['thicknesses'] = workflow_config.get('thicknesses')
+                tdem_input['conductivity'] = workflow_config.get('conductivity')
+                tdem_input['times'] = workflow_config.get('times')
+                tdem_input['noise_level'] = workflow_config.get('noise_level', 0.05)
+            
+            # Handle hydro-to-tdem mode
+            if tdem_input['mode'] == 'hydro_to_tdem':
+                tdem_input['water_content'] = workflow_config.get('water_content')
+                tdem_input['porosity'] = workflow_config.get('porosity')
+                tdem_input['layer_thicknesses'] = workflow_config.get('layer_thicknesses')
+                tdem_input['petrophysical_params'] = workflow_config.get('petrophysical_params', {})
+            
+            update_progress("Running TDEM processing", 0.30, "Loading data and running inversion")
+            
+            # Execute TDEM workflow
+            results = tdem_agent.execute(tdem_input)
+            
+            if results.get('status') == 'success':
+                update_progress("TDEM complete", 0.80, f"Chi² = {results.get('chi2', 'N/A')}")
+                
+                # Generate report
+                update_progress("Generating report", 0.90, "Creating TDEM report")
+                from .report_agent import ReportAgent
+                report_agent = ReportAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+                
+                # Create TDEM-specific report
+                tdem_report = f"""# TDEM Inversion Report
+
+**Generated by:** PyHydroGeophysX TDEMAgent
+**Mode:** {results.get('mode', 'inversion')}
+
+## Executive Summary
+
+{results.get('interpretation', 'TDEM processing completed successfully.')}
+
+## Inversion Results
+
+### Model Statistics
+- **Number of Layers:** {results.get('n_layers', 'N/A')}
+- **Chi-squared Misfit:** {results.get('chi2', 'N/A'):.3f}
+- **Conductivity Range:** {results.get('conductivity_range', ['N/A', 'N/A'])[0]:.4f} - {results.get('conductivity_range', ['N/A', 'N/A'])[1]:.4f} S/m
+- **Resistivity Range:** {results.get('resistivity_range', ['N/A', 'N/A'])[0]:.1f} - {results.get('resistivity_range', ['N/A', 'N/A'])[1]:.1f} Ωm
+
+## Visualization
+
+![TDEM Result]({Path(results.get('visualization_file', '')).name})
+
+## Output Files
+
+- Output directory: `{results.get('output_dir', 'N/A')}`
+- Recovered conductivity: `recovered_conductivity.npy`
+- Layer thicknesses: `inv_thicknesses.npy`
+- Predicted data: `predicted_data.npy`
+
+---
+*Report generated by PyHydroGeophysX TDEMAgent using SimPEG*
+"""
+                # Save report
+                report_file = output_dir / 'tdem_report.md'
+                with open(report_file, 'w', encoding='utf-8') as f:
+                    f.write(tdem_report)
+                
+                report_files = {'report_markdown': str(report_file)}
+                
+                # Save HTML version
+                html_file = report_agent._save_html_report(tdem_report, str(output_dir), 'tdem_report')
+                if html_file:
+                    report_files['report_html'] = html_file
+                
+                # Save PDF version
+                pdf_file = report_agent._save_pdf_report(tdem_report, str(output_dir), 
+                                                         visualization_files={'tdem_result': results.get('visualization_file', '')},
+                                                         filename='tdem_report')
+                if pdf_file:
+                    report_files['report_pdf'] = pdf_file
+                
+                if results.get('visualization_file'):
+                    report_files['visualization_tdem'] = results['visualization_file']
+                
+                interpretation = results.get('interpretation', interpretation)
+            else:
+                update_progress("TDEM failed", 1.0, results.get('error', 'Unknown error'))
+                raise ValueError(f"TDEM processing failed: {results.get('error')}")
+
+        elif workflow_type == 'seismic':
+            # Use SeismicAgent for standalone seismic refraction tomography
+            from .seismic_agent import SeismicAgent
+            seismic_agent = SeismicAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+            
+            update_progress("Starting seismic workflow", 0.15, "Configuring seismic refraction tomography")
+            print('Running seismic refraction tomography workflow...')
+            
+            # Set execution plan for seismic workflow
+            execution_plan = [
+                {'step': 'Load Seismic Data', 'agent': 'SeismicAgent', 
+                 'description': 'Load travel time data from .dat file', 
+                 'outputs': ['seismic_data']},
+                {'step': 'Run SRT Inversion', 'agent': 'SeismicAgent', 
+                 'description': 'Invert for P-wave velocity model using PyGIMLI', 
+                 'outputs': ['velocity_model', 'mesh', 'coverage']},
+                {'step': 'Extract Interfaces', 'agent': 'SeismicAgent', 
+                 'description': 'Extract geological interfaces from velocity thresholds', 
+                 'outputs': ['interface_coords']},
+                {'step': 'Generate Visualization', 'agent': 'SeismicAgent', 
+                 'description': 'Create velocity tomogram and interface plots', 
+                 'outputs': ['visualization_files', 'interpretation']},
+            ]
+            
+            interpretation = (
+                "Seismic refraction tomography (SRT) workflow inverts travel time data to "
+                "recover subsurface P-wave velocity structure. Velocity interfaces are "
+                "extracted for geological interpretation and hydrogeological modeling."
+            )
+            
+            # Get seismic file
+            seismic_file = workflow_config.get('seismic_file')
+            if not seismic_file:
+                raise ValueError('No seismic file specified in configuration. '
+                               'Please provide seismic_file path.')
+            
+            # Normalize seismic file path
+            seismic_file_path = Path(seismic_file)
+            project_dir = workflow_config.get('project_dir', '.')
+            
+            if not seismic_file_path.exists():
+                # Try combining with project_dir
+                if project_dir and project_dir != '.':
+                    combined_path = Path(project_dir) / seismic_file_path.name
+                    if combined_path.exists():
+                        seismic_file_path = combined_path
+                    elif combined_path.parts[0] == 'examples':
+                        combined_path = Path(*combined_path.parts[1:])
+                        if combined_path.exists():
+                            seismic_file_path = combined_path
+                
+                # Try removing 'examples/' prefix
+                if not seismic_file_path.exists() and len(seismic_file_path.parts) > 0:
+                    if seismic_file_path.parts[0] == 'examples':
+                        alt_path = Path(*seismic_file_path.parts[1:])
+                        if alt_path.exists():
+                            seismic_file_path = alt_path
+            
+            seismic_file = str(seismic_file_path)
+            print(f'  → Seismic file: {seismic_file_path.name}')
+            
+            # Get velocity thresholds for interface extraction
+            velocity_thresholds = workflow_config.get('velocity_thresholds', [1200])
+            if isinstance(velocity_thresholds, (int, float)):
+                velocity_thresholds = [velocity_thresholds]
+            
+            # Add additional threshold from user request if specified
+            velocity_threshold = workflow_config.get('velocity_threshold')
+            if velocity_threshold and velocity_threshold not in velocity_thresholds:
+                velocity_thresholds.append(velocity_threshold)
+            
+            print(f'  → Velocity thresholds: {velocity_thresholds} m/s')
+            
+            # Prepare inversion parameters
+            inversion_params = workflow_config.get('inversion_params', {})
+            if not inversion_params:
+                inversion_params = {
+                    'lam': workflow_config.get('lambda', 50),
+                    'zWeight': workflow_config.get('z_weight', 0.2),
+                    'vTop': workflow_config.get('v_top', 500),
+                    'vBottom': workflow_config.get('v_bottom', 5000),
+                    'paraDepth': workflow_config.get('para_depth', 30.0),
+                    'limits': workflow_config.get('velocity_limits', [300., 8000.])
+                }
+            
+            # Prepare seismic input
+            seismic_input = {
+                'seismic_file': seismic_file,
+                'velocity_threshold': velocity_thresholds[0] if velocity_thresholds else 1200,
+                'velocity_thresholds': velocity_thresholds,
+                'inversion_params': inversion_params,
+                'extract_interfaces': workflow_config.get('extract_interfaces', True),
+                'output_dir': str(output_dir / 'seismic')
+            }
+            
+            update_progress("Running seismic inversion", 0.30, "Loading data and inverting velocity model")
+            
+            # Execute seismic workflow
+            results = seismic_agent.execute(seismic_input)
+            
+            if results.get('status') == 'success':
+                vel_range = results.get('velocity_range', [0, 0])
+                update_progress("Seismic inversion complete", 0.80, 
+                              f"Velocity: {vel_range[0]:.0f} - {vel_range[1]:.0f} m/s")
+                
+                # Generate report
+                update_progress("Generating report", 0.90, "Creating seismic report")
+                from .report_agent import ReportAgent
+                report_agent = ReportAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+                
+                # Format interface information
+                interfaces_info = ""
+                for threshold, data in results.get('interfaces', {}).items():
+                    z_min = min(data['z']) if len(data['z']) > 0 else 'N/A'
+                    z_max = max(data['z']) if len(data['z']) > 0 else 'N/A'
+                    interfaces_info += f"- **{threshold} m/s interface:** Depth range {z_min:.1f} to {z_max:.1f} m\n"
+                
+                # Create seismic-specific report
+                seismic_report = f"""# Seismic Refraction Tomography Report
+
+**Generated by:** PyHydroGeophysX SeismicAgent
+
+## Executive Summary
+
+{results.get('interpretation', 'Seismic refraction tomography completed successfully.')}
+
+## Survey Information
+
+- **Data File:** `{seismic_file_path.name}`
+- **Number of Shots:** {results.get('n_shots', 'N/A')}
+- **Number of Receivers:** {results.get('n_receivers', 'N/A')}
+- **Total Travel Times:** {results.get('n_data', 'N/A')}
+
+## Inversion Results
+
+### Velocity Model Statistics
+- **Velocity Range:** {vel_range[0]:.0f} - {vel_range[1]:.0f} m/s
+- **Mesh Cells:** {results.get('mesh').cellCount() if results.get('mesh') else 'N/A'}
+
+### Inversion Parameters
+- **Lambda (regularization):** {inversion_params.get('lam', 50)}
+- **Z-Weight:** {inversion_params.get('zWeight', 0.2)}
+- **Velocity Constraints:** {inversion_params.get('vTop', 500)} - {inversion_params.get('vBottom', 5000)} m/s
+
+## Extracted Interfaces
+
+{interfaces_info if interfaces_info else 'No interfaces extracted.'}
+
+### Geological Interpretation
+
+Based on typical velocity-depth relationships:
+- **< 1200 m/s:** Weathered soil/regolith
+- **1200-3000 m/s:** Fractured rock
+- **> 3000 m/s:** Competent bedrock
+
+## Visualization
+
+![Seismic Velocity Model]({Path(results.get('visualization_file', '')).name})
+
+## Output Files
+
+- **Output directory:** `{results.get('output_dir', 'N/A')}`
+- **Velocity model:** `velocity_model.npy`
+- **Coverage:** `coverage.npy`
+- **Mesh:** `seismic_mesh.bms`
+- **Interface files:** `interface_*ms.txt`
+
+---
+*Report generated by PyHydroGeophysX SeismicAgent using PyGIMLI*
+"""
+                # Save report
+                report_file = output_dir / 'seismic_report.md'
+                with open(report_file, 'w', encoding='utf-8') as f:
+                    f.write(seismic_report)
+                
+                report_files = {'report_markdown': str(report_file)}
+                
+                # Save HTML version
+                html_file = report_agent._save_html_report(seismic_report, str(output_dir), 'seismic_report')
+                if html_file:
+                    report_files['report_html'] = html_file
+                
+                # Save PDF version
+                pdf_file = report_agent._save_pdf_report(seismic_report, str(output_dir),
+                                                         visualization_files={'velocity_model': results.get('visualization_file', '')},
+                                                         filename='seismic_report')
+                if pdf_file:
+                    report_files['report_pdf'] = pdf_file
+                
+                if results.get('visualization_file'):
+                    report_files['visualization_seismic'] = results['visualization_file']
+                
+                interpretation = results.get('interpretation', interpretation)
+            else:
+                update_progress("Seismic inversion failed", 1.0, results.get('error', 'Unknown error'))
+                raise ValueError(f"Seismic processing failed: {results.get('error')}")
+
+        elif workflow_type == 'custom':
+            # Handle out-of-scope requests with CodeGenerationAgent
+            from .code_generation_agent import CodeGenerationAgent
+            code_agent = CodeGenerationAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+            
+            update_progress("Analyzing custom request", 0.20, "Checking if standard workflow applies")
+            
+            # First, check if this is truly out of scope
+            scope_check = code_agent.check_request_scope(
+                workflow_config.get('user_request', ''),
+                workflow_config
+            )
+            
+            if scope_check.get('in_scope', True) and not scope_check.get('out_of_scope_parts'):
+                # Request is in scope but we couldn't detect the workflow type
+                # This likely means missing data files
+                raise ValueError(
+                    'Could not infer workflow type from config! '
+                    'Please provide at least ert_file or data_file.\n'
+                    f"Recommendation: {scope_check.get('recommendation', 'Check your input files')}"
+                )
+            
+            # Request is out of scope - use code generation
+            print(f"  → Out of scope parts: {scope_check.get('out_of_scope_parts', [])}")
+            print(f"  → Recommendation: {scope_check.get('recommendation', 'Using code generation')}")
+            
+            update_progress("Generating custom code", 0.40, "Using LLM to write analysis code")
+            
+            # Prepare available data for code generation
+            available_data = {
+                'workflow_config': workflow_config,
+                'output_dir': str(output_dir)
+            }
+            
+            # Add any file paths from config
+            for key in ['ert_file', 'data_file', 'seismic_file', 'electrode_file']:
+                if workflow_config.get(key):
+                    available_data[key] = workflow_config[key]
+            
+            code_input = {
+                'user_request': workflow_config.get('user_request', ''),
+                'available_data': available_data,
+                'output_dir': str(output_dir / 'custom'),
+                'context': f"Out of scope parts: {scope_check.get('out_of_scope_parts', [])}"
+            }
+            
+            code_results = code_agent.execute(code_input)
+            
+            update_progress("Custom analysis complete", 0.80, 
+                          "Success" if code_results.get('status') == 'success' else "Failed")
+            
+            # Set execution plan for custom workflow
+            execution_plan = [
+                {'step': 'Check Request Scope', 'agent': 'CodeGenerationAgent', 
+                 'description': 'Analyze if request is within standard capabilities', 
+                 'outputs': ['scope_check']},
+                {'step': 'Generate Custom Code', 'agent': 'CodeGenerationAgent', 
+                 'description': 'Use LLM to write analysis code', 
+                 'outputs': ['python_code']},
+                {'step': 'Execute Code', 'agent': 'CodeGenerationAgent', 
+                 'description': 'Run generated code safely', 
+                 'outputs': ['results', 'outputs']},
+            ]
+            
+            interpretation = code_results.get('interpretation', 
+                'Custom analysis attempted. See code output for details.')
+            
+            results = {
+                'status': code_results.get('status', 'failed'),
+                'custom_analysis': True,
+                'code_results': code_results,
+                'out_of_scope_parts': scope_check.get('out_of_scope_parts', []),
+                'recommendation': scope_check.get('recommendation', '')
+            }
+            
+            # Generate report with custom analysis results
+            if code_results.get('status') == 'success':
+                update_progress("Generating report", 0.90, "Documenting custom analysis")
+                from .report_agent import ReportAgent
+                report_agent = ReportAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+                
+                # Create custom report
+                custom_report = f"""# Custom Analysis Report
+
+**Generated by:** PyHydroGeophysX CodeGenerationAgent
+**Request:** {workflow_config.get('user_request', 'Not specified')}
+
+## Analysis Summary
+
+{interpretation}
+
+## Out-of-Scope Components
+
+The following parts of your request were not covered by standard workflows:
+{chr(10).join('- ' + part for part in scope_check.get('out_of_scope_parts', ['Custom analysis required']))}
+
+## Generated Code
+
+The following Python code was generated to address your request:
+
+```python
+{code_results.get('code', 'No code generated')}
+```
+
+## Execution Output
+
+```
+{code_results.get('output', 'No output captured')}
+```
+
+## Files Generated
+
+- Code file: {code_results.get('code_file', 'N/A')}
+- Output directory: {code_results.get('output_dir', str(output_dir))}
+
+---
+*Report generated automatically by PyHydroGeophysX CodeGenerationAgent*
+"""
+                # Save report
+                report_file = output_dir / 'custom_analysis_report.md'
+                with open(report_file, 'w', encoding='utf-8') as f:
+                    f.write(custom_report)
+                
+                report_files = {'report_markdown': str(report_file)}
+                
+                # Try to save HTML version
+                html_file = report_agent._save_html_report(custom_report, str(output_dir), 'custom_analysis_report')
+                if html_file:
+                    report_files['report_html'] = html_file
+                
+                # Save PDF version
+                pdf_file = report_agent._save_pdf_report(custom_report, str(output_dir), 
+                                                         filename='custom_analysis_report')
+                if pdf_file:
+                    report_files['report_pdf'] = pdf_file
+        
         else:
             raise ValueError('Unknown workflow type!')
 

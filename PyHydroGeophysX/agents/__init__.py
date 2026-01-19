@@ -26,6 +26,8 @@ from .climate_data_agent import ClimateDataAgent
 from .data_fusion_agent import DataFusionAgent
 from .structure_constraint_agent import StructureConstraintAgent
 from .petrophysics_agent import PetrophysicsAgent
+from .code_generation_agent import CodeGenerationAgent
+from .tdem_agent import TDEMAgent
 
 __all__ = [
     'AgentCoordinator',
@@ -40,5 +42,7 @@ __all__ = [
     'ClimateDataAgent',
     'DataFusionAgent',
     'StructureConstraintAgent',
-    'PetrophysicsAgent'
+    'PetrophysicsAgent',
+    'CodeGenerationAgent',
+    'TDEMAgent'
 ]

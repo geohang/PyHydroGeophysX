@@ -10574,9 +10574,9 @@
   "metadata": {
     "loader": "RESIPY",
     "ftype": "DAS-1",
-    "project_dir": "C:\\Users\\hchen117\\AppData\\Local\\Temp\\phgx_uploads_zf_gafmm",
-    "data_file": "C:\\Users\\hchen117\\AppData\\Local\\Temp\\phgx_uploads_zf_gafmm\\20171105_1418.Data",
-    "electrode_file": "C:\\Users\\hchen117\\AppData\\Local\\Temp\\phgx_uploads_zf_gafmm\\electrodes.dat",
+    "project_dir": "C:\\Users\\hchen117\\AppData\\Local\\Temp\\phgx_uploads_adnr6kgp",
+    "data_file": "C:\\Users\\hchen117\\AppData\\Local\\Temp\\phgx_uploads_adnr6kgp\\20171105_1418.Data",
+    "electrode_file": "C:\\Users\\hchen117\\AppData\\Local\\Temp\\phgx_uploads_adnr6kgp\\electrodes.dat",
     "epsg": null,
     "local_ref": {
       "origin_x": 0.0,

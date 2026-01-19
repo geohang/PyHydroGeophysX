@@ -34,6 +34,7 @@ CUSTOM_CSS = """
     --phgx-green: #2d9c5b;
     --phgx-gray: #f5f7fb;
     --phgx-dark: #1b262c;
+    --phgx-accent: #3d6cb9;
 }
 
 section.main > div {
@@ -45,6 +46,56 @@ section.main > div {
     font-weight: 700;
     color: var(--phgx-dark);
     letter-spacing: 0.04em;
+}
+
+.phgx-subtitle-main {
+    background: linear-gradient(90deg, var(--phgx-blue) 0%, var(--phgx-accent) 50%, var(--phgx-green) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-top: 0.1rem;
+    margin-bottom: 0.3rem;
+}
+
+.phgx-author-line {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.phgx-version-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.4rem;
+    background: linear-gradient(135deg, #e8f4f8 0%, #f0f7ff 100%);
+    border: 1px solid #c8dce8;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--phgx-blue);
+}
+
+.phgx-author-text {
+    color: #5a6a7a;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.phgx-author-text a {
+    color: var(--phgx-accent);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--phgx-accent);
+}
+
+.phgx-author-text a:hover {
+    color: var(--phgx-blue);
+    border-bottom-style: solid;
 }
 
 .phgx-subtitle {
@@ -72,6 +123,7 @@ section.main > div {
     font-weight: 600;
     font-size: 0.85rem;
     margin-right: 0.35rem;
+    margin-bottom: 0.3rem;
 }
 
 .phgx-mono {
@@ -101,7 +153,20 @@ ERT: fielddataline2.dat
 Petrophysics:
 - Regolith: rho_sat 50-250, n 1.3-2.2, porosity 0.25-0.50
 - Fractured bedrock: rho_sat 165-350, n 2.0-2.2, porosity 0.2-0.3
-Monte Carlo realizations: 100"""
+Monte Carlo realizations: 100""",
+    "Seismic Refraction": """Run a seismic refraction tomography (SRT) inversion.
+Data file: synthetic_seismic_data_long.dat
+Regularization lambda: 50
+Vertical weight: 0.2
+Velocity constraints: 500-5000 m/s
+Parametric depth: 60 m
+Extract velocity interfaces at: 1200 m/s (regolith-bedrock), 5000 m/s (fractured-fresh)""",
+    "TDEM Inversion": """Run a TDEM (Time-Domain Electromagnetic) inversion.
+Data file: tdem_synthetic_data.txt
+Loop source radius: 10 meters
+Number of inversion layers: 20
+Use sparse regularization (IRLS): yes
+Maximum iterations: 50"""
 }
 
 
@@ -125,13 +190,22 @@ def init_session_state() -> None:
 def render_header() -> None:
     st.markdown('<div class="phgx-header">PyHydroGeophysX Workflows</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="phgx-subtitle">AQUAH: Autonomous Query-driven Understanding Agent for Hydrogeophysics</div>',
+        '<div class="phgx-subtitle-main">AQUAH: Autonomous Query-driven Understanding Agent for Hydrogeophysics</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="phgx-author-line">'
+        '<span class="phgx-version-badge">v1.0</span>'
+        '<span class="phgx-author-text">Developed by <a href="https://sites.google.com/view/hangchen" target="_blank">Hang Chen</a> · University of Iowa</span>'
+        '</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
         '<div class="phgx-pill">Unified Workflow</div>'
         '<div class="phgx-pill">ERT</div>'
+        '<div class="phgx-pill">TDEM</div>'
         '<div class="phgx-pill">Seismic</div>'
+        '<div class="phgx-pill">Data Fusion</div>'
         '<div class="phgx-pill">Climate</div>',
         unsafe_allow_html=True,
     )
@@ -249,11 +323,21 @@ def handle_uploads(
         return ("electrode" in name or "electrodes" in name or "elec" in name) and p.suffix.lower() in [".dat", ".txt", ".csv"]
 
     electrode_files = [p for p in all_paths if is_electrode(p)]
+    
+    # Detect TDEM files (typically contain 'tdem', 'tem', or 'electromagnetic' in name)
+    def is_tdem(p: Path) -> bool:
+        name = p.name.lower()
+        return ("tdem" in name or "tem_" in name or "electromagnetic" in name) and p.suffix.lower() in [".txt", ".dat", ".csv"]
+    
+    tdem_candidates = [p for p in all_paths if is_tdem(p)]
+    
+    # Data candidates exclude electrode files, seismic files, and TDEM files
     data_candidates = [
         p for p in all_paths
         if p.suffix.lower() in [".ohm", ".data", ".dat", ".txt"]
         and not is_electrode(p)
         and "seis" not in p.name.lower()
+        and not is_tdem(p)
     ]
     seismic_candidates = [p for p in all_paths if "seis" in p.name.lower() or p.suffix.lower() in [".sgy", ".segy"]]
 
@@ -269,6 +353,9 @@ def handle_uploads(
 
     if seismic_candidates:
         workflow_config["seismic_file"] = str(seismic_candidates[0])
+    
+    if tdem_candidates:
+        workflow_config["tdem_file"] = str(tdem_candidates[0])
 
     # Expose all uploads for downstream agents
     workflow_config["uploaded_files"] = {p.name: str(p) for p in all_paths}
@@ -369,11 +456,26 @@ def run_workflow(
 def _detect_workflow_type(config: Dict) -> str:
     """Detect workflow type from configuration."""
     config_keys = set(config.keys())
-    if 'timelapse_files' in config_keys or 'time_lapse_files' in config_keys:
+    user_request = config.get('user_request', '').lower()
+    
+    # TDEM detection
+    if (config.get('tdem_file') or config.get('tdem_mode') or
+        'tdem' in user_request or 'tem ' in user_request or
+        'electromagnetic' in user_request):
+        return "TDEM Inversion"
+    # Seismic-only detection
+    elif (config.get('seismic_file') and not config.get('ert_file') or
+          config.get('seismic_only') or
+          'seismic refraction' in user_request or 'srt inversion' in user_request):
+        return "Seismic Refraction Tomography"
+    elif 'timelapse_files' in config_keys or 'time_lapse_files' in config_keys:
         return "Time-Lapse ERT"
     elif config.get('velocity_threshold') or (config.get('ert_file') and config.get('seismic_file')):
         return "Data Fusion (Seismic + ERT)"
     elif config.get('ert_file') or config.get('data_file'):
+        # Check if water content is requested
+        if 'water content' in user_request or 'petrophysic' in user_request or 'moisture' in user_request:
+            return "ERT Inversion + Petrophysics"
         return "Direct ERT Inversion"
     return "Unknown"
 

@@ -113,8 +113,34 @@ class ContextInputAgent(BaseAgent):
         climate_response = self.query_llm(climate_prompt)
         climate_config = self._extract_config_from_response(climate_response)
         
+        # STAGE 4: Extract TDEM configuration (if electromagnetic mentioned)
+        tdem_config = {}
+        tdem_keywords = ['tdem', 'tem ', 'time-domain electromagnetic', 'electromagnetic sounding',
+                        'loop source', 'transient electromagnetic', 'simpeg']
+        if any(kw in user_request.lower() for kw in tdem_keywords):
+            print("  Stage 4: Extracting TDEM configuration...")
+            tdem_prompt = self._create_tdem_prompt(user_request)
+            tdem_response = self.query_llm(tdem_prompt)
+            tdem_config = self._extract_config_from_response(tdem_response)
+        
+        # STAGE 5: Extract seismic configuration (if seismic mentioned without ERT fusion)
+        seismic_config = {}
+        user_request_lower = user_request.lower()
+        seismic_keywords = ['seismic refraction', 'srt inversion', 'travel time', 'velocity model',
+                           'velocity tomography', 'p-wave', 'first arrival', 'seismic tomography']
+        # Only extract seismic config if seismic is mentioned but not as part of ERT fusion
+        is_seismic_only = (any(kw in user_request_lower for kw in seismic_keywords) and
+                          'ert' not in user_request_lower and 
+                          'resistivity' not in user_request_lower and
+                          'fusion' not in user_request_lower)
+        if is_seismic_only:
+            print("  Stage 5: Extracting seismic configuration...")
+            seismic_prompt = self._create_seismic_prompt(user_request)
+            seismic_response = self.query_llm(seismic_prompt)
+            seismic_config = self._extract_config_from_response(seismic_response)
+        
         # Merge configurations
-        workflow_config = {**inversion_config, **fusion_config, **climate_config}
+        workflow_config = {**inversion_config, **fusion_config, **climate_config, **tdem_config, **seismic_config}
         
         # Fallback: Extract petrophysical parameters using regex if LLM missed them
         if not workflow_config.get('petrophysical_params') or len(workflow_config.get('petrophysical_params', {})) == 0:
@@ -474,6 +500,128 @@ Example output (climate requested):
 Example output (no climate):
 {{
   "use_climate": false
+}}
+
+Generate JSON now:"""
+        return prompt
+    
+    def _create_tdem_prompt(self, user_request: str) -> str:
+        """Create focused prompt for TDEM configuration extraction."""
+        prompt = f"""You are extracting Time-Domain Electromagnetic (TDEM) configuration from a request.
+
+User Request:
+{user_request}
+
+Extract ONLY TDEM parameters in JSON format:
+
+1. **TDEM Mode**:
+   - tdem_mode: 'inversion', 'forward', or 'hydro_to_tdem'
+   
+2. **Data source** (for inversion mode):
+   - tdem_file: Path to TDEM data file (.txt format with columns: TIME BZ UNCERTAINTY)
+   
+3. **Survey parameters**:
+   - source_radius: Loop radius in meters (extract if mentioned, default: 10)
+   - times: Time channels array (if specified, e.g., "10µs to 10ms")
+   
+4. **Inversion parameters** (for inversion mode):
+   - n_layers: Number of layers (extract if mentioned, default: 20)
+   - min_thickness: Minimum layer thickness in meters (default: 0.5)
+   - max_thickness: Maximum layer thickness in meters (default: 10)
+   - starting_conductivity: Starting conductivity in S/m (default: 0.001)
+   - use_irls: Use sparse regularization (default: true)
+   - max_iterations: Maximum iterations (default: 50)
+
+5. **Forward modeling parameters** (for forward mode):
+   - thicknesses: Layer thicknesses array (meters)
+   - conductivity: Layer conductivities array (S/m)
+   - noise_level: Noise level as fraction (default: 0.05 = 5%)
+
+6. **Hydro-to-TDEM parameters** (for hydro_to_tdem mode):
+   - water_content: Path to water content data
+   - porosity: Path to porosity data
+   - layer_thicknesses: Layer thicknesses
+   - Petrophysical parameters:
+     * sigma_w: Pore water conductivity (S/m, default: 0.05)
+     * m: Cementation exponent (default: 1.5)
+     * n: Saturation exponent (default: 2.0)
+
+IMPORTANT:
+- Only extract TDEM-related parameters
+- Return {{"tdem_mode": null}} if no TDEM processing mentioned
+- Return ONLY valid JSON, no explanatory text
+
+Example output (inversion):
+{{
+  "tdem_mode": "inversion",
+  "tdem_file": "tdem_synthetic_data.txt",
+  "source_radius": 10.0,
+  "n_layers": 20,
+  "use_irls": true,
+  "max_iterations": 50
+}}
+
+Example output (no TDEM):
+{{
+  "tdem_mode": null
+}}
+
+Generate JSON now:"""
+        return prompt
+    
+    def _create_seismic_prompt(self, user_request: str) -> str:
+        """Create focused prompt for seismic refraction configuration extraction."""
+        prompt = f"""You are extracting seismic refraction tomography (SRT) configuration from a request.
+
+User Request:
+{user_request}
+
+Extract ONLY seismic parameters in JSON format:
+
+1. **Data source**:
+   - seismic_file: Path to seismic travel time data file (.dat format)
+   
+2. **Inversion parameters**:
+   - lam: Lambda/regularization parameter (extract if mentioned, default: 50)
+   - z_weight: Vertical smoothing weight (extract if mentioned, default: 0.2)
+   - v_top: Top velocity constraint in m/s (extract if mentioned, default: 500)
+   - v_bottom: Bottom velocity constraint in m/s (extract if mentioned, default: 5000)
+   - para_depth: Parametric depth in meters (extract if mentioned, default: 30)
+   - velocity_limits: [min, max] velocity limits in m/s (default: [300, 8000])
+   
+3. **Interface extraction**:
+   - extract_interfaces: Whether to extract velocity interfaces (default: true)
+   - velocity_threshold: Main threshold for interface extraction in m/s (extract if mentioned, default: 1200)
+   - velocity_thresholds: List of thresholds for multiple interfaces (e.g., [1200, 3000, 5000])
+   
+4. **Geological interpretation hints**:
+   - < 1200 m/s: Regolith/weathered soil
+   - 1200-3000 m/s: Fractured rock
+   - > 3000 m/s: Competent bedrock
+
+IMPORTANT:
+- Only extract seismic-related parameters
+- Look for velocity values mentioned in the request
+- Return {{"seismic_only": false}} if no seismic processing mentioned
+- Set "seismic_only": true for standalone seismic workflows
+- Return ONLY valid JSON, no explanatory text
+
+Example output (seismic inversion):
+{{
+  "seismic_only": true,
+  "seismic_file": "synthetic_seismic_data.dat",
+  "lam": 50,
+  "z_weight": 0.2,
+  "v_top": 500,
+  "v_bottom": 5000,
+  "para_depth": 30,
+  "extract_interfaces": true,
+  "velocity_thresholds": [1200, 5000]
+}}
+
+Example output (no seismic):
+{{
+  "seismic_only": false
 }}
 
 Generate JSON now:"""
