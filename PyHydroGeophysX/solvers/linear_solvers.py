@@ -25,6 +25,11 @@ except ImportError:
     PARALLEL_AVAILABLE = False
 
 
+def _scalar_dot(xp, a, b):
+    """Return scalar dot product regardless of vector shape (works for NumPy/CuPy)."""
+    return float(xp.vdot(a.ravel(), b.ravel()))
+
+
 def generalized_solver(A, b, method="cgls", x=None, maxiter=200, tol=1e-8,
                       verbose=False, damp=0.0, use_gpu=False, parallel=False, n_jobs=-1):
     """
@@ -92,8 +97,8 @@ def generalized_solver(A, b, method="cgls", x=None, maxiter=200, tol=1e-8,
     # Precompute initial quantities
     s = A.T.dot(r)
     p = s.copy()
-    gamma = xp.dot(s.T, s)
-    rr = xp.dot(r.T, r)
+    gamma = _scalar_dot(xp, s, s)
+    rr = _scalar_dot(xp, r, r)
     rr0 = rr
     
     # Choose the solver routine based on method
@@ -209,7 +214,8 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
         q = q.reshape(-1, 1)
         
         # Compute step size
-        alpha = float(gamma / xp.dot(q.T, q))
+        denom = _scalar_dot(xp, q, q)
+        alpha = gamma / denom
         
         # Update solution and residual
         x += alpha * p
@@ -226,8 +232,8 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
         s = s.reshape(-1, 1)
         
         # Compute new gamma and beta
-        gamma_new = float(xp.dot(s.T, s))
-        beta = float(gamma_new / gamma)
+        gamma_new = _scalar_dot(xp, s, s)
+        beta = gamma_new / gamma
         
         # Update search direction
         p = s + beta * p
@@ -236,7 +242,7 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
         gamma = gamma_new
         
         # Check convergence
-        rr = float(xp.dot(r.T, r))
+        rr = _scalar_dot(xp, r, r)
         if rr / rr0 < tol:
             if verbose:
                 pg.info(f"CGLS converged after {i+1} iterations")
@@ -464,11 +470,11 @@ def _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
         if p.ndim == 1:
             p = p.reshape(-1, 1)
             
-        denom = xp.dot(p.T, p)
+        denom = _scalar_dot(xp, p, p)
         if xp.isclose(denom, 0.0):
             break
             
-        lam = xp.dot(p.T, r) / denom
+        lam = _scalar_dot(xp, p, r) / denom
         x = x + w * float(lam)  # Convert lam to scalar
         r = r - p * float(lam)
         
@@ -480,7 +486,7 @@ def _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
             s = s + damp * x
             
         w = s
-        rr = float(xp.dot(r.T, r))
+        rr = _scalar_dot(xp, r, r)
         if rr / rr0 < tol:
             if verbose:
                 pg.info(f"RRLS converged after {i+1} iterations")
