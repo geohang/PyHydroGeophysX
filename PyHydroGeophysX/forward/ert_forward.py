@@ -50,11 +50,11 @@ class ERTForwardModeling:
     def forward(self, resistivity_model: np.ndarray, log_transform: bool = True) -> np.ndarray:
         """
         Compute forward response for a given resistivity model.
-        
+
         Args:
             resistivity_model: Resistivity model values
             log_transform: Whether resistivity_model is log-transformed
-            
+
         Returns:
             Forward response (apparent resistivity)
         """
@@ -63,18 +63,28 @@ class ERTForwardModeling:
             model = pg.Vector(resistivity_model.ravel())
         else:
             model = resistivity_model
-            
+
         # Apply exponentiation if log-transformed input
         if log_transform:
+            # Validate before exponentiation
+            model_array = np.array(model)
+            if not np.all(np.isfinite(model_array)):
+                raise ValueError(f"Non-finite values in log-resistivity model")
+
             model = pg.Vector(np.exp(model))
-            
+
+        # Validate resistivity values before PyGIMLi call
+        model_array = np.array(model)
+        if np.any(model_array <= 0):
+            raise ValueError(f"Forward modeling received invalid resistivity values: min={np.min(model_array):.2e}, max={np.max(model_array):.2e}")
+
         # Calculate response
         response = self.fwd_operator.response(model)
-        
+
         # Log-transform response if requested
         if log_transform:
             return np.log(response.array())
-        
+
         return response.array()
     
     def forward_and_jacobian(self, resistivity_model: np.ndarray, log_transform: bool = True) -> Tuple[np.ndarray, np.ndarray]:
@@ -301,9 +311,25 @@ def ertforward2(fob, xr, mesh):
     Returns:
         dr (np.ndarray): Log-transformed forward response.
     """
+    # Validate input before exponentiation
+    if not np.all(np.isfinite(xr)):
+        raise ValueError(f"Non-finite values in log-resistivity model: NaN={np.sum(np.isnan(xr))}, Inf={np.sum(np.isinf(xr))}")
+
+    # Check bounds to prevent exp overflow/underflow
+    if np.any(xr > 20) or np.any(xr < -20):
+        print(f'WARNING: Extreme log-resistivity values detected: min={np.min(xr):.2f}, max={np.max(xr):.2f}')
+        xr = np.clip(xr, -20, 20)
+
     xr1 = xr.copy()
     xr1 = np.exp(xr)
     rhomodel = xr1
+
+    # Validate resistivity model before PyGIMLi call
+    if not np.all(rhomodel > 0):
+        raise ValueError(f"Forward modeling received non-positive resistivity values: min={np.min(rhomodel):.2e}, max={np.max(rhomodel):.2e}")
+
+    # Clip to physically reasonable range
+    rhomodel = np.clip(rhomodel, 0.001, 1e6)
 
     dr = fob.response(rhomodel)
     dr = np.log(dr)
@@ -347,9 +373,26 @@ def ertforandjac2(fob, xr, mesh):
         dr (np.ndarray): Log-transformed forward response.
         J (np.ndarray): Jacobian matrix.
     """
+    # Validate input before exponentiation
+    if not np.all(np.isfinite(xr)):
+        raise ValueError(f"Non-finite values in log-resistivity model: NaN={np.sum(np.isnan(xr))}, Inf={np.sum(np.isinf(xr))}")
+
+    # Check bounds to prevent exp overflow/underflow
+    if np.any(xr > 20) or np.any(xr < -20):
+        print(f'WARNING: Extreme log-resistivity values detected: min={np.min(xr):.2f}, max={np.max(xr):.2f}')
+        xr = np.clip(xr, -20, 20)
+
     xr1 = xr.copy()
     xr1 = np.exp(xr)
     rhomodel = xr1
+
+    # Validate resistivity model before PyGIMLi call
+    if not np.all(rhomodel > 0):
+        raise ValueError(f"Forward modeling received non-positive resistivity values: min={np.min(rhomodel):.2e}, max={np.max(rhomodel):.2e}")
+
+    # Clip to physically reasonable range
+    rhomodel = np.clip(rhomodel, 0.001, 1e6)
+
     dr = fob.response(rhomodel)
     fob.createJacobian(rhomodel)
     J = fob.jacobian()

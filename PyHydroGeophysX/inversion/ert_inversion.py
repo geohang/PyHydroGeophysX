@@ -143,8 +143,9 @@ class ERTInversion(InversionBase):
             if initial_model.ndim == 1:
                 initial_model = initial_model.reshape(-1, 1)
             if np.min(initial_model) <= 0:
-                # Assume linear model values, convert to log
-                mr = np.log(initial_model + 1e-6)
+                # Handle negative/zero values with absolute value + offset (safer than small offset)
+                print(f'WARNING: Initial model contains non-positive values (min={np.min(initial_model):.2e}). Using absolute values.')
+                mr = np.log(np.abs(initial_model) + 1.0)
             else:
                 mr = np.log(initial_model)
         
@@ -158,7 +159,11 @@ class ERTInversion(InversionBase):
         min_mr, max_mr = self.parameters['model_constraints']
         min_mr = np.log(min_mr)
         max_mr = np.log(max_mr)
-        
+
+        # Apply constraints to initial model immediately
+        mr = np.clip(mr, min_mr, max_mr)
+        mr_R = mr.copy()  # Update reference model after clipping
+
         # Initial setup for the inversion
         delta_mr = (mr - mr_R)
         chi2_ert = 1
@@ -223,6 +228,15 @@ class ERTInversion(InversionBase):
             iarm = 1
             while True:
                 mr1 = mr + mu_LS * d_mr
+
+                # Enforce constraints BEFORE forward modeling (critical fix)
+                mr1 = np.clip(mr1, min_mr, max_mr)
+
+                # Validate that model is finite before forward modeling
+                if not np.all(np.isfinite(mr1)):
+                    print(f'WARNING: Non-finite values detected in model at iteration {nn}')
+                    mr1 = np.nan_to_num(mr1, nan=min_mr, posinf=max_mr, neginf=min_mr)
+
                 dr = ertforward2(self.fwd_operator, mr1, self.mesh)
                 dr = dr.reshape(dr.shape[0], 1)
                 
