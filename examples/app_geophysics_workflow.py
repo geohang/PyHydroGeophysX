@@ -19,7 +19,22 @@ PARENT_DIR = CURRENT_DIR.parent
 if str(PARENT_DIR) not in sys.path:
     sys.path.insert(0, str(PARENT_DIR))
 
-from PyHydroGeophysX.agents import BaseAgent, ContextInputAgent
+IMPORT_ERROR = ""
+try:
+    from PyHydroGeophysX.agents import BaseAgent, ContextInputAgent
+    AGENTS_AVAILABLE = True
+except ImportError as e:
+    AGENTS_AVAILABLE = False
+    IMPORT_ERROR = str(e)
+    BaseAgent = None
+    ContextInputAgent = None
+
+# Check for pygimli availability
+try:
+    import pygimli
+    PYGIMLI_AVAILABLE = True
+except ImportError:
+    PYGIMLI_AVAILABLE = False
 
 st.set_page_config(
     page_title="PyHydroGeophysX - Geophysical Workflows",
@@ -655,6 +670,36 @@ def render_support_section() -> None:
 def main() -> None:
     init_session_state()
     render_header()
+    
+    # Check for missing dependencies
+    if not AGENTS_AVAILABLE:
+        st.error(f"""
+        ⚠️ **Missing Dependencies**
+        
+        Some required packages are not installed: `{IMPORT_ERROR}`
+        
+        Please install the required dependencies:
+        ```bash
+        pip install pygimli SimPEG openai
+        ```
+        
+        Or use conda for pygimli:
+        ```bash
+        conda install -c gimli pygimli
+        ```
+        """)
+        st.stop()
+    
+    if not PYGIMLI_AVAILABLE:
+        st.warning("""
+        ⚠️ **PyGIMLi Not Available**
+        
+        ERT inversion and some geophysical functions require PyGIMLi.
+        Install with: `conda install -c gimli pygimli` or `pip install pygimli`
+        
+        You can still use TDEM workflows with SimPEG if available.
+        """)
+    
     sidebar_state = render_sidebar()
 
     st.markdown("---")
