@@ -130,6 +130,70 @@ section.main > div {
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     font-size: 0.9rem;
 }
+
+.phgx-support-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 1px solid #cbd5e1;
+    border-radius: 0.8rem;
+    padding: 1.2rem 1.5rem;
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.phgx-support-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.5rem;
+}
+
+.phgx-support-text {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 0.8rem;
+    line-height: 1.5;
+}
+
+.phgx-venmo-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #008cff 0%, #0066cc 100%);
+    color: white !important;
+    padding: 0.5rem 1.2rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    margin: 0.3rem;
+    transition: all 0.2s ease;
+}
+
+.phgx-venmo-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 140, 255, 0.3);
+}
+
+.phgx-email-link {
+    color: #0f4c75;
+    text-decoration: none;
+    font-weight: 500;
+    border-bottom: 1px dotted #0f4c75;
+}
+
+.phgx-email-link:hover {
+    color: #3d6cb9;
+    border-bottom-style: solid;
+}
+
+.phgx-free-badge {
+    display: inline-block;
+    background: #dcfce7;
+    color: #166534;
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
 """
 
 st.markdown(f"<style>{CUSTOM_CSS}</style>", unsafe_allow_html=True)
@@ -564,6 +628,30 @@ def render_cloud_tips() -> None:
     )
 
 
+def render_support_section() -> None:
+    """Render the support/donate section."""
+    st.markdown(
+        """
+<div class="phgx-support-card">
+    <div class="phgx-free-badge">🎉 FREE & OPEN SOURCE</div>
+    <div class="phgx-support-title">Support PyHydroGeophysX Development</div>
+    <div class="phgx-support-text">
+        This app is developed for <strong>free usage</strong> by the research community.<br>
+        If you find it useful, consider supporting better Cloud Services!
+    </div>
+    <a href="https://venmo.com/Hang-Chen-35" target="_blank" class="phgx-venmo-btn">
+        💙 Donate via Venmo @Hang-Chen-35
+    </a>
+    <div class="phgx-support-text" style="margin-top: 1rem; font-size: 0.85rem;">
+        <strong>Need a GPT API key to try?</strong><br>
+        Email me at <a href="mailto:hang-chen-1@uiowa.edu" class="phgx-email-link">hang-chen-1@uiowa.edu</a>
+    </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+
 def main() -> None:
     init_session_state()
     render_header()
@@ -620,6 +708,10 @@ def main() -> None:
     if st.session_state.workflow_result:
         st.markdown("---")
         render_results()
+    
+    # Render support section in sidebar
+    with st.sidebar:
+        render_support_section()
 
 if __name__ == "__main__":
     main()
