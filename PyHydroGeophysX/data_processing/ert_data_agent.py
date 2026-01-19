@@ -12,12 +12,15 @@ import warnings
 
 # Optional dependency: RESIPY
 _RESIPY_ERROR = None
+_HAS_RESIPY = False
 try:
     from resipy import Project
     _HAS_RESIPY = True
+    print("[PyHydroGeophysX] RESIPY loaded successfully")
 except Exception as e:
     _HAS_RESIPY = False
     _RESIPY_ERROR = str(e)
+    print(f"[PyHydroGeophysX] RESIPY import failed: {e}")
 
 
 # ---------------------------
