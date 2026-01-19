@@ -10,6 +10,7 @@ pyarrow>=10.0
 #   conda install -c gimli pygimli
 pygimli>=1.4
 SimPEG>=0.21
+resipy>=3.0
 
 # LLM APIs (at least one required for agent functionality)
 openai>=1.0
