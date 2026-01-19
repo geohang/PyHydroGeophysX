@@ -11,11 +11,13 @@ import tempfile
 import warnings
 
 # Optional dependency: RESIPY
+_RESIPY_ERROR = None
 try:
     from resipy import Project
     _HAS_RESIPY = True
-except Exception:
+except Exception as e:
     _HAS_RESIPY = False
+    _RESIPY_ERROR = str(e)
 
 
 # ---------------------------
@@ -150,7 +152,9 @@ def load_ert_resipy(
     StandardERT
         Standardized dataset with electrodes, observations, CRS, instrument, and metadata.
     """
-    assert _HAS_RESIPY, "RESIPY not installed. Please `pip install resipy`."
+    if not _HAS_RESIPY:
+        error_msg = f"RESIPY import failed: {_RESIPY_ERROR}" if _RESIPY_ERROR else "RESIPY not installed. Please `pip install resipy`."
+        raise ImportError(error_msg)
     ftype = _to_ftype(instrument)
 
     # Resolve relative paths to absolute paths based on current working directory
