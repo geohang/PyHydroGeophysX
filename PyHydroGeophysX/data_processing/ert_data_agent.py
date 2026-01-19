@@ -1487,6 +1487,8 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             # rhoa = apparent resistivity (r * K)
             # k = geometric factor
             # err = relative error (optional)
+            rho_min = 0.1
+            rho_max = 1e6
             for obs in ert.observations:
                 # Determine if we have true apparent resistivity or raw resistance
                 # For BERT/PyGIMLi format: obs.K > 1 means app_res is already apparent resistivity
@@ -1513,6 +1515,16 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
                 else:
                     # Skip measurements without valid data
                     continue
+
+                # Enforce positivity and reasonable bounds before writing
+                if not np.isfinite(R) or not np.isfinite(rhoa):
+                    continue
+                R = abs(R)
+                rhoa = abs(rhoa)
+                if R <= 0 or rhoa <= 0:
+                    continue
+                rhoa = float(np.clip(rhoa, rho_min, rho_max))
+                R = float(max(R, rho_min))
                 
                 # Format: a b m n r rhoa k [err]
                 # Note: obs.quad uses 1-based electrode indices (matching PyGIMLi format)
