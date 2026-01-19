@@ -79,7 +79,8 @@ different geological materials and quantify uncertainties."""
             mesh = input_data.get('mesh')
             cell_markers = input_data.get('cell_markers')
             layer_params = input_data.get('layer_params', None)
-            petrophysical_params = input_data.get('petrophysical_params', None)
+            # Normalize legacy key name
+            petrophysical_params = input_data.get('petrophysical_params', None) or input_data.get('petrophysical_parameters', None)
             geological_context = input_data.get('geological_context', 'generic')
             n_realizations = input_data.get('n_realizations', 100)
             output_dir = input_data.get('output_dir', 'results/petrophysics')
@@ -206,6 +207,8 @@ different geological materials and quantify uncertainties."""
                 'saturation_std': saturation_std,
                 'cell_markers': cell_markers,  # Include the markers used for layer-specific analysis
                 'layer_params': layer_params,
+                'layer_params_used': layer_params,
+                'petrophysical_params': petrophysical_params or {},
                 'params_used': mc_results['params_used'],
                 'statistics': {
                     'mean_water_content': wc_mean_overall,
@@ -366,6 +369,27 @@ different geological materials and quantify uncertainties."""
         
         return numeric_params
     
+    
+    def _guess_params_from_geology(self, geological_context: str, layer_index: int = 0) -> Dict[str, float]:
+        """Heuristic petrophysical guesses from geological text. Returns mean values; uncertainty is applied later."""
+        ctx = (geological_context or '').lower()
+        base_regolith = {'m': 1.5, 'n': 2.0, 'porosity': 0.40, 'sigma_sur': 1/200, 'rho_fluid': 20.0}
+        base_bedrock = {'m': 1.8, 'n': 2.0, 'porosity': 0.22, 'sigma_sur': 1/400, 'rho_fluid': 20.0}
+        guess = base_regolith if layer_index == 0 else base_bedrock
+
+        if any(k in ctx for k in ['sand', 'sandstone']):
+            guess = {'m': 1.3, 'n': 1.8, 'porosity': 0.38, 'sigma_sur': 1/300, 'rho_fluid': 20.0}
+        elif any(k in ctx for k in ['clay', 'shale', 'mud']):
+            guess = {'m': 1.8, 'n': 2.2, 'porosity': 0.45, 'sigma_sur': 1/100, 'rho_fluid': 20.0}
+        elif any(k in ctx for k in ['carbonate', 'limestone', 'dolomite']):
+            guess = {'m': 1.7, 'n': 2.0, 'porosity': 0.25, 'sigma_sur': 1/500, 'rho_fluid': 20.0}
+        elif any(k in ctx for k in ['fractured', 'bedrock', 'granite', 'basalt']):
+            guess = {'m': 2.0, 'n': 2.1, 'porosity': 0.18, 'sigma_sur': 1/600, 'rho_fluid': 20.0}
+        elif any(k in ctx for k in ['soil', 'regolith', 'weathered']):
+            guess = {'m': 1.5, 'n': 2.0, 'porosity': 0.42, 'sigma_sur': 1/220, 'rho_fluid': 20.0}
+
+        return guess
+
     def _get_layer_params_with_uncertainty(self, cell_markers: np.ndarray,
                                            info_level: str,
                                            petrophysical_params: Optional[Dict],
@@ -392,12 +416,12 @@ different geological materials and quantify uncertainties."""
         
         # Uncertainty multipliers based on information level
         uncertainty_scales = {
-            'high': 0.05,   # 5% uncertainty with explicit field data
-            'medium': 0.35,  # 25% uncertainty with geological context
-            'low': 0.75     # 75% uncertainty with minimal information
+            'high': 0.05,   # explicit measurements: tight bounds
+            'medium': 0.50,  # geology-described: generous uncertainty
+            'low': 1.00     # minimal information: very high uncertainty
         }
         
-        scale = uncertainty_scales.get(info_level, 0.5)
+        scale = uncertainty_scales.get(info_level, 0.75)
         
         # Base parameters vary by information level
         if info_level == 'high' and petrophysical_params:
@@ -436,43 +460,31 @@ different geological materials and quantify uncertainties."""
                     }
                 
         elif info_level == 'medium':
-            # Geology-informed parameters with moderate uncertainty
-            # Use wider ranges to reflect uncertainty in translating descriptions to parameters
-            # Add random variation to mean values to represent estimation uncertainty
-            m_mean = 1.6 + np.random.uniform(-0.3, 0.3)      # m range: 1.3 to 1.9
-            n_mean = 1.9 + np.random.uniform(-0.4, 0.4)      # n range: 1.5 to 2.3
-            phi_mean = 0.33 + np.random.uniform(-0.08, 0.08)  # φ range: 0.25 to 0.41
-            
-            for layer_id in unique_layers:
+            # Geology-informed guess with generous uncertainty
+            for idx, layer_id in enumerate(unique_layers):
+                base = self._guess_params_from_geology(geological_context, layer_index=idx)
+                m_mean = base['m']; n_mean = base['n']; phi_mean = base['porosity']; sigma_sur = base['sigma_sur']
                 layer_params[int(layer_id)] = {
-                    'm': {'mean': m_mean, 'std': m_mean * scale},
-                    'n': {'mean': n_mean, 'std': n_mean * scale},
-                    'sigma_sur': {'mean': 1/250, 'std': 1/250},
-                    'porosity': {'mean': phi_mean, 'std': phi_mean * scale},
-                    'rho_fluid': 20.0
+                    'm': {'mean': m_mean, 'std': max(abs(m_mean) * scale, 0.3)},
+                    'n': {'mean': n_mean, 'std': max(abs(n_mean) * scale, 0.3)},
+                    'sigma_sur': {'mean': sigma_sur, 'std': max(abs(sigma_sur), 1/250)},
+                    'porosity': {'mean': phi_mean, 'std': max(abs(phi_mean) * scale, 0.08)},
+                    'rho_fluid': base.get('rho_fluid', 20.0)
                 }
                 
         else:  # 'low' information level
-            # Generic parameters with high uncertainty
-            for i, layer_id in enumerate(unique_layers):
-                # Wide parameter ranges reflecting lack of knowledge
-                if i == 0:
-                    m_mean = 1.5 + np.random.uniform(-0.4, 0.4)
-                    n_mean = 2.0 + np.random.uniform(-0.5, 0.5)
-                    phi_mean = 0.35 + np.random.uniform(-0.15, 0.15)
-                else:
-                    m_mean = 1.7 + np.random.uniform(-0.4, 0.4)
-                    n_mean = 1.9 + np.random.uniform(-0.5, 0.5)
-                    phi_mean = 0.30 + np.random.uniform(-0.15, 0.15)
-                
+            # Minimal information: defaults with very high uncertainty
+            for idx, layer_id in enumerate(unique_layers):
+                base = self._guess_params_from_geology(geological_context, layer_index=idx)
+                m_mean = base['m']; n_mean = base['n']; phi_mean = base['porosity']; sigma_sur = base['sigma_sur']
                 layer_params[int(layer_id)] = {
-                    'm': {'mean': m_mean, 'std': m_mean * scale},
-                    'n': {'mean': n_mean, 'std': n_mean * scale},
-                    'sigma_sur': {'mean': 1/200, 'std': 1/200},
-                    'porosity': {'mean': phi_mean, 'std': phi_mean * scale},
-                    'rho_fluid': 20.0
+                    'm': {'mean': m_mean, 'std': max(abs(m_mean) * scale, 0.7)},
+                    'n': {'mean': n_mean, 'std': max(abs(n_mean) * scale, 0.7)},
+                    'sigma_sur': {'mean': sigma_sur, 'std': max(abs(sigma_sur), 1/150)},
+                    'porosity': {'mean': phi_mean, 'std': max(abs(phi_mean) * scale, 0.15)},
+                    'rho_fluid': base.get('rho_fluid', 20.0)
                 }
-        
+
         self._log_execution(f"Generated parameters with {info_level} information level (std scale: {scale:.0%})")
         
         return layer_params

@@ -192,7 +192,7 @@ class BaseAgent(ABC):
         
         # Save context and results as JSON
         output_file = os.path.join(output_dir, f"{self.name}_results.json")
-        with open(output_file, 'w') as f:
+        with open(output_file, 'w', encoding='utf-8') as f:
             json.dump({
                 'agent': self.name,
                 'context': {k: str(v) for k, v in self.context.items()},
@@ -202,12 +202,26 @@ class BaseAgent(ABC):
         return output_file
     
     @staticmethod
-    def run_unified_agent_workflow(workflow_config, api_key, llm_model, llm_provider, output_dir):
+    def run_unified_agent_workflow(workflow_config, api_key, llm_model, llm_provider, output_dir, progress_callback=None):
         """
         Unified agent workflow: infers task type from config and runs the appropriate pipeline.
         Supported: data fusion, time-lapse, direct ERT conversion.
         Returns: results dict, execution plan, interpretation, report files
+        
+        Args:
+            workflow_config: Configuration dictionary from ContextInputAgent
+            api_key: LLM API key
+            llm_model: LLM model name
+            llm_provider: LLM provider ('openai', 'gemini', 'claude')
+            output_dir: Output directory path
+            progress_callback: Optional callback function(step: str, progress: float, details: str)
         """
+        def update_progress(step: str, progress: float, details: str = ""):
+            """Update progress if callback is available."""
+            if progress_callback:
+                progress_callback(step, progress, details)
+            print(f"[Progress {progress*100:.0f}%] {step}: {details}")
+        
         # 1. Infer workflow type from configuration keys
         # More specific detection: check for unique indicators of each workflow
         config_keys = set(workflow_config.keys())
@@ -335,7 +349,16 @@ class BaseAgent(ABC):
                 }
                 report_results = report_agent.generate_data_fusion_report(report_input)
                 if report_results.get('status') == 'success':
-                    report_files = report_results.get('visualization_files', {})
+                    # Collect all report artifacts (md/html/pdf + visualizations)
+                    report_files = {}
+                    if report_results.get('report_file'):
+                        report_files['report_markdown'] = report_results['report_file']
+                    if report_results.get('html_file'):
+                        report_files['report_html'] = report_results['html_file']
+                    if report_results.get('pdf_file'):
+                        report_files['report_pdf'] = report_results['pdf_file']
+                    for vis_name, vis_path in (report_results.get('visualization_files') or {}).items():
+                        report_files[f'visualization_{vis_name}'] = vis_path
 
         elif workflow_type == 'time_lapse':
             # Use ERT agents for time-lapse workflow
@@ -478,7 +501,7 @@ class BaseAgent(ABC):
                         'output': str(output_dir / 'climate_data.csv')
                     }
                     
-                    with open(climate_config_file, 'w') as f:
+                    with open(climate_config_file, 'w', encoding='utf-8') as f:
                         json.dump(config_to_save, f, indent=2)
                     
                     print(f"  → Climate config saved: {climate_config_file.name}")
@@ -674,17 +697,25 @@ class BaseAgent(ABC):
                 report_results = report_agent.generate_timelapse_report(report_input)
                 
                 if report_results.get('status') == 'success':
-                    report_files = report_results.get('visualization_files', {})
-                    print('\n✓ Report generation completed successfully!')
-                    print(f"  → Generated {len(report_files)} visualization files")
-                    print(f"  → Report file: {report_results.get('report_file')}")
-                    print(f"  → HTML file: {report_results.get('html_file')}")
+                    report_files = {}
+                    if report_results.get('report_file'):
+                        report_files['report_markdown'] = report_results['report_file']
+                    if report_results.get('html_file'):
+                        report_files['report_html'] = report_results['html_file']
+                    if report_results.get('pdf_file'):
+                        report_files['report_pdf'] = report_results['pdf_file']
+                    for vis_name, vis_path in (report_results.get('visualization_files') or {}).items():
+                        report_files[f'visualization_{vis_name}'] = vis_path
+                    print("\nReport generation completed successfully!")
+                    print(f"  Generated {len(report_results.get('visualization_files', {}))} visualization files")
+                    print(f"  Report file: {report_results.get('report_file')}")
+                    print(f"  HTML file: {report_results.get('html_file')}")
                 else:
-                    print(f'\n❌ Report generation failed: {report_results.get("error", "Unknown error")}')
-                    print(f"  → Check logs for details")
+                    print(f"\nReport generation failed: {report_results.get('error', 'Unknown error')}")
+                    print("  Check logs for details")
 
         elif workflow_type == 'direct_ert':
-            # Use ERT agents for direct ERT to water content conversion
+            # Use ERT agents for direct ERT workflow
             from .ert_loader_agent import ERTLoaderAgent
             from .ert_inversion_agent import ERTInversionAgent
             from .water_content_agent import WaterContentAgent
@@ -694,7 +725,38 @@ class BaseAgent(ABC):
             water_content_agent = WaterContentAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
             eval_agent = InversionEvaluationAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
 
-            print('Running direct ERT to water content workflow...')
+            # Detect if user wants water content conversion
+            # Check explicit flag or presence of petrophysical parameters
+            user_request = workflow_config.get('user_request', '').lower()
+            petro_params = workflow_config.get('petrophysical_params', {})
+            has_petro_params = petro_params and len(petro_params) > 0
+            
+            # Keywords indicating water content conversion is desired
+            wc_keywords = ['water content', 'moisture', 'saturation', 'petrophysic', 
+                          'archie', 'porosity', 'rho_sat', 'hydro']
+            wants_water_content = (
+                any(kw in user_request for kw in wc_keywords) or
+                has_petro_params or
+                workflow_config.get('convert_to_water_content', None) is True
+            )
+            
+            # Keywords indicating ERT-only is desired
+            ert_only_keywords = ['ert inversion only', 'resistivity only', 'just inversion', 
+                                'only invert', 'inversion result', 'resistivity imaging']
+            explicitly_ert_only = (
+                any(kw in user_request for kw in ert_only_keywords) or
+                workflow_config.get('convert_to_water_content') is False
+            )
+            
+            # Determine workflow mode
+            skip_petrophysics = explicitly_ert_only or (not wants_water_content and not has_petro_params)
+            
+            if skip_petrophysics:
+                print('Running ERT inversion workflow (no water content conversion)...')
+                update_progress("Running ERT inversion", 0.20, "ERT-only mode detected")
+            else:
+                print('Running direct ERT to water content workflow...')
+                update_progress("Running ERT to water content workflow", 0.20, "Full conversion mode")
 
             # Load ERT data
             data_file = workflow_config.get('ert_file')
@@ -737,6 +799,8 @@ class BaseAgent(ABC):
                 # Make sure project_dir matches where the file actually is
                 workflow_config['project_dir'] = str(data_file_path.parent)
 
+            update_progress("Loading ERT data", 0.25, f"File: {data_file_path.name}")
+            
             # Handle electrode file if provided
             electrode_file = workflow_config.get('electrode_file')
             if electrode_file:
@@ -773,8 +837,10 @@ class BaseAgent(ABC):
                 raise ValueError(f'Failed to load ERT data: {load_result.get("error")}')
 
             ert_data = load_result['ert_data']
+            update_progress("Data loaded successfully", 0.35, f"{len(ert_data.electrodes)} electrodes, {len(ert_data.observations)} measurements")
 
             # Run inversion
+            update_progress("Running ERT inversion", 0.40, "This may take a few minutes...")
             inversion_input = {
                 'ert_data': ert_data,
                 'instrument': workflow_config.get('instrument', 'DAS-1'),
@@ -803,30 +869,41 @@ class BaseAgent(ABC):
                 }
                 evaluation_results = eval_agent.execute(eval_input)
 
-            # Convert to water content
-            petro_input = {
-                'inversion_results': inversion_results,  # Pass the entire inversion_results dict
-                'petrophysical_params': workflow_config.get('petrophysical_params', {}),
-                'uncertainty_analysis': workflow_config.get('run_uncertainty', True),
-                'n_realizations': workflow_config.get('n_realizations', 100),
-                'output_dir': str(output_dir / 'petrophysics')
-            }
+            # If request is only for ERT imaging (no water content), return early
+            only_ert = workflow_config.get('convert_to_water_content') is False
+            if only_ert:
+                results = {
+                    'status': 'success',
+                    'ert_data': ert_data,
+                    'inversion_results': inversion_results,
+                    'evaluation_results': evaluation_results
+                }
+            else:
+                # Convert to water content
+                petro_input = {
+                    'inversion_results': inversion_results,  # Pass the entire inversion_results dict
+                    'petrophysical_params': workflow_config.get('petrophysical_params', {}),
+                    'uncertainty_analysis': workflow_config.get('run_uncertainty', True),
+                    'n_realizations': workflow_config.get('n_realizations', 100),
+                    'output_dir': str(output_dir / 'petrophysics')
+                }
 
-            petro_results = water_content_agent.execute(petro_input)
+                petro_results = water_content_agent.execute(petro_input)
 
-            if petro_results.get('status') != 'success':
-                raise ValueError(f'Petrophysics conversion failed: {petro_results.get("error")}')
+                if petro_results.get('status') != 'success':
+                    raise ValueError(f'Petrophysics conversion failed: {petro_results.get("error")}')
 
-            # Combine results
-            results = {
-                'status': 'success',
-                'ert_data': ert_data,
-                'inversion_results': inversion_results,
-                'evaluation_results': evaluation_results,
-                'petrophysics_results': petro_results,
-                'water_content_mean': petro_results.get('water_content_mean'),
-                'water_content_std': petro_results.get('water_content_std')
-            }
+                # Combine results
+                results = {
+                    'status': 'success',
+                    'ert_data': ert_data,
+                    'inversion_results': inversion_results,
+                    'evaluation_results': evaluation_results,
+                    'petrophysics_results': petro_results,
+                    'petrophysical_params': workflow_config.get('petrophysical_params', {}),
+                    'water_content_mean': petro_results.get('water_content_mean'),
+                    'water_content_std': petro_results.get('water_content_std')
+                }
 
             # Generate comprehensive report
             if results.get('status') == 'success':
@@ -835,7 +912,9 @@ class BaseAgent(ABC):
                 workflow_data = {
                     'ert_data': {
                         'n_electrodes': len(ert_data.electrodes),
+                        'num_electrodes': len(ert_data.electrodes),
                         'n_measurements': len(ert_data.observations),
+                        'num_measurements': len(ert_data.observations),
                         'instrument': workflow_config.get('instrument', 'DAS-1')
                     },
                     'inversion_results': {
@@ -853,8 +932,12 @@ class BaseAgent(ABC):
                         'water_content_mean': petro_results.get('water_content_mean'),
                         'water_content_std': petro_results.get('water_content_std'),
                         'layer_params_used': petro_results.get('layer_params_used', {}),
+                        'layer_params': petro_results.get('layer_params', {}),
+                        'petrophysical_params': workflow_config.get('petrophysical_params', {}),
                         'n_realizations': workflow_config.get('n_realizations', 200)
-                    }
+                    },
+                    'petrophysics_results': petro_results,
+                    'petrophysical_params': workflow_config.get('petrophysical_params', {})
                 }
                 report_input = {
                     'workflow_data': workflow_data,
@@ -863,7 +946,15 @@ class BaseAgent(ABC):
                 }
                 report_results = report_agent.execute(report_input)
                 if report_results.get('status') == 'success':
-                    report_files = report_results.get('visualization_files', {})
+                    report_files = {}
+                    if report_results.get('report_file'):
+                        report_files['report_markdown'] = report_results['report_file']
+                    if report_results.get('html_file'):
+                        report_files['report_html'] = report_results['html_file']
+                    if report_results.get('pdf_file'):
+                        report_files['report_pdf'] = report_results['pdf_file']
+                    for vis_name, vis_path in (report_results.get('visualization_files') or {}).items():
+                        report_files[f'visualization_{vis_name}'] = vis_path
 
         else:
             raise ValueError('Unknown workflow type!')

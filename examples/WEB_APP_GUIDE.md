@@ -44,9 +44,9 @@ In the sidebar:
 ### Standard ERT Workflow
 
 ```
-We have ERT data from DAS-1 instrument at 
-examples/data/ERT/DAS/20171105_1418.Data 
-with electrode file at examples/data/ERT/DAS/electrodes.dat 
+Run a standard ERT inversion using the DAS-1 instrument.
+Data file: 20171105_1418.Data
+Electrode file: electrodes.dat 
 
 Use petrophysical parameters: 
 rho_sat=541, porosity=0.37, n=1.24
@@ -76,21 +76,15 @@ Fetch climate data for Mt. Snodgrass site:
 ### Data Fusion Workflow
 
 ```
-I need to characterize subsurface water content using multi-method data fusion:
-
-1. Use field seismic refraction data at data/Seismic/srtfieldline2.dat
-   - Velocity threshold: 1000 m/s to identify regolith/bedrock boundary
-
-2. Use seismic structure to constrain ERT inversion
-   - ERT data: data/ERT/Bert/fielddataline2.dat
-   - Lambda: 20 (moderate regularization)
-
-3. Convert to water content with layer-specific petrophysics:
-   - Regolith: rho_sat (50-250 Ωm), n (1.3-2.2), porosity (0.25-0.5)
-   - Fractured bedrock: rho_sat (165-350 Ωm), n (2.0-2.2), porosity (0.2-0.3)
-   
-4. Run Monte Carlo uncertainty analysis with 100 realizations
+Perform structure-constrained inversion using seismic + ERT.
+Seismic: srtfieldline2.dat with velocity threshold 1000 m/s
+ERT: fielddataline2.dat
+Petrophysics:
+- Regolith: rho_sat 50-250, n 1.3-2.2, porosity 0.25-0.50
+- Fractured bedrock: rho_sat 165-350, n 2.0-2.2, porosity 0.2-0.3
+Monte Carlo realizations: 100
 ```
+
 
 ## 📁 File Upload Options
 
@@ -200,4 +194,5 @@ The system automatically detects your workflow type:
 ---
 
 **Happy analyzing! 🎉**
+
 

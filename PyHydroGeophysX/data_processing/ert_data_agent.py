@@ -527,7 +527,7 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
     if fmt == "pgimli":
         path = outdir_path / "bert_data.dat"
         
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             # Write number of electrodes
             f.write(f"{len(ert.electrodes)}\n")
             
@@ -664,7 +664,7 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             
             # Rewrite the file with updated K and rhoa values
             temp_path = path.parent / (path.name + '.tmp')
-            with open(temp_path, 'w') as f:
+            with open(temp_path, 'w', encoding='utf-8') as f:
                 # Write number of electrodes
                 f.write(f"{len(ert.electrodes)}\n")
                 

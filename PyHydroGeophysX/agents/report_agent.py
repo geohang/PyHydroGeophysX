@@ -106,7 +106,7 @@ reports suitable for scientists and engineers. You should integrate climate insi
             
             # Save report to file
             report_file = os.path.join(output_dir, 'workflow_report.md')
-            with open(report_file, 'w') as f:
+            with open(report_file, 'w', encoding='utf-8') as f:
                 f.write(full_report)
             
             # Also save as HTML if possible
@@ -159,7 +159,9 @@ reports suitable for scientists and engineers. You should integrate climate insi
         # Add key findings from each step
         if 'ert_data' in workflow_data:
             ert = workflow_data['ert_data']
-            summary += f"- Loaded {ert.get('num_electrodes', 'N/A')} electrodes with {ert.get('num_measurements', 'N/A')} measurements\n"
+            num_elec = ert.get('num_electrodes') or ert.get('n_electrodes')
+            num_meas = ert.get('num_measurements') or ert.get('n_measurements')
+            summary += f"- Loaded {num_elec if num_elec is not None else 'N/A'} electrodes with {num_meas if num_meas is not None else 'N/A'} measurements\n"
         
         if 'inversion_results' in workflow_data:
             inv = workflow_data['inversion_results']
@@ -180,10 +182,12 @@ reports suitable for scientists and engineers. You should integrate climate insi
         
         if 'ert_data' in workflow_data:
             ert = workflow_data['ert_data']
+            num_elec = ert.get('num_electrodes') or ert.get('n_electrodes')
+            num_meas = ert.get('num_measurements') or ert.get('n_measurements')
             summary += f"""
 ### ERT Data Loading
-- Number of electrodes: {ert.get('num_electrodes', 'N/A')}
-- Number of measurements: {ert.get('num_measurements', 'N/A')}
+- Number of electrodes: {num_elec if num_elec is not None else 'N/A'}
+- Number of measurements: {num_meas if num_meas is not None else 'N/A'}
 - Quality metrics: {ert.get('qc_results', 'N/A')}
 
 **Insights:** {ert.get('insights', 'N/A')}
@@ -211,7 +215,7 @@ reports suitable for scientists and engineers. You should integrate climate insi
 ### ERT Inversion
 - Final chi2: {inv.get('chi2', 'N/A')}
 - Iterations: {inv.get('iterations', 'N/A')}
-- Convergence: {'Success' if inv.get('status') == 'success' else 'Failed'}
+- Convergence: {'Success' if (inv.get('status') == 'success' or (isinstance(inv.get('chi2'), (int, float)) and inv.get('chi2') is not None and inv.get('chi2') < 2.0)) else 'Failed'}
 
 **Interpretation:** {inv.get('interpretation', 'N/A')}
 """
@@ -253,32 +257,60 @@ reports suitable for scientists and engineers. You should integrate climate insi
 - Number of realizations: {wc.get('n_realizations', 'N/A')}
 """
             
-            # Layer parameters used
-            layer_params = wc.get('layer_params_used', {})
+            # Layer parameters used (means +/- std)
+            # Collect petrophysical parameters from multiple sources
+            layer_params = {}
+            candidates = [
+                wc.get('layer_params_used'),
+                wc.get('layer_params'),
+                workflow_data.get('petrophysics_results', {}).get('layer_params_used', {}),
+                workflow_data.get('petrophysics_results', {}).get('layer_params', {}),
+            ]
+            # If only per-parameter scalars were provided, build a single-layer entry
+            scalar_params = workflow_data.get('petrophysical_params', {}) or wc.get('petrophysical_params', {})
+
+            for cand in candidates:
+                if isinstance(cand, dict):
+                    layer_params.update(cand)
+
+            if not layer_params and scalar_params:
+                layer_params = {
+                    0: {
+                        'use_rho_sat': 'rho_sat' in scalar_params,
+                        'rho_sat': {'mean': scalar_params.get('rho_sat'), 'std': scalar_params.get('rho_sat_std', 'N/A')},
+                        'm': {'mean': scalar_params.get('m'), 'std': scalar_params.get('m_std', 'N/A')},
+                        'n': {'mean': scalar_params.get('n'), 'std': scalar_params.get('n_std', 'N/A')},
+                        'porosity': {'mean': scalar_params.get('porosity'), 'std': scalar_params.get('porosity_std', 'N/A')},
+                    }
+                }
             if layer_params:
-                summary += f"\n### Petrophysical Parameters\n"
+                summary += f"\n### Petrophysical Parameters (means +/- std)\n"
                 for marker, params in layer_params.items():
-                    # Check if using rho_sat directly or traditional m-based approach
+                    if not isinstance(params, dict):
+                        # If params is a scalar (e.g., rho_sat), skip to avoid attribute errors
+                        continue
                     use_rho_sat = params.get('use_rho_sat', False)
                     
+                    def fmt(comp: str) -> str:
+                        if isinstance(params.get(comp), dict):
+                            return f"{params[comp].get('mean','N/A')}+/-{params[comp].get('std','N/A')}"
+                        return str(params.get(comp, 'N/A'))
+                    
                     if use_rho_sat:
-                        # Display rho_sat-based parameters
-                        rho_sat_mean = params.get('rho_sat', {}).get('mean', 'N/A')
-                        n_mean = params.get('n', {}).get('mean', 'N/A')
-                        phi_mean = params.get('porosity', {}).get('mean', 'N/A')
-                        if isinstance(rho_sat_mean, (int, float)) and isinstance(n_mean, (int, float)) and isinstance(phi_mean, (int, float)):
-                            summary += f"- Marker {marker}: ρ_sat={rho_sat_mean:.1f} Ω·m, n={n_mean:.2f}, φ={phi_mean:.2f}\n"
-                        else:
-                            summary += f"- Marker {marker}: ρ_sat={rho_sat_mean}, n={n_mean}, φ={phi_mean}\n"
+                        summary += (
+                            f"- Marker {marker}: "
+                            f"rho_sat={fmt('rho_sat')}, "
+                            f"n={fmt('n')}, "
+                            f"phi={fmt('porosity')}\n"
+                        )
                     else:
-                        # Display traditional m-based parameters
-                        m_mean = params.get('m', {}).get('mean', 'N/A')
-                        n_mean = params.get('n', {}).get('mean', 'N/A')
-                        phi_mean = params.get('porosity', {}).get('mean', 'N/A')
-                        if isinstance(m_mean, (int, float)) and isinstance(n_mean, (int, float)) and isinstance(phi_mean, (int, float)):
-                            summary += f"- Marker {marker}: m={m_mean:.2f}, n={n_mean:.2f}, φ={phi_mean:.2f}\n"
-                        else:
-                            summary += f"- Marker {marker}: m={m_mean}, n={n_mean}, φ={phi_mean}\n"
+                        summary += (
+                            f"- Marker {marker}: "
+                            f"m={fmt('m')}, "
+                            f"n={fmt('n')}, "
+                            f"phi={fmt('porosity')}, "
+                            f"rho_sat={fmt('rho_sat')}\n"
+                        )
             
             summary += f"\n**Interpretation:** {wc.get('interpretation', 'N/A')}\n"
         
@@ -698,7 +730,7 @@ Generated by PyHydroGeophysX Multi-Agent System
 </html>
 """
             html_file = os.path.join(output_dir, f'{filename}.html')
-            with open(html_file, 'w') as f:
+            with open(html_file, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             return html_file
         except:
@@ -928,7 +960,7 @@ Generated by PyHydroGeophysX Multi-Agent System
             
             # Save report to file
             report_file = os.path.join(output_dir, 'time_lapse_report.md')
-            with open(report_file, 'w') as f:
+            with open(report_file, 'w', encoding='utf-8') as f:
                 f.write(full_report)
             
             # Save as HTML
@@ -1957,7 +1989,7 @@ Based on the time-lapse ERT monitoring and climate data integration:
             
             # Save report
             report_file = os.path.join(output_dir, 'data_fusion_report.md')
-            with open(report_file, 'w') as f:
+            with open(report_file, 'w', encoding='utf-8') as f:
                 f.write(full_report)
             
             # Save HTML and PDF
@@ -2307,3 +2339,5 @@ All workflow parameters were extracted from the natural language request:
     def _log_execution(self, message: str, level: str = 'INFO'):
         """Log execution message."""
         print(f"[{self.name}] [{level}] {message}")
+
+

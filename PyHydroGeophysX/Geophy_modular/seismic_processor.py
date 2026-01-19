@@ -253,7 +253,7 @@ def save_velocity_structure(filename, x_coords, z_coords, interface_data=None):
     
     # Also save as CSV for easier viewing
     csv_filename = filename.replace('.npz', '.csv')
-    with open(csv_filename, 'w') as f:
+    with open(csv_filename, 'w', encoding='utf-8') as f:
         f.write('x,z\n')
         for x, z in zip(x_coords, z_coords):
             f.write(f"{x},{z}\n")
