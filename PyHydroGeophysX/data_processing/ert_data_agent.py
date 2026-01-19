@@ -2,6 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict
 from pathlib import Path
+import io
 from typing import Optional, Dict, Any, List, Literal, NamedTuple
 import json
 import numpy as np
@@ -105,14 +106,13 @@ def _bertParser(fname):
     if not dump:
         raise ValueError(f"File {fname} is empty")
 
-    line = 0
     numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+'
 
     # Skip comment lines and find data start
-    data_start_line = 0
+    data_start_line = None
     for i, line_content in enumerate(dump):
         clean_line = line_content.strip()
-        if clean_line and not clean_line.startswith('#') and not clean_line.startswith('*'):
+        if clean_line and not clean_line.startswith('#') and not clean_line.startswith('*') and not clean_line.startswith('!'):
             try:
                 # Try to parse as numbers
                 vals = re.findall(numStr, clean_line)
@@ -122,7 +122,7 @@ def _bertParser(fname):
             except:
                 continue
 
-    if data_start_line == 0:
+    if data_start_line is None:
         raise ValueError("Could not find data section in file")
 
     # Try to read as CSV first (more common format)
@@ -136,7 +136,7 @@ def _bertParser(fname):
             # Convert ABMN to int
             for col in ['a', 'b', 'm', 'n']:
                 if col in df.columns:
-                    df[col] = df[col].astype(int)
+                    df[col] = pd.to_numeric(df[col], errors='coerce').astype(int)
 
             # Build electrode positions from unique values
             array = df[['a', 'b', 'm', 'n']].values
@@ -176,12 +176,17 @@ def _bertParser(fname):
 
     # Assign default column names
     default_headers = ['a', 'b', 'm', 'n', 'resist', 'dev', 'ip']
-    df.columns = default_headers[:len(df.columns)]
+    col_count = df.shape[1]
+    if col_count <= len(default_headers):
+        df.columns = default_headers[:col_count]
+    else:
+        extras = [f'extra_{i}' for i in range(col_count - len(default_headers))]
+        df.columns = default_headers + extras
 
     # Convert ABMN to int
     for col in ['a', 'b', 'm', 'n']:
         if col in df.columns:
-            df[col] = df[col].astype(int)
+            df[col] = pd.to_numeric(df[col], errors='coerce').astype(int)
 
     # Build electrode positions
     array = df[['a', 'b', 'm', 'n']].values
@@ -395,6 +400,175 @@ def _protocolParser(fname, ip=False):
     return elec, df
 
 
+def _dasParser(fname):
+    """
+    Parse DAS-1 format (ERTLab DACQ).
+    Modified from ResIPy project (GPL-3.0).
+    Handles electrode blocks and mixed separators from DAS-1 exports.
+    """
+    try:
+        with open(fname, "r", encoding="utf-8", errors="ignore") as f:
+            dump_raw = f.readlines()
+    except Exception as e:
+        raise ValueError(f"Could not read file {fname}: {e}")
+
+    numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+'
+
+    # Remove known bad rows (e.g., out-of-range records)
+    dump = [val for val in dump_raw if 'out of range' not in val]
+    cleanData = ''.join(dump)
+
+    # Electrode section
+    try:
+        elec_lineNum_s = next(i + 2 for i in range(len(dump)) if '#elec_start' in dump[i])
+        elec_lineNum_e = next(i for i in range(len(dump)) if '#elec_end' in dump[i])
+    except StopIteration:
+        raise ValueError("Could not locate electrode section in DAS-1 file")
+
+    nrows = elec_lineNum_e - elec_lineNum_s
+    try:
+        dfElec_raw = pd.read_csv(
+            io.StringIO(cleanData),
+            sep=r'\s+',
+            skiprows=elec_lineNum_s,
+            nrows=nrows,
+            index_col=False,
+            header=None,
+            dtype=str,
+            engine='python'
+        )
+    except Exception:
+        # Fallback to detected encoding (slow path)
+        enc = None
+        try:
+            import chardet
+            with open(fname, 'rb') as f:
+                enc = chardet.detect(f.read()).get('encoding', None)
+        except Exception:
+            enc = None
+
+        dfElec_raw = pd.read_csv(
+            io.StringIO(cleanData),
+            sep=r'\s+',
+            skiprows=elec_lineNum_s,
+            nrows=nrows,
+            index_col=False,
+            header=None,
+            dtype=str,
+            engine='python',
+            encoding=enc
+        )
+
+    elecNum = dfElec_raw.iloc[:, 0].str.split(',', expand=True)
+    elecNum = elecNum.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int).astype(str)
+    elecLabel = elecNum[0].str.strip().str.cat(elecNum[1].str.strip(), sep=' ')
+
+    dfelec = pd.DataFrame()
+    dfelec['label'] = elecLabel.copy()
+    dfelec[['x', 'y', 'z']] = dfElec_raw.iloc[:, 1:4].apply(pd.to_numeric, errors='coerce')
+    dfelec['buried'] = False
+    dfelec['remote'] = False
+
+    # Remote electrodes flags (copied from ResIPy logic)
+    remote_flags = [-9999999, -999999, -99999, -9999, -999,
+                    9999999, 999999, 99999]
+    iremote = np.isin(dfelec['x'].values, remote_flags)
+    iremote = np.isinf(dfelec[['x', 'y', 'z']].values).any(1) | iremote
+    dfelec['remote'] = iremote
+
+    # Data section
+    try:
+        df_lineNum_s = next(i + 3 for i in range(len(dump)) if '#data_start' in dump[i])
+        df_lineNum_e = next(i for i in range(len(dump)) if '#data_end' in dump[i])
+    except StopIteration:
+        raise ValueError("Could not locate data section in DAS-1 file")
+
+    df_list = []
+    for val in dump[df_lineNum_s:df_lineNum_e]:
+        vals = re.findall(numStr, val)
+        if vals:
+            df_list.append(vals)
+
+    if not df_list:
+        raise ValueError("No measurement rows found in DAS-1 file")
+
+    max_len = max(len(row) for row in df_list)
+    normalized = [row + [np.nan] * (max_len - len(row)) for row in df_list]
+    df_raw = pd.DataFrame(np.array(normalized, dtype=float))
+
+    # Determine 2D vs 3D (line numbers vary for 3D)
+    flagD = '3D' if np.mean(df_raw.iloc[:, 1]) != df_raw.iloc[0, 1] else '2D'
+
+    def _header_col(keyword: str, default: int | None = None) -> int | None:
+        for line in dump:
+            if keyword in line:
+                try:
+                    return int(line.split()[-1]) - 1
+                except Exception:
+                    try:
+                        # Fallback: last numeric token
+                        tokens = re.findall(numStr, line)
+                        if tokens:
+                            return int(tokens[-1]) - 1
+                    except Exception:
+                        return default
+        return default
+
+    resCol = _header_col('data_res_col', default=df_raw.shape[1] - 1)
+    devCol = _header_col('data_std_res_col', default=-1)
+    ipCol = _header_col('data_ip_wind_col', default=-1)
+
+    df = pd.DataFrame()
+    arrHeader = ['a', 'b', 'm', 'n']
+
+    # 2D array
+    if flagD == '2D':
+        lineNumber = int(df_raw.iloc[0, 1])
+        elecLNum = elecNum[0].astype(int)
+        selectElecs = elecLNum[elecLNum == lineNumber].index.values
+        dfelec_sel = dfelec.iloc[selectElecs, :].reset_index(drop=True)
+
+        # Convert 3D XY to 2D profile if needed
+        if np.isfinite(dfelec_sel['x']).all() and np.mean(dfelec_sel['x']) == dfelec_sel['x'][0]:
+            dfelec_sel['x'] = dfelec_sel['y'].values.copy()
+            dfelec_sel['y'] = 0
+
+        dfelec_sel = dfelec_sel.sort_values('x').reset_index(drop=True)
+
+        for idx, name in enumerate(arrHeader):
+            df[name] = pd.to_numeric(df_raw.iloc[:, (idx + 1) * 2], errors='coerce').astype(int)
+
+        elec_out = dfelec_sel
+
+    # 3D array
+    else:
+        lines = np.unique(df_raw.iloc[:, 1].values)
+        elecLNum = elecNum[0].astype(int)
+        dfelec_selected = []
+        for lineNumber in lines:
+            selectElecs = elecLNum[elecLNum == lineNumber].index.values
+            dfelec_selected.append(dfelec.iloc[selectElecs, :])
+
+        elec_out = pd.concat(dfelec_selected).reset_index(drop=True)
+
+        for idx, name in enumerate(arrHeader):
+            left = pd.to_numeric(df_raw.iloc[:, (idx * 2) + 1], errors='coerce').fillna(0).astype(int).astype(str)
+            right = pd.to_numeric(df_raw.iloc[:, (idx + 1) * 2], errors='coerce').fillna(0).astype(int).astype(str)
+            df[name] = left.str.cat(right, sep=' ')
+
+    # Data columns
+    if resCol is not None and 0 <= resCol < df_raw.shape[1]:
+        df['resist'] = df_raw.iloc[:, resCol].values
+    if devCol is not None and 0 <= devCol < df_raw.shape[1]:
+        df['dev'] = df_raw.iloc[:, devCol].values
+    if ipCol is not None and ipCol > 1 and ipCol < df_raw.shape[1]:
+        df['ip'] = df_raw.iloc[:, ipCol].values
+    else:
+        df['ip'] = df.get('ip', 0)
+
+    return elec_out, df
+
+
 # ---------------------------
 # Types and schemas
 # ---------------------------
@@ -491,7 +665,7 @@ _EMBEDDED_PARSER_MAP = {
     "Protocol IP": _protocolParser,
     "BERT": _bertParser,
     "E4D": _bertParser,
-    "DAS-1": _protocolParser,  # DAS-1 uses protocol format
+    "DAS-1": _dasParser,
     "ABEM-Lund": _bertParser,  # Use BERT parser as fallback
     "Lippmann": _bertParser,   # Use BERT parser as fallback
     "ARES": _bertParser,       # Use BERT parser as fallback
@@ -557,7 +731,8 @@ def _load_ert_embedded_parsers(
         else:
             raise ValueError(f"Failed to parse ERT data with {parser_name}: {e}")
     
-    # Build electrodes dataframe
+    # Build electrodes dataframe and optional label map for non-numeric electrode IDs
+    label_map = None
     if isinstance(elec_array, np.ndarray):
         if elec_array.ndim == 1:
             elec_array = elec_array.reshape(-1, 1)
@@ -568,32 +743,67 @@ def _load_ert_embedded_parsers(
             'z': elec_array[:, 2] if n_cols > 2 else 0.0,
         })
     else:
-        # Already a DataFrame
         electrodes = pd.DataFrame({
             'x': elec_array['x'] if 'x' in elec_array.columns else elec_array.iloc[:, 0],
             'y': elec_array['y'] if 'y' in elec_array.columns else 0.0,
             'z': elec_array['z'] if 'z' in elec_array.columns else 0.0,
         })
+        if 'label' in elec_array.columns:
+            electrodes['label'] = elec_array['label']
+            label_map = {str(lbl).strip(): idx + 1 for idx, lbl in enumerate(pd.unique(elec_array['label']))}
     
     # Build observations dataframe with standardized columns
     observations = pd.DataFrame()
-    observations['a'] = df['a'].astype(int) if 'a' in df.columns else 1
-    observations['b'] = df['b'].astype(int) if 'b' in df.columns else 2
-    observations['m'] = df['m'].astype(int) if 'm' in df.columns else 3
-    observations['n'] = df['n'].astype(int) if 'n' in df.columns else 4
+    def _coerce_indices(col_name: str, fallback_value: int) -> pd.Series:
+        if col_name not in df.columns:
+            return pd.Series(np.full(len(df), fallback_value, dtype=int))
+        series = df[col_name]
+        numeric = pd.to_numeric(series, errors='coerce')
+        if numeric.notna().all():
+            return numeric.astype(int)
+        labels = series.astype(str).str.strip()
+        if label_map:
+            mapped = labels.map(label_map)
+        else:
+            unique_labels = pd.unique(labels)
+            tmp_map = {lab: idx + 1 for idx, lab in enumerate(unique_labels)}
+            mapped = labels.map(tmp_map)
+        return mapped.fillna(fallback_value).astype(int)
     
-    # Get apparent resistivity
-    if 'app' in df.columns:
-        observations['rhoa'] = df['app']
-    elif 'resist' in df.columns:
-        # Calculate geometric factor and convert
-        observations['rhoa'] = df['resist'] * 1.0  # Simplified
+    observations['a'] = _coerce_indices('a', 1)
+    observations['b'] = _coerce_indices('b', 2)
+    observations['m'] = _coerce_indices('m', 3)
+    observations['n'] = _coerce_indices('n', 4)
+    
+    # Get apparent resistivity / resistance
+    rho_cols = ['app', 'rhoa', 'rhoA', 'Rhoa', 'app_res']
+    resist_cols = ['resist', 'R', 'r', 'resistance']
+    if any(c in df.columns for c in rho_cols):
+        rho_col = next(c for c in rho_cols if c in df.columns)
+        observations['rhoa'] = pd.to_numeric(df[rho_col], errors='coerce')
+    elif any(c in df.columns for c in resist_cols):
+        res_col = next(c for c in resist_cols if c in df.columns)
+        observations['rhoa'] = pd.to_numeric(df[res_col], errors='coerce')
     else:
         observations['rhoa'] = 100.0  # Default
+    observations['rhoa'] = pd.to_numeric(observations['rhoa'], errors='coerce')
+    if observations['rhoa'].isna().all():
+        observations['rhoa'] = 100.0
     
-    # Get error/dev
-    if 'dev' in df.columns:
-        observations['error'] = df['dev'] / 100.0  # Convert percentage to fraction
+    # Get error/dev, try to compute relative error where possible
+    err_col = next((c for c in ['error', 'err', 'dev', 'std', 'std_res'] if c in df.columns), None)
+    if err_col:
+        err_vals = pd.to_numeric(df[err_col], errors='coerce')
+        rho_vals = pd.to_numeric(observations['rhoa'], errors='coerce')
+        rel_err = np.where(
+            (np.isfinite(err_vals)) & (np.isfinite(rho_vals)) & (rho_vals != 0),
+            np.abs(err_vals) / np.abs(rho_vals),
+            np.nan
+        )
+        median_err = np.nanmedian(err_vals)
+        if np.isfinite(median_err) and median_err > 1 and np.nanmedian(rel_err) > 1:
+            rel_err = rel_err / 100.0
+        observations['error'] = np.where(np.isfinite(rel_err), rel_err, 0.05)
     else:
         observations['error'] = 0.05  # Default 5%
     
