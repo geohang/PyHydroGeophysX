@@ -1547,18 +1547,10 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             # Load the file we just created
             data = ert_pg.load(str(path))
 
-            # Apply PyGIMLi's reciprocal filtering (removes measurements with poor reciprocal error)
-            # This is the same filtering that ResIPy applies automatically
-            initial_size = data.size()
-            data = ert_pg.reciprocalProcessing(data, maxrec=0.05, maxerr=0.2)
-            reciprocal_filtered = initial_size - data.size()
-            if reciprocal_filtered > 0:
-                print(f"   PyGIMLi reciprocal filter: removed {reciprocal_filtered} measurements")
-
             # Check if K was already provided (not all k=1)
             k_vals = np.array(data['k'])
             has_valid_k = np.any(k_vals > 1.5)  # If any K > 1.5, assume K was provided
-            
+
             if has_valid_k:
                 print(f"   K factors already provided (range: [{k_vals.min():.1f}, {k_vals.max():.1f}])")
                 # No need to recompute - just validate
@@ -1568,8 +1560,7 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
                 data['k'] = ert_pg.createGeometricFactors(data, numerical=True)
                 k_vals = np.array(data['k'])
                 print(f"   Computed K range: [{k_vals.min():.1f}, {k_vals.max():.1f}]")
-                # Don't compute rhoa here - will be done after filtering
-            
+
             # Filter by geometric factor threshold (for DAS data)
             k_threshold = 1000  # max geometric factor, m
             k_vals = np.array(data['k'])
@@ -1580,10 +1571,19 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
                 remove_indices = np.where(~k_valid)[0]
                 for idx in sorted(remove_indices, reverse=True):
                     data.remove(int(idx))
-            
+
             # Recompute apparent resistivity with correct K
             # rhoa = R * K
             data['rhoa'] = data['r'] * data['k']
+
+            # CRITICAL: Apply reciprocal filtering AFTER K and rhoa are computed!
+            # PyGIMLi's reciprocal processing compares rhoa values between normal and reciprocal pairs
+            # If we call this before computing K, all rhoa values are wrong (just R with k=1)
+            initial_size = data.size()
+            data = ert_pg.reciprocalProcessing(data, maxrec=0.05, maxerr=0.2)
+            reciprocal_filtered = initial_size - data.size()
+            if reciprocal_filtered > 0:
+                print(f"   PyGIMLi reciprocal filter: removed {reciprocal_filtered} measurements")
             
             # Filter extreme apparent resistivity values
             rhoa_vals = np.array(data['rhoa'])
