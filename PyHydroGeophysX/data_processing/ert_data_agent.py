@@ -1546,7 +1546,15 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             
             # Load the file we just created
             data = ert_pg.load(str(path))
-            
+
+            # Apply PyGIMLi's reciprocal filtering (removes measurements with poor reciprocal error)
+            # This is the same filtering that ResIPy applies automatically
+            initial_size = data.size()
+            data = ert_pg.filterReciprocal(data, maxrelerr=0.05)  # 5% reciprocal error threshold
+            reciprocal_filtered = initial_size - data.size()
+            if reciprocal_filtered > 0:
+                print(f"   PyGIMLi reciprocal filter: removed {reciprocal_filtered} measurements")
+
             # Check if K was already provided (not all k=1)
             k_vals = np.array(data['k'])
             has_valid_k = np.any(k_vals > 1.5)  # If any K > 1.5, assume K was provided
