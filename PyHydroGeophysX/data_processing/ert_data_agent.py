@@ -1539,7 +1539,7 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
         
         # Step 4: Load and validate the exported data
         # Only recompute K if it was not already provided (k=1 placeholder)
-        print("   Validating geometric factors...")
+        print("   Validating geometric factors... [CODE-VERSION: 2026-01-20-v3-RECIPROCAL-AFTER-K]")
         try:
             import pygimli as pg
             import pygimli.physics.ert as ert_pg
