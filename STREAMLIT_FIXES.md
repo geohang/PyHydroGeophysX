@@ -290,6 +290,63 @@ The embedded parser now:
 - `ert_data_agent.py` lines 678-770 (new `_compute_reciprocal_errors()` function)
 - `ert_data_agent.py` lines 893-950 (integration into embedded parser)
 
+### 11. Incorrect Error Validation Logic in Inversion (Extremely High Initial Chi²)
+**File**: `PyHydroGeophysX/inversion/ert_inversion.py`
+
+**Problem**:
+Even after all previous fixes, cloud deployment showed extremely high initial chi² (39 million vs 120 locally). The issue was a **logical error** in how the inversion code checks for valid error data:
+
+```python
+# WRONG (line 95):
+if np.all(self.data['err']) != 0.0:
+    Delta_rhoa_rhoa = self.data['err'].array()
+```
+
+This code has a **precedence error**:
+- `np.all(self.data['err'])` evaluates to a single boolean (True/False)
+- `True != 0.0` evaluates to `True` (always!)
+- So it ALWAYS tries to use `self.data['err']`, even if the values are invalid
+
+The condition should check if **all error values are non-zero**, not if **np.all() result is non-zero**.
+
+**Consequences**:
+- If error data contains zeros or very small values → huge weights in `1/log(err+1)`
+- If error data is missing or corrupted → invalid weights → huge chi²
+- The code never fell back to PyGIMLi's error estimation
+
+**Changes**:
+Fixed the error validation logic at lines 94-105:
+
+```python
+# BEFORE (WRONG): Logical error in condition
+if np.all(self.data['err']) != 0.0:  # ❌ Always True!
+    Delta_rhoa_rhoa = self.data['err'].array()
+else:
+    # This branch never executed
+    Delta_rhoa_rhoa = ert_manager.estimateError(...)
+
+# AFTER (CORRECT): Proper validation
+has_valid_err = False
+if 'err' in self.data.dataMap():
+    err_array = self.data['err'].array()
+    has_valid_err = np.any(err_array > 0) and np.all(np.isfinite(err_array))
+
+if has_valid_err:
+    Delta_rhoa_rhoa = self.data['err'].array()
+    print(f'Using provided error estimates (mean: {np.mean(Delta_rhoa_rhoa):.4f})')
+else:
+    Delta_rhoa_rhoa = ert_manager.estimateError(...)  # ✓ Fallback works now
+    print(f'Estimating errors (absoluteUError={...}, relativeError={...})')
+```
+
+**Expected result**:
+- Cloud deployment should now correctly detect and use error values
+- If error values are invalid, it will fall back to PyGIMLi's error estimation
+- Initial chi² should match local deployment (~100-120)
+- Full convergence should achieve chi² < 1.0
+
+**Locations**: `ert_inversion.py` lines 94-116 (fixed error validation logic)
+
 ## Why These Fixes Work
 
 ### Multiple Defense Layers
@@ -360,6 +417,7 @@ streamlit run examples/app_geophysics_workflow.py
 | `ert_data_agent.py` | 1579-1587 | Remove redundant reciprocal processing after K computation |
 | `ert_data_agent.py` | 1628-1647 | Always write error column with 5% default when rewriting file |
 | `ert_data_agent.py` | 678-770, 893-950 | Add reciprocal error computation to embedded parser (ResIPy algorithm) |
+| `ert_inversion.py` | 94-116 | Fix error validation logic (precedence error in condition) |
 
 ## Additional Notes
 

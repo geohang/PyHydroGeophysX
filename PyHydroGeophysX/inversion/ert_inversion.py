@@ -92,17 +92,26 @@ class ERTInversion(InversionBase):
         self.rhos1 = self.rhos1.reshape(self.rhos1.shape[0], 1)
         
         # Data error matrix
-        if np.all(self.data['err']) != 0.0:
-            # If data has error values, use them
+        # Check if error data exists and is valid (non-zero values)
+        has_valid_err = False
+        if 'err' in self.data.dataMap():
+            err_array = self.data['err'].array()
+            has_valid_err = np.any(err_array > 0) and np.all(np.isfinite(err_array))
+
+        if has_valid_err:
+            # If data has valid error values, use them
             Delta_rhoa_rhoa = self.data['err'].array()
+            print(f'   Using provided error estimates (mean: {np.mean(Delta_rhoa_rhoa):.4f}, range: [{np.min(Delta_rhoa_rhoa):.4f}, {np.max(Delta_rhoa_rhoa):.4f}])')
         else:
-            # Otherwise, estimate error
+            # Otherwise, estimate error using PyGIMLi's built-in estimator
+            print(f'   No valid error data found, estimating errors (absoluteUError={self.parameters["absoluteUError"]}, relativeError={self.parameters["relativeError"]})')
             ert_manager = ert.ERTManager(self.data)
             Delta_rhoa_rhoa = ert_manager.estimateError(
                 self.data,
                 absoluteUError=self.parameters['absoluteUError'],
                 relativeError=self.parameters['relativeError']
             )
+            print(f'   Estimated error statistics (mean: {np.mean(Delta_rhoa_rhoa):.4f}, range: [{np.min(Delta_rhoa_rhoa):.4f}, {np.max(Delta_rhoa_rhoa):.4f}])')
         
         # Create data weighting matrix
         self.Wdert = np.diag(1.0 / np.log(Delta_rhoa_rhoa + 1))
