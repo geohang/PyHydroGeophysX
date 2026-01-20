@@ -332,8 +332,6 @@ class BaseAgent(ABC):
             
             # Update interpretation with detailed results
             if results.get('status') == 'success':
-                import numpy as np
-                
                 # Build layer parameters summary
                 layer_params = workflow_config.get('layer_params', {})
                 params_summary = ""
@@ -381,7 +379,6 @@ class BaseAgent(ABC):
 
                 # Add layer-specific statistics if available
                 if 'cell_markers' in results and 'water_content_mean' in results:
-                    import numpy as np
                     cell_markers = results['cell_markers']
                     water_content_mean = results['water_content_mean'].ravel()
                     unique_markers = np.unique(cell_markers)
@@ -728,7 +725,6 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
                 comparison_df = None
                 if workflow_config.get('climate_data'):
                     import pandas as pd
-                    import numpy as np
 
                     climate_results = workflow_config['climate_data']
                     if climate_results.get('ert_alignment') and 'ert_aligned_data' in climate_results['ert_alignment']:
