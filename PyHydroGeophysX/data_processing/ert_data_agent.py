@@ -675,6 +675,126 @@ _EMBEDDED_PARSER_MAP = {
 # ---------------------------
 # Local Parser Fallback Loader (adapted from ResIPy)
 # ---------------------------
+def _compute_reciprocal_errors(df: pd.DataFrame, max_reciprocal_error: float = 0.05) -> pd.DataFrame:
+    """
+    Compute reciprocal errors and filter measurements based on reciprocal error threshold.
+
+    ACKNOWLEDGEMENT & LICENSE
+    -------------------------
+    This function is MODIFIED from ResIPy's computeReciprocalP() method:
+    - Original Source: https://gitlab.com/hkex/resipy (Survey.py, lines 787-900)
+    - Original License: GPL-3.0 (GNU General Public License v3.0)
+    - Original Authors: Guillaume Blanchy, Jimmy Boyd, Sina Saneiyan, Pedro Concha
+    - Original Function: Survey.computeReciprocalP()
+
+    Algorithm:
+    1. Sort quadrupoles (A,B) and (M,N) to create standardized array
+    2. Use pandas merge to match normal and reciprocal measurements
+    3. Compute reciprocal error on resistance values: err = (R_recip - R_normal) / R_mean
+    4. Filter measurements with reciprocal error > threshold
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe with columns: a, b, m, n, resist (resistance values)
+    max_reciprocal_error : float
+        Maximum allowed reciprocal error (default: 0.05 = 5%)
+
+    Returns
+    -------
+    pd.DataFrame
+        Filtered dataframe with added columns: reciprocalErrRel, recipMean
+    """
+    if 'resist' not in df.columns:
+        print("   Warning: No 'resist' column found, skipping reciprocal error computation")
+        return df
+
+    resist = df['resist'].values
+    n_data = len(df)
+
+    # Get quadrupole array (0-indexed for Python)
+    array = df[['a', 'b', 'm', 'n']].values.astype(int)
+
+    # Initialize output arrays
+    reciprocalErr = np.zeros(n_data) * np.nan
+    reciprocalErrRel = np.zeros(n_data) * np.nan
+    reciprocalMean = np.zeros(n_data) * np.nan
+
+    # Sort quadrupoles: (min(A,B), max(A,B), min(M,N), max(M,N))
+    # This creates a canonical form so normal and reciprocal match
+    sortedArray = np.c_[np.sort(array[:, :2], axis=1), np.sort(array[:, 2:], axis=1)]
+
+    # Build dataframe of normal and reciprocal and merge them
+    # Normal: (A, B, M, N)
+    df1 = pd.DataFrame(sortedArray, columns=['a', 'b', 'm', 'n'])
+    df1['index1'] = np.arange(df1.shape[0])
+
+    # Reciprocal: (M, N, A, B) - swap current and potential
+    df2 = pd.DataFrame(sortedArray, columns=['m', 'n', 'a', 'b'])
+    df2['index2'] = np.arange(df2.shape[0])
+
+    # Merge on (a,b,m,n) to find matches
+    dfm = pd.merge(df1, df2, on=['a', 'b', 'm', 'n'], how='outer')
+    dfm = dfm.dropna()  # Keep only measurements that have both normal and reciprocal
+
+    if len(dfm) == 0:
+        print("   Warning: No reciprocal pairs found in data")
+        df['reciprocalErrRel'] = np.nan
+        df['recipMean'] = df['resist']  # Use resist for measurements without reciprocals
+        return df
+
+    # Sort and keep only half (avoid counting each pair twice)
+    indexArray = np.sort(dfm[['index1', 'index2']].values.astype(int), axis=1)
+    indexArrayUnique = np.unique(indexArray, axis=0)
+    inormal = indexArrayUnique[:, 0]
+    irecip = indexArrayUnique[:, 1]
+
+    print(f"   Found {len(inormal)} reciprocal pairs ({100*len(inormal)/n_data:.1f}% of measurements)")
+
+    # Compute reciprocal error on resistance values
+    # err = R_recip - R_normal
+    reciprocalErr[inormal] = resist[irecip] - resist[inormal]
+    reciprocalErr[irecip] = resist[irecip] - resist[inormal]
+
+    # Compute reciprocal mean with valid values only
+    ok1 = ~(np.isnan(resist[inormal]) | np.isinf(resist[inormal]))
+    ok2 = ~(np.isnan(resist[irecip]) | np.isinf(resist[irecip]))
+
+    ie = ok1 & ok2  # Both normal and recip are valid
+    reciprocalMean[inormal[ie]] = np.mean(np.c_[np.abs(resist[inormal[ie]]), np.abs(resist[irecip[ie]])], axis=1)
+    reciprocalMean[irecip[ie]] = np.mean(np.c_[np.abs(resist[inormal[ie]]), np.abs(resist[irecip[ie]])], axis=1)
+
+    ie = ok1 & ~ok2  # Only use normal
+    reciprocalMean[inormal[ie]] = np.abs(resist[inormal[ie]])
+
+    ie = ~ok1 & ok2  # Only use reciprocal
+    reciprocalMean[inormal[ie]] = np.abs(resist[irecip[ie]])
+
+    # Compute relative reciprocal error
+    reciprocalErrRel = reciprocalErr / reciprocalMean
+
+    # Preserve sign in reciprocalMean
+    reciprocalMean = np.sign(resist) * reciprocalMean
+
+    # For measurements without reciprocals, use original resistance
+    inotRecip = np.isnan(reciprocalErrRel)
+    reciprocalMean[inotRecip] = resist[inotRecip]
+
+    # Add columns to dataframe
+    df['reciprocalErrRel'] = reciprocalErrRel
+    df['recipMean'] = reciprocalMean
+
+    # Filter measurements with high reciprocal error
+    before_filter = len(df)
+    df = df[np.abs(df['reciprocalErrRel']) < max_reciprocal_error].copy()
+    n_filtered = before_filter - len(df)
+
+    if n_filtered > 0:
+        print(f"   Filtered {n_filtered} measurements with reciprocal error > {max_reciprocal_error*100:.0f}%")
+
+    return df
+
+
 def _load_ert_embedded_parsers(
     data_file: str,
     electrode_file: Optional[str] = None,
@@ -687,14 +807,14 @@ def _load_ert_embedded_parsers(
     """
     ERT data loader using embedded parsers (modified from ResIPy).
     Used when the full ResIPy package cannot be installed.
-    
+
     ACKNOWLEDGEMENT & LICENSE
     -------------------------
     Parser functions are MODIFIED from the ResIPy project:
     - Original Source: https://gitlab.com/hkex/resipy
     - Original License: GPL-3.0 (GNU General Public License v3.0)
     - Original Authors: Guillaume Blanchy, Jimmy Boyd, Sina Saneiyan, Pedro Concha
-    
+
     All credit for original parsing algorithms goes to the ResIPy developers.
     """
     data_file_path = Path(data_file)
@@ -774,39 +894,60 @@ def _load_ert_embedded_parsers(
     observations['b'] = _coerce_indices('b', 2)
     observations['m'] = _coerce_indices('m', 3)
     observations['n'] = _coerce_indices('n', 4)
-    
+
+    # Get resistance values (needed for reciprocal error computation)
+    resist_cols = ['resist', 'R', 'r', 'resistance']
+    resist_col = next((c for c in resist_cols if c in df.columns), None)
+    if resist_col:
+        observations['resist'] = pd.to_numeric(df[resist_col], errors='coerce')
+
+    # Compute reciprocal errors BEFORE any K computation or rhoa calculation
+    # This matches ResIPy behavior: reciprocal processing on resistance values
+    if 'resist' in observations.columns:
+        print("   Computing reciprocal errors on resistance values (ResIPy algorithm)...")
+        observations = _compute_reciprocal_errors(observations, max_reciprocal_error=0.05)
+
     # Get apparent resistivity / resistance
     rho_cols = ['app', 'rhoa', 'rhoA', 'Rhoa', 'app_res']
-    resist_cols = ['resist', 'R', 'r', 'resistance']
     if any(c in df.columns for c in rho_cols):
         rho_col = next(c for c in rho_cols if c in df.columns)
         observations['rhoa'] = pd.to_numeric(df[rho_col], errors='coerce')
-    elif any(c in df.columns for c in resist_cols):
-        res_col = next(c for c in resist_cols if c in df.columns)
-        observations['rhoa'] = pd.to_numeric(df[res_col], errors='coerce')
+    elif 'resist' in observations.columns:
+        # Use resistance values (will be converted to rhoa with K later)
+        observations['rhoa'] = observations['resist']
     else:
         observations['rhoa'] = 100.0  # Default
     observations['rhoa'] = pd.to_numeric(observations['rhoa'], errors='coerce')
     if observations['rhoa'].isna().all():
         observations['rhoa'] = 100.0
-    
-    # Get error/dev, try to compute relative error where possible
-    err_col = next((c for c in ['error', 'err', 'dev', 'std', 'std_res'] if c in df.columns), None)
-    if err_col:
-        err_vals = pd.to_numeric(df[err_col], errors='coerce')
-        rho_vals = pd.to_numeric(observations['rhoa'], errors='coerce')
-        rel_err = np.where(
-            (np.isfinite(err_vals)) & (np.isfinite(rho_vals)) & (rho_vals != 0),
-            np.abs(err_vals) / np.abs(rho_vals),
-            np.nan
-        )
-        median_err = np.nanmedian(err_vals)
-        if np.isfinite(median_err) and median_err > 1 and np.nanmedian(rel_err) > 1:
-            rel_err = rel_err / 100.0
-        observations['error'] = np.where(np.isfinite(rel_err), rel_err, 0.05)
+
+    # Compute error estimates based on reciprocal data or standard deviation
+    # Priority: 1) reciprocalErrRel from reciprocal processing, 2) dev/std column, 3) default 5%
+    if 'reciprocalErrRel' in observations.columns:
+        # Use reciprocal-based error estimates (best option)
+        # For measurements without reciprocals, use 5% default
+        observations['error'] = observations['reciprocalErrRel'].fillna(0.05)
+        print(f"   Using reciprocal-based error estimates (mean: {observations['error'].mean():.4f})")
     else:
-        observations['error'] = 0.05  # Default 5%
-    
+        # Fallback to dev/std column or default
+        err_col = next((c for c in ['error', 'err', 'dev', 'std', 'std_res'] if c in df.columns), None)
+        if err_col:
+            err_vals = pd.to_numeric(df[err_col], errors='coerce')
+            rho_vals = pd.to_numeric(observations['rhoa'], errors='coerce')
+            rel_err = np.where(
+                (np.isfinite(err_vals)) & (np.isfinite(rho_vals)) & (rho_vals != 0),
+                np.abs(err_vals) / np.abs(rho_vals),
+                np.nan
+            )
+            median_err = np.nanmedian(err_vals)
+            if np.isfinite(median_err) and median_err > 1 and np.nanmedian(rel_err) > 1:
+                rel_err = rel_err / 100.0
+            observations['error'] = np.where(np.isfinite(rel_err), rel_err, 0.05)
+            print(f"   Using standard deviation-based error estimates (mean: {observations['error'].mean():.4f})")
+        else:
+            observations['error'] = 0.05  # Default 5%
+            print("   Using default 5% error estimates")
+
     observations['valid'] = True
 
     # Convert to dataclass lists for downstream compatibility

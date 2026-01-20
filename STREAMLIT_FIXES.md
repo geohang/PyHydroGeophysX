@@ -230,6 +230,66 @@ for i in range(data.size()):
 
 **Locations**: `ert_data_agent.py` lines 1628-1647 (always write error column)
 
+### 10. Missing Reciprocal Error Computation in Embedded Parser
+**File**: `PyHydroGeophysX/data_processing/ert_data_agent.py`
+
+**Problem**:
+The embedded parser (used when ResIPy is unavailable on Streamlit Cloud) was not computing reciprocal errors at all. It just assigned a flat 5% error to all measurements, regardless of data quality. This meant:
+
+1. **No reciprocal filtering**: Bad measurements with high reciprocal error were not filtered
+2. **Incorrect error estimates**: All measurements got 5% error, even if reciprocal data showed they should have different errors
+3. **Different behavior** between local (ResIPy) and cloud (embedded parser)
+
+**Root Cause**:
+ResIPy's `Survey` class automatically computes reciprocal errors using the `computeReciprocal()` method:
+- Matches normal (A-B-M-N) and reciprocal (M-N-A-B) quadrupoles
+- Computes reciprocal error on **resistance values** (before K computation)
+- Filters measurements with reciprocal error > 5%
+- Provides reciprocal-based error estimates for inversion
+
+The embedded parser didn't have this functionality, so it couldn't replicate ResIPy's behavior.
+
+**Changes**:
+Added `_compute_reciprocal_errors()` function based on ResIPy's `computeReciprocalP()` algorithm:
+
+**ACKNOWLEDGEMENT & LICENSE**:
+- **Original Source**: https://gitlab.com/hkex/resipy (Survey.py, lines 787-900)
+- **Original License**: GPL-3.0 (GNU General Public License v3.0)
+- **Original Authors**: Guillaume Blanchy, Jimmy Boyd, Sina Saneiyan, Pedro Concha
+- **Original Function**: `Survey.computeReciprocalP()`
+
+**Algorithm** (from ResIPy):
+```python
+def _compute_reciprocal_errors(df, max_reciprocal_error=0.05):
+    """
+    Compute reciprocal errors on resistance values (ResIPy algorithm).
+
+    Steps:
+    1. Sort quadrupoles (A,B) and (M,N) to create canonical form
+    2. Use pandas merge to match normal and reciprocal measurements
+    3. Compute reciprocal error: err = (R_recip - R_normal) / R_mean
+    4. Filter measurements with reciprocal error > threshold
+
+    Returns filtered dataframe with reciprocalErrRel column
+    """
+```
+
+**Integration**:
+The embedded parser now:
+1. Calls `_compute_reciprocal_errors()` after parsing data
+2. Uses `reciprocalErrRel` for error estimates (instead of flat 5%)
+3. Filters bad measurements automatically (matching ResIPy behavior)
+
+**Expected result**:
+- Cloud deployment should now behave identically to local deployment
+- Reciprocal filtering happens on both platforms
+- Error estimates are based on actual reciprocal data quality
+- Chi² values should match between local and cloud deployments
+
+**Locations**:
+- `ert_data_agent.py` lines 678-770 (new `_compute_reciprocal_errors()` function)
+- `ert_data_agent.py` lines 893-950 (integration into embedded parser)
+
 ## Why These Fixes Work
 
 ### Multiple Defense Layers
