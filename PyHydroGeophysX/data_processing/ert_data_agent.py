@@ -1626,20 +1626,29 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
                 f.write(f"{data.size()}\n")
                 
                 # Write measurement data with computed K and error
-                # Check if error data exists
-                has_err = 'err' in data.dataMap() and len(data['err']) == data.size()
+                # Check if error data exists in PyGIMLi data object
+                has_err = 'err' in data.dataMap()
                 if has_err:
-                    f.write("# a b m n r rhoa k err\n")
+                    err_vals = np.array(data['err'])
+                    # Validate error data: check if non-zero and correct size
+                    has_valid_err = (len(err_vals) == data.size()) and np.any(err_vals > 0)
                 else:
-                    f.write("# a b m n r rhoa k\n")
-                    
+                    has_valid_err = False
+
+                # Always write error column (default to 5% if not available)
+                f.write("# a b m n r rhoa k err\n")
+
                 for i in range(data.size()):
                     # PyGIMLi uses 0-based indices internally, but file format uses 1-based
                     f.write(f"{int(data['a'][i]) + 1} {int(data['b'][i]) + 1} {int(data['m'][i]) + 1} {int(data['n'][i]) + 1} ")
-                    if has_err:
-                        f.write(f"{data['r'][i]} {data['rhoa'][i]} {data['k'][i]} {data['err'][i]}\n")
+
+                    # Write error value (use data['err'] if available, otherwise default to 5%)
+                    if has_valid_err:
+                        err_val = data['err'][i]
                     else:
-                        f.write(f"{data['r'][i]} {data['rhoa'][i]} {data['k'][i]}\n")
+                        err_val = 0.05  # Default 5% relative error
+
+                    f.write(f"{data['r'][i]} {data['rhoa'][i]} {data['k'][i]} {err_val}\n")
             
             # Replace original file with updated version
             temp_path.replace(path)
