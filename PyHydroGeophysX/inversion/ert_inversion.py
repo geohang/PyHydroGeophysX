@@ -189,11 +189,14 @@ class ERTInversion(InversionBase):
             # Compute chi-squared and check convergence
             old_chi2 = chi2_ert
             chi2_ert = fdert / len(dr)
+            # Convert to scalar if it's an array (fdert is (1,1) from matrix multiplication)
+            if isinstance(chi2_ert, np.ndarray):
+                chi2_ert = float(chi2_ert.item())
             dPhi = abs(chi2_ert - old_chi2) / old_chi2 if nn > 0 else 1.0
-            
+
             print(f'chi2: {chi2_ert}')
             print(f'dPhi: {dPhi}')
-            
+
             # Store iterations data
             result.iteration_models.append(np.exp(mr.ravel()))
             result.iteration_chi2.append(chi2_ert)

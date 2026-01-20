@@ -142,13 +142,13 @@ constraints, structural constraints, and convergence criteria."""
                 'mesh': inversion_result.mesh,
                 'resistivity_model': inversion_result.final_model,
                 'coverage': inversion_result.coverage,
-                'chi2': float(inversion_result.iteration_chi2[-1]) if inversion_result.iteration_chi2 else None,
+                'chi2': float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else None,
                 'iterations': len(inversion_result.iteration_chi2),
                 'interpretation': interpretation,
                 'output_dir': output_dir
             }
             
-            final_chi2 = float(inversion_result.iteration_chi2[-1]) if inversion_result.iteration_chi2 else 0.0
+            final_chi2 = float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else 0.0
             n_iterations = len(inversion_result.iteration_chi2)
             self._log_execution(f"Final chi2: {final_chi2:.3f}, "
                               f"Iterations: {n_iterations}")
@@ -262,7 +262,7 @@ Return as: lambda=XX, max_iterations=YY"""
         """
         try:
             # Extract final chi2 as scalar (it's stored as numpy array)
-            final_chi2 = float(inversion_result.iteration_chi2[-1]) if inversion_result.iteration_chi2 else 0.0
+            final_chi2 = float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else 0.0
             n_iterations = len(inversion_result.iteration_chi2)
             
             results_summary = f"""
