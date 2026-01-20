@@ -1550,7 +1550,7 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             # Apply PyGIMLi's reciprocal filtering (removes measurements with poor reciprocal error)
             # This is the same filtering that ResIPy applies automatically
             initial_size = data.size()
-            data = ert_pg.filterReciprocal(data, maxrelerr=0.05)  # 5% reciprocal error threshold
+            data = ert_pg.reciprocalProcessing(data, maxrec=0.05, maxerr=0.2)
             reciprocal_filtered = initial_size - data.size()
             if reciprocal_filtered > 0:
                 print(f"   PyGIMLi reciprocal filter: removed {reciprocal_filtered} measurements")
@@ -1564,14 +1564,11 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
                 # No need to recompute - just validate
             else:
                 # Compute geometric factors with topography using PyGIMLi
-                print("   Recomputing geometric factors with PyGIMLi...")
+                print("   Computing geometric factors with PyGIMLi...")
                 data['k'] = ert_pg.createGeometricFactors(data, numerical=True)
-                
-                # Recompute apparent resistivity with correct K
-                # rhoa = R * K
-                data['rhoa'] = data['r'] * data['k']
                 k_vals = np.array(data['k'])
                 print(f"   Computed K range: [{k_vals.min():.1f}, {k_vals.max():.1f}]")
+                # Don't compute rhoa here - will be done after filtering
             
             # Filter by geometric factor threshold (for DAS data)
             k_threshold = 1000  # max geometric factor, m
