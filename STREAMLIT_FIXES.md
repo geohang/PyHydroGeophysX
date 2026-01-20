@@ -116,27 +116,25 @@ The local imports were added conditionally (e.g., `if workflow_config.get('clima
 
 **Locations**: `base_agent.py` lines 1045-1068 (params extraction), 1070-1087 (chi2 formatting), 1247-1278 (TDEM report formatting)
 
-### 8. Missing Reciprocal Filtering and Double K Computation (High Chi-Squared)
+### 8. Redundant Reciprocal Processing in export_for_inversion (High Chi-Squared)
 **File**: `PyHydroGeophysX/data_processing/ert_data_agent.py`
 
-**Problem 1 - Missing Reciprocal Filtering**:
-On Streamlit Cloud (without ResIPy), the chi-squared values were extremely high (~1,320,000 vs ~120 locally) because reciprocal error filtering was not being applied. When ResIPy is unavailable, the embedded DAS-1 parser doesn't compute reciprocal errors, so bad measurements with incorrect error estimates remained in the dataset.
+**Problem**:
+The `export_for_inversion()` function was calling `reciprocalProcessing()` AFTER computing geometric factors K. This caused 465/945 measurements (49%!) to be incorrectly filtered because:
 
-**Problem 2 - Wrong Order: Reciprocal Filtering Before K Computation**:
-The reciprocal filtering was being applied BEFORE computing geometric factors K:
-1. Line 1553: `reciprocalProcessing()` called with k=1 (placeholder)
-2. Line 1568: K computed AFTER reciprocal processing
-3. Line 1586: `rhoa = R * K` computed
+1. Reciprocal pairs (forward: A-B-M-N, reciprocal: M-N-A-B) have **different geometric factors K** due to different electrode configurations
+2. After computing K, even measurements with identical resistance R have different apparent resistivity: rhoa = R * K
+3. `reciprocalProcessing()` compares rhoa between reciprocal pairs and calculates reciprocal error as: `(rhoa_fwd - rhoa_recip) / rhoa_avg`
+4. Because K_fwd ≠ K_recip, this reciprocal error is artificially inflated
+5. Example: R=1.0 Ω, K_fwd=100 m, K_recip=50 m
+   - rhoa_fwd = 100 Ω·m, rhoa_recip = 50 Ω·m
+   - Reciprocal error = 50% → filtered out even though measurements are identical!
 
-This is catastrophic because:
-- `reciprocalProcessing()` compares `rhoa` between normal/reciprocal pairs
-- At line 1553, all `rhoa` values are just raw resistance R (with k=1)
-- Reciprocal pairs have **identical R** but **different K** values
-- After K computation, forward and reciprocal rhoa differ by K_ratio = K_fwd / K_recip
-- The function thinks reciprocal error is huge and filters out 465/945 measurements (49%!)
-
-**Problem 3 - Geometric Factor Applied Twice** (now fixed by reordering):
-Previously, `rhoa = R * K` was computed twice (before and after filtering), but this was solved by moving reciprocal processing to after K computation.
+**Root Cause**:
+Reciprocal filtering should happen during **data loading**, NOT during **export for inversion**:
+- **With ResIPy (local)**: `reciprocalProcessing()` is called automatically during data loading on resistance values BEFORE K computation
+- **With embedded parser (cloud)**: Reciprocal error filtering is applied at lines 1243-1246 during parsing
+- **In export_for_inversion**: Reciprocal filtering is REDUNDANT and incorrect because K has already been computed
 
 **Evidence from logs**:
 - **Local (with ResIPy)**: 945 measurements → 930 after reciprocal filtering, chi² = 120 → 0.76
@@ -148,44 +146,35 @@ Previously, `rhoa = R * K` was computed twice (before and after filtering), but 
 3. Double K application: `rhoa = R * K` computed twice in the workflow
 
 **Changes**:
-1. Fixed function name: Changed `filterReciprocal()` to `reciprocalProcessing()`
-
-2. **CRITICAL**: Moved reciprocal filtering to AFTER K computation and rhoa calculation:
+**Removed the `reciprocalProcessing()` call entirely from `export_for_inversion()`** (lines 1579-1587):
 ```python
-# WRONG ORDER (before fix):
-data = ert_pg.load(path)
-data = reciprocalProcessing(data, ...)  # Called with k=1, wrong rhoa!
+# WRONG (before fix): Calling reciprocalProcessing in export_for_inversion
 data['k'] = createGeometricFactors(data)
 data['rhoa'] = data['r'] * data['k']
+data = reciprocalProcessing(data, ...)  # ❌ Filters 465/945 measurements incorrectly!
 
-# CORRECT ORDER (after fix):
-data = ert_pg.load(path)
-data['k'] = createGeometricFactors(data)  # Compute K first
-data['rhoa'] = data['r'] * data['k']      # Then compute correct rhoa
-data = reciprocalProcessing(data, ...)    # THEN filter with correct rhoa
+# CORRECT (after fix): No reciprocal processing in export_for_inversion
+data['k'] = createGeometricFactors(data)
+data['rhoa'] = data['r'] * data['k']
+# Reciprocal filtering already done during data loading ✓
 ```
 
-**Why order matters**:
-- ResIPy computes K automatically during data loading, so reciprocal processing sees correct rhoa
-- Embedded parser writes k=1 placeholder, so K must be computed before reciprocal processing
-- If reciprocal processing runs with k=1, it compares R values but thinks they're rhoa values
-- Reciprocal pairs with K_fwd=100, K_recip=50 and identical R=1.0 would show:
-  - Before K: rhoa_fwd = 1.0, rhoa_recip = 1.0 (correct, no error)
-  - After wrong-order K: rhoa_fwd = 100, rhoa_recip = 50 (50% reciprocal error!)
-  - After correct-order K: rhoa_fwd = 100, rhoa_recip = 100 (correct, no error)
+**Why reciprocal processing should NOT happen here**:
+1. **Timing**: Reciprocal filtering must happen on resistance values BEFORE K computation
+2. **Already done**: Both ResIPy and embedded parser handle reciprocal filtering during data loading
+3. **Geometric differences**: After K computation, reciprocal pairs have legitimately different rhoa values because electrode geometry differs
+4. **False positives**: Calling `reciprocalProcessing()` after K computation treats geometric differences as measurement errors
 
-**Why this works**:
-- PyGIMLi's `reciprocalProcessing()` averages normal/reciprocal pairs and sets proper error estimates
-- Removes measurements with reciprocal error > 5% and total error > 20%
-- Applying K only ONCE ensures chi² = sum((d_obs - d_model)²/error²) is computed correctly
-- Previously chi² was inflated by K² because both d_obs and d_model had extra K factor
+**Where reciprocal filtering DOES happen**:
+- **With ResIPy**: Automatic during data loading via PyGIMLi's reciprocal processing on resistance values
+- **With embedded parser**: Lines 1243-1246 filter measurements where `reciprocalErrRel < 5%`
 
 **Expected result**:
-- Cloud deployment should now filter ~15 measurements (matching local behavior)
-- Final dataset: ~930 measurements instead of 945 (NOT 480!)
+- Cloud deployment should now keep 945 measurements (no additional filtering in export)
+- Reciprocal filtering already happened during data loading (embedded parser)
 - Chi² should be ~100-120 initially, converging to ~0.5-1.0 within 3-4 iterations
 
-**Locations**: `ert_data_agent.py` lines 1547-1590 (reordered K computation before reciprocal processing)
+**Locations**: `ert_data_agent.py` lines 1579-1587 (removed reciprocalProcessing call)
 
 ## Why These Fixes Work
 
