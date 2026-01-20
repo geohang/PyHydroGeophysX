@@ -357,7 +357,9 @@ streamlit run examples/app_geophysics_workflow.py
 | `ert_forward.py` | 50-89, 292-325, 337-375 | Validate inputs before PyGIMLi calls |
 | `ert_inversion_agent.py` | 145, 151, 162 | Handle chi2 array-to-scalar conversion safely |
 | `base_agent.py` | 335, 384, 731, 1045-1068, 1070-1087, 1247-1278 | Fix numpy imports, dict formatting, safe value extraction |
-| `ert_data_agent.py` | 1553, 1570-1572 | Fix reciprocal filtering function name, remove double K computation |
+| `ert_data_agent.py` | 1579-1587 | Remove redundant reciprocal processing after K computation |
+| `ert_data_agent.py` | 1628-1647 | Always write error column with 5% default when rewriting file |
+| `ert_data_agent.py` | 678-770, 893-950 | Add reciprocal error computation to embedded parser (ResIPy algorithm) |
 
 ## Additional Notes
 
