@@ -1576,16 +1576,14 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             # rhoa = R * K
             data['rhoa'] = data['r'] * data['k']
 
-            # CRITICAL: Apply reciprocal filtering AFTER K and rhoa are computed!
-            # PyGIMLi's reciprocal processing compares rhoa values between normal and reciprocal pairs
-            # If we call this before computing K, all rhoa values are wrong (just R with k=1)
-            # This order is essential - reciprocal processing must see correct apparent resistivity!
-            initial_size = data.size()
-            data = ert_pg.reciprocalProcessing(data, maxrec=0.05, maxerr=0.2)
-            reciprocal_filtered = initial_size - data.size()
-            if reciprocal_filtered > 0:
-                print(f"   PyGIMLi reciprocal filter: removed {reciprocal_filtered} measurements")
-            
+            # NOTE: Reciprocal filtering should have already been done during data loading:
+            # - With ResIPy: reciprocalProcessing() is called automatically
+            # - With embedded parser: reciprocal error filter is applied (line 1243-1246)
+            # We do NOT call reciprocalProcessing() here because:
+            # 1. It would be redundant (filtering already done)
+            # 2. After computing K, reciprocal pairs have different rhoa even with identical R
+            #    because K depends on electrode geometry, making reciprocal error artificially high
+
             # Filter extreme apparent resistivity values
             rhoa_vals = np.array(data['rhoa'])
             valid_mask = (np.isfinite(rhoa_vals)) & (rhoa_vals > 0.1) & (rhoa_vals < 1e6)
