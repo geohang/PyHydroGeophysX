@@ -871,6 +871,30 @@ def _load_ert_embedded_parsers(
         if 'label' in elec_array.columns:
             electrodes_df['label'] = elec_array['label']
             label_map = {str(lbl).strip(): idx + 1 for idx, lbl in enumerate(pd.unique(elec_array['label']))}
+
+    # Override electrode positions from external file if provided
+    # This matches ResIPy behavior: external electrode file takes priority
+    if electrode_file is not None:
+        electrode_file_path = Path(electrode_file)
+        if not electrode_file_path.is_absolute():
+            electrode_file_path = Path.cwd() / electrode_file_path
+
+        if not electrode_file_path.exists():
+            raise FileNotFoundError(f"Electrode file not found: {electrode_file_path}")
+
+        # Load electrode coordinates from file
+        try:
+            elec_data = np.loadtxt(str(electrode_file_path))
+            if elec_data.ndim == 1:
+                elec_data = elec_data.reshape(-1, 3)
+
+            # Update electrode positions in dataframe
+            electrodes_df['x'] = elec_data[:, 0]
+            electrodes_df['y'] = elec_data[:, 1] if elec_data.shape[1] > 1 else 0.0
+            electrodes_df['z'] = elec_data[:, 2] if elec_data.shape[1] > 2 else 0.0
+            print(f"   Updated electrode positions from {electrode_file_path.name}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to load electrode file '{electrode_file_path}': {e}") from e
     
     # Build observations dataframe with standardized columns
     observations = pd.DataFrame()
@@ -1059,7 +1083,31 @@ def _load_ert_pygimli(
         'y': sensors[:, 1] if sensors.shape[1] > 1 else 0.0,
         'z': sensors[:, 2] if sensors.shape[1] > 2 else 0.0,
     })
-    
+
+    # Override electrode positions from external file if provided
+    # This matches ResIPy behavior: external electrode file takes priority
+    if electrode_file is not None:
+        electrode_file_path = Path(electrode_file)
+        if not electrode_file_path.is_absolute():
+            electrode_file_path = Path.cwd() / electrode_file_path
+
+        if not electrode_file_path.exists():
+            raise FileNotFoundError(f"Electrode file not found: {electrode_file_path}")
+
+        # Load electrode coordinates from file
+        try:
+            elec_data = np.loadtxt(str(electrode_file_path))
+            if elec_data.ndim == 1:
+                elec_data = elec_data.reshape(-1, 3)
+
+            # Update electrode positions in dataframe
+            electrodes_df['x'] = elec_data[:, 0]
+            electrodes_df['y'] = elec_data[:, 1] if elec_data.shape[1] > 1 else 0.0
+            electrodes_df['z'] = elec_data[:, 2] if elec_data.shape[1] > 2 else 0.0
+            print(f"   Updated electrode positions from {electrode_file_path.name}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to load electrode file '{electrode_file_path}': {e}") from e
+
     # Extract measurements
     n_data = data.size()
     

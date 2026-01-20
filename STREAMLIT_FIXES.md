@@ -347,6 +347,70 @@ else:
 
 **Locations**: `ert_inversion.py` lines 94-116 (fixed error validation logic)
 
+### 12. Missing Electrode Topography Update in Embedded Parser
+**File**: `PyHydroGeophysX/data_processing/ert_data_agent.py`
+
+**Problem**:
+When an external `electrode.dat` file was provided to override electrode positions (e.g., to apply topography corrections), the embedded parser and PyGIMLi fallback loaders were ignoring it. This caused:
+
+1. **Incorrect mesh geometry**: Inversions assumed flat topography even when actual survey had significant elevation changes
+2. **Wrong geometric factors K**: K depends on electrode positions, so incorrect positions lead to incorrect K values
+3. **Poor inversion results**: Model doesn't match actual subsurface geometry
+4. **Cloud/local discrepancy**: Local (ResIPy) correctly applied electrode positions, cloud (embedded parser) did not
+
+**Root Cause**:
+Both `_load_ert_embedded_parsers()` (line 798) and `_load_ert_pygimli()` (line 1030) accept `electrode_file` parameter but never actually load it. The ResIPy loader (lines 1319-1340) correctly loads and applies external electrode positions.
+
+**Changes**:
+Added electrode file loading to both fallback loaders, matching ResIPy behavior:
+
+```python
+# BEFORE (WRONG): embedded parser ignored electrode_file parameter
+electrodes_df = pd.DataFrame({
+    'x': elec_array[:, 0],
+    'y': elec_array[:, 1] if n_cols > 1 else 0.0,
+    'z': elec_array[:, 2] if n_cols > 2 else 0.0,
+})
+# No code to load electrode_file! ❌
+
+# AFTER (CORRECT): external electrode file overrides parsed positions
+electrodes_df = pd.DataFrame({
+    'x': elec_array[:, 0],
+    'y': elec_array[:, 1] if n_cols > 1 else 0.0,
+    'z': elec_array[:, 2] if n_cols > 2 else 0.0,
+})
+
+# Override electrode positions from external file if provided ✓
+if electrode_file is not None:
+    electrode_file_path = Path(electrode_file)
+    if not electrode_file_path.is_absolute():
+        electrode_file_path = Path.cwd() / electrode_file_path
+
+    if not electrode_file_path.exists():
+        raise FileNotFoundError(f"Electrode file not found: {electrode_file_path}")
+
+    # Load electrode coordinates from file
+    elec_data = np.loadtxt(str(electrode_file_path))
+    if elec_data.ndim == 1:
+        elec_data = elec_data.reshape(-1, 3)
+
+    # Update electrode positions in dataframe
+    electrodes_df['x'] = elec_data[:, 0]
+    electrodes_df['y'] = elec_data[:, 1] if elec_data.shape[1] > 1 else 0.0
+    electrodes_df['z'] = elec_data[:, 2] if elec_data.shape[1] > 2 else 0.0
+    print(f"   Updated electrode positions from {electrode_file_path.name}")
+```
+
+**Expected result**:
+- Cloud deployment now correctly applies electrode positions from external files
+- Mesh geometry matches actual survey topography
+- Geometric factors K computed using correct electrode positions
+- Cloud and local deployments produce identical results
+
+**Locations**:
+- `ert_data_agent.py` lines 875-897 (added to embedded parser after line 873)
+- `ert_data_agent.py` lines 1108-1130 (added to PyGIMLi fallback after line 1085)
+
 ## Why These Fixes Work
 
 ### Multiple Defense Layers
@@ -417,6 +481,7 @@ streamlit run examples/app_geophysics_workflow.py
 | `ert_data_agent.py` | 1579-1587 | Remove redundant reciprocal processing after K computation |
 | `ert_data_agent.py` | 1628-1647 | Always write error column with 5% default when rewriting file |
 | `ert_data_agent.py` | 678-770, 893-950 | Add reciprocal error computation to embedded parser (ResIPy algorithm) |
+| `ert_data_agent.py` | 875-897, 1108-1130 | Load electrode positions from external file in fallback loaders |
 | `ert_inversion.py` | 94-116 | Fix error validation logic (precedence error in condition) |
 
 ## Additional Notes
