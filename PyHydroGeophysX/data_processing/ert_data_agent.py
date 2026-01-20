@@ -1579,6 +1579,7 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             # CRITICAL: Apply reciprocal filtering AFTER K and rhoa are computed!
             # PyGIMLi's reciprocal processing compares rhoa values between normal and reciprocal pairs
             # If we call this before computing K, all rhoa values are wrong (just R with k=1)
+            # This order is essential - reciprocal processing must see correct apparent resistivity!
             initial_size = data.size()
             data = ert_pg.reciprocalProcessing(data, maxrec=0.05, maxerr=0.2)
             reciprocal_filtered = initial_size - data.size()
