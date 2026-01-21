@@ -1273,16 +1273,19 @@ The workflows in this app focus on the methods below.
         "Show me Python code with PyHydroGeophysX to run ERT inversion and plot results",
     ]
 
+    # Initialize the text input state if not exists
+    if "concept_input" not in st.session_state:
+        st.session_state.concept_input = ""
+
     cols = st.columns(2)
     for idx, question in enumerate(example_questions):
         if cols[idx % 2].button(question, key=f"example_q_{idx}", use_container_width=True):
-            st.session_state.concept_question = question
+            st.session_state.concept_input = question
             st.rerun()
 
     # Text input for custom questions
     user_question = st.text_area(
         "Or type your own question:",
-        value=st.session_state.get("concept_question", ""),
         height=100,
         placeholder="Ask about ERT, seismic, petrophysics, Python code, or any hydrogeophysics concept...",
         key="concept_input"
@@ -1294,7 +1297,7 @@ The workflows in this app focus on the methods below.
 
     if clear_clicked:
         st.session_state.concept_chat_history = []
-        st.session_state.concept_question = ""
+        st.session_state.concept_input = ""
         st.rerun()
 
     if ask_clicked and user_question.strip():
@@ -1382,7 +1385,8 @@ When providing code examples:
                     })
 
                     # Clear the question input
-                    st.session_state.concept_question = ""
+                    st.session_state.concept_input = ""
+                    st.rerun()
 
                 except Exception as e:
                     st.error(f"Error getting AI response: {e}")
