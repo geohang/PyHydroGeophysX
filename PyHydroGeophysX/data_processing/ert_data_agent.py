@@ -771,7 +771,12 @@ def _compute_reciprocal_errors(df: pd.DataFrame, max_reciprocal_error: float = 0
     reciprocalMean[inormal[ie]] = np.abs(resist[irecip[ie]])
 
     # Compute relative reciprocal error
-    reciprocalErrRel = reciprocalErr / reciprocalMean
+    # Avoid division by zero: if reciprocalMean is too small, set error to NaN (will be filtered/replaced later)
+    reciprocalErrRel = np.where(
+        np.abs(reciprocalMean) > 1e-10,  # Only compute if mean is not near zero
+        reciprocalErr / reciprocalMean,
+        np.nan  # Mark as NaN if division would be invalid
+    )
 
     # Preserve sign in reciprocalMean
     reciprocalMean = np.sign(resist) * reciprocalMean
@@ -949,8 +954,13 @@ def _load_ert_embedded_parsers(
     # Priority: 1) reciprocalErrRel from reciprocal processing, 2) dev/std column, 3) default 5%
     if 'reciprocalErrRel' in observations.columns:
         # Use reciprocal-based error estimates (best option)
-        # For measurements without reciprocals, use 5% default
+        # For measurements without reciprocals or with zero error, use 5% default
+        # IMPORTANT: fillna only handles NaN, need to also replace zeros and infinities
         observations['error'] = observations['reciprocalErrRel'].fillna(0.05)
+        # Replace zeros and infinities with 5% default
+        observations['error'] = observations['error'].replace([0, np.inf, -np.inf], 0.05)
+        # Ensure all values are positive and at least 1% (avoid division by zero in inversion)
+        observations['error'] = np.maximum(np.abs(observations['error']), 0.01)
         print(f"   Using reciprocal-based error estimates (mean: {observations['error'].mean():.4f})")
     else:
         # Fallback to dev/std column or default
