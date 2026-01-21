@@ -6,6 +6,9 @@ Welcome to **PyHydroGeophysX**—a Python package for integrating hydrological m
 Key Features
 ------------
 - **ERT data processing**: Load, QC, and export field ERT data with RESIPY integration
+- **Multi-Agent AI System**: Automated cross-modal geophysics workflows with LLM support **NEW**
+- **3D ERT Modeling**: Complete 3D mesh creation, forward modeling, and PyVista visualization **NEW**
+- **TDEM Forward & Inversion**: Time-Domain Electromagnetic modeling using SimPEG **NEW**
 - Hydrological model integration (MODFLOW, ParFlow)
 - Advanced petrophysical relationships (Archie, Waxman-Smits, DEM, Hertz-Mindlin)
 - Forward modeling and time-lapse inversion for ERT & SRT
@@ -129,6 +132,64 @@ Time-Lapse Inversion (ERT)
    #     inversion_type="L2"
    # )
    # result = inversion.run()
+
+3D ERT Forward Modeling (NEW)
+-----------------------------
+Create complete 3D meshes with electrode arrays and forward model with MODFLOW integration:
+
+.. code-block:: python
+
+   from PyHydroGeophysX.core.mesh_3d import Mesh3DCreator
+   from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
+   import pygimli as pg
+
+   # Define domain and electrode array
+   domain_x, domain_y, domain_z = 20.0, 20.0, 14.0  # meters
+   
+   # Create mesh with electrodes
+   mesh_creator = Mesh3DCreator(domain_x, domain_y, domain_z, 
+                                max_element_size=2.0, quality=1.2)
+   electrodes = mesh_creator.create_electrode_grid(
+       nx=5, ny=5, spacing=4.0, z_offset=0.0
+   )
+   mesh = mesh_creator.create_3d_mesh_with_topography(
+       electrodes=electrodes, topography=None
+   )
+
+   # Load MODFLOW data and interpolate to mesh
+   wc_processor = MODFLOWWaterContent(model_dir, idomain, cell_size=1.0)
+   water_content = wc_processor.load_timestep(0)
+
+   # Convert to resistivity and run 3D forward modeling
+   from PyHydroGeophysX.petrophysics import water_content_to_resistivity
+   resistivity = water_content_to_resistivity(water_content, rhos=100, n=2.2, porosity=0.3)
+
+TDEM Forward Modeling (NEW)
+---------------------------
+Time-Domain Electromagnetic forward modeling using SimPEG:
+
+.. code-block:: python
+
+   from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling, TDEMSurveyConfig
+   import numpy as np
+
+   # Define survey configuration
+   config = TDEMSurveyConfig(
+       source_type='VMD',              # Vertical magnetic dipole
+       source_location=[0, 0, 1],      # Source at 1m height
+       source_radius=5.0,              # 5m loop radius
+       receiver_location=[0, 0, 1],    # Co-located receiver
+       receiver_type='dBdt',           # Measure dB/dt
+       times=np.logspace(-5, -2, 31)   # Time gates
+   )
+
+   # Define 1D layered Earth model
+   layer_thicknesses = [0.5, 1.0, 2.0, 5.0]  # meters
+   conductivities = [0.01, 0.1, 0.05, 0.02]  # S/m
+
+   # Create forward model and compute response
+   tdem_fwd = TDEMForwardModeling(config)
+   response = tdem_fwd.forward(layer_thicknesses, conductivities)
 
 More Examples and Documentation
 ------------------------------

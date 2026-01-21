@@ -41,6 +41,7 @@ sphinx_gallery_conf = {
 # HTML theme
 html_theme = 'sphinx_rtd_theme'
 html_title = 'PyHydroGeophysX Documentation'
+html_logo = '_static/logo.png'
 
 # Static files
 html_static_path = ['_static']

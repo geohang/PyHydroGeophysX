@@ -1,14 +1,29 @@
+<div align="center">
+  <img src="logo.png" alt="PyHydroGeophysX Logo" width="400">
+</div>
+
 # PyHydroGeophysX
 
 A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, specializing in electrical resistivity tomography (ERT) and seismic refraction tomography (SRT) for watershed monitoring applications.
+
+<div align="center">
+  <img src="frame.png" alt="HydroGeophysX Framework" width="600">
+</div>
+
+*HydroGeophysX bridges the strengths and limitations of hydrologic modeling and geophysical monitoring, enabling process-based survey design, inversion constraints, and model calibration. This integrative approach supports advanced watershed studies and critical zone science.*
+
+For a detailed conceptual framework and application, see:
+Chen, H., Niu, Q., Mendieta, A., Bradford, J., & McNamara, J. (2023). Geophysics‐informed hydrologic modeling of a mountain headwater catchment for studying hydrological partitioning in the critical zone. Water Resources Research, 59(12), e2023WR035280. https://doi.org/10.1029/2023WR035280
 
 ## 🌟 Key Features
 
 - 🌊 **Hydrological Model Integration:** Seamless loading and processing of MODFLOW and ParFlow outputs  
 - 📊 **ERT Data Processing:** Standardized loading, quality control, and export of ERT field data with RESIPY integration  
-- 🤖 **Multi-Agent AI System:** Automatic cross-modal geophysics agent supporting multiple LLM APIs (GPT, Gemini, Claude) for automated workflows processing ERT, seismic, and other geophysical data into hydrologic information **NEW**
+- 🤖 **Multi-Agent AI System:** Automatic cross-modal geophysics agent supporting multiple LLM APIs (GPT, Gemini, Claude) for automated workflows processing ERT, seismic, and other geophysical data into hydrologic information
+- 🧊 **3D ERT Modeling:** Complete 3D mesh creation, forward modeling, and visualization with topography and MODFLOW integration **NEW**
+- 📡 **TDEM Forward & Inversion:** Time-Domain Electromagnetic (TDEM) forward modeling and inversion using SimPEG **NEW**
 - 🪨 **Petrophysical Relationships:** Advanced models for converting between water content, saturation, resistivity, and seismic velocity  
-- ⚡ **Forward Modeling:** Complete ERT and SRT forward modeling capabilities with synthetic data generation  
+- ⚡ **Forward Modeling:** Complete ERT, SRT, and TDEM forward modeling capabilities with synthetic data generation  
 - 🔄 **Time-Lapse Inversion:** Sophisticated algorithms for time-lapse ERT inversion with temporal regularization  
 - 🏔️ **Structure-Constrained Inversion:** Integration of seismic velocity interfaces for constrained ERT inversion  
 - 🔬 **Uncertainty Quantification:** Monte Carlo methods for parameter uncertainty assessment  
@@ -67,7 +82,8 @@ make html
 PyHydroGeophysX/
 ├── core/               # Core utilities
 │   ├── interpolation.py    # Profile interpolation tools
-│   └── mesh_utils.py       # Mesh creation and manipulation
+│   ├── mesh_utils.py       # 2D mesh creation and manipulation
+│   └── mesh_3d.py          # 3D mesh creation with GMSH/PyGIMLi **NEW**
 ├── agents/             # Multi-agent AI system **NEW**
 │   ├── agent_coordinator.py    # Workflow orchestration
 │   ├── ert_loader_agent.py     # ERT data loading agent
@@ -85,12 +101,14 @@ PyHydroGeophysX/
 │   ├── resistivity_models.py  # Waxman-Smits, Archie models
 │   └── velocity_models.py     # DEM, Hertz-Mindlin models
 ├── forward/            # Forward modeling
-│   ├── ert_forward.py      # ERT forward modeling
-│   └── srt_forward.py      # Seismic forward modeling
+│   ├── ert_forward.py      # 2D/3D ERT forward modeling
+│   ├── srt_forward.py      # Seismic forward modeling
+│   └── tdem_forward.py     # TDEM forward modeling **NEW**
 ├── inversion/          # Inverse modeling
 │   ├── ert_inversion.py    # Single-time ERT inversion
 │   ├── time_lapse.py       # Time-lapse inversion
-│   └── windowed.py         # Windowed time-lapse for large datasets
+│   ├── windowed.py         # Windowed time-lapse for large datasets
+│   └── tdem_inversion.py   # TDEM inversion with SimPEG **NEW**
 ├── solvers/            # Linear algebra solvers
 │   └── linear_solvers.py   # CGLS, LSQR, RRLS with GPU support
 ├── Hydro_modular/      # Direct hydro-to-geophysics conversion
@@ -112,6 +130,8 @@ The examples folder provides paired Jupyter notebooks (.ipynb) and Python script
 - EX_SRT_forward: Seismic refraction tomography forward modeling and synthetic travel times (notebook: EX_SRT_forward.ipynb, script: EX_SRT_forward.py).
 - Ex_SRT_inv: Seismic refraction tomography inversion workflow (notebook: Ex_SRT_inv.ipynb, script: Ex_SRT_inv.py).
 - Ex_MC_Hydro: Monte Carlo uncertainty quantification for hydro‑to‑resistivity conversion (notebook: Ex_MC_Hydro.ipynb, script: Ex_MC_Hydro.py).
+- **Ex_3D_ERT_forward**: 3D ERT forward modeling with MODFLOW integration using Mesh3DCreator and PyVista visualization (notebook: Ex_3D_ERT_forward.ipynb). **NEW**
+- **Ex_TDEM_workflow**: Time-Domain Electromagnetic (TDEM) forward modeling and inversion from hydrological models using SimPEG (notebook: Ex_TDEM_workflow.ipynb). **NEW**
 
 
 ## 🚀 Quick Start
@@ -323,6 +343,74 @@ travel_times = srt_fwd.create_synthetic_data(
 )
 ```
 
+## 4b. 3D ERT Forward Modeling (NEW)
+
+Create complete 3D meshes and forward models with MODFLOW integration:
+
+```python
+from PyHydroGeophysX.core.mesh_3d import Mesh3DCreator
+import pygimli as pg
+
+# Define domain and electrode array
+domain_x, domain_y, domain_z = 20.0, 20.0, 14.0  # meters
+nx_elec, ny_elec = 5, 5  # 5x5 electrode grid
+spacing = 4.0  # 4m between electrodes
+
+# Create mesh with electrodes
+mesh_creator = Mesh3DCreator(domain_x, domain_y, domain_z, 
+                             max_element_size=2.0, quality=1.2)
+electrodes = mesh_creator.create_electrode_grid(
+    nx=nx_elec, ny=ny_elec, spacing=spacing, z_offset=0.0
+)
+mesh = mesh_creator.create_3d_mesh_with_topography(
+    electrodes=electrodes, topography=None
+)
+
+# Load MODFLOW data and interpolate to mesh
+from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
+wc_processor = MODFLOWWaterContent(model_dir, idomain, cell_size=1.0)
+water_content = wc_processor.load_timestep(0)
+
+# Forward model with PyGIMLi
+from PyHydroGeophysX.forward.ert_forward import ERTForwardModeling
+ert_fwd = ERTForwardModeling(mesh, data)
+synthetic_data = ert_fwd.create_synthetic_3d_data(
+    electrodes=electrodes, res_model=resistivity_model
+)
+```
+
+## 4c. TDEM Forward Modeling (NEW)
+
+Time-Domain Electromagnetic forward modeling using SimPEG:
+
+```python
+from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling, TDEMSurveyConfig
+import numpy as np
+
+# Define survey configuration
+config = TDEMSurveyConfig(
+    source_type='VMD',              # Vertical magnetic dipole
+    source_location=[0, 0, 1],      # Source at 1m height
+    source_radius=5.0,              # 5m loop radius
+    receiver_location=[0, 0, 1],    # Co-located receiver
+    receiver_type='dBdt',           # Measure dB/dt
+    times=np.logspace(-5, -2, 31)   # Time gates
+)
+
+# Define 1D layered Earth model
+layer_thicknesses = [0.5, 1.0, 2.0, 5.0]  # meters
+conductivities = [0.01, 0.1, 0.05, 0.02]  # S/m
+
+# Create forward model and compute response
+tdem_fwd = TDEMForwardModeling(config)
+response = tdem_fwd.forward(layer_thicknesses, conductivities)
+
+# For hydro-geophysics integration with MODFLOW
+wc_profile = water_content[:, row, col]  # 1D profile from MODFLOW
+sigma = waxman_smits(wc_profile, rhos=100, n=2.0, porosity=0.35)
+response = tdem_fwd.forward(layer_thicknesses, sigma)
+```
+
 ## 5. Time-Lapse Inversion
 
 Perform sophisticated time-lapse ERT inversions:
@@ -523,6 +611,20 @@ Additionally, please cite the underlying libraries you use:
 }
 ```
 
+**For electromagnetic modeling (SimPEG):**
+```bibtex
+@article{cockett2015simpeg,
+  title={SimPEG: An open source framework for simulation and gradient based parameter estimation in geophysical applications},
+  author={Cockett, Rowan and Kang, Seogi and Heagy, Lindsey J and Pidlisecky, Adam and Oldenburg, Douglas W},
+  journal={Computers \& Geosciences},
+  volume={85},
+  pages={142--154},
+  year={2015},
+  publisher={Elsevier},
+  doi={10.1016/j.cageo.2015.09.015}
+}
+```
+
 ## 📄 License
 
 This project is licensed under the Apache-2.0 license - see the LICENSE file for details.
@@ -531,6 +633,7 @@ This project is licensed under the Apache-2.0 license - see the LICENSE file for
 
 - **RESIPY** developers (Blanchy, Guillaume and Saneiyan, Sina and Boyd, Jimmy and McLachlan, Paul and Binley, Andrew and contributors) for the excellent ERT data processing library that powers our field data workflows
 - **pyGIMLi** team (Carsten Rücker, Thomas Günther, Florian Wagner, and contributors) for the outstanding geophysical modeling and inversion framework  
+- **SimPEG** team (Rowan Cockett, Seogi Kang, Lindsey Heagy, Adam Pidlisecky, Douglas Oldenburg, and contributors) for the powerful simulation and parameter estimation framework enabling TDEM forward modeling and inversion
 - **ParFlow** development team (Reed Maxwell, Laura Condon, Stefan Kollet, and contributors) for the integrated surface-subsurface hydrologic model
 - **MODFLOW** community (USGS and contributors) for the groundwater modeling standard
 - All open-source contributors and users providing valuable feedback  

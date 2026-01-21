@@ -23,34 +23,41 @@ from scipy.optimize import root_scalar
 def WS_Model(saturation, porosity, sigma_w, m, n, sigma_s=0):
     """
     Convert water content to resistivity using Waxman-Smits model.
-    
+
     Based on equation: σ = (S_w^n/F)σ_w + σ_s
     where F = φ^(-m) (formation factor from Archie's law)
-    
+
     Args:
         saturation (array): Saturation (S_w)
         porosity (array): Porosity values (φ)
         sigma_w (float): Pore water conductivity (σ_w)
         m (float): Cementation exponent
-        n (float): Saturation exponent  
+        n (float): Saturation exponent
         sigma_s (float): Surface conductivity (σ_s). Default is 0 (no surface effects).
-    
+
     Returns:
         array: Resistivity values
     """
-    # Calculate saturation (S_w)
+    # Clip saturation to physically meaningful range (avoid division by zero)
+    saturation = np.clip(saturation, 0.001, 1.0)
 
-    
     # Calculate formation factor F = φ^(-m)
     formation_factor = porosity**(-m)
-    
+
     # Calculate conductivity using Waxman-Smits model
     # σ = (S_w^n/F)(σ_w + σ_s/S_w)
     sigma = (saturation**n / formation_factor) * (sigma_w + sigma_s/saturation)
-    
+
+    # Add minimum conductivity threshold to prevent division by zero
+    sigma_min = 1e-6
+    sigma = np.maximum(sigma, sigma_min)
+
     # Convert conductivity to resistivity
     resistivity = 1.0 / sigma
-    
+
+    # Clip resistivity to physically reasonable range
+    resistivity = np.clip(resistivity, 0.1, 1e6)
+
     return resistivity
 
 
@@ -58,28 +65,35 @@ def WS_Model(saturation, porosity, sigma_w, m, n, sigma_s=0):
 def water_content_to_resistivity(water_content, rhos, n, porosity, sigma_sur=0):
     """
     Convert water content to resistivity using Waxman-Smits model.
-    
+
     Args:
         water_content (array): Volumetric water content (θ)
         rhos (float): Saturated resistivity without surface effects
         n (float): Saturation exponent
         porosity (array): Porosity values (φ)
         sigma_sur (float): Surface conductivity. Default is 0 (no surface effects).
-    
+
     Returns:
         array: Resistivity values
     """
-    # Calculate saturation
+    # Calculate saturation with minimum threshold to avoid division issues
     saturation = water_content / porosity
-    saturation = np.clip(saturation, 0.0, 1.0)
-    
+    saturation = np.clip(saturation, 0.001, 1.0)
+
     # Calculate conductivity using Waxman-Smits model
     sigma_sat = 1.0 / rhos
     sigma = sigma_sat * saturation**n + sigma_sur * saturation**(n-1)
-    
+
+    # Add minimum conductivity threshold to prevent division by zero
+    sigma_min = 1e-6
+    sigma = np.maximum(sigma, sigma_min)
+
     # Convert conductivity to resistivity
     resistivity = 1.0 / sigma
-    
+
+    # Clip resistivity to physically reasonable range
+    resistivity = np.clip(resistivity, 0.1, 1e6)
+
     return resistivity
 
 

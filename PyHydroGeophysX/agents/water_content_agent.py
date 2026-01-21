@@ -18,9 +18,10 @@ class WaterContentAgent(BaseAgent):
     quantification to estimate water content from resistivity.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,
+                 llm_provider: str = "openai"):
         """Initialize Water Content Agent."""
-        super().__init__("water_content", api_key)
+        super().__init__("water_content", api_key, model, llm_provider)
         self.system_message = """You are an expert in petrophysical relationships and 
 rock physics. Your role is to convert electrical resistivity to water content using 
 appropriate models (Archie's law, Waxman-Smits), select suitable parameters for 

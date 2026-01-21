@@ -42,21 +42,190 @@ class ClimateDataAgent(BaseAgent):
         """
         super().__init__("climate_data", api_key, model, llm_provider)
         
-        # Check if pydaymet is available
+        # Check if pydaymet is available (optional - only needed for direct fetching)
         try:
             import pydaymet
             self.pydaymet = pydaymet
+            self.pydaymet_available = True
         except ImportError:
-            raise ImportError(
-                "pydaymet is required for climate data retrieval. "
-                "Install with: pip install pydaymet"
-            )
+            self.pydaymet = None
+            self.pydaymet_available = False
+            # Note: pydaymet only required if fetching data directly
+            # For loading pre-fetched CSV files, it's not needed
         
         # Default variables to retrieve
         self.default_variables = ['prcp', 'tmin', 'tmax', 'srad', 'vp', 'dayl']
         
         # Supported PET methods
         self.pet_methods = ['penman_monteith', 'priestley_taylor', 'hargreaves_samani']
+    
+    def fetch_climate_data_with_conda(self, config_file: str, 
+                                      conda_path: Optional[str] = None,
+                                      env_name: str = "climate_fetch") -> Dict[str, Any]:
+        """
+        Fetch climate data using a separate conda environment with pydaymet.
+        
+        This method is useful when pydaymet cannot be installed in the main environment
+        due to dependency conflicts (e.g., NumPy version requirements).
+        
+        Args:
+            config_file: Path to climate configuration JSON file
+            conda_path: Path to conda executable (auto-detected if None)
+            env_name: Name of conda environment to use/create
+            
+        Returns:
+            Dictionary with:
+                - success: bool indicating if fetch was successful
+                - csv_path: Path to fetched CSV file (if successful)
+                - message: Status or error message
+                - stdout: Command output
+        """
+        import subprocess
+        import os
+        from pathlib import Path
+        
+        self._log("Fetching climate data using conda environment")
+        
+        # Auto-detect conda path if not provided
+        if conda_path is None:
+            # Common conda locations
+            possible_paths = [
+                Path.home() / "anaconda3" / "Scripts" / "conda.exe",
+                Path.home() / "miniconda3" / "Scripts" / "conda.exe",
+                Path(os.environ.get("CONDA_PREFIX", "")) / "Scripts" / "conda.exe"
+            ]
+            
+            for path in possible_paths:
+                if path.exists():
+                    conda_path = str(path)
+                    break
+            
+            if conda_path is None:
+                return {
+                    "success": False,
+                    "message": "Could not find conda executable. Please provide conda_path.",
+                    "csv_path": None,
+                    "stdout": ""
+                }
+        
+        config_file = Path(config_file).absolute()
+        if not config_file.exists():
+            return {
+                "success": False,
+                "message": f"Configuration file not found: {config_file}",
+                "csv_path": None,
+                "stdout": ""
+            }
+        
+        # Create climate data directory
+        climate_dir = Path("data/climate")
+        climate_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Check if environment exists
+        self._log(f"Checking for {env_name} environment...")
+        result = subprocess.run(
+            [conda_path, "env", "list"],
+            capture_output=True,
+            text=True
+        )
+        
+        env_exists = env_name in result.stdout
+        
+        if not env_exists:
+            self._log(f"Creating {env_name} environment...")
+            
+            # Create environment
+            create_cmd = [
+                conda_path, "create",
+                "-n", env_name,
+                "-y",
+                "python=3.10",
+                "numpy>=2.0",
+                "pandas>=2.0"
+            ]
+            
+            result = subprocess.run(create_cmd, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                return {
+                    "success": False,
+                    "message": f"Failed to create environment: {result.stderr}",
+                    "csv_path": None,
+                    "stdout": result.stdout
+                }
+            
+            self._log("Installing pydaymet...")
+            
+            # Install pydaymet
+            pip_cmd = [
+                conda_path, "run",
+                "-n", env_name,
+                "pip", "install", "pydaymet>=0.19", "pyet"
+            ]
+            
+            result = subprocess.run(pip_cmd, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                return {
+                    "success": False,
+                    "message": f"Failed to install packages: {result.stderr}",
+                    "csv_path": None,
+                    "stdout": result.stdout
+                }
+        
+        # Fetch the data
+        self._log("Fetching climate data (this may take 1-2 minutes)...")
+        
+        python_script = Path("fetch_climate_data.py").absolute()
+        if not python_script.exists():
+            return {
+                "success": False,
+                "message": f"Climate fetch script not found: {python_script}",
+                "csv_path": None,
+                "stdout": ""
+            }
+        
+        fetch_cmd = [
+            conda_path, "run",
+            "-n", env_name,
+            "python", str(python_script),
+            "--config", str(config_file)
+        ]
+        
+        result = subprocess.run(
+            fetch_cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(Path.cwd())
+        )
+        
+        if result.returncode == 0:
+            # Find the generated CSV file
+            csv_files = list(climate_dir.glob("*.csv"))
+            if csv_files:
+                csv_path = csv_files[0]
+                file_size = csv_path.stat().st_size / 1024  # KB
+                
+                return {
+                    "success": True,
+                    "csv_path": str(csv_path),
+                    "message": f"Climate data fetched successfully ({file_size:.1f} KB)",
+                    "stdout": result.stdout
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": "Fetch completed but CSV file not found",
+                    "csv_path": None,
+                    "stdout": result.stdout
+                }
+        else:
+            return {
+                "success": False,
+                "message": f"Failed to fetch climate data: {result.stderr}",
+                "csv_path": None,
+                "stdout": result.stdout
+            }
     
     def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -75,11 +244,18 @@ class ClimateDataAgent(BaseAgent):
                 - region: 'na', 'hi', or 'pr'
                 - ert_timestamps: Optional timestamps for alignment
                 - antecedent_days: List of days for antecedent totals (e.g., [1, 3, 7])
+                - csv_file: Optional path to pre-fetched climate data CSV file
+                - metadata_file: Optional path to metadata JSON file
                 
         Returns:
             Dictionary containing climate data and derived features
         """
         self._log("Starting climate data retrieval")
+        
+        # Check if pre-fetched CSV file is provided
+        csv_file = input_data.get('csv_file')
+        if csv_file:
+            return self._load_from_csv(csv_file, input_data)
         
         # Extract parameters
         coords = input_data.get('coords')
@@ -160,6 +336,12 @@ class ClimateDataAgent(BaseAgent):
                        pet_params: Dict, time_scale: str, region: str,
                        to_xarray: bool = False) -> Union[pd.DataFrame, Any]:
         """Retrieve climate data for point locations."""
+        if not self.pydaymet_available:
+            raise ImportError(
+                "pydaymet is required for fetching climate data. "
+                "Install with: pip install pydaymet"
+            )
+        
         self._log(f"Retrieving point data for {len(coords) if isinstance(coords, list) else 1} location(s)")
         
         climate_data = self.pydaymet.get_bycoords(
@@ -180,6 +362,12 @@ class ClimateDataAgent(BaseAgent):
                          variables: List[str], pet_method: str,
                          pet_params: Dict, time_scale: str, region: str) -> Any:
         """Retrieve gridded climate data for a region."""
+        if not self.pydaymet_available:
+            raise ImportError(
+                "pydaymet is required for fetching climate data. "
+                "Install with: pip install pydaymet"
+            )
+        
         self._log("Retrieving gridded climate data")
         
         climate_data = self.pydaymet.get_bygeom(
@@ -392,6 +580,110 @@ class ClimateDataAgent(BaseAgent):
                 comparison['coefficient_of_variation'] = np.nan
         
         return comparison
+    
+    def _load_from_csv(self, csv_file: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Load pre-fetched climate data from CSV file.
+        
+        This method enables a two-environment workflow:
+        1. Fetch climate data in a separate environment with PyDaymet 0.19+ and NumPy 2.x
+        2. Load the CSV file in the main environment with PyGIMLi (NumPy 1.x)
+        
+        Args:
+            csv_file: Path to CSV file with climate data
+            input_data: Original input data dictionary
+            
+        Returns:
+            Dictionary containing climate data and derived features
+        """
+        import os
+        import json
+        from pathlib import Path
+        
+        self._log(f"Loading pre-fetched climate data from CSV: {csv_file}")
+        
+        csv_path = Path(csv_file)
+        if not csv_path.exists():
+            raise FileNotFoundError(f"Climate data CSV file not found: {csv_file}")
+        
+        # Load climate data
+        climate_data = pd.read_csv(csv_file, index_col=0, parse_dates=True)
+        self._log(f"Loaded {len(climate_data)} records from CSV")
+        
+        # Standardize column names (remove units in parentheses)
+        # e.g., "prcp (mm/day)" -> "prcp", "tmin (degrees C)" -> "tmin"
+        column_mapping = {}
+        for col in climate_data.columns:
+            # Extract base name before parentheses
+            base_name = col.split('(')[0].strip()
+            if base_name != col:
+                column_mapping[col] = base_name
+        
+        if column_mapping:
+            climate_data.rename(columns=column_mapping, inplace=True)
+            self._log(f"Standardized {len(column_mapping)} column names")
+        
+        # Load metadata if available
+        metadata_file = input_data.get('metadata_file')
+        if not metadata_file:
+            # Try to find metadata file with same name
+            metadata_file = csv_path.with_suffix('.json')
+        
+        metadata = {}
+        if Path(metadata_file).exists():
+            with open(metadata_file, 'r') as f:
+                metadata = json.load(f)
+            self._log(f"Loaded metadata from: {metadata_file}")
+        else:
+            self._log("No metadata file found, using defaults", level='WARN')
+            metadata = {
+                'dates': (str(climate_data.index.min()), str(climate_data.index.max())),
+                'variables': [col for col in climate_data.columns 
+                             if col not in ['prcp_antecedent_1d', 'prcp_antecedent_3d', 
+                                           'prcp_antecedent_7d', 'prcp_antecedent_14d',
+                                           'p_minus_pet', 'prcp_cumulative', 'temp_range', 
+                                           'temp_mean'] and not col.startswith('p_minus_')],
+                'pet_method': 'unknown',
+                'time_scale': 'daily',
+                'region': 'unknown',
+                'crs': 4326
+            }
+        
+        # Prepare derived features dictionary
+        derived_features = {'enhanced_data': climate_data}
+        
+        # Add individual feature references
+        antecedent_cols = [col for col in climate_data.columns if 'antecedent' in col]
+        for col in antecedent_cols:
+            derived_features[col] = climate_data[col]
+        
+        p_minus_cols = [col for col in climate_data.columns if col.startswith('p_minus_')]
+        for col in p_minus_cols:
+            derived_features[col] = climate_data[col]
+        
+        # Align with ERT timestamps if provided
+        ert_alignment = None
+        if input_data.get('ert_timestamps') is not None:
+            ert_alignment = self._align_with_ert(
+                climate_data,
+                derived_features,
+                input_data['ert_timestamps']
+            )
+        
+        # Store results
+        self.results = {
+            'climate_data': climate_data,
+            'derived_features': derived_features,
+            'ert_alignment': ert_alignment,
+            'pet_comparison': None,
+            'metadata': metadata,
+            'data_source': 'pre_fetched_csv',
+            'csv_file': str(csv_path)
+        }
+        
+        self._log("Climate data loaded from CSV successfully")
+        
+        return self.results
     
     def _log(self, message: str, level: str = 'INFO'):
         """Log a message."""

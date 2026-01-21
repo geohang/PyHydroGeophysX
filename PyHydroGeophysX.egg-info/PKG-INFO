@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: PyHydroGeophysX
-Version: 0.1.0
-Summary: A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion
+Version: 0.2.0
+Summary: A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, featuring an automatic cross-modal geophysics agent for subsurface hydrology
 Home-page: https://github.com/geohang/PyHydroGeophysX
 Author: Hang Chen
 Author-email: Hang Chen <hangchen.work@gmail.com>
@@ -32,6 +32,7 @@ Requires-Dist: matplotlib>=3.2
 Requires-Dist: tqdm>=4.0
 Provides-Extra: geophysics
 Requires-Dist: pygimli>=1.5; extra == "geophysics"
+Requires-Dist: resipy>=3.4.0; extra == "geophysics"
 Requires-Dist: flopy; extra == "geophysics"
 Requires-Dist: joblib; extra == "geophysics"
 Provides-Extra: gpu
@@ -43,6 +44,7 @@ Requires-Dist: black; extra == "dev"
 Requires-Dist: flake8; extra == "dev"
 Provides-Extra: all
 Requires-Dist: pygimli>=1.5; extra == "all"
+Requires-Dist: resipy>=3.4.0; extra == "all"
 Requires-Dist: flopy; extra == "all"
 Requires-Dist: joblib; extra == "all"
 Requires-Dist: cupy; extra == "all"
@@ -62,13 +64,15 @@ A comprehensive Python package for integrating hydrological model outputs with g
 ## 🌟 Key Features
 
 - 🌊 **Hydrological Model Integration:** Seamless loading and processing of MODFLOW and ParFlow outputs  
+- 📊 **ERT Data Processing:** Standardized loading, quality control, and export of ERT field data with RESIPY integration  
+- 🤖 **Multi-Agent AI System:** Automatic cross-modal geophysics agent supporting multiple LLM APIs (GPT, Gemini, Claude) for automated workflows processing ERT, seismic, and other geophysical data into hydrologic information **NEW**
 - 🪨 **Petrophysical Relationships:** Advanced models for converting between water content, saturation, resistivity, and seismic velocity  
 - ⚡ **Forward Modeling:** Complete ERT and SRT forward modeling capabilities with synthetic data generation  
 - 🔄 **Time-Lapse Inversion:** Sophisticated algorithms for time-lapse ERT inversion with temporal regularization  
 - 🏔️ **Structure-Constrained Inversion:** Integration of seismic velocity interfaces for constrained ERT inversion  
-- 📊 **Uncertainty Quantification:** Monte Carlo methods for parameter uncertainty assessment  
+- 🔬 **Uncertainty Quantification:** Monte Carlo methods for parameter uncertainty assessment  
 - 🚀 **High Performance:** GPU acceleration support (CUDA/CuPy) and parallel processing capabilities  
-- 📈 **Advanced Solvers:** Multiple linear solvers (CGLS, LSQR, RRLS) with optional GPU acceleration
+- 💡 **Advanced Solvers:** Multiple linear solvers (CGLS, LSQR, RRLS) with optional GPU acceleration
 
 ## 📋 Requirements
 
@@ -123,6 +127,16 @@ PyHydroGeophysX/
 ├── core/               # Core utilities
 │   ├── interpolation.py    # Profile interpolation tools
 │   └── mesh_utils.py       # Mesh creation and manipulation
+├── agents/             # Multi-agent AI system **NEW**
+│   ├── agent_coordinator.py    # Workflow orchestration
+│   ├── ert_loader_agent.py     # ERT data loading agent
+│   ├── ert_inversion_agent.py  # Inversion agent
+│   ├── water_content_agent.py  # Water content conversion agent
+│   ├── seismic_agent.py        # Seismic processing agent
+│   ├── climate_data_agent.py   # Climate data and PET agent **NEW**
+│   └── report_agent.py         # Report generation agent
+├── data_processing/    # Geophysical data processing
+│   └── ert_data_agent.py   # ERT data loading, QC, and export
 ├── model_output/       # Hydrological model interfaces
 │   ├── modflow_output.py   # MODFLOW data loading
 │   └── parflow_output.py   # ParFlow data loading
@@ -146,6 +160,8 @@ PyHydroGeophysX/
 
 The examples folder provides paired Jupyter notebooks (.ipynb) and Python scripts (.py) for each workflow. Data used by examples is under examples/data, with outputs written to examples/results.
 
+- **Ex_ERT_data_process**: Loading, quality control, and export of field ERT data with RESIPY integration (notebook: Ex_ERT_data_process.ipynb).
+- **Ex_multi_agent_workflow**: Automated multi-agent workflow for ERT processing with optional seismic integration (script: Ex_multi_agent_workflow.py). **NEW**
 - Ex_model_output: Loading and processing hydrological model outputs (MODFLOW/ParFlow) (notebook: Ex_model_output.ipynb, script: Ex_model_output.py).
 - Ex_ERT_workflow: End‑to‑end ERT modeling and inversion workflow (notebook: Ex_ERT_workflow.ipynb, script: Ex_ERT_workflow.py).
 - Ex_Time_lapse_measurement: Generate synthetic time‑lapse ERT measurements and schedules (notebook: Ex_Time_lapse_measurement.ipynb, script: Ex_Time_lapse_measurement.py).
@@ -159,7 +175,152 @@ The examples folder provides paired Jupyter notebooks (.ipynb) and Python script
 
 ## 🚀 Quick Start
 
-## 1. Hydrological Model Integration
+## 0. Multi-Agent AI Workflow (NEW)
+
+Automatic cross-modal geophysics agent for subsurface hydrology. Automate geophysical data processing workflows (ERT, seismic, and more) using AI agents with support for multiple LLM APIs (GPT, Gemini, Claude):
+
+```python
+from PyHydroGeophysX.agents import (
+    AgentCoordinator, ERTLoaderAgent, ERTInversionAgent,
+    WaterContentAgent, ReportAgent, SeismicAgent, ClimateDataAgent
+)
+
+# Initialize coordinator with your LLM API key (supports OpenAI GPT, Google Gemini, Anthropic Claude)
+coordinator = AgentCoordinator(api_key='your-api-key', llm_provider='openai')  # or 'gemini', 'claude'
+
+# Register specialized agents
+coordinator.register_agent('ert_loader', ERTLoaderAgent())
+coordinator.register_agent('ert_inversion', ERTInversionAgent())
+coordinator.register_agent('water_content', WaterContentAgent())
+coordinator.register_agent('report', ReportAgent())
+
+# Optional: Add seismic agent for structure-constrained inversion
+coordinator.register_agent('seismic_processor', SeismicAgent())
+
+# Optional: Add climate agent for meteorological data integration **NEW**
+coordinator.register_agent('climate_data', ClimateDataAgent())
+
+# Configure and execute workflow
+config = {
+    'data_file': 'data/ERT/survey.dat',
+    'instrument': 'E4D',
+    'inversion_params': {'lambda': 20.0, 'max_iterations': 10},
+    'run_uncertainty': True,
+    'n_realizations': 100,
+    # Optional seismic integration
+    'use_seismic': True,
+    'seismic_data': travel_time_data,
+    'velocity_threshold': 1200,
+    # Optional climate data integration **NEW**
+    'use_climate': True,
+    'climate_config': {
+        'coords': (-105.3, 40.0),  # Site location (lon, lat)
+        'dates': ('2023-06-01', '2023-09-30'),
+        'pet_method': 'penman_monteith',
+        'antecedent_days': [1, 3, 7]
+    },
+    'ert_timestamps': ['2023-06-15', '2023-07-15', '2023-08-15']
+}
+
+# Run complete workflow
+results = coordinator.execute_workflow(config)
+
+# Access results
+if results['status'] == 'success':
+    print(f"Report: {results['results']['report']['report_file']}")
+    print(f"Water content: {results['results']['water_content']['water_content_mean']}")
+    if 'climate_data' in results['results']:
+        print(f"Climate data: {results['results']['climate_data']['metadata']}")
+```
+
+**Key Features:**
+- 🤖 AI-powered parameter selection and interpretation with multiple LLM API support (GPT, Gemini, Claude)
+- 🔄 Fully automated workflow execution for cross-modal geophysical data
+- 📊 Automatic quality control and uncertainty quantification
+- 📝 Comprehensive report generation with visualizations
+- 🌊 Cross-modal integration (ERT, seismic, and other geophysical methods)
+- ☁️ Climate data integration with PET computation for hydrologic context **NEW**
+
+See `examples/Ex_multi_agent_workflow.py` and `examples/Ex_climate_ert_integration.py` for complete examples.
+
+## 1. ERT Field Data Processing
+
+Load, quality control, and export field ERT data with RESIPY integration:
+
+```python
+from PyHydroGeophysX.data_processing.ert_data_agent import (
+    load_ert_resipy, qc_and_visualize, export_for_inversion, LocalRef
+)
+
+# Load ERT field data from various instruments (E4D, Syscal, ABEM, etc.)
+ert = load_ert_resipy(
+    project_dir="data/ERT/E4D",
+    data_file="data/ERT/E4D/2021-10-08_1400.ohm",
+    instrument="E4D",
+    crs="local",
+    local_ref=LocalRef(origin_x=0.0, origin_y=0.0, azimuth_deg=90.0)
+)
+
+# Run quality control and generate diagnostic plots
+artifacts = qc_and_visualize(ert, outdir="results/ert_data_process")
+# Generates: rhoa_hist.png, pseudosection.png, data_summary.json
+
+# Export to pyGIMLi/BERT format for inversion
+bert_path = export_for_inversion(ert, outdir="results/ert_data_process", fmt="pgimli")
+# Creates: bert_data.dat (with electrode coordinates and measurements)
+```
+
+## 1.5 Climate Data Integration (NEW)
+
+Fetch meteorological data and compute potential evapotranspiration (PET) for integration with ERT analysis:
+
+```python
+from PyHydroGeophysX.agents import ClimateDataAgent
+
+# Initialize climate agent
+climate_agent = ClimateDataAgent()
+
+# Fetch climate data for ERT site
+climate_config = {
+    'coords': (-105.3, 40.0),  # Site location (lon, lat)
+    'dates': ('2023-06-01', '2023-09-30'),  # Campaign period
+    'crs': 4326,
+    'variables': ['prcp', 'tmin', 'tmax', 'srad', 'vp', 'dayl'],
+    'pet_method': 'penman_monteith',  # or 'priestley_taylor', 'hargreaves_samani'
+    'pet_params': {
+        'arid_correction': True,  # For arid regions
+        'soil_heat_flux': 0,
+        'albedo': 0.23
+    },
+    'time_scale': 'daily',
+    'region': 'na',
+    'ert_timestamps': ['2023-06-15', '2023-07-15', '2023-08-15'],
+    'antecedent_days': [1, 3, 7]  # Compute antecedent precipitation
+}
+
+# Execute data retrieval
+results = climate_agent.execute(climate_config)
+
+# Access climate data
+climate_data = results['climate_data']  # Daily climate variables + PET
+derived_features = results['derived_features']  # Antecedent totals, P-PET
+ert_aligned = results['ert_alignment']  # Climate data at ERT timestamps
+
+# Get summary
+print(climate_agent.get_climate_summary())
+```
+
+**Climate Data Features:**
+- 🌡️ Daily meteorological variables (prcp, tmin, tmax, srad, vp, dayl)
+- 💧 PET computation with multiple methods (Penman-Monteith, Priestley-Taylor, Hargreaves-Samani)
+- 📊 Derived features: antecedent precipitation totals, P-PET water balance
+- 🎯 Temporal alignment with ERT acquisition timestamps
+- 🔬 PET method comparison for robustness assessment
+- 🏜️ Arid region corrections for improved estimates
+
+See `examples/Ex_climate_ert_integration.py` for complete examples.
+
+## 2. Hydrological Model Integration
 
 Load and process outputs from various hydrological models:
 
@@ -177,7 +338,7 @@ saturation_proc = ParflowSaturation("model_dir", "run_name")
 saturation = saturation_proc.load_timestep(100)
 ```
 
-## 2. Petrophysical Modeling
+## 3. Petrophysical Modeling
 
 Convert between hydrological and geophysical properties:
 
@@ -201,7 +362,7 @@ vp_high, vp_low = hm_model.calculate_velocity(
 )
 ```
 
-## 3. Forward Modeling
+## 4. Forward Modeling
 
 Generate synthetic geophysical data:
 
@@ -221,7 +382,7 @@ travel_times = srt_fwd.create_synthetic_data(
 )
 ```
 
-## 4. Time-Lapse Inversion
+## 5. Time-Lapse Inversion
 
 Perform sophisticated time-lapse ERT inversions:
 
@@ -245,7 +406,7 @@ windowed_inv = WindowedTimeLapseERTInversion(
 result = windowed_inv.run(window_parallel=True)
 ```
 
-## 5. Uncertainty Quantification
+## 6. Uncertainty Quantification
 
 Quantify uncertainty in water content estimates:
 
@@ -368,11 +529,56 @@ If you use PyHydroGeophysX in your research, please cite:
 
 ```bibtex
 @software{chen2025pyhydrogeophysx,
-  author = {Chen, Hang, Niu, Qifei, Wu, Yuxin},
+  author = {Chen, Hang and Niu, Qifei and Wu, Yuxin},
   title = {PyHydroGeophysX: An Extensible Open-Source Platform for Bridging Hydrological Models and Geophysical Measurements},
   year = {2025},
   publisher = {Water Resources Research (under review)},
   url = {https://github.com/geohang/PyHydroGeophysX}
+}
+```
+
+Additionally, please cite the underlying libraries you use:
+
+**For ERT data processing (RESIPY):**
+```bibtex
+@article{blanchy2020resipy,
+  title={ResIPy, an intuitive open source software for complex geoelectrical inversion/modeling},
+  author={Blanchy, Guillaume and Saneiyan, Sina and Boyd, Jimmy and McLachlan, Paul and Binley, Andrew},
+  journal={Computers \& Geosciences},
+  volume={137},
+  pages={104423},
+  year={2020},
+  publisher={Elsevier},
+  doi={10.1016/j.cageo.2020.104423}
+}
+```
+
+**For geophysical modeling (pyGIMLi):**
+```bibtex
+@article{rucker2017pygimli,
+  title={pyGIMLi: An open-source library for modelling and inversion in geophysics},
+  author={R{\"u}cker, Carsten and G{\"u}nther, Thomas and Wagner, Florian M},
+  journal={Computers \& Geosciences},
+  volume={109},
+  pages={106--123},
+  year={2017},
+  publisher={Elsevier},
+  doi={10.1016/j.cageo.2017.07.011}
+}
+```
+
+**For hydrological modeling (ParFlow):**
+```bibtex
+@article{maxwell2015parflow,
+  title={A high-resolution simulation of groundwater and surface water over most of the continental US with the integrated hydrologic model ParFlow v3},
+  author={Maxwell, Reed M and Condon, Laura E and Kollet, Stefan J},
+  journal={Geoscientific Model Development},
+  volume={8},
+  number={3},
+  pages={923--937},
+  year={2015},
+  publisher={Copernicus GmbH},
+  doi={10.5194/gmd-8-923-2015}
 }
 ```
 
@@ -382,8 +588,11 @@ This project is licensed under the Apache-2.0 license - see the LICENSE file for
 
 ## 🙏 Acknowledgments
 
-- PyGIMLi team for the excellent geophysical modeling framework  
-- MODFLOW and ParFlow communities for hydrologic modeling tools  
+- **RESIPY** developers (Blanchy, Guillaume and Saneiyan, Sina and Boyd, Jimmy and McLachlan, Paul and Binley, Andrew and contributors) for the excellent ERT data processing library that powers our field data workflows
+- **pyGIMLi** team (Carsten Rücker, Thomas Günther, Florian Wagner, and contributors) for the outstanding geophysical modeling and inversion framework  
+- **ParFlow** development team (Reed Maxwell, Laura Condon, Stefan Kollet, and contributors) for the integrated surface-subsurface hydrologic model
+- **MODFLOW** community (USGS and contributors) for the groundwater modeling standard
+- All open-source contributors and users providing valuable feedback  
 
 ## 📧 Contact
 

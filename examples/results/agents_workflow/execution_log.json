@@ -1,0 +1,102 @@
+[
+  {
+    "timestamp": "2025-11-06T18:50:39.788887",
+    "level": "INFO",
+    "message": "Registered agent: climate_data"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:39.788887",
+    "level": "INFO",
+    "message": "Registered agent: ert_loader"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:39.788887",
+    "level": "INFO",
+    "message": "Registered agent: ert_inversion"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:39.788887",
+    "level": "INFO",
+    "message": "Registered agent: water_content"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:39.789193",
+    "level": "INFO",
+    "message": "Registered agent: report"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:39.789193",
+    "level": "INFO",
+    "message": "Registered agent: seismic_processor"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:44.860019",
+    "level": "INFO",
+    "message": "Starting workflow execution"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:44.860019",
+    "level": "INFO",
+    "message": "Step 1: Loading ERT data"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:44.860019",
+    "level": "INFO",
+    "message": "Executing agent: ert_loader"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:48.512836",
+    "level": "INFO",
+    "message": "Agent ert_loader completed successfully"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:48.512836",
+    "level": "INFO",
+    "message": "Step 2: Running ERT inversion"
+  },
+  {
+    "timestamp": "2025-11-06T18:50:48.512836",
+    "level": "INFO",
+    "message": "Executing agent: ert_inversion"
+  },
+  {
+    "timestamp": "2025-11-06T18:51:49.027810",
+    "level": "INFO",
+    "message": "Agent ert_inversion completed successfully"
+  },
+  {
+    "timestamp": "2025-11-06T18:51:49.027810",
+    "level": "INFO",
+    "message": "Step 3: Converting to water content"
+  },
+  {
+    "timestamp": "2025-11-06T18:51:49.027810",
+    "level": "INFO",
+    "message": "Executing agent: water_content"
+  },
+  {
+    "timestamp": "2025-11-06T18:52:00.630344",
+    "level": "INFO",
+    "message": "Agent water_content completed successfully"
+  },
+  {
+    "timestamp": "2025-11-06T18:52:00.630344",
+    "level": "INFO",
+    "message": "Step 4: Generating report"
+  },
+  {
+    "timestamp": "2025-11-06T18:52:00.630344",
+    "level": "INFO",
+    "message": "Executing agent: report"
+  },
+  {
+    "timestamp": "2025-11-06T18:52:06.491394",
+    "level": "INFO",
+    "message": "Agent report completed successfully"
+  },
+  {
+    "timestamp": "2025-11-06T18:52:06.491394",
+    "level": "INFO",
+    "message": "Workflow completed successfully"
+  }
+]

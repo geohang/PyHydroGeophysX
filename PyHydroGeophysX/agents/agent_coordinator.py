@@ -133,7 +133,7 @@ class AgentCoordinator:
             self.workflow_state['current_step'] = 'invert_ert'
             
             inversion_input = {
-                'ert_data': ert_data,
+                'ert_data': ert_data['ert_data'],  # Extract the actual ERT data object from result dict
                 'inversion_params': config.get('inversion_params', {}),
             }
             
@@ -242,12 +242,12 @@ class AgentCoordinator:
             'data_keys': list(self.workflow_state['data'].keys())
         }
         
-        with open(state_file, 'w') as f:
+        with open(state_file, 'w', encoding='utf-8') as f:
             json.dump(serializable_state, f, indent=2)
         
         # Save execution log
         log_file = os.path.join(self.output_dir, 'execution_log.json')
-        with open(log_file, 'w') as f:
+        with open(log_file, 'w', encoding='utf-8') as f:
             json.dump(self.execution_log, f, indent=2)
     
     def get_workflow_summary(self) -> Dict[str, Any]:

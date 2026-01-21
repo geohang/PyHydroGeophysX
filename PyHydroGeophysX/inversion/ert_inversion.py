@@ -39,6 +39,13 @@ class ERTInversion(InversionBase):
         # Load ERT data
         data = ert.load(data_file)
         
+        # Compute geometric factors numerically from electrode positions
+        # This ensures accurate K values based on actual electrode geometry
+        # Check if K values are missing, all zeros, or all ones (placeholder values)
+        if 'k' not in data.dataMap() or len(data['k']) == 0 or np.allclose(data['k'], 0) or np.allclose(data['k'], 1):
+            print("   Computing geometric factors from electrode positions...")
+            data['k'] = ert.createGeometricFactors(data, numerical=True)
+        
         # Call parent initializer
         super().__init__(data, mesh, **kwargs)
         
@@ -69,11 +76,23 @@ class ERTInversion(InversionBase):
     
     def setup(self):
         """Set up ERT inversion (create operators, matrices, etc.)"""
+        # DEBUG: Print electrode positions from data before mesh creation
+        sensors = self.data.sensorPositions()
+        print(f"DEBUG [ert_inversion.py]: Data has {len(sensors)} electrode positions before mesh creation")
+        if len(sensors) > 0:
+            y_vals = [s.y() for s in sensors]
+            print(f"DEBUG [ert_inversion.py]: Electrode Y-range (elevation): [{min(y_vals):.3f}, {max(y_vals):.3f}]")
+
         # Create mesh if not provided
         if self.mesh is None:
             ert_manager = ert.ERTManager(self.data)
             self.mesh = ert_manager.createMesh(data=self.data, quality=34)
-        
+
+            # DEBUG: Print mesh information
+            print(f"DEBUG [ert_inversion.py]: Mesh created with {self.mesh.nodeCount()} nodes, {self.mesh.cellCount()} cells")
+            y_coords = [n.y() for n in self.mesh.nodes()]
+            print(f"DEBUG [ert_inversion.py]: Mesh Y-range: [{min(y_coords):.3f}, {max(y_coords):.3f}]")
+
         # Initialize forward operator
         self.fwd_operator = ert.ERTModelling()
         self.fwd_operator.setData(self.data)
@@ -85,17 +104,26 @@ class ERTInversion(InversionBase):
         self.rhos1 = self.rhos1.reshape(self.rhos1.shape[0], 1)
         
         # Data error matrix
-        if np.all(self.data['err']) != 0.0:
-            # If data has error values, use them
+        # Check if error data exists and is valid (non-zero values)
+        has_valid_err = False
+        if 'err' in self.data.dataMap():
+            err_array = self.data['err'].array()
+            has_valid_err = np.any(err_array > 0) and np.all(np.isfinite(err_array))
+
+        if has_valid_err:
+            # If data has valid error values, use them
             Delta_rhoa_rhoa = self.data['err'].array()
+            print(f'   Using provided error estimates (mean: {np.mean(Delta_rhoa_rhoa):.4f}, range: [{np.min(Delta_rhoa_rhoa):.4f}, {np.max(Delta_rhoa_rhoa):.4f}])')
         else:
-            # Otherwise, estimate error
+            # Otherwise, estimate error using PyGIMLi's built-in estimator
+            print(f'   No valid error data found, estimating errors (absoluteUError={self.parameters["absoluteUError"]}, relativeError={self.parameters["relativeError"]})')
             ert_manager = ert.ERTManager(self.data)
             Delta_rhoa_rhoa = ert_manager.estimateError(
                 self.data,
                 absoluteUError=self.parameters['absoluteUError'],
                 relativeError=self.parameters['relativeError']
             )
+            print(f'   Estimated error statistics (mean: {np.mean(Delta_rhoa_rhoa):.4f}, range: [{np.min(Delta_rhoa_rhoa):.4f}, {np.max(Delta_rhoa_rhoa):.4f}])')
         
         # Create data weighting matrix
         self.Wdert = np.diag(1.0 / np.log(Delta_rhoa_rhoa + 1))
@@ -136,8 +164,9 @@ class ERTInversion(InversionBase):
             if initial_model.ndim == 1:
                 initial_model = initial_model.reshape(-1, 1)
             if np.min(initial_model) <= 0:
-                # Assume linear model values, convert to log
-                mr = np.log(initial_model + 1e-6)
+                # Handle negative/zero values with absolute value + offset (safer than small offset)
+                print(f'WARNING: Initial model contains non-positive values (min={np.min(initial_model):.2e}). Using absolute values.')
+                mr = np.log(np.abs(initial_model) + 1.0)
             else:
                 mr = np.log(initial_model)
         
@@ -151,7 +180,11 @@ class ERTInversion(InversionBase):
         min_mr, max_mr = self.parameters['model_constraints']
         min_mr = np.log(min_mr)
         max_mr = np.log(max_mr)
-        
+
+        # Apply constraints to initial model immediately
+        mr = np.clip(mr, min_mr, max_mr)
+        mr_R = mr.copy()  # Update reference model after clipping
+
         # Initial setup for the inversion
         delta_mr = (mr - mr_R)
         chi2_ert = 1
@@ -177,11 +210,14 @@ class ERTInversion(InversionBase):
             # Compute chi-squared and check convergence
             old_chi2 = chi2_ert
             chi2_ert = fdert / len(dr)
+            # Convert to scalar if it's an array (fdert is (1,1) from matrix multiplication)
+            if isinstance(chi2_ert, np.ndarray):
+                chi2_ert = float(chi2_ert.item())
             dPhi = abs(chi2_ert - old_chi2) / old_chi2 if nn > 0 else 1.0
-            
+
             print(f'chi2: {chi2_ert}')
             print(f'dPhi: {dPhi}')
-            
+
             # Store iterations data
             result.iteration_models.append(np.exp(mr.ravel()))
             result.iteration_chi2.append(chi2_ert)
@@ -216,6 +252,15 @@ class ERTInversion(InversionBase):
             iarm = 1
             while True:
                 mr1 = mr + mu_LS * d_mr
+
+                # Enforce constraints BEFORE forward modeling (critical fix)
+                mr1 = np.clip(mr1, min_mr, max_mr)
+
+                # Validate that model is finite before forward modeling
+                if not np.all(np.isfinite(mr1)):
+                    print(f'WARNING: Non-finite values detected in model at iteration {nn}')
+                    mr1 = np.nan_to_num(mr1, nan=min_mr, posinf=max_mr, neginf=min_mr)
+
                 dr = ertforward2(self.fwd_operator, mr1, self.mesh)
                 dr = dr.reshape(dr.shape[0], 1)
                 

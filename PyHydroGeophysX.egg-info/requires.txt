@@ -5,6 +5,7 @@ tqdm>=4.0
 
 [all]
 pygimli>=1.5
+resipy>=3.4.0
 flopy
 joblib
 cupy
@@ -21,6 +22,7 @@ flake8
 
 [geophysics]
 pygimli>=1.5
+resipy>=3.4.0
 flopy
 joblib
 

@@ -16,6 +16,14 @@ from PyHydroGeophysX.forward.srt_forward import (
     SeismicForwardModeling
 )
 
+# Import TDEM forward modeling utilities
+from PyHydroGeophysX.forward.tdem_forward import (
+    TDEMForwardModeling,
+    TDEMSurveyConfig,
+    create_tdem_survey,
+    hydro_to_tdem
+)
+
 # Define the public API for this module
 __all__ = [
     # ERT forward modeling
@@ -26,5 +34,11 @@ __all__ = [
     'ertforandjac2',
     
     # SRT forward modeling
-    'SeismicForwardModeling'
+    'SeismicForwardModeling',
+    
+    # TDEM forward modeling
+    'TDEMForwardModeling',
+    'TDEMSurveyConfig',
+    'create_tdem_survey',
+    'hydro_to_tdem'
 ]

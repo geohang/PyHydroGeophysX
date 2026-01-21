@@ -1,0 +1,10 @@
+{
+  "status": "failed",
+  "current_step": "process_seismic",
+  "completed_steps": [
+    "load_ert"
+  ],
+  "data_keys": [
+    "ert_data"
+  ]
+}

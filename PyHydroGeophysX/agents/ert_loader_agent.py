@@ -17,9 +17,10 @@ class ERTLoaderAgent(BaseAgent):
     and prepare ERT data for inversion.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,
+                 llm_provider: str = "openai"):
         """Initialize ERT Loader Agent."""
-        super().__init__("ert_loader", api_key)
+        super().__init__("ert_loader", api_key, model, llm_provider)
         self.system_message = """You are an expert in electrical resistivity tomography (ERT) 
 data processing. Your role is to load and validate ERT field data from various commercial 
 instruments, perform quality control, and prepare data for inversion. You understand 
@@ -51,6 +52,7 @@ different data formats, coordinate systems, and common data quality issues."""
             data_file = input_data.get('data_file')
             instrument = input_data.get('instrument', 'E4D')
             project_dir = input_data.get('project_dir', '.')
+            electrode_file = input_data.get('electrode_file')  # Extract electrode file
             crs = input_data.get('crs', 'local')
             quality_check = input_data.get('quality_check', True)
             
@@ -58,6 +60,8 @@ different data formats, coordinate systems, and common data quality issues."""
                 raise ValueError("data_file is required")
             
             self._log_execution(f"Loading data from {data_file} ({instrument} format)")
+            if electrode_file:
+                self._log_execution(f"Using electrode file: {electrode_file}")
             
             # Set up coordinate reference
             local_ref = LocalRef(origin_x=0.0, origin_y=0.0, azimuth_deg=90.0)
@@ -67,6 +71,7 @@ different data formats, coordinate systems, and common data quality issues."""
                 project_dir=project_dir,
                 data_file=data_file,
                 instrument=instrument,
+                electrode_file=electrode_file,  # Pass electrode file
                 crs=crs,
                 local_ref=local_ref if crs == 'local' else None
             )
