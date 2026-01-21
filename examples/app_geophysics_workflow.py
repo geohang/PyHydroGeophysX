@@ -1263,6 +1263,14 @@ The workflows in this app focus on the methods below.
     # Initialize session state for AI chat
     if "concept_chat_history" not in st.session_state:
         st.session_state.concept_chat_history = []
+    if "pending_question" not in st.session_state:
+        st.session_state.pending_question = ""
+
+    # Check if there's a pending question from button click
+    initial_value = ""
+    if st.session_state.pending_question:
+        initial_value = st.session_state.pending_question
+        st.session_state.pending_question = ""  # Clear it after using
 
     # Example questions as buttons
     st.markdown("**Quick questions:**")
@@ -1273,22 +1281,18 @@ The workflows in this app focus on the methods below.
         "Show me Python code with PyHydroGeophysX to run ERT inversion and plot results",
     ]
 
-    # Initialize the text input state if not exists
-    if "concept_input" not in st.session_state:
-        st.session_state.concept_input = ""
-
     cols = st.columns(2)
     for idx, question in enumerate(example_questions):
         if cols[idx % 2].button(question, key=f"example_q_{idx}", use_container_width=True):
-            st.session_state.concept_input = question
+            st.session_state.pending_question = question
             st.rerun()
 
     # Text input for custom questions
     user_question = st.text_area(
         "Or type your own question:",
+        value=initial_value,
         height=100,
         placeholder="Ask about ERT, seismic, petrophysics, Python code, or any hydrogeophysics concept...",
-        key="concept_input"
     )
 
     col_ask, col_clear = st.columns([3, 1])
@@ -1297,7 +1301,7 @@ The workflows in this app focus on the methods below.
 
     if clear_clicked:
         st.session_state.concept_chat_history = []
-        st.session_state.concept_input = ""
+        st.session_state.pending_question = ""
         st.rerun()
 
     if ask_clicked and user_question.strip():
@@ -1384,8 +1388,7 @@ When providing code examples:
                         "answer": response
                     })
 
-                    # Clear the question input
-                    st.session_state.concept_input = ""
+                    # Rerun to show the response (text area will be empty on next run)
                     st.rerun()
 
                 except Exception as e:
