@@ -411,6 +411,73 @@ if electrode_file is not None:
 - `ert_data_agent.py` lines 875-897 (added to embedded parser after line 873)
 - `ert_data_agent.py` lines 1108-1130 (added to PyGIMLi fallback after line 1085)
 
+### 13. Zero and Infinite Error Values from Reciprocal Processing (Extremely High Initial Chi²)
+**File**: `PyHydroGeophysX/data_processing/ert_data_agent.py`
+
+**Problem**:
+Cloud deployment showed initial chi² = 39 million vs local chi² = 120, even though both used reciprocal error computation. The issue was **zero error values** causing division by zero in the inversion weighting matrix:
+
+**Log Evidence**:
+```
+# Local (ResIPy):
+Using provided error estimates (mean: 0.0500, range: [0.0500, 0.0500])
+chi2: 120.25  # Initial - good!
+
+# Cloud (Embedded parser):
+Using provided error estimates (mean: 0.0335, range: [0.0000, 0.0500])
+chi2: 39579910.22  # Initial - EXTREMELY HIGH!
+```
+
+**Root Cause**:
+The reciprocal error calculation at line 774 can produce zeros when `reciprocalMean` is near zero:
+```python
+reciprocalErrRel = reciprocalErr / reciprocalMean  # Division by near-zero → 0, inf, or NaN
+```
+
+Then at line 953, only NaN values are replaced:
+```python
+observations['error'] = observations['reciprocalErrRel'].fillna(0.05)  # fillna doesn't replace zeros!
+```
+
+**Consequences**:
+- Zero errors → infinite weights in inversion → astronomical chi²
+- Some measurements have valid reciprocal pairs but near-zero resistance → division produces 0 or inf
+- The error range `[0.0000, 0.0500]` shows zeros are present
+
+**Changes**:
+
+1. **Avoid division by zero in reciprocal error calculation** (lines 773-779):
+```python
+# BEFORE (WRONG): Division by near-zero produces zeros/infinities
+reciprocalErrRel = reciprocalErr / reciprocalMean
+
+# AFTER (CORRECT): Only compute error if mean is valid
+reciprocalErrRel = np.where(
+    np.abs(reciprocalMean) > 1e-10,  # Only compute if mean is not near zero
+    reciprocalErr / reciprocalMean,
+    np.nan  # Mark as NaN if division would be invalid
+)
+```
+
+2. **Replace zeros and infinities in error estimates** (lines 953-957):
+```python
+# BEFORE (WRONG): Only replaces NaN, not zeros
+observations['error'] = observations['reciprocalErrRel'].fillna(0.05)
+
+# AFTER (CORRECT): Replace NaN, zeros, and infinities
+observations['error'] = observations['reciprocalErrRel'].fillna(0.05)
+observations['error'] = observations['error'].replace([0, np.inf, -np.inf], 0.05)
+observations['error'] = np.maximum(np.abs(observations['error']), 0.01)  # Minimum 1%
+```
+
+**Expected result**:
+- Cloud initial chi² should be ~120 (matching local)
+- All error values between 1% and 100% (no zeros or infinities)
+- Error range should be `[0.0100, 0.0500]` or similar
+- Convergence to chi² < 1.0 within 4-5 iterations
+
+**Locations**: `ert_data_agent.py` lines 773-779 (reciprocal error calculation), 953-957 (error value sanitization)
+
 ## Why These Fixes Work
 
 ### Multiple Defense Layers
@@ -482,6 +549,7 @@ streamlit run examples/app_geophysics_workflow.py
 | `ert_data_agent.py` | 1628-1647 | Always write error column with 5% default when rewriting file |
 | `ert_data_agent.py` | 678-770, 893-950 | Add reciprocal error computation to embedded parser (ResIPy algorithm) |
 | `ert_data_agent.py` | 875-897, 1108-1130 | Load electrode positions from external file in fallback loaders |
+| `ert_data_agent.py` | 773-779, 953-957 | Avoid division by zero in reciprocal errors, replace zeros/infinities with defaults |
 | `ert_inversion.py` | 94-116 | Fix error validation logic (precedence error in condition) |
 
 ## Additional Notes
