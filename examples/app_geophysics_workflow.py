@@ -382,6 +382,56 @@ def render_tutorial_tab() -> None:
         unsafe_allow_html=True,
     )
 
+    # API Key Setup Section
+    st.markdown("### How to Get an API Key")
+    with st.expander("Step-by-step guide to obtain LLM API keys", expanded=False):
+        st.markdown("""
+PyHydroGeophysX requires an LLM (Large Language Model) API key to power its natural language processing capabilities.
+You can use any of the following providers:
+
+#### Option 1: OpenAI (Recommended for beginners)
+1. Go to [OpenAI Platform](https://platform.openai.com/signup)
+2. Create an account or sign in with Google/Microsoft
+3. Navigate to **API Keys** in the left sidebar (or go to [API Keys page](https://platform.openai.com/api-keys))
+4. Click **"Create new secret key"**
+5. Give it a name (e.g., "PyHydroGeophysX") and click **Create**
+6. **Copy the key immediately** - you won't be able to see it again!
+7. Add billing information at [Billing](https://platform.openai.com/account/billing) (required for API access)
+
+**Recommended models:** `gpt-4o-mini` (fast & cheap), `gpt-4o` (more capable)
+
+#### Option 2: Anthropic (Claude)
+1. Go to [Anthropic Console](https://console.anthropic.com/)
+2. Create an account and verify your email
+3. Navigate to **API Keys** in the settings
+4. Click **"Create Key"**
+5. Copy and save your API key securely
+6. Add billing information in the Billing section
+
+**Recommended models:** `claude-3-5-sonnet-20241022`, `claude-3-haiku-20240307` (faster)
+
+#### Option 3: Google (Gemini)
+1. Go to [Google AI Studio](https://aistudio.google.com/)
+2. Sign in with your Google account
+3. Click **"Get API Key"** in the top right
+4. Select or create a Google Cloud project
+5. Copy your API key
+
+**Recommended models:** `gemini-1.5-flash` (fast), `gemini-1.5-pro` (more capable)
+
+---
+
+**Important Tips:**
+- Keep your API key **secret** - never share it publicly or commit it to GitHub
+- API usage is **pay-per-use** - typical workflow costs $0.01-0.10 per run
+- Start with cheaper models (`gpt-4o-mini`, `claude-3-haiku`, `gemini-1.5-flash`) for testing
+- Set up **usage limits** in your provider's dashboard to avoid unexpected charges
+        """)
+
+        st.info("💡 **Tip:** OpenAI's `gpt-4o-mini` offers the best balance of cost and performance for most hydrogeophysics workflows.")
+
+    st.markdown("---")
+
     st.markdown("### Example Data from GitHub")
     for label, link in DATA_LINKS.items():
         st.markdown(f"- [{label}]({link})")
