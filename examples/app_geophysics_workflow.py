@@ -1220,13 +1220,14 @@ The workflows in this app focus on the methods below.
         "What is Archie's Law and how is it used in hydrogeophysics?",
         "How do I choose regularization parameters for ERT inversion?",
         "What is the difference between Wenner and Dipole-Dipole arrays?",
-        "Show me Python code to plot a resistivity model with PyGIMLi",
+        "Show me Python code with PyHydroGeophysX to run ERT inversion and plot results",
     ]
 
     cols = st.columns(2)
     for idx, question in enumerate(example_questions):
         if cols[idx % 2].button(question, key=f"example_q_{idx}", use_container_width=True):
             st.session_state.concept_question = question
+            st.rerun()
 
     # Text input for custom questions
     user_question = st.text_area(
