@@ -76,11 +76,23 @@ class ERTInversion(InversionBase):
     
     def setup(self):
         """Set up ERT inversion (create operators, matrices, etc.)"""
+        # DEBUG: Print electrode positions from data before mesh creation
+        sensors = self.data.sensorPositions()
+        print(f"DEBUG [ert_inversion.py]: Data has {len(sensors)} electrode positions before mesh creation")
+        if len(sensors) > 0:
+            y_vals = [s.y() for s in sensors]
+            print(f"DEBUG [ert_inversion.py]: Electrode Y-range (elevation): [{min(y_vals):.3f}, {max(y_vals):.3f}]")
+
         # Create mesh if not provided
         if self.mesh is None:
             ert_manager = ert.ERTManager(self.data)
             self.mesh = ert_manager.createMesh(data=self.data, quality=34)
-        
+
+            # DEBUG: Print mesh information
+            print(f"DEBUG [ert_inversion.py]: Mesh created with {self.mesh.nodeCount()} nodes, {self.mesh.cellCount()} cells")
+            y_coords = [n.y() for n in self.mesh.nodes()]
+            print(f"DEBUG [ert_inversion.py]: Mesh Y-range: [{min(y_coords):.3f}, {max(y_coords):.3f}]")
+
         # Initialize forward operator
         self.fwd_operator = ert.ERTModelling()
         self.fwd_operator.setData(self.data)

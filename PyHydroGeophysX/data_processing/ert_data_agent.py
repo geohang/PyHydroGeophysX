@@ -1657,7 +1657,15 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             f.write("# x y z\n")
             for elec in ert.electrodes:
                 f.write(f"{elec.x} {elec.y} {elec.z}\n")
-            
+
+            # DEBUG: Print electrode information being written
+            print(f"   DEBUG: Writing {len(ert.electrodes)} electrodes to file")
+            if len(ert.electrodes) > 0:
+                y_vals = [e.y for e in ert.electrodes]
+                print(f"   DEBUG: First electrode: x={ert.electrodes[0].x:.3f}, y={ert.electrodes[0].y:.3f}, z={ert.electrodes[0].z:.3f}")
+                print(f"   DEBUG: Last electrode: x={ert.electrodes[-1].x:.3f}, y={ert.electrodes[-1].y:.3f}, z={ert.electrodes[-1].z:.3f}")
+                print(f"   DEBUG: Y-range (elevation) being written: [{min(y_vals):.3f}, {max(y_vals):.3f}]")
+
             # Write number of measurements
             f.write(f"{len(ert.observations)}\n")
             
@@ -1735,6 +1743,15 @@ def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert",
             
             # Load the file we just created
             data = ert_pg.load(str(path))
+
+            # DEBUG: Print electrode positions loaded by PyGIMLi
+            sensors = data.sensorPositions()
+            print(f"   DEBUG: PyGIMLi loaded {len(sensors)} electrode positions")
+            if len(sensors) > 0:
+                print(f"   DEBUG: First electrode: x={sensors[0].x():.3f}, y={sensors[0].y():.3f}, z={sensors[0].z():.3f}")
+                print(f"   DEBUG: Last electrode: x={sensors[-1].x():.3f}, y={sensors[-1].y():.3f}, z={sensors[-1].z():.3f}")
+                y_vals = [s.y() for s in sensors]
+                print(f"   DEBUG: Y-range (elevation): [{min(y_vals):.3f}, {max(y_vals):.3f}]")
 
             # Check if K was already provided (not all k=1)
             k_vals = np.array(data['k'])
