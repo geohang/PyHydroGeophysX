@@ -311,6 +311,17 @@ EXAMPLE_DATA_LINKS: Dict[str, Dict[str, str]] = {
     },
 }
 
+AUTHOR_LINK = "https://sites.google.com/view/hangchen"
+
+STANDARD_ERT_TUTORIAL_IMAGES = [
+    ("Step 1", "step1.png"),
+    ("Step 2", "Step2.png"),
+    ("Final result 1", "Final_result_1.png"),
+    ("Final result 2", "Final_result_2.png"),
+    ("Resistivity model", "resistivity_model (5).png"),
+    ("Water content", "water_content.png"),
+]
+
 
 def init_session_state() -> None:
     defaults = {
@@ -466,6 +477,15 @@ Use specific petrophysical parameters: rho_sat = 541, porosity = 0.37, n = 1.24"
 5. **Review results** - download the generated report with resistivity and water content models
         """)
 
+        st.markdown("#### Standard ERT Inversion Screenshots")
+        image_dir = CURRENT_DIR / "images"
+        for caption, filename in STANDARD_ERT_TUTORIAL_IMAGES:
+            image_path = image_dir / filename
+            if image_path.exists():
+                st.image(str(image_path), caption=caption, use_container_width=True)
+            else:
+                st.warning(f"Missing tutorial image: {image_path}")
+
     # Time-Lapse Example Tutorial
     st.markdown("### Example 2: Time-Lapse ERT with Climate Integration")
     with st.expander("Step-by-step tutorial for Time-Lapse workflow", expanded=False):
@@ -565,8 +585,6 @@ Regularization lambda: 15""",
 - Add geology hints, water content targets, or climate context for richer interpretations.
 """
     )
-
-
 def render_concepts_tab() -> None:
     st.subheader("Hydrogeophysics Concepts")
     st.markdown(
@@ -1405,9 +1423,60 @@ When providing code examples:
                 st.markdown(f"**Answer:**\n\n{chat['answer']}")
 
 
+def render_author_tab() -> None:
+    st.subheader("About the Author")
+    st.markdown(
+        """
+Learn more about Hang Chen and ongoing hydrogeophysics research projects.
+"""
+    )
+    st.markdown(f"[Open the author page]({AUTHOR_LINK})")
+    st.info("Google Sites blocks embedding in iframes, so the page opens in a new tab.")
+
+
+def render_local_deployment_tab() -> None:
+    st.subheader("Local Deployment")
+    st.markdown(
+        """
+# PyHydroGeophysX - Quick Start Guide
+
+## 🚀 Get Started in 3 Steps
+
+### Step 0: Download the GitHub Repository
+```bash
+git clone https://github.com/geohang/PyHydroGeophysX.git
+cd PyHydroGeophysX
+```
+
+### Step 1: Launch the Web App
+```bash
+cd examples
+streamlit run app_geophysics_workflow.py
+```
+Or use the launcher scripts:
+- **Windows**: `start_webapp.bat`
+- **Linux/Mac**: `./start_webapp.sh`
+
+### Step 2: Configure API Key
+In the sidebar:
+1. Select LLM provider (OpenAI recommended)
+2. Enter your API key
+3. Click "🚀 Initialize System"
+
+### Step 3: Run Your First Workflow
+1. Choose a workflow example or describe your data
+2. Upload files if needed
+3. Click **Run workflow** and review the report outputs
+"""
+    )
+
+
 def render_workflow_tab(sidebar_state: Dict[str, str]) -> None:
     st.markdown("---")
     st.subheader("Describe your workflow")
+    st.info(
+        "Cloud resources are limited. For big datasets, use the Local Deployment tab so you can run the same web interface with local compute."
+    )
     request_text = st.text_area(
         "Describe what you want to do (files, parameters, outputs)",
         value=st.session_state.user_request,
@@ -1861,10 +1930,12 @@ def main() -> None:
     
     sidebar_state = render_sidebar()
 
-    tab_workflow, tab_tutorial, tab_concepts = st.tabs([
+    tab_workflow, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs([
         "🚀 Run Workflow",
         "📖 Step-by-Step Tutorials",
-        "🔬 Learn Hydrogeophysics & Ask AI"
+        "🔬 Learn Hydrogeophysics & Ask AI",
+        "💻 Local Deployment",
+        "👤 About Author",
     ])
 
     with tab_workflow:
@@ -1875,6 +1946,12 @@ def main() -> None:
 
     with tab_concepts:
         render_concepts_tab()
+
+    with tab_local:
+        render_local_deployment_tab()
+
+    with tab_author:
+        render_author_tab()
     
     # Render support section in sidebar
     with st.sidebar:
@@ -1882,3 +1959,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
