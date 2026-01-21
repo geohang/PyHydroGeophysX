@@ -1473,10 +1473,10 @@ In the sidebar:
 
 def render_workflow_tab(sidebar_state: Dict[str, str]) -> None:
     st.markdown("---")
-    st.subheader("Describe your workflow")
     st.info(
         "Cloud resources are limited. For big datasets, use the Local Deployment tab so you can run the same web interface with local compute."
     )
+    st.subheader("Describe your workflow")
     request_text = st.text_area(
         "Describe what you want to do (files, parameters, outputs)",
         value=st.session_state.user_request,
