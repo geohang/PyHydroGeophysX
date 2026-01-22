@@ -1571,9 +1571,9 @@ def render_author_tab() -> None:
     st.markdown("---")
 
     # Sub-tabs inside the Author tab
-    sub_tab1, sub_tab3, sub_tab4, sub_tab5, sub_tab6 = st.tabs([
-        "🏠 Lab & People",
+    sub_tab3, sub_tab1, sub_tab4, sub_tab5, sub_tab6 = st.tabs([
         "🔬 Research",
+        "🏠 Lab & People",
         "📄 Publications",
         "📚 Teaching",
         "💻 Open Source"
