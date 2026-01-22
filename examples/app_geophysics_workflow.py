@@ -1424,14 +1424,347 @@ When providing code examples:
 
 
 def render_author_tab() -> None:
-    st.subheader("About the Author")
-    st.markdown(
-        """
-Learn more about Hang Chen and ongoing hydrogeophysics research projects.
-"""
-    )
-    st.markdown(f"[Open the author page]({AUTHOR_LINK})")
-    st.info("Google Sites blocks embedding in iframes, so the page opens in a new tab.")
+    # Custom CSS for author page
+    st.markdown("""
+    <style>
+    .ship-header {
+        background: linear-gradient(135deg, #0f4c75 0%, #3d6cb9 50%, #2d9c5b 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    .ship-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .ship-subtitle {
+        font-size: 1rem;
+        opacity: 0.9;
+        line-height: 1.6;
+    }
+    .profile-card {
+        background: #f8fafc;
+        border: 1px solid #e1e5ec;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .profile-name {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #1b262c;
+    }
+    .profile-title {
+        font-size: 1rem;
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+    .profile-contact {
+        font-size: 0.9rem;
+        color: #64748b;
+    }
+    .news-item {
+        padding: 1rem;
+        border-left: 4px solid #3d6cb9;
+        background: #f8fafc;
+        margin-bottom: 0.8rem;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+    .news-date {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+    .news-content {
+        font-size: 0.95rem;
+        color: #334155;
+        margin-top: 0.3rem;
+    }
+    .link-card {
+        display: block;
+        padding: 1.2rem;
+        background: white;
+        border: 1px solid #e1e5ec;
+        border-radius: 0.75rem;
+        text-decoration: none;
+        color: inherit;
+        margin-bottom: 0.8rem;
+        transition: all 0.2s ease;
+    }
+    .link-card:hover {
+        border-color: #3d6cb9;
+        box-shadow: 0 4px 12px rgba(61, 108, 185, 0.15);
+        transform: translateY(-2px);
+    }
+    .link-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #0f4c75;
+        margin-bottom: 0.3rem;
+    }
+    .link-card-desc {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    .member-card {
+        background: white;
+        border: 1px solid #e1e5ec;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 0.8rem;
+    }
+    .member-role {
+        font-size: 0.75rem;
+        color: white;
+        background: #3d6cb9;
+        padding: 0.2rem 0.6rem;
+        border-radius: 1rem;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
+    .member-name {
+        font-weight: 600;
+        color: #1b262c;
+    }
+    .member-info {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # SHIP Lab Header
+    st.markdown("""
+    <div class="ship-header">
+        <div class="ship-title">SHIP Lab</div>
+        <div class="ship-subtitle">
+            <strong>S</strong>ustainability, <strong>H</strong>ydrogeophysics, <strong>I</strong>maging, & <strong>P</strong>rediction<br>
+            Advancing Earth systems understanding through integrated research approaches
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # PI Profile Card
+    col_profile, col_contact = st.columns([2, 1])
+
+    with col_profile:
+        st.markdown("""
+        <div class="profile-card">
+            <div class="profile-name">Hang Chen, Ph.D.</div>
+            <div class="profile-title">
+                Assistant Professor, School of Earth, Environment, and Sustainability<br>
+                University of Iowa | Affiliated Faculty, Lawrence Berkeley National Laboratory
+            </div>
+            <div class="profile-contact">
+                📧 hchen117@uiowa.edu &nbsp;|&nbsp; 📍 23 Trowbridge Hall, Iowa City, IA
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_contact:
+        st.markdown("[🌐 **Visit Full Website**](https://sites.google.com/view/hangchen)")
+        st.markdown("[💻 **GitHub**](https://github.com/geohang)")
+
+    st.markdown("---")
+
+    # Sub-tabs inside the Author tab
+    sub_tab1, sub_tab3, sub_tab4, sub_tab5, sub_tab6 = st.tabs([
+        "🏠 Lab & People",
+        "🔬 Research",
+        "📄 Publications",
+        "📚 Teaching",
+        "💻 Open Source"
+    ])
+
+    # --- Lab & People Tab ---
+    with sub_tab1:
+        st.markdown("### SHIP Lab Members")
+        st.markdown("*For full details, visit [SHIP Lab & People](https://sites.google.com/view/hangchen)*")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role">Principal Investigator</div>
+                <div class="member-name">Hang Chen</div>
+                <div class="member-info">Assistant Professor, University of Iowa</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role">PhD Student</div>
+                <div class="member-name">Chen Xiong</div>
+                <div class="member-info">Hydrogeophysics Research</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role" style="background: #f59e0b;">Undergraduate</div>
+                <div class="member-name">Cameron Roach</div>
+                <div class="member-info">Gravity and Magnetic data joint inversion for geological hydrogen exploration</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role">Master's Student</div>
+                <div class="member-name">Weiyu Guo</div>
+                <div class="member-info">Geophysical Modeling</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role" style="background: #f59e0b;">Undergraduate</div>
+                <div class="member-name">Jax Waller</div>
+                <div class="member-info">Processing airborne electromagnetic data</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role" style="background: #2d9c5b;">Open Position</div>
+                <div class="member-name">Postdoc Opening</div>
+                <div class="member-info">Contact for opportunities!</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.info("🎓 **Interested in joining?** Visit [Opportunities](https://sites.google.com/view/hangchen/opportunities) for current openings.")
+
+    # --- Research Tab ---
+    with sub_tab3:
+        st.markdown("### Research")
+        st.markdown("*For detailed descriptions, visit [Research](https://sites.google.com/view/hangchen/research_1)*")
+
+        # Research Methods
+        st.markdown("#### Research Methods")
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">📡 1. Advanced 4D Geophysical Imaging</div>
+            <div class="link-card-desc">Joint inversion, structurally-constrained inversion, temporal constraint integration</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">💧 2. Integrated Hydrological Modeling</div>
+            <div class="link-card-desc">Geophysics-informed hydrologic modeling, subsurface parameterization</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">🤖 3. AI-driven Solutions</div>
+            <div class="link-card-desc">Deep learning inversion, AI agents, pattern recognition, automated workflows</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        # Research Applications
+        st.markdown("#### Research Applications")
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">🌊 1. Integrated Watershed Analysis & Management</div>
+            <div class="link-card-desc">Surface-groundwater interactions, climate impacts, sustainable water management</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">🏔️ 2. Critical Zone Ecosystem Dynamics</div>
+            <div class="link-card-desc">Rock-soil-plant-atmosphere interactions, ecosystem resilience, bedrock hydrology</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">☢️ 3. Environmental Monitoring & Protection</div>
+            <div class="link-card-desc">Nuclear waste disposal monitoring, 4D THM process characterization</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">⛏️ 4. Critical Mineral & Resource Characterization</div>
+            <div class="link-card-desc">Electromagnetic methods for mineral deposits, geothermal resource assessment</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">⚡ 5. Geological Hydrogen Exploration</div>
+            <div class="link-card-desc">Natural hydrogen accumulation identification using integrated geophysical methods</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+    # --- Publications Tab ---
+    with sub_tab4:
+        st.markdown("### Selected Publications")
+        st.markdown("*For complete list, visit [Publications](https://sites.google.com/view/hangchen/publications)*")
+
+        pubs_preview = [
+            ("2025", "Development of an ERT-based framework for bentonite buffers monitoring - Part I & II", "JGR: Solid Earth"),
+            ("2024", "Electrical resistivity changes during heating experiments in salt formations", "Geophysical Research Letters"),
+            ("2024", "Influence of subsurface critical zone structure on hydrological partitioning", "Geophysical Research Letters"),
+            ("2023", "Geophysics-informed hydrologic modeling of a mountain headwater catchment", "Water Resources Research"),
+        ]
+
+        for year, title, journal in pubs_preview:
+            st.markdown(f"**{year}** | {title} - *{journal}*")
+
+        st.markdown("---")
+        st.markdown("[📄 **View All Publications →**](https://sites.google.com/view/hangchen/publications)")
+
+    # --- Teaching Tab ---
+    with sub_tab5:
+        st.markdown("### Teaching")
+        st.markdown("*For course materials, visit [Teaching](https://sites.google.com/view/hangchen/teaching)*")
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/teaching" target="_blank" class="link-card">
+            <div class="link-card-title">📖 Courses at University of Iowa</div>
+            <div class="link-card-desc">Hydrogeophysics, Environmental Geophysics, Data Analysis in Geosciences</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/teaching" target="_blank" class="link-card">
+            <div class="link-card-title">🎓 Student Mentoring</div>
+            <div class="link-card-desc">Graduate and undergraduate research opportunities available</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("[📚 **View Teaching Page →**](https://sites.google.com/view/hangchen/teaching)")
+
+    # --- Open Source Tab ---
+    with sub_tab6:
+        st.markdown("### Open Source Projects")
+        st.markdown("*For all codes, visit [Open Source Codes](https://sites.google.com/view/hangchen/open-source-codes)*")
+
+        st.markdown("""
+        <a href="https://github.com/geohang/PyHydroGeophysX" target="_blank" class="link-card">
+            <div class="link-card-title">🐍 PyHydroGeophysX</div>
+            <div class="link-card-desc">AI-powered hydrogeophysics workflow platform - ERT, Seismic, TDEM inversion with LLM agents</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("[💻 **View All Open Source Projects →**](https://sites.google.com/view/hangchen/open-source-codes)")
+
+        st.markdown("---")
+        st.markdown("### Acknowledgments")
+        st.markdown("""
+        PyHydroGeophysX development is supported by:
+        - University of Iowa
+        - Lawrence Berkeley National Laboratory
+
+        Special thanks to **ResIPy**, **PyGIMLi**, and **SimPEG** for their excellent geophysical libraries.
+        """)
 
 
 def render_local_deployment_tab() -> None:
