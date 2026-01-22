@@ -482,7 +482,7 @@ Use specific petrophysical parameters: rho_sat = 541, porosity = 0.37, n = 1.24"
         for caption, filename in STANDARD_ERT_TUTORIAL_IMAGES:
             image_path = image_dir / filename
             if image_path.exists():
-                st.image(str(image_path), caption=caption, width="full")
+                st.image(str(image_path), caption=caption, use_container_width=True)
             else:
                 st.warning(f"Missing tutorial image: {image_path}")
 
@@ -1301,7 +1301,7 @@ The workflows in this app focus on the methods below.
 
     cols = st.columns(2)
     for idx, question in enumerate(example_questions):
-        if cols[idx % 2].button(question, key=f"example_q_{idx}", width="full"):
+        if cols[idx % 2].button(question, key=f"example_q_{idx}", use_container_width=True):
             st.session_state.pending_question = question
             st.rerun()
 
@@ -1314,8 +1314,8 @@ The workflows in this app focus on the methods below.
     )
 
     col_ask, col_clear = st.columns([3, 1])
-    ask_clicked = col_ask.button("🔍 Ask AI", type="primary", width="full")
-    clear_clicked = col_clear.button("Clear History", width="full")
+    ask_clicked = col_ask.button("🔍 Ask AI", type="primary", use_container_width=True)
+    clear_clicked = col_clear.button("Clear History", use_container_width=True)
 
     if clear_clicked:
         st.session_state.concept_chat_history = []
@@ -1834,7 +1834,7 @@ def render_workflow_tab(sidebar_state: Dict[str, str]) -> None:
     )
 
     st.markdown("---")
-    run_clicked = st.button("Run workflow", type="primary", width="full")
+    run_clicked = st.button("Run workflow", type="primary", use_container_width=True)
 
     if run_clicked:
         if not request_text.strip():
@@ -1889,8 +1889,8 @@ def render_sidebar() -> Dict[str, str]:
     output_dir = st.sidebar.text_input("Output directory", value=st.session_state.output_dir)
 
     col_a, col_b = st.sidebar.columns(2)
-    init_clicked = col_a.button("Initialize", type="primary", width="full")
-    reset_clicked = col_b.button("Reset state", width="full")
+    init_clicked = col_a.button("Initialize", type="primary", use_container_width=True)
+    reset_clicked = col_b.button("Reset state", use_container_width=True)
 
     if reset_clicked:
         for key in ["context_agent", "workflow_result", "workflow_config", "upload_dir"]:
