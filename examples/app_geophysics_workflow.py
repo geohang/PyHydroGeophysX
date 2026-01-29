@@ -350,6 +350,7 @@ def render_header() -> None:
         '<div class="phgx-author-line">'
         '<span class="phgx-version-badge">v1.0</span>'
         '<span class="phgx-author-text">Developed by <a href="https://sites.google.com/view/hangchen" target="_blank">Hang Chen</a> · University of Iowa</span>'
+        '<a href="https://www.youtube.com/watch?v=d4lgs_hQqDo" target="_blank" style="margin-left: 1rem; background: #ff0000; color: white; padding: 0.3rem 0.8rem; border-radius: 0.4rem; font-size: 0.85rem; font-weight: 600; text-decoration: none;">▶ Video Tutorial</a>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -376,6 +377,12 @@ def render_example_buttons() -> None:
 
 def render_tutorial_tab() -> None:
     st.subheader("Tutorial")
+
+    # Video Tutorial
+    st.markdown("### Video Tutorial")
+    st.video("https://www.youtube.com/watch?v=d4lgs_hQqDo")
+
+    st.markdown("---")
     st.markdown(
         """
 <div class="phgx-card">
