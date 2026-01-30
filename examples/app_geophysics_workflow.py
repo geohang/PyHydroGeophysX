@@ -655,7 +655,7 @@ The workflows in this app focus on the methods below.
   .phgx-sim-btn:hover { background: #e8f4f8; }
   .phgx-sim-btn.active { background: linear-gradient(135deg, #0f4c75 0%, #3d6cb9 100%); color: #fff; border-color: #0f4c75; }
   #phgx-sim-canvas { width: 100%; height: auto; border-radius: 8px; background: #fff; border: 1px solid #e1e5ec; }
-  #phgx-sim-legend { margin-top: 10px; font-size: 12px; color: #475569; line-height: 1.5; padding: 8px 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #e1e5ec; }
+  #phgx-sim-legend { margin-top: 10px; font-size: 11px; color: #475569; line-height: 1.4; padding: 8px 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #e1e5ec; }
   .legend-title { font-weight: 600; color: #1b262c; margin-bottom: 4px; }
   #phgx-sim-info { margin-top: 8px; font-size: 11px; color: #64748b; }
 </style>
@@ -687,38 +687,37 @@ The workflows in this app focus on the methods below.
   const legendData = {
     ert: {
       title: "Electrical Resistivity Tomography (ERT)",
-      text: "Current flows between electrodes A and B. Potential electrodes M and N measure voltage. Current paths curve through subsurface, with deeper penetration at larger electrode spacings.",
-      layers: ["Soil (100-500 Ωm)", "Saturated zone (50-150 Ωm)", "Bedrock (500-2000 Ωm)"]
+      text: "Current injected at A flows to B through the subsurface. The sensitivity pattern (red shading) shows where the measurement is most sensitive - forming a 'banana' shape between electrodes. Potential difference measured at M-N relates to subsurface resistivity.",
+      layers: ["Soil (200 Ωm)", "Saturated (80 Ωm)", "Bedrock (1000 Ωm)"]
     },
     seismic: {
       title: "Seismic Refraction Tomography (SRT)",
-      text: "Seismic waves travel from source to geophones. Direct waves travel along surface; refracted waves travel faster along layer interfaces and arrive first at distant receivers.",
-      layers: ["Soil (300-800 m/s)", "Weathered rock (1000-2000 m/s)", "Fresh bedrock (3000-5000 m/s)"]
+      text: "P-waves expand as wavefronts from source. At layer interfaces, waves refract according to Snell's law. Head waves travel along faster layers and return to surface. At crossover distance, refracted wave arrives before direct wave.",
+      layers: ["Layer 1: 500 m/s", "Layer 2: 1500 m/s", "Layer 3: 3000 m/s"]
     },
     tdem: {
       title: "Time-Domain Electromagnetics (TDEM)",
-      text: "Transmitter loop creates primary magnetic field. When current is switched off, eddy currents diffuse downward through conductive layers, inducing secondary field measured by receiver.",
-      layers: ["Dry soil (high ρ)", "Clay/saturated (low ρ)", "Bedrock (high ρ)"]
+      text: "After Tx current shutoff, the decaying magnetic field induces eddy currents that form 'smoke rings' expanding outward and downward. Conductive layers (low resistivity) sustain currents longer, producing stronger late-time response.",
+      layers: ["Resistive (500 Ωm)", "Conductive (20 Ωm)", "Resistive (800 Ωm)"]
     }
   };
 
   let mode = "ert";
   let t = 0;
   let lastWidth = 0;
-  let animFrame = null;
 
-  // Geological model
-  const layers = [
-    { name: "Air", color: "#e8f4fc", y: 0, h: 0.18 },
-    { name: "Topsoil", color: "#c9a66b", y: 0.18, h: 0.12, pattern: "dots" },
-    { name: "Saturated Zone", color: "#7cb5d4", y: 0.30, h: 0.22, pattern: "water" },
-    { name: "Weathered Bedrock", color: "#a08060", y: 0.52, h: 0.18, pattern: "cracks" },
-    { name: "Fresh Bedrock", color: "#706050", y: 0.70, h: 0.30, pattern: "solid" }
-  ];
+  // Layer model with resistivity/velocity
+  const geoModel = {
+    layers: [
+      { y: 0.18, h: 0.15, color: "#d4a574", rho: 200, vel: 500, name: "Dry soil" },
+      { y: 0.33, h: 0.22, color: "#6ba3c7", rho: 80, vel: 1500, name: "Saturated" },
+      { y: 0.55, h: 0.45, color: "#8b7355", rho: 1000, vel: 3000, name: "Bedrock" }
+    ]
+  };
 
   function resize() {
-    const width = Math.max(300, container.clientWidth - 28);
-    const height = 280;
+    const width = Math.max(320, container.clientWidth - 28);
+    const height = 300;
     if (width !== lastWidth) {
       canvas.width = width;
       canvas.height = height;
@@ -731,72 +730,55 @@ The workflows in this app focus on the methods below.
     t = 0;
     buttons.forEach(btn => btn.classList.toggle("active", btn.dataset.mode === next));
     const data = legendData[next];
-    legend.innerHTML = `<div class="legend-title">${data.title}</div>${data.text}<br><small><b>Layers:</b> ${data.layers.join(" → ")}</small>`;
+    legend.innerHTML = `<div class="legend-title">${data.title}</div>${data.text}<br><small><b>Model:</b> ${data.layers.join(" | ")}</small>`;
   }
 
   buttons.forEach(btn => btn.addEventListener("click", () => setMode(btn.dataset.mode)));
 
-  function drawLayers() {
+  function drawGround(groundY) {
     const w = canvas.width, h = canvas.height;
-    const groundY = h * 0.18;
 
-    // Draw each layer
-    layers.forEach(layer => {
+    // Sky
+    ctx.fillStyle = "#e3f2fd";
+    ctx.fillRect(0, 0, w, groundY);
+
+    // Draw geological layers
+    geoModel.layers.forEach((layer, i) => {
       const ly = h * layer.y;
       const lh = h * layer.h;
       ctx.fillStyle = layer.color;
       ctx.fillRect(0, ly, w, lh);
 
-      // Add texture patterns
-      if (layer.pattern === "dots") {
-        ctx.fillStyle = "#b8956055";
-        for (let i = 0; i < 40; i++) {
-          const px = Math.random() * w;
-          const py = ly + Math.random() * lh;
-          ctx.beginPath();
-          ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      } else if (layer.pattern === "water") {
-        ctx.strokeStyle = "#5a9fc466";
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 8; i++) {
-          const wy = ly + 8 + i * (lh / 8);
-          ctx.beginPath();
-          for (let x = 0; x < w; x += 4) {
-            const y = wy + Math.sin(x * 0.03 + t * 0.5 + i) * 2;
-            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-        }
-      } else if (layer.pattern === "cracks") {
-        ctx.strokeStyle = "#60503055";
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 12; i++) {
-          const cx = (i * w / 12) + 20;
-          ctx.beginPath();
-          ctx.moveTo(cx, ly);
-          ctx.lineTo(cx + (Math.random() - 0.5) * 15, ly + lh);
-          ctx.stroke();
-        }
+      // Layer texture
+      ctx.globalAlpha = 0.3;
+      for (let j = 0; j < 20; j++) {
+        ctx.fillStyle = i === 1 ? "#4a90a4" : "#5d4e37";
+        const px = (j * 47 + i * 13) % w;
+        const py = ly + 5 + (j * 17) % (lh - 10);
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, Math.PI * 2);
+        ctx.fill();
       }
+      ctx.globalAlpha = 1;
     });
 
-    // Ground surface with grass
+    // Ground surface
     ctx.strokeStyle = "#2d5016";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, groundY);
-    for (let x = 0; x < w; x += 2) {
-      ctx.lineTo(x, groundY + Math.sin(x * 0.1) * 1.5);
-    }
+    ctx.lineTo(w, groundY);
     ctx.stroke();
 
-    // Layer boundaries
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = "#00000033";
+    // Layer boundaries with labels
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = "#00000044";
     ctx.lineWidth = 1;
-    [0.30, 0.52, 0.70].forEach(y => {
+    ctx.font = "9px sans-serif";
+    ctx.fillStyle = "#555";
+    ctx.textAlign = "right";
+
+    [0.33, 0.55].forEach((y, i) => {
       ctx.beginPath();
       ctx.moveTo(0, h * y);
       ctx.lineTo(w, h * y);
@@ -805,458 +787,582 @@ The workflows in this app focus on the methods below.
     ctx.setLineDash([]);
 
     // Depth scale
-    ctx.fillStyle = "#475569";
-    ctx.font = "10px sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("0m", 5, groundY + 12);
-    ctx.fillText("5m", 5, h * 0.40);
-    ctx.fillText("15m", 5, h * 0.60);
-    ctx.fillText("30m", 5, h * 0.85);
-
-    return groundY;
+    ctx.fillStyle = "#333";
+    ctx.fillText("0m", 4, groundY + 12);
+    ctx.fillText("5m", 4, h * 0.42);
+    ctx.fillText("15m", 4, h * 0.65);
+    ctx.fillText("30m", 4, h * 0.90);
   }
 
   function drawERT(groundY) {
     const w = canvas.width, h = canvas.height;
-    const nElec = 12;
-    const spacing = (w - 60) / (nElec - 1);
-    const startX = 30;
+    const electrodeY = groundY;
 
-    // Electrode array
-    for (let i = 0; i < nElec; i++) {
-      const x = startX + i * spacing;
-      const isActive = (i === 2 || i === 9); // A and B
-      const isMeasure = (i === 4 || i === 7); // M and N
+    // Animated dipole-dipole array - electrodes move through different n-levels
+    const cycleTime = 6; // seconds per full cycle
+    const animPhase = (t % cycleTime) / cycleTime;
 
-      // Electrode stake
-      ctx.fillStyle = isActive ? "#dc2626" : (isMeasure ? "#2563eb" : "#64748b");
-      ctx.fillRect(x - 2, groundY - 12, 4, 14);
+    // Dipole spacing (a) and n-level animation (1 to 5)
+    const dipoleSpacing = 35; // electrode spacing within dipole
+    const nLevel = 1 + Math.floor(animPhase * 5); // n = 1, 2, 3, 4, 5
+    const nProgress = (animPhase * 5) % 1; // smooth transition within each n
+
+    // Fixed current dipole A-B position
+    const aX = w * 0.15;
+    const bX = aX + dipoleSpacing;
+
+    // Moving potential dipole M-N based on n-level
+    const separation = nLevel * dipoleSpacing;
+    const mX = bX + separation;
+    const nX = mX + dipoleSpacing;
+
+    // Calculate geometric factor K for dipole-dipole: K = π * n * (n+1) * (n+2) * a
+    const geoFactor = Math.PI * nLevel * (nLevel + 1) * (nLevel + 2) * (dipoleSpacing / 100);
+
+    // Subsurface resistivity (two-layer model)
+    const rho1 = 100; // top layer resistivity (Ohm-m)
+    const rho2 = 500; // bottom layer resistivity (Ohm-m)
+
+    // Apparent resistivity changes with depth of investigation
+    const depthFactor = Math.min(1, nLevel / 3);
+    const apparentRho = rho1 * (1 - depthFactor) + rho2 * depthFactor;
+
+    // Calculate voltage: V = I * rho / K (I = 1A assumed)
+    const current = 100; // mA
+    const voltage = (current * apparentRho / geoFactor / 10);
+
+    // Draw sensitivity pattern (banana-shaped) - size depends on n-level
+    const midAB = (aX + bX) / 2;
+    const midMN = (mX + nX) / 2;
+    const centerX = (midAB + midMN) / 2;
+    const sepDist = midMN - midAB;
+    const maxDepth = sepDist * 0.5;
+
+    // Sensitivity contours
+    for (let level = 5; level >= 1; level--) {
+      const alpha = 0.06 + level * 0.035;
+      const depth = maxDepth * (level / 5);
+      const curveWidth = sepDist * (0.25 + level * 0.12);
+
+      ctx.fillStyle = `rgba(220, 50, 50, ${alpha})`;
       ctx.beginPath();
-      ctx.arc(x, groundY - 14, 4, 0, Math.PI * 2);
+      ctx.moveTo(midAB, electrodeY);
+      ctx.quadraticCurveTo(centerX - curveWidth/3, electrodeY + depth * 0.7, centerX, electrodeY + depth);
+      ctx.quadraticCurveTo(centerX + curveWidth/3, electrodeY + depth * 0.7, midMN, electrodeY);
+      ctx.closePath();
       ctx.fill();
-
-      // Labels
-      ctx.fillStyle = "#1f2937";
-      ctx.font = "bold 10px sans-serif";
-      ctx.textAlign = "center";
-      if (i === 2) ctx.fillText("A", x, groundY - 22);
-      if (i === 9) ctx.fillText("B", x, groundY - 22);
-      if (i === 4) ctx.fillText("M", x, groundY - 22);
-      if (i === 7) ctx.fillText("N", x, groundY - 22);
     }
 
-    // Current flow lines (realistic curved paths)
-    const aX = startX + 2 * spacing;
-    const bX = startX + 9 * spacing;
-    const midX = (aX + bX) / 2;
-
-    ctx.strokeStyle = "rgba(220, 38, 38, 0.5)";
-    ctx.lineWidth = 2;
-
-    for (let d = 1; d <= 5; d++) {
-      const depth = 20 + d * 35;
-      const phase = t * 2 + d * 0.3;
-      const intensity = Math.sin(phase) * 0.3 + 0.7;
-
-      ctx.globalAlpha = intensity * 0.6;
-      ctx.beginPath();
-      ctx.moveTo(aX, groundY);
-
-      // Bezier curve for current path
-      const cp1x = aX + (midX - aX) * 0.3;
-      const cp1y = groundY + depth * 0.6;
-      const cp2x = midX - (midX - aX) * 0.3;
-      const cp2y = groundY + depth;
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, midX, groundY + depth);
-
-      const cp3x = midX + (bX - midX) * 0.3;
-      const cp3y = groundY + depth;
-      const cp4x = bX - (bX - midX) * 0.3;
-      const cp4y = groundY + depth * 0.6;
-      ctx.bezierCurveTo(cp3x, cp3y, cp4x, cp4y, bX, groundY);
-      ctx.stroke();
-
-      // Arrows on current lines
-      if (d === 3) {
-        const arrowX = midX;
-        const arrowY = groundY + depth - 5;
-        ctx.beginPath();
-        ctx.moveTo(arrowX - 6, arrowY - 4);
-        ctx.lineTo(arrowX, arrowY + 4);
-        ctx.lineTo(arrowX + 6, arrowY - 4);
-        ctx.stroke();
-      }
-    }
-    ctx.globalAlpha = 1;
-
-    // Equipotential lines
-    ctx.strokeStyle = "rgba(37, 99, 235, 0.3)";
+    // Equipotential lines near current electrodes
+    ctx.strokeStyle = "rgba(37, 99, 235, 0.35)";
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
     for (let i = -2; i <= 2; i++) {
       if (i === 0) continue;
-      const px = midX + i * 25;
+      const px = (aX + bX) / 2 + i * 12;
       ctx.beginPath();
-      ctx.moveTo(px, groundY);
-      ctx.quadraticCurveTo(px + i * 10, groundY + 60, px, groundY + 100);
+      ctx.moveTo(px - i * 4, electrodeY);
+      ctx.quadraticCurveTo(px, electrodeY + 50, px + i * 4, electrodeY + 90);
       ctx.stroke();
     }
     ctx.setLineDash([]);
 
-    // Voltage measurement indicator
-    const mX = startX + 4 * spacing;
-    const nX = startX + 7 * spacing;
-    const voltY = groundY - 35;
+    // Draw electrodes
+    const drawElectrode = (x, label, isSource) => {
+      ctx.fillStyle = isSource ? "#dc2626" : "#2563eb";
+      ctx.fillRect(x - 2, electrodeY - 14, 4, 16);
+      ctx.beginPath();
+      ctx.arc(x, electrodeY - 16, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#1f2937";
+      ctx.font = "bold 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(label, x, electrodeY - 24);
+    };
+
+    drawElectrode(aX, "A", true);
+    drawElectrode(bX, "B", true);
+    drawElectrode(mX, "M", false);
+    drawElectrode(nX, "N", false);
+
+    // Connection line between M and N (voltmeter wires)
     ctx.strokeStyle = "#2563eb";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(mX, groundY - 14);
-    ctx.lineTo(mX, voltY);
-    ctx.lineTo(nX, voltY);
-    ctx.lineTo(nX, groundY - 14);
+    ctx.moveTo(mX, electrodeY - 16);
+    ctx.lineTo(mX, electrodeY - 38);
+    ctx.lineTo(nX, electrodeY - 38);
+    ctx.lineTo(nX, electrodeY - 16);
     ctx.stroke();
 
-    // Voltmeter
+    // Voltmeter display box
+    const vmX = (mX + nX) / 2;
     ctx.fillStyle = "#dbeafe";
     ctx.strokeStyle = "#2563eb";
-    ctx.lineWidth = 2;
-    const vmX = (mX + nX) / 2;
     ctx.beginPath();
-    ctx.roundRect(vmX - 18, voltY - 12, 36, 18, 4);
+    ctx.roundRect(vmX - 28, electrodeY - 54, 56, 22, 4);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = "#1e40af";
-    ctx.font = "bold 9px sans-serif";
-    ctx.textAlign = "center";
-    const voltage = (Math.sin(t * 2) * 50 + 150).toFixed(0);
-    ctx.fillText(voltage + "mV", vmX, voltY + 1);
 
-    info.textContent = "Dipole-Dipole array: Current injection A→B, Voltage measurement M-N";
+    // Display voltage value (changes with electrode positions)
+    ctx.fillStyle = "#1e40af";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("ΔV=" + voltage.toFixed(1) + "mV", vmX, electrodeY - 39);
+
+    // n-level indicator
+    ctx.fillStyle = "#7c3aed";
+    ctx.font = "bold 11px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("n = " + nLevel, w - 75, electrodeY - 55);
+
+    // Apparent resistivity indicator
+    ctx.fillStyle = "#065f46";
+    ctx.font = "10px sans-serif";
+    ctx.fillText("ρₐ = " + apparentRho.toFixed(0) + " Ωm", w - 75, electrodeY - 40);
+
+    // Layer resistivities label
+    ctx.fillStyle = "#666";
+    ctx.font = "9px sans-serif";
+    ctx.fillText("ρ₁=" + rho1 + "Ωm", 5, h * 0.26);
+    ctx.fillText("ρ₂=" + rho2 + "Ωm", 5, h * 0.48);
+
+    info.textContent = "Dipole-Dipole array (n=" + nLevel + "): As n increases, M-N moves away from A-B, probing deeper. Voltage decreases with distance.";
   }
 
   function drawSeismic(groundY) {
     const w = canvas.width, h = canvas.height;
-    const sourceX = 50;
-    const nGeophones = 10;
-    const geoSpacing = (w - 100) / (nGeophones - 1);
+    const sourceX = 40;
+    const nGeophones = 12;
 
-    // Source (hammer/shot)
+    // Layer interfaces
+    const interface1 = h * 0.33;
+    const interface2 = h * 0.55;
+
+    // Velocities
+    const v1 = 500, v2 = 1500, v3 = 3000;
+
+    // Critical angles
+    const ic1 = Math.asin(v1 / v2);
+    const ic2 = Math.asin(v1 / v3);
+
+    // Animation timing
+    const cycleTime = 5;
+    const waveT = t % cycleTime;
+    const waveRadius = waveT * 60;
+
+    // Draw source
     ctx.fillStyle = "#dc2626";
     ctx.beginPath();
-    ctx.moveTo(sourceX, groundY - 25);
-    ctx.lineTo(sourceX - 8, groundY - 5);
-    ctx.lineTo(sourceX + 8, groundY - 5);
-    ctx.closePath();
+    ctx.arc(sourceX, groundY - 8, 8, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#1f2937";
-    ctx.font = "bold 10px sans-serif";
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 8px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Source", sourceX, groundY - 30);
+    ctx.fillText("S", sourceX, groundY - 5);
 
-    // Geophones
+    // Draw geophones
     for (let i = 0; i < nGeophones; i++) {
-      const gx = 80 + i * geoSpacing;
+      const gx = 80 + i * ((w - 100) / (nGeophones - 1));
       ctx.fillStyle = "#059669";
       ctx.beginPath();
       ctx.moveTo(gx, groundY - 2);
-      ctx.lineTo(gx - 5, groundY - 12);
-      ctx.lineTo(gx + 5, groundY - 12);
+      ctx.lineTo(gx - 4, groundY - 10);
+      ctx.lineTo(gx + 4, groundY - 10);
       ctx.closePath();
       ctx.fill();
-      ctx.fillRect(gx - 1, groundY - 2, 2, 6);
     }
 
-    // Wave propagation
-    const waveSpeed = 80;
-    const cycleTime = 4;
-    const waveT = (t % cycleTime);
-
-    // Direct wave (along surface)
-    const directDist = waveT * waveSpeed;
-    if (directDist > 0 && directDist < w) {
-      ctx.strokeStyle = "#dc262688";
+    // Direct wave (circular wavefront in layer 1)
+    if (waveRadius > 0 && waveRadius < w) {
+      ctx.strokeStyle = "#dc262699";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(sourceX, groundY, directDist, -0.15, 0.15);
+      ctx.arc(sourceX, groundY, waveRadius, -0.3, 0.3);
       ctx.stroke();
 
-      // Wave label
-      if (directDist > 50 && directDist < 200) {
+      // Wavefront label
+      if (waveRadius > 40 && waveRadius < 150) {
         ctx.fillStyle = "#dc2626";
         ctx.font = "9px sans-serif";
-        ctx.fillText("Direct", sourceX + directDist * 0.7, groundY - 8);
+        ctx.fillText("Direct (V₁)", sourceX + waveRadius * 0.7, groundY - 10);
       }
     }
 
-    // Refracted waves at layer boundaries
-    const layer1Y = h * 0.30; // First interface
-    const layer2Y = h * 0.52; // Second interface
+    // Refracted wave at interface 1
+    const timeToInterface1 = (interface1 - groundY) / (v1 * 0.08);
+    if (waveT > timeToInterface1 * 0.3) {
+      const refractT = waveT - timeToInterface1 * 0.3;
+      const headwaveDist = refractT * v2 * 0.08;
 
-    // Refracted wave at first interface (faster in saturated zone)
-    const refractDelay1 = (layer1Y - groundY) / 40;
-    const refractT1 = waveT - refractDelay1;
-    if (refractT1 > 0) {
-      const refractDist1 = refractT1 * waveSpeed * 1.5;
-
-      // Down-going ray
-      ctx.strokeStyle = "#f59e0b88";
+      // Down-going ray at critical angle
+      ctx.strokeStyle = "#f59e0b99";
       ctx.lineWidth = 2;
+      const critX = sourceX + (interface1 - groundY) * Math.tan(ic1);
       ctx.beginPath();
       ctx.moveTo(sourceX, groundY);
-      ctx.lineTo(sourceX + 30, layer1Y);
+      ctx.lineTo(critX, interface1);
       ctx.stroke();
 
-      // Critically refracted ray along interface
-      if (refractDist1 < w - sourceX) {
+      // Head wave along interface
+      if (headwaveDist > 0) {
         ctx.strokeStyle = "#f59e0b";
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(sourceX + 30, layer1Y);
-        ctx.lineTo(sourceX + 30 + refractDist1, layer1Y);
+        ctx.moveTo(critX, interface1);
+        ctx.lineTo(Math.min(critX + headwaveDist, w - 20), interface1);
         ctx.stroke();
 
-        // Up-going rays to geophones
-        ctx.strokeStyle = "#f59e0b55";
+        // Up-going rays
+        ctx.strokeStyle = "#f59e0b66";
         ctx.lineWidth = 1;
-        for (let i = 0; i < nGeophones; i++) {
-          const gx = 80 + i * geoSpacing;
-          if (gx > sourceX + 30 && gx < sourceX + 30 + refractDist1) {
+        for (let i = 2; i < nGeophones; i++) {
+          const gx = 80 + i * ((w - 100) / (nGeophones - 1));
+          if (gx > critX && gx < critX + headwaveDist) {
             ctx.beginPath();
-            ctx.moveTo(gx, layer1Y);
+            ctx.moveTo(gx, interface1);
             ctx.lineTo(gx, groundY);
             ctx.stroke();
           }
         }
 
-        if (refractDist1 > 80 && refractDist1 < 180) {
+        if (headwaveDist > 50 && headwaveDist < 180) {
           ctx.fillStyle = "#f59e0b";
           ctx.font = "9px sans-serif";
-          ctx.fillText("Refracted (V₁)", sourceX + 30 + refractDist1 * 0.5, layer1Y - 5);
+          ctx.fillText("Head wave (V₂)", critX + headwaveDist * 0.5, interface1 - 5);
         }
       }
     }
 
-    // Refracted wave at second interface (faster in bedrock)
-    const refractDelay2 = (layer2Y - groundY) / 35;
-    const refractT2 = waveT - refractDelay2;
-    if (refractT2 > 0) {
-      const refractDist2 = refractT2 * waveSpeed * 2.2;
+    // Refracted wave at interface 2
+    const timeToInterface2 = (interface2 - groundY) / (v1 * 0.06);
+    if (waveT > timeToInterface2 * 0.4) {
+      const refractT2 = waveT - timeToInterface2 * 0.4;
+      const headwaveDist2 = refractT2 * v3 * 0.1;
 
-      ctx.strokeStyle = "#8b5cf688";
+      ctx.strokeStyle = "#8b5cf699";
       ctx.lineWidth = 2;
+      const critX2 = sourceX + (interface2 - groundY) * Math.tan(ic2) * 0.8;
       ctx.beginPath();
       ctx.moveTo(sourceX, groundY);
-      ctx.lineTo(sourceX + 50, layer2Y);
+      ctx.lineTo(critX2, interface2);
       ctx.stroke();
 
-      if (refractDist2 < w - sourceX) {
+      if (headwaveDist2 > 0) {
         ctx.strokeStyle = "#8b5cf6";
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(sourceX + 50, layer2Y);
-        ctx.lineTo(sourceX + 50 + refractDist2, layer2Y);
+        ctx.moveTo(critX2, interface2);
+        ctx.lineTo(Math.min(critX2 + headwaveDist2, w - 20), interface2);
         ctx.stroke();
 
-        if (refractDist2 > 60 && refractDist2 < 150) {
+        if (headwaveDist2 > 40 && headwaveDist2 < 150) {
           ctx.fillStyle = "#8b5cf6";
           ctx.font = "9px sans-serif";
-          ctx.fillText("Refracted (V₂)", sourceX + 50 + refractDist2 * 0.5, layer2Y - 5);
+          ctx.fillText("Head wave (V₃)", critX2 + headwaveDist2 * 0.4, interface2 - 5);
         }
       }
     }
 
-    // Seismogram preview (small)
-    const sgX = w - 90, sgY = groundY + 20, sgW = 80, sgH = 60;
-    ctx.fillStyle = "#ffffffdd";
-    ctx.strokeStyle = "#64748b";
+    // Travel-time plot
+    const plotX = w - 100, plotY = groundY + 15, plotW = 90, plotH = 70;
+    ctx.fillStyle = "#ffffffee";
+    ctx.strokeStyle = "#94a3b8";
     ctx.lineWidth = 1;
-    ctx.fillRect(sgX, sgY, sgW, sgH);
-    ctx.strokeRect(sgX, sgY, sgW, sgH);
+    ctx.fillRect(plotX, plotY, plotW, plotH);
+    ctx.strokeRect(plotX, plotY, plotW, plotH);
 
-    ctx.fillStyle = "#1f2937";
+    // Axes
+    ctx.fillStyle = "#334155";
     ctx.font = "8px sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Travel-time curve", sgX + 2, sgY + 10);
+    ctx.fillText("t (ms)", plotX + 2, plotY + 10);
+    ctx.fillText("x (m)", plotX + plotW - 22, plotY + plotH - 3);
 
-    // Draw travel time curves
+    // Travel-time curves
+    const xScale = (plotW - 10) / 100;
+    const tScale = (plotH - 15) / 80;
+
+    // Direct wave: t = x/v1
     ctx.strokeStyle = "#dc2626";
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(sgX + 5, sgY + 55);
-    ctx.lineTo(sgX + sgW - 5, sgY + 25);
+    for (let x = 0; x <= 100; x += 2) {
+      const tt = x / 0.5; // t in ms
+      const px = plotX + 5 + x * xScale;
+      const py = plotY + plotH - 5 - tt * tScale;
+      if (py > plotY + 10) {
+        x === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+    }
     ctx.stroke();
 
+    // Refracted V2: t = 2*z1*cos(ic)/v1 + x/v2
     ctx.strokeStyle = "#f59e0b";
     ctx.beginPath();
-    ctx.moveTo(sgX + 25, sgY + 50);
-    ctx.lineTo(sgX + sgW - 5, sgY + 30);
+    const ti1 = 15; // intercept time
+    const crossover1 = 35;
+    for (let x = crossover1; x <= 100; x += 2) {
+      const tt = ti1 + x / 1.5;
+      const px = plotX + 5 + x * xScale;
+      const py = plotY + plotH - 5 - tt * tScale;
+      if (py > plotY + 10) {
+        x === crossover1 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+    }
     ctx.stroke();
 
+    // Refracted V3
     ctx.strokeStyle = "#8b5cf6";
     ctx.beginPath();
-    ctx.moveTo(sgX + 40, sgY + 48);
-    ctx.lineTo(sgX + sgW - 5, sgY + 38);
+    const ti2 = 25;
+    const crossover2 = 60;
+    for (let x = crossover2; x <= 100; x += 2) {
+      const tt = ti2 + x / 3;
+      const px = plotX + 5 + x * xScale;
+      const py = plotY + plotH - 5 - tt * tScale;
+      if (py > plotY + 10) {
+        x === crossover2 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+    }
     ctx.stroke();
 
-    info.textContent = "First arrivals: Direct wave (red), Refracted V₁ (orange), Refracted V₂ (purple)";
+    // Crossover distance marker
+    ctx.fillStyle = "#065f46";
+    ctx.font = "7px sans-serif";
+    ctx.fillText("Xc", plotX + 5 + crossover1 * xScale - 5, plotY + plotH - 8);
+
+    info.textContent = "Seismic refraction: Snell's law at interfaces. Head waves travel at V₂, V₃. Crossover distance Xc where refracted arrives first.";
   }
 
   function drawTDEM(groundY) {
     const w = canvas.width, h = canvas.height;
-    const loopCenterX = w * 0.5;
-    const loopWidth = 100;
+    const loopCenterX = w * 0.4;
+    const loopRadius = 50;
+
+    // Conductive layer (low resistivity)
+    const condTop = h * 0.33;
+    const condBot = h * 0.55;
+
+    // Animation phase
+    const cycleTime = 4;
+    const phase = (t % cycleTime) / cycleTime;
 
     // Transmitter loop
     ctx.strokeStyle = "#0f766e";
     ctx.lineWidth = 4;
-    ctx.fillStyle = "#0f766e11";
     ctx.beginPath();
-    ctx.rect(loopCenterX - loopWidth/2, groundY - 20, loopWidth, 15);
-    ctx.fill();
+    ctx.ellipse(loopCenterX, groundY - 5, loopRadius, 8, 0, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.fillStyle = "#0f766e";
-    ctx.font = "bold 10px sans-serif";
+    ctx.font = "bold 9px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Tx Loop", loopCenterX, groundY - 25);
+    ctx.fillText("Tx Loop", loopCenterX, groundY - 18);
 
-    // Receiver coil
+    // Receiver
     const rxX = loopCenterX;
     ctx.fillStyle = "#7c3aed";
     ctx.beginPath();
-    ctx.arc(rxX, groundY - 5, 6, 0, Math.PI * 2);
+    ctx.arc(rxX, groundY - 5, 5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#7c3aed";
-    ctx.font = "9px sans-serif";
-    ctx.fillText("Rx", rxX + 15, groundY - 2);
+    ctx.font = "8px sans-serif";
+    ctx.fillText("Rx", rxX + 12, groundY - 2);
 
-    // EM field propagation (eddy current diffusion)
-    const cycleTime = 5;
-    const phase = (t % cycleTime) / cycleTime;
+    // Current waveform indicator
+    ctx.fillStyle = "#f8fafc";
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 1;
+    const cwX = 15, cwY = groundY - 50, cwW = 50, cwH = 35;
+    ctx.fillRect(cwX, cwY, cwW, cwH);
+    ctx.strokeRect(cwX, cwY, cwW, cwH);
 
-    // Primary field (at t=0, during current on)
-    if (phase < 0.15) {
-      const intensity = 1 - phase / 0.15;
-      ctx.strokeStyle = `rgba(15, 118, 110, ${intensity * 0.6})`;
+    ctx.fillStyle = "#334155";
+    ctx.font = "7px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Tx Current", cwX + 2, cwY + 8);
+
+    // Draw current waveform
+    ctx.strokeStyle = "#0f766e";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cwX + 5, cwY + 25);
+    ctx.lineTo(cwX + 15, cwY + 25);
+    ctx.lineTo(cwX + 15, cwY + 12);
+    ctx.lineTo(cwX + 35, cwY + 12);
+    ctx.lineTo(cwX + 35, cwY + 25);
+    ctx.lineTo(cwX + 45, cwY + 25);
+    ctx.stroke();
+
+    // Time indicator on waveform
+    const timeX = cwX + 5 + phase * 40;
+    ctx.fillStyle = "#dc2626";
+    ctx.beginPath();
+    ctx.arc(timeX, phase < 0.25 ? cwY + 25 : (phase < 0.75 ? cwY + 12 : cwY + 25), 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Phase 1: Current ON - Primary field
+    if (phase < 0.25) {
+      ctx.strokeStyle = "rgba(15, 118, 110, 0.5)";
       ctx.lineWidth = 2;
 
+      // Primary magnetic field lines
       for (let i = 1; i <= 4; i++) {
-        const fieldY = groundY + i * 15;
+        const fieldDepth = groundY + i * 25;
+        const fieldWidth = loopRadius + i * 30;
         ctx.beginPath();
-        ctx.moveTo(loopCenterX - loopWidth/2 - i*20, fieldY);
-        ctx.quadraticCurveTo(loopCenterX, fieldY + i*8, loopCenterX + loopWidth/2 + i*20, fieldY);
+        ctx.moveTo(loopCenterX - fieldWidth, fieldDepth);
+        ctx.quadraticCurveTo(loopCenterX, fieldDepth + i * 10, loopCenterX + fieldWidth, fieldDepth);
         ctx.stroke();
+
+        // Field direction arrows
+        ctx.fillStyle = "rgba(15, 118, 110, 0.6)";
+        ctx.beginPath();
+        ctx.moveTo(loopCenterX + fieldWidth - 10, fieldDepth - 3);
+        ctx.lineTo(loopCenterX + fieldWidth, fieldDepth);
+        ctx.lineTo(loopCenterX + fieldWidth - 10, fieldDepth + 3);
+        ctx.fill();
       }
 
       ctx.fillStyle = "#0f766e";
       ctx.font = "9px sans-serif";
-      ctx.fillText("Primary Field (Tx ON)", loopCenterX, groundY + 85);
+      ctx.fillText("Primary B-field (Tx ON)", loopCenterX, h * 0.85);
     }
 
-    // Eddy currents diffusing downward (after current shutoff)
-    if (phase >= 0.15) {
-      const diffusePhase = (phase - 0.15) / 0.85;
-      const maxDepth = h - groundY - 20;
-      const currentDepth = diffusePhase * maxDepth;
+    // Phase 2: Current OFF - Eddy currents (smoke rings)
+    if (phase >= 0.25) {
+      const diffusePhase = (phase - 0.25) / 0.75;
 
-      // Draw eddy current rings at different depths
-      for (let d = 0; d < 5; d++) {
-        const ringDepth = currentDepth - d * 25;
-        if (ringDepth < 10 || ringDepth > maxDepth) continue;
+      // "Smoke ring" eddy currents expanding and diffusing down
+      const nRings = 5;
+      for (let ring = 0; ring < nRings; ring++) {
+        const ringAge = diffusePhase - ring * 0.12;
+        if (ringAge < 0 || ringAge > 1) continue;
 
-        const ringY = groundY + ringDepth;
-        const decay = Math.exp(-d * 0.4) * Math.exp(-diffusePhase * 2);
-        const ringWidth = 60 + d * 15;
+        // Ring expands outward and moves down with sqrt(t) behavior
+        const ringDepth = groundY + 20 + Math.sqrt(ringAge) * (h - groundY - 40);
+        const ringRadius = loopRadius * (0.8 + ringAge * 1.5);
 
-        // Eddy current loops
+        // Decay is faster in resistive layers, slower in conductive
+        let decay;
+        if (ringDepth < condTop) {
+          decay = Math.exp(-ringAge * 4); // Fast decay in resistive
+        } else if (ringDepth < condBot) {
+          decay = Math.exp(-ringAge * 1.5); // Slow decay in conductive
+        } else {
+          decay = Math.exp(-ringAge * 5); // Fast decay in resistive
+        }
+
+        // Draw eddy current ring
         ctx.strokeStyle = `rgba(234, 88, 12, ${decay * 0.8})`;
-        ctx.lineWidth = 2.5 - d * 0.3;
+        ctx.lineWidth = 2.5 * decay + 0.5;
         ctx.beginPath();
-        ctx.ellipse(loopCenterX, ringY, ringWidth, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(loopCenterX, ringDepth, ringRadius, 6 + ring * 2, 0, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Current direction arrows
-        if (d < 3) {
-          const arrowAngle = t * 3 + d;
-          const ax = loopCenterX + Math.cos(arrowAngle) * ringWidth;
-          const ay = ringY + Math.sin(arrowAngle) * 8;
-          ctx.fillStyle = `rgba(234, 88, 12, ${decay})`;
-          ctx.beginPath();
-          ctx.arc(ax, ay, 3, 0, Math.PI * 2);
-          ctx.fill();
+        // Current direction indicators
+        if (decay > 0.3) {
+          const arrowAngle = t * 4 + ring;
+          for (let a = 0; a < 4; a++) {
+            const angle = arrowAngle + a * Math.PI / 2;
+            const ax = loopCenterX + Math.cos(angle) * ringRadius;
+            const ay = ringDepth + Math.sin(angle) * (6 + ring * 2);
+            ctx.fillStyle = `rgba(234, 88, 12, ${decay})`;
+            ctx.beginPath();
+            ctx.arc(ax, ay, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       }
 
-      // Secondary field response (going back up)
-      const secIntensity = Math.exp(-diffusePhase * 3) * 0.5;
-      ctx.strokeStyle = `rgba(124, 58, 237, ${secIntensity})`;
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 4]);
-      for (let i = 1; i <= 3; i++) {
-        const fy = groundY - 10 - i * 12;
-        ctx.beginPath();
-        ctx.moveTo(loopCenterX - 30, fy);
-        ctx.quadraticCurveTo(loopCenterX, fy - 8, loopCenterX + 30, fy);
-        ctx.stroke();
+      // Secondary field going up to receiver
+      const secIntensity = Math.exp(-diffusePhase * 2) * 0.6;
+      if (secIntensity > 0.1) {
+        ctx.strokeStyle = `rgba(124, 58, 237, ${secIntensity})`;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        for (let i = 1; i <= 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(loopCenterX - 20 - i * 8, groundY - 5 - i * 8);
+          ctx.quadraticCurveTo(loopCenterX, groundY - 5 - i * 12, loopCenterX + 20 + i * 8, groundY - 5 - i * 8);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
       }
-      ctx.setLineDash([]);
 
       ctx.fillStyle = "#ea580c";
       ctx.font = "9px sans-serif";
-      ctx.fillText("Eddy Currents Diffusing", loopCenterX, groundY + 85);
+      ctx.textAlign = "center";
+      ctx.fillText("Eddy currents diffuse (smoke rings)", loopCenterX, h * 0.85);
     }
 
-    // Decay curve display
-    const dcX = w - 95, dcY = groundY + 15, dcW = 85, dcH = 55;
-    ctx.fillStyle = "#ffffffdd";
+    // Decay curve plot
+    const dcX = w - 95, dcY = groundY + 20, dcW = 85, dcH = 65;
+    ctx.fillStyle = "#ffffffee";
     ctx.strokeStyle = "#64748b";
     ctx.lineWidth = 1;
     ctx.fillRect(dcX, dcY, dcW, dcH);
     ctx.strokeRect(dcX, dcY, dcW, dcH);
 
-    ctx.fillStyle = "#1f2937";
+    ctx.fillStyle = "#334155";
     ctx.font = "8px sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Decay Curve", dcX + 3, dcY + 10);
-    ctx.fillText("log(V)", dcX + 3, dcY + 25);
-    ctx.fillText("log(t)", dcX + dcW - 25, dcY + dcH - 3);
+    ctx.fillText("Voltage Decay", dcX + 2, dcY + 10);
+    ctx.fillText("log(V)", dcX + 2, dcY + 22);
+    ctx.fillText("log(t)", dcX + dcW - 22, dcY + dcH - 2);
 
-    // Decay curve
+    // Draw decay curve with slope change at conductive layer
     ctx.strokeStyle = "#7c3aed";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    for (let x = 0; x < dcW - 15; x++) {
-      const tx = x / (dcW - 15);
-      const v = Math.exp(-tx * 3) * (dcH - 25);
-      const px = dcX + 8 + x;
-      const py = dcY + 15 + (dcH - 25) - v;
-      x === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    for (let i = 0; i < dcW - 12; i++) {
+      const tNorm = i / (dcW - 12);
+      let v;
+      if (tNorm < 0.3) {
+        v = Math.exp(-tNorm * 4) * 0.9; // Early time - steep
+      } else if (tNorm < 0.7) {
+        v = Math.exp(-0.3 * 4) * Math.exp(-(tNorm - 0.3) * 1.5) * 0.9; // Conductive layer - slower decay
+      } else {
+        v = Math.exp(-0.3 * 4) * Math.exp(-0.4 * 1.5) * Math.exp(-(tNorm - 0.7) * 5) * 0.9;
+      }
+      const px = dcX + 6 + i;
+      const py = dcY + 28 + (1 - v) * (dcH - 35);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
     }
     ctx.stroke();
 
-    // Current time indicator on curve
-    const cursorX = dcX + 8 + phase * (dcW - 15);
-    const cursorV = Math.exp(-phase * 3) * (dcH - 25);
-    const cursorY = dcY + 15 + (dcH - 25) - cursorV;
-    ctx.fillStyle = "#dc2626";
-    ctx.beginPath();
-    ctx.arc(cursorX, cursorY, 4, 0, Math.PI * 2);
-    ctx.fill();
+    // Slope annotation
+    ctx.fillStyle = "#6b7280";
+    ctx.font = "7px sans-serif";
+    ctx.fillText("slow", dcX + dcW * 0.4, dcY + 45);
+    ctx.fillText("(cond.)", dcX + dcW * 0.38, dcY + 52);
 
-    info.textContent = "TDEM: Tx current off → Eddy currents diffuse → Secondary field measured at Rx";
+    // Current time marker
+    if (phase >= 0.25) {
+      const tPos = (phase - 0.25) / 0.75;
+      const cursorX = dcX + 6 + tPos * (dcW - 12);
+      ctx.fillStyle = "#dc2626";
+      ctx.beginPath();
+      ctx.arc(cursorX, dcY + dcH - 10, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    info.textContent = "TDEM: After Tx off, eddy currents diffuse as 'smoke rings'. Conductive layers slow decay rate → detectable in late-time response.";
   }
 
   function animate() {
     resize();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const groundY = drawLayers();
+    const groundY = canvas.height * 0.18;
+    drawGround(groundY);
 
     if (mode === "ert") drawERT(groundY);
     else if (mode === "seismic") drawSeismic(groundY);
     else if (mode === "tdem") drawTDEM(groundY);
 
-    t += 0.03;
-    animFrame = requestAnimationFrame(animate);
+    t += 0.025;
+    requestAnimationFrame(animate);
   }
 
   setMode(mode);
@@ -1266,8 +1372,8 @@ The workflows in this app focus on the methods below.
 </body>
 </html>
 """
-        components.html(html_sim, height=420)
-        st.caption("Interactive visualization showing realistic survey physics. Click tabs to explore different methods.")
+        components.html(html_sim, height=450)
+        st.caption("Interactive visualization showing geophysical survey physics. Click tabs to explore different methods.")
 
     # LLM-powered explanation section
     st.markdown("---")
