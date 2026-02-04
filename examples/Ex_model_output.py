@@ -55,7 +55,11 @@ saturation_processor = ParflowSaturation(
     model_directory=model_directory,
     run_name="test2"
 )
-saturation = saturation_processor.load_timestep(200)  # Load first timestep
+# Use a safe timestep index (works even if only one file is available)
+requested_idx = 200
+available_count = len(getattr(saturation_processor, "available_timesteps", []))
+timestep_idx = min(requested_idx, max(0, available_count - 1)) if available_count > 0 else 0
+saturation = saturation_processor.load_timestep(timestep_idx)  # Load first available timestep
 
 # Load porosity data
 porosity_processor = ParflowPorosity(

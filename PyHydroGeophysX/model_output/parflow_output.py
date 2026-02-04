@@ -3,13 +3,111 @@ Module for processing ParFlow model outputs.
 
 This module provides classes to handle specific types of ParFlow outputs,
 such as saturation and porosity, by reading ParFlow Binary Files (PFB).
-It relies on the `parflow` Python package for PFB reading capabilities.
+It includes a standalone PFB reader that works without the `parflow` package,
+falling back to the `parflow` package if available for maximum compatibility.
 """
 import os
+import struct
 import numpy as np
-from typing import Tuple, Optional, Union, List, Dict, Any # Dict and Union not directly used here, but Any is.
+from typing import Tuple, Optional, Union, List, Dict, Any
 
-from .base import HydroModelOutput # Assuming base.py is in the same directory or package
+from .base import HydroModelOutput
+
+
+def read_pfb_standalone(filename: str) -> np.ndarray:
+    """
+    Read a ParFlow Binary (PFB) file without requiring the parflow package.
+    
+    This is a pure Python/NumPy implementation that parses the PFB file format
+    directly. PFB files store 3D data in a hierarchical subgrid structure.
+    
+    Args:
+        filename: Path to the .pfb file
+        
+    Returns:
+        np.ndarray: 3D array of shape (nz, ny, nx) containing the data
+        
+    Raises:
+        FileNotFoundError: If the file does not exist
+        ValueError: If the file format is invalid
+    """
+    if not os.path.exists(filename):
+        raise FileNotFoundError(f"PFB file not found: {filename}")
+    
+    with open(filename, 'rb') as f:
+        # Read header (all values are big-endian doubles and integers)
+        # Header format: x, y, z (origin), nx, ny, nz (grid dimensions), 
+        #                dx, dy, dz (grid spacing), num_subgrids
+        
+        # Origin (x, y, z) - 3 doubles
+        x_origin = struct.unpack('>d', f.read(8))[0]
+        y_origin = struct.unpack('>d', f.read(8))[0]
+        z_origin = struct.unpack('>d', f.read(8))[0]
+        
+        # Grid dimensions (nx, ny, nz) - 3 integers
+        nx = struct.unpack('>i', f.read(4))[0]
+        ny = struct.unpack('>i', f.read(4))[0]
+        nz = struct.unpack('>i', f.read(4))[0]
+        
+        # Grid spacing (dx, dy, dz) - 3 doubles
+        dx = struct.unpack('>d', f.read(8))[0]
+        dy = struct.unpack('>d', f.read(8))[0]
+        dz = struct.unpack('>d', f.read(8))[0]
+        
+        # Number of subgrids - 1 integer
+        num_subgrids = struct.unpack('>i', f.read(4))[0]
+        
+        # Initialize output array
+        data = np.zeros((nz, ny, nx), dtype=np.float64)
+        
+        # Read each subgrid
+        for _ in range(num_subgrids):
+            # Subgrid header: ix, iy, iz (start indices), subgrid_nx, ny, nz, rx, ry, rz
+            ix = struct.unpack('>i', f.read(4))[0]
+            iy = struct.unpack('>i', f.read(4))[0]
+            iz = struct.unpack('>i', f.read(4))[0]
+            
+            sub_nx = struct.unpack('>i', f.read(4))[0]
+            sub_ny = struct.unpack('>i', f.read(4))[0]
+            sub_nz = struct.unpack('>i', f.read(4))[0]
+            
+            # r values (refinement ratios, typically 1)
+            rx = struct.unpack('>i', f.read(4))[0]
+            ry = struct.unpack('>i', f.read(4))[0]
+            rz = struct.unpack('>i', f.read(4))[0]
+            
+            # Read subgrid data (big-endian doubles)
+            num_values = sub_nx * sub_ny * sub_nz
+            subgrid_data = np.frombuffer(f.read(num_values * 8), dtype='>f8')
+            
+            # Reshape and place in output array
+            # PFB stores data in Fortran order (column-major): x varies fastest
+            subgrid_3d = subgrid_data.reshape((sub_nz, sub_ny, sub_nx))
+            
+            # Place subgrid data into the full array
+            data[iz:iz+sub_nz, iy:iy+sub_ny, ix:ix+sub_nx] = subgrid_3d
+        
+        return data
+
+
+def read_pfb(filename: str) -> np.ndarray:
+    """
+    Read a ParFlow Binary (PFB) file.
+    
+    Attempts to use the parflow package if available, otherwise falls back
+    to the standalone pure-Python reader.
+    
+    Args:
+        filename: Path to the .pfb file
+        
+    Returns:
+        np.ndarray: 3D array of shape (nz, ny, nx) containing the data
+    """
+    try:
+        import parflow.tools.io as pftools
+        return pftools.read_pfb(filename)
+    except ImportError:
+        return read_pfb_standalone(filename)
 
 
 class ParflowOutput(HydroModelOutput):
@@ -17,9 +115,8 @@ class ParflowOutput(HydroModelOutput):
     Base class for processing ParFlow model outputs.
 
     This class handles common ParFlow output functionalities, such as
-    identifying available timesteps and interfacing with the `parflow`
-    Python package for reading PFB files. Specific data types (like
-    saturation, porosity) should be handled by subclasses.
+    identifying available timesteps and reading PFB files. It uses the
+    standalone PFB reader that works without the parflow package installed.
     """
     
     def __init__(self, model_directory: str, run_name: str):
@@ -32,7 +129,6 @@ class ParflowOutput(HydroModelOutput):
                             output files are like 'my_run.out.satur.00001.pfb').
 
         Raises:
-            ImportError: If the `parflow` Python package is not installed.
             FileNotFoundError: If `model_directory` does not exist.
         """
         super().__init__(model_directory)
@@ -41,21 +137,11 @@ class ParflowOutput(HydroModelOutput):
 
         self.run_name = run_name
         
-        try:
-            # Dynamically import parflow and its PFB reading tool.
-            # This makes `parflow` an optional dependency if ParflowOutput classes are not used.
-            import parflow.tools.io as pftools # Changed from `import parflow`
-            self.parflow_available = True
-            self.read_pfb = pftools.read_pfb # Assign the function directly
-        except ImportError:
-            self.parflow_available = False
-            # Critical dependency for this class to function.
-            raise ImportError("The 'parflow' Python package is required to process ParFlow outputs. "
-                              "Please install it (e.g., 'pip install parflow').")
+        # Use the module-level read_pfb function which works with or without parflow package
+        self.read_pfb = read_pfb
+        self.parflow_available = True  # We can read PFB files with standalone reader
         
         # Discover available timesteps upon initialization.
-        # Potential Issue: If new output files are written after initialization,
-        # this list won't update unless refreshed.
         self.available_timesteps = self._get_available_timesteps()
         if not self.available_timesteps:
             print(f"Warning: No ParFlow output timesteps found for run '{self.run_name}' in '{self.model_directory}'. "

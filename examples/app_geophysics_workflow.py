@@ -250,6 +250,12 @@ section.main > div {
 st.markdown(f"<style>{CUSTOM_CSS}</style>", unsafe_allow_html=True)
 
 EXAMPLE_REQUESTS: Dict[str, str] = {
+    "ParFlow": """Load ParFlow outputs. I uploaded a saturation .pfb file.
+Also uploaded porosity .pfb file.
+Convert saturation to water content, then to resistivity with rho_sat=541 and n=1.24.""",
+    "MODFLOW": """Load MODFLOW outputs. I uploaded id.txt (idomain file).
+Model name: TLnewtest2sfb2. Timestep: 1. Number of layers: 3.
+Convert water content to resistivity using rho_sat=541 and n=1.24.""",
     "Standard ERT": """Run a standard ERT inversion using the DAS-1 instrument.
 Data file: 20171105_1418.Data
 Electrode file: electrodes.dat
@@ -275,13 +281,7 @@ Regularization lambda: 50
 Vertical weight: 0.2
 Velocity constraints: 500-5000 m/s
 Parametric depth: 60 m
-Extract velocity interfaces at: 1200 m/s (regolith-bedrock), 5000 m/s (fractured-fresh)""",
-    "TDEM Inversion": """Run a TDEM (Time-Domain Electromagnetic) inversion.
-Data file: tdem_synthetic_data.txt
-Loop source radius: 10 meters
-Number of inversion layers: 20
-Use sparse regularization (IRLS): yes
-Maximum iterations: 50"""
+Extract velocity interfaces at: 1200 m/s (regolith-bedrock), 5000 m/s (fractured-fresh)"""
 }
 
 DATA_LINKS: Dict[str, str] = {
@@ -290,6 +290,18 @@ DATA_LINKS: Dict[str, str] = {
 
 # Example-specific data links organized by workflow type
 EXAMPLE_DATA_LINKS: Dict[str, Dict[str, str]] = {
+    "ParFlow Example": {
+        "description": "Load ParFlow saturation outputs and convert to resistivity",
+        "notebook": "https://github.com/geohang/PyHydroGeophysX/blob/main/examples/Ex_model_output.ipynb",
+        "parflow_data": "https://github.com/geohang/PyHydroGeophysX/tree/main/examples/data/parflow/test2",
+        "files": ["test2.out.satur.00005.pfb", "test2.out.porosity.pfb", "test2.out.mask.pfb"],
+    },
+    "MODFLOW Example": {
+        "description": "Load MODFLOW water content outputs and convert to resistivity",
+        "notebook": "https://github.com/geohang/PyHydroGeophysX/blob/main/examples/Ex_model_output.ipynb",
+        "modflow_data": "https://github.com/geohang/PyHydroGeophysX/tree/main/examples/data/modflow",
+        "files": ["id.txt", "WaterContent"],
+    },
     "ERT Example (Ex1)": {
         "description": "Standard ERT inversion with DAS-1 instrument data from Snowy Range, Wyoming",
         "notebook": "https://github.com/geohang/PyHydroGeophysX/blob/main/examples/Ex_Unified_Workflow_ex1.ipynb",
@@ -356,11 +368,11 @@ def render_header() -> None:
     )
     st.markdown(
         '<div class="phgx-pill">Unified Workflow</div>'
+        '<div class="phgx-pill">MODFLOW/ParFlow</div>'
         '<div class="phgx-pill">ERT</div>'
         '<div class="phgx-pill">TDEM</div>'
         '<div class="phgx-pill">Seismic</div>'
-        '<div class="phgx-pill">Data Fusion</div>'
-        '<div class="phgx-pill">Climate</div>',
+        '<div class="phgx-pill">Data Fusion</div>',
         unsafe_allow_html=True,
     )
 
@@ -455,6 +467,66 @@ You can use any of the following providers:
         st.markdown(f"- [{label}]({link})")
 
     st.markdown("---")
+
+    # Hydrological Model Output Tutorial
+    st.markdown("### Example 0: Hydrological Model Outputs (MODFLOW / ParFlow)")
+    with st.expander("Step-by-step tutorial for MODFLOW/ParFlow outputs", expanded=False):
+        st.markdown("""
+This tutorial shows how to **load MODFLOW or ParFlow outputs** and **convert them into geophysical properties** (resistivity or velocity).
+
+**Supported Models:**
+- **MODFLOW**: Water content + porosity arrays (requires `flopy` for porosity)
+- **ParFlow**: Saturation + porosity + mask arrays (now works **without** `parflow` package!)
+
+**Workflow:**
+1. Upload hydrological model output file(s) - including porosity if available
+2. Describe the conversion using natural language
+3. Get resistivity or velocity outputs for comparison with geophysical data
+""")
+
+        st.markdown("#### A) ParFlow Workflow (Recommended - No extra packages needed)")
+        st.markdown("""
+**Step 1:** Upload ParFlow `.pfb` files:
+- Saturation file (e.g., `test2.out.satur.00005.pfb`)
+- Porosity file (e.g., `test2.out.porosity.pfb`) - optional but recommended
+- Mask file (e.g., `test2.out.mask.pfb`) - optional
+
+**Step 2:** Use this natural language request:
+""")
+        st.code("""Load ParFlow outputs. I uploaded a saturation .pfb file.
+Also uploaded porosity .pfb file.
+Convert saturation to water content, then to resistivity with rho_sat=541 and n=1.24.""", language="text")
+        
+        st.markdown("""
+**What happens:**
+- The system reads the PFB files directly (no `parflow` package needed!)
+- Saturation × Porosity → Water content
+- Water content → Resistivity (or velocity) using petrophysical models
+- Generates plots and reports
+""")
+
+        st.markdown("#### B) MODFLOW Workflow")
+        st.markdown("""
+**Step 1:** Upload MODFLOW files:
+- `id.txt` (idomain file)
+- The `WaterContent` binary file should be in the same directory
+
+**Step 2:** Use this natural language request:
+""")
+        st.code("""Load MODFLOW outputs. I uploaded id.txt (idomain file).
+Model name: TLnewtest2sfb2. Timestep: 1. Number of layers: 3.
+Convert water content to resistivity using rho_sat=541 and n=1.24.""", language="text")
+
+        st.markdown("""
+**Petrophysical Parameters:**
+- `rho_sat`: Saturated resistivity (Ω·m) - typically 50-1000 depending on pore water salinity
+- `n`: Saturation exponent (dimensionless) - typically 1.2-2.5
+- `porosity`: Can be uploaded as a file or specified as a constant value
+""")
+
+        st.success("✅ **New Feature:** ParFlow .pfb files can now be read without installing the `parflow` Python package!")
+
+        st.info("💡 **Tip:** Use the **'ParFlow'** or **'MODFLOW'** example buttons above to auto-fill a working request.")
 
     # ERT Example Tutorial
     st.markdown("### Example 1: Standard ERT Inversion")
@@ -1942,7 +2014,7 @@ def render_workflow_tab(sidebar_state: Dict[str, str]) -> None:
     uploaded_files = st.file_uploader(
         "Data files",
         accept_multiple_files=True,
-        type=["ohm", "dat", "data", "txt", "sgy", "segy"],
+        type=["ohm", "dat", "data", "txt", "sgy", "segy", "pfb", "nam"],
         help="Single upload area for ERT, seismic, electrodes, etc.",
     )
 
@@ -2083,14 +2155,47 @@ def handle_uploads(
         return ("tdem" in name or "tem_" in name or "electromagnetic" in name) and p.suffix.lower() in [".txt", ".dat", ".csv"]
     
     tdem_candidates = [p for p in all_paths if is_tdem(p)]
+
+    # Detect hydrological model files (MODFLOW / ParFlow)
+    def is_modflow_idomain(p: Path) -> bool:
+        return p.name.lower() in ["id.txt", "idomain.txt", "idomain.dat"]
+
+    def is_modflow_watercontent(p: Path) -> bool:
+        return p.name.lower() == "watercontent"
+
+    def is_modflow_nam(p: Path) -> bool:
+        return p.suffix.lower() == ".nam"
+
+    def is_parflow_pfb(p: Path) -> bool:
+        return p.suffix.lower() == ".pfb"
+
+    def infer_parflow_run_name(p: Path) -> Optional[str]:
+        name_lower = p.name.lower()
+        patterns = [".out.satur.", ".out.press.", ".out.porosity", ".out.mask"]
+        for pattern in patterns:
+            if pattern in name_lower:
+                idx = name_lower.index(pattern)
+                return p.name[:idx]
+        return None
+
+    modflow_idomain_files = [p for p in all_paths if is_modflow_idomain(p)]
+    modflow_wc_files = [p for p in all_paths if is_modflow_watercontent(p)]
+    modflow_nam_files = [p for p in all_paths if is_modflow_nam(p)]
+    parflow_pfb_files = [p for p in all_paths if is_parflow_pfb(p)]
+    has_modflow = bool(modflow_idomain_files or modflow_wc_files or modflow_nam_files)
+    has_parflow = bool(parflow_pfb_files)
     
-    # Data candidates exclude electrode files, seismic files, and TDEM files
+    def is_hydro(p: Path) -> bool:
+        return is_modflow_idomain(p) or is_modflow_watercontent(p) or is_modflow_nam(p) or is_parflow_pfb(p)
+
+    # Data candidates exclude electrode files, seismic files, TDEM files, and hydro model files
     data_candidates = [
         p for p in all_paths
         if p.suffix.lower() in [".ohm", ".data", ".dat", ".txt"]
         and not is_electrode(p)
         and "seis" not in p.name.lower()
         and not is_tdem(p)
+        and not is_hydro(p)
     ]
     seismic_candidates = [p for p in all_paths if "seis" in p.name.lower() or p.suffix.lower() in [".sgy", ".segy"]]
 
@@ -2109,6 +2214,40 @@ def handle_uploads(
     
     if tdem_candidates:
         workflow_config["tdem_file"] = str(tdem_candidates[0])
+
+    # Hydrological model upload handling (single-file friendly)
+    if has_modflow or has_parflow:
+        if has_modflow and has_parflow:
+            workflow_config["hydro_model"] = "both"
+        elif has_modflow:
+            workflow_config["hydro_model"] = "modflow"
+        else:
+            workflow_config["hydro_model"] = "parflow"
+
+    if modflow_idomain_files:
+        workflow_config["idomain_file"] = str(modflow_idomain_files[0])
+        workflow_config["modflow_dir"] = str(modflow_idomain_files[0].parent)
+    if modflow_wc_files:
+        workflow_config["modflow_dir"] = str(modflow_wc_files[0].parent)
+        workflow_config["load_water_content"] = True
+    if modflow_nam_files and "modflow_dir" not in workflow_config:
+        workflow_config["modflow_dir"] = str(modflow_nam_files[0].parent)
+
+    if parflow_pfb_files:
+        # Use the first PFB file to infer run_name and set directory
+        first_pfb = parflow_pfb_files[0]
+        workflow_config["parflow_dir"] = str(first_pfb.parent)
+        run_name = infer_parflow_run_name(first_pfb)
+        if run_name:
+            workflow_config["run_name"] = run_name
+        # Set load flags based on filename patterns
+        name_lower = first_pfb.name.lower()
+        if ".out.satur." in name_lower:
+            workflow_config["load_saturation"] = True
+        if ".out.porosity" in name_lower:
+            workflow_config["load_porosity"] = True
+        if ".out.mask" in name_lower:
+            workflow_config["load_mask"] = True
 
     # Expose all uploads for downstream agents
     workflow_config["uploaded_files"] = {p.name: str(p) for p in all_paths}
@@ -2210,6 +2349,20 @@ def _detect_workflow_type(config: Dict) -> str:
     """Detect workflow type from configuration."""
     config_keys = set(config.keys())
     user_request = config.get('user_request', '').lower()
+    
+    # ERT data processing detection (QC/export)
+    processing_keywords = ['data processing', 'quality control', 'qc', 'preprocess', 'export', 'resipy']
+    inversion_keywords = ['invert', 'inversion', 'tomography', 'time-lapse', 'timelapse']
+    if (config.get('ert_data_processing') or
+        (any(kw in user_request for kw in processing_keywords) and not any(kw in user_request for kw in inversion_keywords))):
+        return "ERT Data Processing"
+    
+    # Hydrological model output detection (MODFLOW / ParFlow)
+    hydro_keywords = ['modflow', 'parflow', 'par flow', 'hydrological model', 'watercontent', 'saturation', 'porosity']
+    mentions_hydro = config.get('hydro_model') or any(kw in user_request for kw in hydro_keywords)
+    mentions_geophysics = any(kw in user_request for kw in ['ert', 'seismic', 'tdem', 'inversion', 'forward'])
+    if mentions_hydro and not mentions_geophysics:
+        return "Hydrological Model Output"
     
     # TDEM detection
     if (config.get('tdem_file') or config.get('tdem_mode') or
@@ -2405,5 +2558,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
