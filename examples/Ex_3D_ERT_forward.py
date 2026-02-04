@@ -194,9 +194,7 @@ plt.show()
 # and the water content at the surface layer (right). The red contour indicates
 # regions with >80% active cells, helping identify optimal domain placement.
 #
-# .. image:: /auto_examples/images/Ex_3D_ERT_forward_fig_01.png
-#    :align: center
-#    :width: 700px
+# *Figure saved to: modflow_active_cells.png*
 
 # Calculate optimal domain placement
 # Find the centroid of the high-activity region
