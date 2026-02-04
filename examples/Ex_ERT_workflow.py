@@ -17,6 +17,7 @@ The workflow includes:
 This example serves as a comprehensive tutorial showing the integration
 of hydrological and geophysical modeling for watershed monitoring applications.
 """
+# sphinx_gallery_thumbnail_path = '_static/Ex_ERT_workflow_fig_01.png'
 
 # %%
 import os

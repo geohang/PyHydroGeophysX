@@ -16,6 +16,7 @@ The example covers:
 This workflow is essential for testing time-lapse inversion algorithms
 and understanding the sensitivity of ERT measurements to hydrological changes.
 """
+# sphinx_gallery_thumbnail_path = '_static/Ex_Time_lapse_measurement_fig_01.png'
 
 # %%
 import os

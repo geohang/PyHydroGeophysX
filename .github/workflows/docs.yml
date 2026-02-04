@@ -48,6 +48,39 @@ jobs:
       run: |
         echo "Checking for figures in docs/source/auto_examples/images/"
         if ls docs/source/auto_examples/images/*.png 1> /dev/null 2>&1; then
+
+    - name: Check for missing image references
+      run: |
+        echo "Running image reference check..."
+        python tools/check_docs_images.py
+        echo "✅ All image references are valid"
+
+    - name: Verify key thumbnails exist
+      run: |
+        echo "Verifying gallery thumbnails..."
+        THUMBS_DIR="docs/source/auto_examples/images/thumb"
+        MISSING=0
+        
+        for thumb in \
+          sphx_glr_Ex_ERT_workflow_thumb.png \
+          sphx_glr_Ex_model_output_thumb.png \
+          sphx_glr_Ex_TDEM_workflow_thumb.png \
+          sphx_glr_Ex_3D_ERT_forward_thumb.png \
+          sphx_glr_Ex_ERT_data_process_thumb.png; do
+          if [ ! -f "$THUMBS_DIR/$thumb" ]; then
+            echo "⚠️ Missing thumbnail: $thumb"
+            MISSING=$((MISSING + 1))
+          fi
+        done
+        
+        if [ $MISSING -gt 0 ]; then
+          echo "Warning: $MISSING thumbnails missing (will use placeholders)"
+        else
+          echo "✅ All key thumbnails present"
+        fi
+
+    - name: Check for pre-generated figures (detailed)
+      run: |
           echo "✅ Found pre-generated figures:"
           ls -la docs/source/auto_examples/images/ | grep '\.png$' | head -10
           FIGURE_COUNT=$(ls docs/source/auto_examples/images/*.png | wc -l)
