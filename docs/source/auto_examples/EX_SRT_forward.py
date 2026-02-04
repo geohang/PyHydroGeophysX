@@ -18,6 +18,7 @@ SRT is valuable for determining subsurface structure and bedrock interface
 geometry, which provides important constraints for hydrogeophysical modeling
 and interpretation of ERT data.
 """
+# sphinx_gallery_thumbnail_path = '_static/EX_SRT_forward_fig_01.png'
 
 # %%
 import os

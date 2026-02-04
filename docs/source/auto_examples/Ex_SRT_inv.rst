@@ -35,7 +35,16 @@ Visualization: The resulting velocity tomograms are plotted, showing the recover
 Interface Extraction: For the long profile, the script uses the extract_velocity_interface function to automatically delineate boundaries between different geological layers (e.g., regolith, fractured bedrock, and fresh bedrock) based on velocity thresholds.
 Exporting Results: The coordinates of the extracted interfaces are saved to text files, making them available for constraining other models, such as hydrogeological simulations.
 
-.. GENERATED FROM PYTHON SOURCE LINES 25-55
+.. GENERATED FROM PYTHON SOURCE LINES 21-24
+
+.. code-block:: Python
+   :dedent: 1
+
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 26-56
 
 .. code-block:: Python
 
@@ -70,7 +79,7 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
     from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 56-59
+.. GENERATED FROM PYTHON SOURCE LINES 57-60
 
 .. code-block:: Python
 
@@ -78,15 +87,15 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
     os.makedirs(output_dir, exist_ok=True)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 60-61
+.. GENERATED FROM PYTHON SOURCE LINES 61-62
 
 ## Long seismic profile
 
-.. GENERATED FROM PYTHON SOURCE LINES 63-64
+.. GENERATED FROM PYTHON SOURCE LINES 64-65
 
 ### Load seismic data and inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 66-73
+.. GENERATED FROM PYTHON SOURCE LINES 67-74
 
 .. code-block:: Python
 
@@ -98,15 +107,15 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
               verbose=1, limits=[300., 10000.])
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 74-75
+.. GENERATED FROM PYTHON SOURCE LINES 75-76
 
 ### Get parameters for plotting layers
 
-.. GENERATED FROM PYTHON SOURCE LINES 77-78
+.. GENERATED FROM PYTHON SOURCE LINES 78-79
 
 Get coverage and cell positions
 
-.. GENERATED FROM PYTHON SOURCE LINES 78-85
+.. GENERATED FROM PYTHON SOURCE LINES 79-86
 
 .. code-block:: Python
 
@@ -118,7 +127,7 @@ Get coverage and cell positions
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 86-114
+.. GENERATED FROM PYTHON SOURCE LINES 87-115
 
 .. code-block:: Python
 
@@ -151,7 +160,7 @@ Get coverage and cell positions
                              facecolor='black', edgecolor='black')
     fig.savefig(os.path.join(output_dir, 'seismic_velocity_long.tiff'), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 115-128
+.. GENERATED FROM PYTHON SOURCE LINES 116-129
 
 Long Profile Seismic Velocity Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -167,11 +176,11 @@ geological interfaces at 1200 and 5000 m/s respectively.
 %% [markdown]
 ### Get subsurface structure for hydrologic modeling
 
-.. GENERATED FROM PYTHON SOURCE LINES 130-131
+.. GENERATED FROM PYTHON SOURCE LINES 131-132
 
 Assuming TT.model.array() gives you the velocity values
 
-.. GENERATED FROM PYTHON SOURCE LINES 131-142
+.. GENERATED FROM PYTHON SOURCE LINES 132-143
 
 .. code-block:: Python
 
@@ -187,11 +196,11 @@ Assuming TT.model.array() gives you the velocity values
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 143-144
+.. GENERATED FROM PYTHON SOURCE LINES 144-145
 
 # plot the extracted interfaces withe filled velocity images
 
-.. GENERATED FROM PYTHON SOURCE LINES 144-158
+.. GENERATED FROM PYTHON SOURCE LINES 145-159
 
 .. code-block:: Python
 
@@ -210,7 +219,7 @@ Assuming TT.model.array() gives you the velocity values
     np.savetxt(os.path.join(output_dir, 'regolith_interface.txt'), np.c_[smooth_x1, smooth_z1])
     np.savetxt(os.path.join(output_dir, 'fractured_bedrock_interface.txt'), np.c_[smooth_x2, smooth_z2])
 
-.. GENERATED FROM PYTHON SOURCE LINES 159-172
+.. GENERATED FROM PYTHON SOURCE LINES 160-173
 
 Automated Interface Extraction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -226,7 +235,7 @@ exported as text files for integration with hydrogeological models.
 %% [markdown]
 ## Short seismic profiles
 
-.. GENERATED FROM PYTHON SOURCE LINES 174-181
+.. GENERATED FROM PYTHON SOURCE LINES 175-182
 
 .. code-block:: Python
 
@@ -238,7 +247,7 @@ exported as text files for integration with hydrogeological models.
               verbose=1, limits=[300., 8000.])
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 182-187
+.. GENERATED FROM PYTHON SOURCE LINES 183-188
 
 .. code-block:: Python
 
@@ -248,7 +257,7 @@ exported as text files for integration with hydrogeological models.
     filled_cov1 = fill_holes_2d(pos, TT_short.standardizedCoverage())
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 188-217
+.. GENERATED FROM PYTHON SOURCE LINES 189-218
 
 .. code-block:: Python
 
@@ -282,7 +291,7 @@ exported as text files for integration with hydrogeological models.
                              facecolor='black', edgecolor='black')
     fig.savefig(os.path.join(output_dir, 'seismic_velocity_short.tiff'), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 218-229
+.. GENERATED FROM PYTHON SOURCE LINES 219-230
 
 Short Profile Multi-Scale Comparison
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -296,7 +305,7 @@ shows excellent agreement with the long profile.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 231-241
+.. GENERATED FROM PYTHON SOURCE LINES 232-242
 
 Summary
 ~~~~~~~

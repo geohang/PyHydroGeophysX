@@ -33,10 +33,9 @@ The example covers:
 This is typically the first step in any workflow where you want to
 convert hydrological model outputs to geophysical data.
 
-.. GENERATED FROM PYTHON SOURCE LINES 17-40
+.. GENERATED FROM PYTHON SOURCE LINES 17-39
 
 .. code-block:: Python
-
 
 
     import os
@@ -61,7 +60,7 @@ convert hydrological model outputs to geophysical data.
     from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent, MODFLOWPorosity
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 42-47
+.. GENERATED FROM PYTHON SOURCE LINES 41-46
 
 1. ParFlow Example
 ------------------
@@ -69,11 +68,11 @@ convert hydrological model outputs to geophysical data.
 Let's start by loading ParFlow data. ParFlow is a physically-based, 
 three-dimensional model that simulates surface and subsurface flow.
 
-.. GENERATED FROM PYTHON SOURCE LINES 49-50
+.. GENERATED FROM PYTHON SOURCE LINES 48-49
 
 Path to your Parflow model directory
 
-.. GENERATED FROM PYTHON SOURCE LINES 50-74
+.. GENERATED FROM PYTHON SOURCE LINES 49-77
 
 .. code-block:: Python
 
@@ -85,7 +84,11 @@ Path to your Parflow model directory
         model_directory=model_directory,
         run_name="test2"
     )
-    saturation = saturation_processor.load_timestep(200)  # Load first timestep
+    # Use a safe timestep index (works even if only one file is available)
+    requested_idx = 200
+    available_count = len(getattr(saturation_processor, "available_timesteps", []))
+    timestep_idx = min(requested_idx, max(0, available_count - 1)) if available_count > 0 else 0
+    saturation = saturation_processor.load_timestep(timestep_idx)  # Load first available timestep
 
     # Load porosity data
     porosity_processor = ParflowPorosity(
@@ -102,7 +105,7 @@ Path to your Parflow model directory
     print(saturation.shape)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 75-80
+.. GENERATED FROM PYTHON SOURCE LINES 78-83
 
 Visualizing ParFlow Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -110,11 +113,11 @@ Visualizing ParFlow Data
 Now let's create visualizations of the loaded ParFlow data. We'll plot
 both porosity and saturation for layer 19 of the model.
 
-.. GENERATED FROM PYTHON SOURCE LINES 82-83
+.. GENERATED FROM PYTHON SOURCE LINES 85-86
 
 Plotting the data
 
-.. GENERATED FROM PYTHON SOURCE LINES 83-99
+.. GENERATED FROM PYTHON SOURCE LINES 86-102
 
 .. code-block:: Python
 
@@ -135,7 +138,7 @@ Plotting the data
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 100-108
+.. GENERATED FROM PYTHON SOURCE LINES 103-111
 
 The above plot shows the porosity and saturation data from ParFlow simulation.
 Notice how the values vary spatially across the domain. The porosity shows 
@@ -146,7 +149,7 @@ much of that space is filled with water.
    :align: center
    :width: 600px
 
-.. GENERATED FROM PYTHON SOURCE LINES 110-115
+.. GENERATED FROM PYTHON SOURCE LINES 113-118
 
 2. MODFLOW Example
 ------------------
@@ -154,11 +157,11 @@ much of that space is filled with water.
 MODFLOW is a widely-used groundwater flow model. Here we'll load water content
 and porosity data from a MODFLOW simulation.
 
-.. GENERATED FROM PYTHON SOURCE LINES 117-118
+.. GENERATED FROM PYTHON SOURCE LINES 120-121
 
 These would be your actual data files
 
-.. GENERATED FROM PYTHON SOURCE LINES 118-145
+.. GENERATED FROM PYTHON SOURCE LINES 121-148
 
 .. code-block:: Python
 
@@ -190,7 +193,7 @@ These would be your actual data files
     porosity_data = porosity_loader.load_porosity()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 146-151
+.. GENERATED FROM PYTHON SOURCE LINES 149-154
 
 Visualizing MODFLOW Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -198,11 +201,11 @@ Visualizing MODFLOW Data
 Let's create visualizations of the MODFLOW simulation results. We'll compare
 the porosity distribution with the water content.
 
-.. GENERATED FROM PYTHON SOURCE LINES 153-154
+.. GENERATED FROM PYTHON SOURCE LINES 156-157
 
 Plotting the data
 
-.. GENERATED FROM PYTHON SOURCE LINES 154-171
+.. GENERATED FROM PYTHON SOURCE LINES 157-174
 
 .. code-block:: Python
 
@@ -224,7 +227,7 @@ Plotting the data
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 172-179
+.. GENERATED FROM PYTHON SOURCE LINES 175-182
 
 The MODFLOW results show the comparison between porosity distribution and 
 water content. The water content represents the volumetric water content, 
@@ -234,7 +237,7 @@ which is the product of porosity and saturation.
    :align: center
    :width: 600px
 
-.. GENERATED FROM PYTHON SOURCE LINES 181-202
+.. GENERATED FROM PYTHON SOURCE LINES 184-205
 
 Summary and Next Steps
 ----------------------
@@ -258,7 +261,7 @@ using petrophysical relationships.
 * Perform ERT forward modeling and inversion (see Examples 3-4)
 * Apply time-lapse analysis for monitoring applications (see Examples 4-7)
 
-.. GENERATED FROM PYTHON SOURCE LINES 204-210
+.. GENERATED FROM PYTHON SOURCE LINES 207-213
 
 Download and Links
 ------------------

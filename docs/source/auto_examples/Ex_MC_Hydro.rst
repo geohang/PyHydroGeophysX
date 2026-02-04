@@ -37,7 +37,14 @@ Uncertainty quantification is essential for reliable hydrological
 interpretation of geophysical data, providing confidence bounds on
 water content estimates and identifying regions of high/low certainty.
 
-.. GENERATED FROM PYTHON SOURCE LINES 24-47
+.. GENERATED FROM PYTHON SOURCE LINES 22-23
+
+.. code-block:: Python
+   :dedent: 1
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 25-48
 
 .. code-block:: Python
 
@@ -65,11 +72,11 @@ water content estimates and identifying regions of high/low certainty.
     from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_saturation
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 48-49
+.. GENERATED FROM PYTHON SOURCE LINES 49-50
 
 ### MC sampling for paramters
 
-.. GENERATED FROM PYTHON SOURCE LINES 51-214
+.. GENERATED FROM PYTHON SOURCE LINES 52-215
 
 .. code-block:: Python
 
@@ -237,11 +244,11 @@ water content estimates and identifying regions of high/low certainty.
     print(f"Mean uncertainty (std): {np.mean(water_content_std):.4f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 215-216
+.. GENERATED FROM PYTHON SOURCE LINES 216-217
 
 ### Plot the water content distribution
 
-.. GENERATED FROM PYTHON SOURCE LINES 218-280
+.. GENERATED FROM PYTHON SOURCE LINES 219-281
 
 .. code-block:: Python
 
@@ -308,7 +315,7 @@ water content estimates and identifying regions of high/low certainty.
     plt.tight_layout()
     plt.savefig("results/Structure_WC/timelapse_sat.tiff", dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 281-294
+.. GENERATED FROM PYTHON SOURCE LINES 282-295
 
 Time-Lapse Water Content with Uncertainty
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -324,7 +331,7 @@ temporal changes track seasonal hydrological processes with confidence intervals
 %% [markdown]
 ### Extract the true water content values
 
-.. GENERATED FROM PYTHON SOURCE LINES 296-308
+.. GENERATED FROM PYTHON SOURCE LINES 297-309
 
 .. code-block:: Python
 
@@ -341,11 +348,11 @@ temporal changes track seasonal hydrological processes with confidence intervals
     print(WC_true.shape)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 309-310
+.. GENERATED FROM PYTHON SOURCE LINES 310-311
 
 ### Pick up the comparison locations
 
-.. GENERATED FROM PYTHON SOURCE LINES 312-335
+.. GENERATED FROM PYTHON SOURCE LINES 313-336
 
 .. code-block:: Python
 
@@ -373,7 +380,7 @@ temporal changes track seasonal hydrological processes with confidence intervals
     ax.plot([40],[1590],'*')
     ax.plot([55],[1590],'*')
 
-.. GENERATED FROM PYTHON SOURCE LINES 336-349
+.. GENERATED FROM PYTHON SOURCE LINES 337-350
 
 Monitoring Point Selection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -389,11 +396,11 @@ layer-specific uncertainty patterns in water content estimates.
 %% [markdown]
 ### Function for analyze the time-series data
 
-.. GENERATED FROM PYTHON SOURCE LINES 351-352
+.. GENERATED FROM PYTHON SOURCE LINES 352-353
 
 Modified function to extract time series based on x AND y positions
 
-.. GENERATED FROM PYTHON SOURCE LINES 352-421
+.. GENERATED FROM PYTHON SOURCE LINES 353-422
 
 .. code-block:: Python
 
@@ -467,11 +474,11 @@ Modified function to extract time series based on x AND y positions
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 422-423
+.. GENERATED FROM PYTHON SOURCE LINES 423-424
 
 ### Pick up the locations
 
-.. GENERATED FROM PYTHON SOURCE LINES 425-437
+.. GENERATED FROM PYTHON SOURCE LINES 426-438
 
 .. code-block:: Python
 
@@ -488,15 +495,15 @@ Modified function to extract time series based on x AND y positions
     Pos1_true
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 438-439
+.. GENERATED FROM PYTHON SOURCE LINES 439-440
 
 ### Comparisons of water content
 
-.. GENERATED FROM PYTHON SOURCE LINES 441-442
+.. GENERATED FROM PYTHON SOURCE LINES 442-443
 
 Plot time series with uncertainty bands
 
-.. GENERATED FROM PYTHON SOURCE LINES 442-473
+.. GENERATED FROM PYTHON SOURCE LINES 443-474
 
 .. code-block:: Python
 
@@ -532,7 +539,7 @@ Plot time series with uncertainty bands
     plt.tight_layout()
     plt.savefig("results/Structure_WC/regolith_WC.tiff", dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 474-487
+.. GENERATED FROM PYTHON SOURCE LINES 475-488
 
 Regolith Layer Water Content Uncertainty
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -548,7 +555,7 @@ Regolith Layer Water Content Uncertainty
  %%
 ## Fractured bedrock layer
 
-.. GENERATED FROM PYTHON SOURCE LINES 487-499
+.. GENERATED FROM PYTHON SOURCE LINES 488-500
 
 .. code-block:: Python
 
@@ -565,11 +572,11 @@ Regolith Layer Water Content Uncertainty
     Pos2_true
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 500-501
+.. GENERATED FROM PYTHON SOURCE LINES 501-502
 
 Plot time series with uncertainty bands
 
-.. GENERATED FROM PYTHON SOURCE LINES 501-533
+.. GENERATED FROM PYTHON SOURCE LINES 502-534
 
 .. code-block:: Python
 
@@ -606,7 +613,7 @@ Plot time series with uncertainty bands
 
     plt.savefig("results/Structure_WC/Fracture_WC.tiff", dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 534-547
+.. GENERATED FROM PYTHON SOURCE LINES 535-548
 
 Fractured Bedrock Water Content Uncertainty
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -622,11 +629,11 @@ reduced ERT sensitivity in low-porosity environments.
 %% [markdown]
 ### Estimate Porosity
 
-.. GENERATED FROM PYTHON SOURCE LINES 549-550
+.. GENERATED FROM PYTHON SOURCE LINES 550-551
 
 If we know the water table and then use it to estimate the porosity
 
-.. GENERATED FROM PYTHON SOURCE LINES 550-693
+.. GENERATED FROM PYTHON SOURCE LINES 551-694
 
 .. code-block:: Python
 
@@ -774,11 +781,11 @@ If we know the water table and then use it to estimate the porosity
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 694-695
+.. GENERATED FROM PYTHON SOURCE LINES 695-696
 
 ### Unsaturated zone comparison
 
-.. GENERATED FROM PYTHON SOURCE LINES 697-717
+.. GENERATED FROM PYTHON SOURCE LINES 698-718
 
 .. code-block:: Python
 
@@ -803,7 +810,7 @@ If we know the water table and then use it to estimate the porosity
     plt.ylabel('Porosity (-)')
     plt.legend(frameon=False)
 
-.. GENERATED FROM PYTHON SOURCE LINES 718-731
+.. GENERATED FROM PYTHON SOURCE LINES 719-732
 
 Unsaturated Zone Porosity Estimation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -819,7 +826,7 @@ relationships for partially saturated conditions.
 %% [markdown]
 ### Saturated zone comparison
 
-.. GENERATED FROM PYTHON SOURCE LINES 733-750
+.. GENERATED FROM PYTHON SOURCE LINES 734-751
 
 .. code-block:: Python
 
@@ -841,7 +848,7 @@ relationships for partially saturated conditions.
     plt.ylim(0, 0.35)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 751-763
+.. GENERATED FROM PYTHON SOURCE LINES 752-764
 
 Saturated Zone Porosity Validation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -856,7 +863,7 @@ compared to partially saturated conditions.
    :width: 700px
 %%
 
-.. GENERATED FROM PYTHON SOURCE LINES 765-773
+.. GENERATED FROM PYTHON SOURCE LINES 766-774
 
 Summary
 ~~~~~~~

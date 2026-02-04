@@ -13,6 +13,7 @@ The workflow includes:
 Supports 14+ commercial instruments including E4D, Syscal, ABEM-Lund, Sting, ARES,
 Protocol DC/IP, BERT, DAS-1, Electra, and more.
 """
+# sphinx_gallery_thumbnail_path = '_static/Ex_ERT_data_process_fig_01.png'
 
 # %%
 # Import Required Modules

@@ -36,7 +36,14 @@ SRT is valuable for determining subsurface structure and bedrock interface
 geometry, which provides important constraints for hydrogeophysical modeling
 and interpretation of ERT data.
 
-.. GENERATED FROM PYTHON SOURCE LINES 23-55
+.. GENERATED FROM PYTHON SOURCE LINES 21-22
+
+.. code-block:: Python
+   :dedent: 1
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 24-56
 
 .. code-block:: Python
 
@@ -73,7 +80,7 @@ and interpretation of ERT data.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 56-59
+.. GENERATED FROM PYTHON SOURCE LINES 57-60
 
 .. code-block:: Python
 
@@ -81,11 +88,11 @@ and interpretation of ERT data.
     os.makedirs(output_dir, exist_ok=True)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 60-61
+.. GENERATED FROM PYTHON SOURCE LINES 61-62
 
 ## 1. Follow the workflow to create the mesh and model
 
-.. GENERATED FROM PYTHON SOURCE LINES 63-107
+.. GENERATED FROM PYTHON SOURCE LINES 64-108
 
 .. code-block:: Python
 
@@ -134,11 +141,11 @@ and interpretation of ERT data.
     porosity_profile = interpolator.interpolate_3d_data(porosity)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 108-109
+.. GENERATED FROM PYTHON SOURCE LINES 109-110
 
 ## Creating geometry for the seismic refraction survey
 
-.. GENERATED FROM PYTHON SOURCE LINES 111-140
+.. GENERATED FROM PYTHON SOURCE LINES 112-141
 
 .. code-block:: Python
 
@@ -172,11 +179,11 @@ and interpretation of ERT data.
     )
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 141-142
+.. GENERATED FROM PYTHON SOURCE LINES 142-143
 
 ## Interpolating data to mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 144-193
+.. GENERATED FROM PYTHON SOURCE LINES 145-194
 
 .. code-block:: Python
 
@@ -230,11 +237,11 @@ and interpretation of ERT data.
     saturation = wc_mesh / porosity_mesh
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 194-195
+.. GENERATED FROM PYTHON SOURCE LINES 195-196
 
 ## Convert to P wave velocity using petrophysical model
 
-.. GENERATED FROM PYTHON SOURCE LINES 197-265
+.. GENERATED FROM PYTHON SOURCE LINES 198-266
 
 .. code-block:: Python
 
@@ -307,7 +314,7 @@ and interpretation of ERT data.
     velocity_mesh[bot_mask] = Vp
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 266-270
+.. GENERATED FROM PYTHON SOURCE LINES 267-271
 
 .. code-block:: Python
 
@@ -316,7 +323,7 @@ and interpretation of ERT data.
     print(np.min(velocity_mesh[bot_mask]), np.max(velocity_mesh[bot_mask]))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 271-280
+.. GENERATED FROM PYTHON SOURCE LINES 272-281
 
 .. code-block:: Python
 
@@ -330,7 +337,7 @@ and interpretation of ERT data.
             xlabel="Distance (m)", ylabel="Elevation (m)", 
             label='Velocity (m s$^{-1}$)', cMin=500, cMax=5500)
 
-.. GENERATED FROM PYTHON SOURCE LINES 281-292
+.. GENERATED FROM PYTHON SOURCE LINES 282-293
 
 P-Wave Velocity Model from Petrophysical Conversion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -344,7 +351,7 @@ distinct velocity ranges appropriate for watershed environments.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 294-310
+.. GENERATED FROM PYTHON SOURCE LINES 295-311
 
 .. code-block:: Python
 
@@ -365,7 +372,7 @@ distinct velocity ranges appropriate for watershed environments.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 311-382
+.. GENERATED FROM PYTHON SOURCE LINES 312-383
 
 .. code-block:: Python
 
@@ -441,7 +448,7 @@ distinct velocity ranges appropriate for watershed environments.
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, "velocity_porosity_saturation.tiff"), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 383-396
+.. GENERATED FROM PYTHON SOURCE LINES 384-397
 
 Petrophysical Relationships Analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -457,11 +464,11 @@ computed values, confirming realistic petrophysical transformations.
 %% [markdown]
 ## Short distance seismic survey
 
-.. GENERATED FROM PYTHON SOURCE LINES 398-399
+.. GENERATED FROM PYTHON SOURCE LINES 399-400
 
 ################# Seismic data #####################
 
-.. GENERATED FROM PYTHON SOURCE LINES 399-430
+.. GENERATED FROM PYTHON SOURCE LINES 400-431
 
 .. code-block:: Python
 
@@ -497,7 +504,7 @@ computed values, confirming realistic petrophysical transformations.
     datasrt.save(os.path.join(output_dir, "synthetic_seismic_data.dat"))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 431-437
+.. GENERATED FROM PYTHON SOURCE LINES 432-438
 
 .. code-block:: Python
 
@@ -508,7 +515,7 @@ computed values, confirming realistic petrophysical transformations.
     drawFirstPicks(ax, datasrt)
     fig.savefig(os.path.join(output_dir, "synthetic_seismic_data_first_picks_short.tiff"), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 438-451
+.. GENERATED FROM PYTHON SOURCE LINES 439-452
 
 Short Survey First-Arrival Travel Times  
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -524,7 +531,7 @@ indicating velocity interfaces at shallow depths.
 %% [markdown]
 ## Long distance seismic survey
 
-.. GENERATED FROM PYTHON SOURCE LINES 453-475
+.. GENERATED FROM PYTHON SOURCE LINES 454-476
 
 .. code-block:: Python
 
@@ -551,7 +558,7 @@ indicating velocity interfaces at shallow depths.
     scheme.setSensors(pos)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 476-483
+.. GENERATED FROM PYTHON SOURCE LINES 477-484
 
 .. code-block:: Python
 
@@ -563,11 +570,11 @@ indicating velocity interfaces at shallow depths.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 484-485
+.. GENERATED FROM PYTHON SOURCE LINES 485-486
 
 ## SRT one step from HM to GM
 
-.. GENERATED FROM PYTHON SOURCE LINES 487-606
+.. GENERATED FROM PYTHON SOURCE LINES 488-607
 
 .. code-block:: Python
 
@@ -691,7 +698,7 @@ indicating velocity interfaces at shallow depths.
 
     plt.tight_layout()
 
-.. GENERATED FROM PYTHON SOURCE LINES 607-618
+.. GENERATED FROM PYTHON SOURCE LINES 608-619
 
 One-Step Integrated Workflow Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -705,7 +712,7 @@ for tomographic inversion and interface extraction.
    :align: center
    :width: 800px
 
-.. GENERATED FROM PYTHON SOURCE LINES 620-627
+.. GENERATED FROM PYTHON SOURCE LINES 621-628
 
 Summary
 ~~~~~~~

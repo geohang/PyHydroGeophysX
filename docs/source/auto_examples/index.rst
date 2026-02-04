@@ -32,11 +32,6 @@ The examples are organized to show the complete workflow from loading hydrologic
 * **Ex_Structure_resinv.py**: Structure-constrained resistivity inversion
 * **Ex_MC_Hydro.py**: Monte Carlo uncertainty quantification for water content estimation
 
-**3D and Electromagnetic Methods (NEW):**
-
-* **Ex_3D_ERT_forward.py**: 3D ERT forward modeling with MODFLOW integration, mesh creation using Mesh3DCreator, and PyVista visualization
-* **Ex_TDEM_workflow.py**: Time-Domain Electromagnetic (TDEM) forward modeling and inversion from hydrological models using SimPEG
-
 Each example includes detailed comments and demonstrates best practices for watershed geophysical monitoring applications.
 
 
@@ -65,18 +60,18 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load and process outputs from different  hydrological models using PyHydroGeophysX. We show examples for both  ParFlow and MODFLOW models.">
+    <div class="sphx-glr-thumbcontainer" tooltip="Run:     conda activate pg  # or your env     python examples/smoke_test_workflows.py">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_model_output_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_smoke_test_workflows_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_model_output.py`
+  :ref:`sphx_glr_auto_examples_smoke_test_workflows.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex. Loading and Processing Hydrological Model Outputs</div>
+      <div class="sphx-glr-thumbnail-title">Quick smoke tests for PyHydroGeophysX agent workflows (non-Streamlit).</div>
     </div>
 
 
@@ -94,6 +89,40 @@ Each example includes detailed comments and demonstrates best practices for wate
 .. raw:: html
 
       <div class="sphx-glr-thumbnail-title">Ex. Structure-Constrained Resistivity Inversion</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load and process outputs from different  hydrological models using PyHydroGeophysX. We show examples for both  ParFlow and MODFLOW models.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_model_output_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Ex_model_output.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex. Loading and Processing Hydrological Model Outputs</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Runs MODFLOW and ParFlow model output loading (and resistivity conversion) using the unified workflow dispatcher.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_smoke_test_model_output_agent_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_smoke_test_model_output_agent.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Smoke test for hydrological model output workflow.</div>
     </div>
 
 
@@ -145,6 +174,23 @@ Each example includes detailed comments and demonstrates best practices for wate
 .. raw:: html
 
       <div class="sphx-glr-thumbnail-title">Ex. Time-Lapse ERT Inversion Techniques</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for integrating hydrological  model outputs (MODFLOW water content) with Time-Domain Electromagnetic (TDEM)  forward modeling and inversion using SimPEG and PyHydroGeophysX.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_TDEM_workflow_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Ex_TDEM_workflow.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</div>
     </div>
 
 
@@ -218,7 +264,7 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates complete 3D ERT forward modeling with MODFLOW integration, mesh creation using Mesh3DCreator, topography handling, and PyVista visualization.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for 3D ERT forward modeling using PyHydroGeophysX, integrating hydrological model outputs.">
 
 .. only:: html
 
@@ -229,24 +275,24 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex. 3D ERT Forward Modeling with MODFLOW Integration</div>
+      <div class="sphx-glr-thumbnail-title">3D ERT Forward Modeling with MODFLOW Integration</div>
     </div>
 
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for TDEM forward modeling and inversion from hydrological models using SimPEG and PyHydroGeophysX.">
+    <div class="sphx-glr-thumbcontainer" tooltip="Natural-language interface for geophysical workflows. Usage: streamlit run app_geophysics_workflow.py">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_TDEM_workflow_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_app_geophysics_workflow_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_TDEM_workflow.py`
+  :ref:`sphx_glr_auto_examples_app_geophysics_workflow.py`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</div>
+      <div class="sphx-glr-thumbnail-title">PyHydroGeophysX Streamlit Web Application</div>
     </div>
 
 
@@ -261,17 +307,20 @@ Each example includes detailed comments and demonstrates best practices for wate
    :hidden:
 
    /auto_examples/Ex_ERT_data_process
-   /auto_examples/Ex_model_output
+   /auto_examples/smoke_test_workflows
    /auto_examples/Ex_Structure_resinv
+   /auto_examples/Ex_model_output
+   /auto_examples/smoke_test_model_output_agent
    /auto_examples/Ex_SRT_inv
    /auto_examples/Ex_structure_TLresinv
    /auto_examples/Ex_TL_inversion
+   /auto_examples/Ex_TDEM_workflow
    /auto_examples/EX_SRT_forward
    /auto_examples/Ex_Time_lapse_measurement
    /auto_examples/Ex_ERT_workflow
    /auto_examples/Ex_MC_Hydro
    /auto_examples/Ex_3D_ERT_forward
-   /auto_examples/Ex_TDEM_workflow
+   /auto_examples/app_geophysics_workflow
 
 
 .. only:: html

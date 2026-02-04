@@ -49,7 +49,15 @@ This technique is particularly valuable for watershed monitoring, groundwater
 management, and landslide early warning systems where geological structure
 plays a critical role in subsurface flow patterns.
 
-.. GENERATED FROM PYTHON SOURCE LINES 38-63
+.. GENERATED FROM PYTHON SOURCE LINES 35-37
+
+.. code-block:: Python
+   :dedent: 1
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 39-64
 
 .. code-block:: Python
 
@@ -79,7 +87,7 @@ plays a critical role in subsurface flow patterns.
     from PyHydroGeophysX.inversion.windowed import WindowedTimeLapseERTInversion
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 64-96
+.. GENERATED FROM PYTHON SOURCE LINES 65-97
 
 .. code-block:: Python
 
@@ -116,7 +124,7 @@ plays a critical role in subsurface flow patterns.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 97-132
+.. GENERATED FROM PYTHON SOURCE LINES 98-133
 
 .. code-block:: Python
 
@@ -156,7 +164,7 @@ plays a critical role in subsurface flow patterns.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 133-138
+.. GENERATED FROM PYTHON SOURCE LINES 134-139
 
 .. code-block:: Python
 
@@ -166,7 +174,7 @@ plays a critical role in subsurface flow patterns.
     result.all_coverage.shape
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 139-143
+.. GENERATED FROM PYTHON SOURCE LINES 140-144
 
 .. code-block:: Python
 
@@ -175,7 +183,7 @@ plays a critical role in subsurface flow patterns.
     result.mesh.save("results/Structure_WC/mesh_res.bms")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 144-215
+.. GENERATED FROM PYTHON SOURCE LINES 145-216
 
 .. code-block:: Python
 
@@ -251,7 +259,7 @@ plays a critical role in subsurface flow patterns.
     plt.savefig("results/Structure_WC/timelapse_ert_with structure.tiff", dpi=300, bbox_inches='tight')
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 216-244
+.. GENERATED FROM PYTHON SOURCE LINES 217-245
 
 Structure-Constrained Time-Lapse Inversion Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -282,7 +290,7 @@ the 12-month monitoring period.
 %%
 plot the true resistivity model
 
-.. GENERATED FROM PYTHON SOURCE LINES 244-287
+.. GENERATED FROM PYTHON SOURCE LINES 245-288
 
 .. code-block:: Python
 
@@ -330,7 +338,7 @@ plot the true resistivity model
             cbar.remove()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 288-310
+.. GENERATED FROM PYTHON SOURCE LINES 289-311
 
 True Resistivity Model Comparison
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -355,7 +363,7 @@ the value of integrating geophysical constraints in time-lapse monitoring.
    :align: center
    :width: 900px
 
-.. GENERATED FROM PYTHON SOURCE LINES 313-321
+.. GENERATED FROM PYTHON SOURCE LINES 314-322
 
 Summary and Best Practices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

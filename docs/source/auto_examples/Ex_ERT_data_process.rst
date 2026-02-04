@@ -32,13 +32,20 @@ The workflow includes:
 Supports 14+ commercial instruments including E4D, Syscal, ABEM-Lund, Sting, ARES,
 Protocol DC/IP, BERT, DAS-1, Electra, and more.
 
-.. GENERATED FROM PYTHON SOURCE LINES 18-21
+.. GENERATED FROM PYTHON SOURCE LINES 16-17
+
+.. code-block:: Python
+   :dedent: 1
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 19-22
 
 Import Required Modules
 -----------------------
 Import the ERT data processing functions and data structures.
 
-.. GENERATED FROM PYTHON SOURCE LINES 21-42
+.. GENERATED FROM PYTHON SOURCE LINES 22-43
 
 .. code-block:: Python
 
@@ -64,7 +71,7 @@ Import the ERT data processing functions and data structures.
     )
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 43-50
+.. GENERATED FROM PYTHON SOURCE LINES 44-51
 
 Load ERT Field Data
 -------------------
@@ -74,7 +81,7 @@ Load ERT data from E4D instrument format. The function automatically handles:
 - Flexible column name detection
 - Data validation and error checking
 
-.. GENERATED FROM PYTHON SOURCE LINES 50-63
+.. GENERATED FROM PYTHON SOURCE LINES 51-64
 
 .. code-block:: Python
 
@@ -92,7 +99,7 @@ Load ERT data from E4D instrument format. The function automatically handles:
     print(f"Coordinate system: {ert.crs}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 64-70
+.. GENERATED FROM PYTHON SOURCE LINES 65-71
 
 Quality Control and Visualization
 ----------------------------------
@@ -101,7 +108,7 @@ Generate diagnostic plots and statistical summaries:
 - Pseudosection visualization
 - Summary statistics (JSON)
 
-.. GENERATED FROM PYTHON SOURCE LINES 70-77
+.. GENERATED FROM PYTHON SOURCE LINES 71-78
 
 .. code-block:: Python
 
@@ -113,7 +120,7 @@ Generate diagnostic plots and statistical summaries:
         print(f"  {artifact_type}: {filepath}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 78-84
+.. GENERATED FROM PYTHON SOURCE LINES 79-85
 
 Export for Inversion
 --------------------
@@ -122,7 +129,7 @@ Export to pyGIMLi/BERT format with:
 - Measurement data (13 columns including geometric factors, resistance, validity)
 - Compatible with pyGIMLi and BERT inversion codes
 
-.. GENERATED FROM PYTHON SOURCE LINES 84-95
+.. GENERATED FROM PYTHON SOURCE LINES 85-96
 
 .. code-block:: Python
 
@@ -138,7 +145,7 @@ Export to pyGIMLi/BERT format with:
     print("\nReady for inversion workflow!")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 96-109
+.. GENERATED FROM PYTHON SOURCE LINES 97-110
 
 Alternative: UTM Coordinates
 ----------------------------
@@ -154,7 +161,7 @@ For data with projected coordinates (e.g., UTM):
         epsg=32615
     )
 
-.. GENERATED FROM PYTHON SOURCE LINES 111-141
+.. GENERATED FROM PYTHON SOURCE LINES 112-142
 
 Time-Lapse Processing
 ---------------------
@@ -187,7 +194,7 @@ For time-lapse monitoring, process each timestep separately:
             filename=f"survey_{timestamp.strftime('%Y%m%d_%H%M')}.dat"
         )
 
-.. GENERATED FROM PYTHON SOURCE LINES 143-164
+.. GENERATED FROM PYTHON SOURCE LINES 144-165
 
 Supported Instruments
 ---------------------
