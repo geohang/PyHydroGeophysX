@@ -218,6 +218,18 @@ plt.tight_layout()
 plt.savefig(os.path.join(output_dir, "true_model_profiles.png"), dpi=150)
 plt.show()
 
+###############################################################################
+# True Model Profiles
+# ~~~~~~~~~~~~~~~~~~~
+#
+# Vertical profiles of porosity, water content, saturation, and conductivity
+# extracted from the MODFLOW model. The conductivity is calculated using the
+# Waxman-Smits petrophysical model with layer-specific parameters.
+#
+# .. image:: /auto_examples/images/Ex_TDEM_workflow_fig_01.png
+#    :align: center
+#    :width: 700px
+
 # %% [markdown]
 # ## Step 5: TDEM Forward Modeling
 # 
@@ -284,6 +296,18 @@ ax.grid(True, which='both', alpha=0.5)
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, "synthetic_tdem_data.png"), dpi=150)
 plt.show()
+
+###############################################################################
+# Synthetic TDEM Data
+# ~~~~~~~~~~~~~~~~~~~
+#
+# TDEM sounding data generated from the MODFLOW-derived conductivity model.
+# The clean forward response (blue line), noisy observations (black circles),
+# and uncertainty bounds (gray shading) are shown on log-log axes.
+#
+# .. image:: /auto_examples/images/Ex_TDEM_workflow_fig_02.png
+#    :align: center
+#    :width: 700px
 
 # %% [markdown]
 # ## Step 7: Save Synthetic Data
