@@ -70,15 +70,21 @@ Quick Example
 
 .. toctree::
    :maxdepth: 2
-   :caption: API Reference
+   :caption: Multi-Agent AI System
 
-   api/index
+   agents/index
 
 .. toctree::
    :maxdepth: 2
-   :caption: Examples
+   :caption: Examples Gallery
 
    auto_examples/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference
+
+   api/index
 
 Indices and tables
 ==================

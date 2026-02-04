@@ -216,6 +216,40 @@ Each example includes detailed comments and demonstrates best practices for wate
     </div>
 
 
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates complete 3D ERT forward modeling with MODFLOW integration, mesh creation using Mesh3DCreator, topography handling, and PyVista visualization.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_3D_ERT_forward_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Ex_3D_ERT_forward.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex. 3D ERT Forward Modeling with MODFLOW Integration</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for TDEM forward modeling and inversion from hydrological models using SimPEG and PyHydroGeophysX.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_TDEM_workflow_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Ex_TDEM_workflow.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</div>
+    </div>
+
+
 .. thumbnail-parent-div-close
 
 .. raw:: html
@@ -236,6 +270,8 @@ Each example includes detailed comments and demonstrates best practices for wate
    /auto_examples/Ex_Time_lapse_measurement
    /auto_examples/Ex_ERT_workflow
    /auto_examples/Ex_MC_Hydro
+   /auto_examples/Ex_3D_ERT_forward
+   /auto_examples/Ex_TDEM_workflow
 
 
 .. only:: html
