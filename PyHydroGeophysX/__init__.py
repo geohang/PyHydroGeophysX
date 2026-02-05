@@ -269,3 +269,71 @@ try:
 except ImportError:
     # Agents module requires openai package
     pass
+
+# Additional forward modeling (FDEM)
+try:
+    from PyHydroGeophysX.forward.fdem_forward import (
+        FDEMForwardModeling,
+        FDEMSurveyConfig,
+    )
+    __all__ += [
+        "FDEMForwardModeling",
+        "FDEMSurveyConfig",
+    ]
+except ImportError:
+    FDEMForwardModeling = None
+    FDEMSurveyConfig = None
+
+# Additional inversion modules
+try:
+    from PyHydroGeophysX.inversion.srt_inversion import SRTInversion
+    from PyHydroGeophysX.inversion.srt_time_lapse import TimeLapseSRTInversion
+    from PyHydroGeophysX.inversion.fdem_inversion import (
+        FDEMInversion,
+        FDEMInversionResult,
+    )
+    from PyHydroGeophysX.inversion.multi_method import GeophysicalInversion
+    from PyHydroGeophysX.inversion.cross_constraints import (
+        StructuralConstraint,
+        PetrophysicalCoupling,
+    )
+    __all__ += [
+        "SRTInversion",
+        "TimeLapseSRTInversion",
+        "FDEMInversion",
+        "FDEMInversionResult",
+        "GeophysicalInversion",
+        "StructuralConstraint",
+        "PetrophysicalCoupling",
+    ]
+except ImportError:
+    SRTInversion = None
+    TimeLapseSRTInversion = None
+    FDEMInversion = None
+    FDEMInversionResult = None
+    GeophysicalInversion = None
+    StructuralConstraint = None
+    PetrophysicalCoupling = None
+
+# Additional multi-method agent
+try:
+    from .agents.geophysical_inversion_agent import GeophysicalInversionAgent
+    __all__ += [
+        "GeophysicalInversionAgent",
+    ]
+except ImportError:
+    GeophysicalInversionAgent = None
+
+# Additional joint inversion module
+try:
+    from PyHydroGeophysX.inversion.joint_ert_srt import (
+        JointERTSRTInversion,
+        JointERTSRTResult,
+    )
+    __all__ += [
+        "JointERTSRTInversion",
+        "JointERTSRTResult",
+    ]
+except ImportError:
+    JointERTSRTInversion = None
+    JointERTSRTResult = None

@@ -42,3 +42,11 @@ __all__ = [
     'create_tdem_survey',
     'hydro_to_tdem'
 ]
+
+# FDEM forward modeling
+from PyHydroGeophysX.forward.fdem_forward import FDEMForwardModeling, FDEMSurveyConfig
+
+__all__ += [
+    'FDEMForwardModeling',
+    'FDEMSurveyConfig',
+]

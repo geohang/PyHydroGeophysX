@@ -48,3 +48,9 @@ __all__ = [
     'TDEMAgent',
     'ModelOutputAgent'
 ]
+
+from .geophysical_inversion_agent import GeophysicalInversionAgent
+
+__all__ += [
+    'GeophysicalInversionAgent'
+]

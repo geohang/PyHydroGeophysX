@@ -10,6 +10,13 @@ Install from PyPI
 
    pip install pyhydrogeophysx
 
+Install with geophysics engines (recommended)
+---------------------------------------------
+
+.. code-block:: bash
+
+   pip install "pyhydrogeophysx[geophysics]"
+
 Install from Source
 -------------------
 
@@ -24,18 +31,20 @@ Core Dependencies
 
 .. code-block:: bash
 
-   pip install numpy scipy matplotlib pygimli joblib tqdm
+   pip install numpy scipy matplotlib tqdm
 
 Optional Dependencies
 ---------------------
 
+- PyGIMLi for ERT/SRT forward and inversion
+- SimPEG for TDEM/FDEM workflows
 - RESIPY for field ERT data processing
-- SimPEG for TDEM workflows
 - CuPy for GPU acceleration
+- joblib for parallel CPU workflows
 
 .. code-block:: bash
 
-   pip install resipy simpeg
+   pip install pygimli simpeg resipy joblib
    pip install cupy-cuda11x  # Replace with your CUDA version
 
 Verification

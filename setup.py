@@ -46,6 +46,7 @@ setup(
     extras_require={
         "geophysics": [
             "pygimli>=1.5",   # Optional, heavy dependencies for real geophysical usage
+            "simpeg>=0.20",   # EM forward/inversion engines (TDEM/FDEM)
             "resipy>=3.4.0",  # ERT data processing and inversion
             "flopy",
             "cupy",
@@ -85,7 +86,7 @@ setup(
         ],
         "all": [
             # Combines all optional dependencies
-            "pygimli>=1.5", "resipy>=3.4.0", "flopy", "cupy", "parflow", "joblib", "meshop",
+            "pygimli>=1.5", "simpeg>=0.20", "resipy>=3.4.0", "flopy", "cupy", "parflow", "joblib", "meshop",
             "openai>=1.0.0", "google-generativeai>=0.3.0", "anthropic>=0.18.0", "markdown>=3.0",
             "pydaymet>=0.16.0", "pandas>=1.3.0", "xarray>=0.19.0",
             "sphinx>=7.1.2", "sphinx-rtd-theme>=1.3.0", "myst-parser>=2.0.0",

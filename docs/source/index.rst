@@ -79,6 +79,22 @@ User Journeys
 
       Use language-guided workflows and the hosted Streamlit app.
 
+   .. grid-item-card:: Joint ERT + SRT Inversion
+      :link: tutorials/joint_inversion
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Couple ERT and SRT with structure constraints and geostatistics.
+
+New In This Release
+-------------------
+
+- Dedicated ``SRTInversion`` and ``TimeLapseSRTInversion`` classes.
+- New ``FDEMForwardModeling`` and ``FDEMInversion`` workflow support.
+- Unified dispatcher: ``GeophysicalInversion`` for ``ert/srt/tdem/fdem/joint``.
+- New ``JointERTSRTInversion`` with cross-gradient and geostatistical constraints.
+- Cross-method utilities in ``StructuralConstraint`` and ``PetrophysicalCoupling``.
+
 Quickstart Code
 ---------------
 

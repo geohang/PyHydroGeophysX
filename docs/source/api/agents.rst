@@ -82,6 +82,14 @@ TDEMAgent
    :undoc-members:
    :show-inheritance:
 
+GeophysicalInversionAgent
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: PyHydroGeophysX.agents.geophysical_inversion_agent
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 DataFusionAgent
 ^^^^^^^^^^^^^^^
 

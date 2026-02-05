@@ -47,6 +47,7 @@ dependencies = [
 [project.optional-dependencies]
 geophysics = [
     "pygimli>=1.5",
+    "simpeg>=0.20",
     "resipy>=3.4.0",
     "flopy",
     "joblib",
@@ -62,6 +63,7 @@ dev = [
 ]
 all = [
     "pygimli>=1.5",
+    "simpeg>=0.20",
     "resipy>=3.4.0",
     "flopy",
     "joblib",
