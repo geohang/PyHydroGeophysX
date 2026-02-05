@@ -57,7 +57,7 @@ Where to Go Next
 
 Tutorials
 
-- :doc:`/tutorials/tutorial_field_ert_qc`
+- :doc:`/tutorials/field_ert_data_qc`
 
 Best examples
 

@@ -6,7 +6,7 @@
 This example demonstrates the complete workflow for 3D ERT forward modeling
 using PyHydroGeophysX, integrating hydrological model outputs.
 """
-# sphinx_gallery_thumbnail_path = '_static/sphx_glr_Ex_3D_ERT_forward_thumb.png'
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_3D_ERT_forward_fig_01.png'
 
 # %% [markdown]
 # # 3D ERT Forward Modeling Workflow with Topography

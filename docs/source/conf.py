@@ -27,7 +27,7 @@ extensions = [
 sphinx_gallery_conf = {
     'examples_dirs': '../../examples',           # Path to example scripts
     'gallery_dirs': 'auto_examples',             # Output gallery directory
-    'filename_pattern': '/Ex.*\.py$',            # Pattern to match example files
+    'filename_pattern': '/(Ex|EX|smoke_test|app_geophysics_workflow).*\.py$',
     'plot_gallery': False,                       # Don't execute scripts (use pre-generated figures)
     'download_all_examples': True,               # Allow downloading scripts
     'abort_on_example_error': False,             # Continue on errors

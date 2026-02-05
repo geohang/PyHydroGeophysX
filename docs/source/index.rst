@@ -1,34 +1,8 @@
 PyHydroGeophysX
 ===============
 
-PyHydroGeophysX is an open-source Python toolkit for turning hydrologic model outputs into
-geophysical responses and inversions (ERT, SRT, TDEM). It is built for watershed and
-critical-zone researchers who need repeatable hydro-to-geophysics workflows.
-
-Key Workflows
--------------
-
-- Field ERT ingestion, QC, visualization, and export for inversion (RESIPY-compatible).
-- Hydrologic model outputs (MODFLOW/ParFlow) -> petrophysics -> 2D/3D forward responses
-  for ERT/SRT/EM, including time-lapse monitoring and survey sensitivity.
-- Single-time, time-lapse, and windowed inversions with temporal regularization for
-  monitoring datasets.
-- Structure-constrained inversion and GM -> HM transfer: extract seismic interfaces and
-  velocity structure to build meshes and parameterize hydrologic models.
-- Multi-physics and uncertainty workflows: integrate ERT/SRT/EM and Monte Carlo to
-  quantify parameter uncertainty.
-
-Quickstart
-----------
-
-.. code-block:: python
-
-   import numpy as np
-   from PyHydroGeophysX.petrophysics import water_content_to_resistivity
-
-   wc = np.linspace(0.1, 0.4, 6).reshape(2, 3)
-   rho = water_content_to_resistivity(wc, rhos=100.0, n=2.0, porosity=0.3)
-   print(rho)
+PyHydroGeophysX turns hydrology model outputs into geophysical responses and inversions.
+Use this page as a start point for first-time setup, guided workflows, and agent tools.
 
 Start Here
 ----------
@@ -41,50 +15,94 @@ Start Here
       :link-type: doc
       :class-card: sd-card-hover
 
-      Install PyHydroGeophysX and optional dependencies.
+      Install the package and optional dependencies.
 
-   .. grid-item-card:: Documentation
-      :link: documentation/index
+   .. grid-item-card:: Quickstart
+      :link: quickstart
       :link-type: doc
       :class-card: sd-card-hover
 
-      User guide and task-oriented references.
+      Run a small, realistic first example.
 
    .. grid-item-card:: Tutorials
       :link: tutorials/index
       :link-type: doc
       :class-card: sd-card-hover
 
-      End-to-end walkthroughs.
+      Follow task-oriented workflow walkthroughs.
 
-   .. grid-item-card:: Examples
+   .. grid-item-card:: Examples Gallery
       :link: auto_examples/index
       :link-type: doc
       :class-card: sd-card-hover
 
-      Gallery of runnable scripts.
+      Browse full scripts with figures and outputs.
 
    .. grid-item-card:: API Reference
       :link: api/index
       :link-type: doc
       :class-card: sd-card-hover
 
-      Complete Python API docs.
+      Explore modules, classes, and functions.
 
-   .. grid-item-card:: Agents
-      :link: documentation/agents
+   .. grid-item-card:: Agent Web App
+      :link: agents/webapp
       :link-type: doc
       :class-card: sd-card-hover
 
-      Multi-agent system usage and limitations.
+      Open the Streamlit app and agent usage guidance.
+
+User Journeys
+-------------
+
+.. grid:: 1 1 3 3
+   :gutter: 2
+
+   .. grid-item-card:: Hydrology -> ERT Workflow
+      :link: tutorials/hydrology_to_ert
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Load MODFLOW or ParFlow output, convert with petrophysics, and run ERT workflows.
+
+   .. grid-item-card:: Hydrology -> TDEM Workflow
+      :link: tutorials/hydrology_to_tdem
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Build layered conductivity models and run TDEM forward and inversion steps.
+
+   .. grid-item-card:: Agents and LLM Workflows
+      :link: tutorials/agent_workflows
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Use language-guided workflows and the hosted Streamlit app.
+
+Quickstart Code
+---------------
+
+.. code-block:: python
+
+   import numpy as np
+   from PyHydroGeophysX.petrophysics import water_content_to_resistivity
+
+   wc = np.array([[0.22, 0.28], [0.31, 0.35]])
+   rho = water_content_to_resistivity(wc, rhos=100.0, n=2.0, porosity=0.3)
+   print(rho)
+
+Web App
+-------
+
+Open the hosted app: `pyhydrogeophysx.streamlit.app <https://pyhydrogeophysx.streamlit.app/>`_
 
 .. toctree::
    :maxdepth: 1
    :hidden:
 
-   Home <self>
-   Documentation <documentation/index>
    Installation <installation>
-   Tutorials <tutorials/index>
+   Quickstart <quickstart>
+   Tutorials/Workflows <tutorials/index>
    Examples <auto_examples/index>
    API Reference <api/index>
+   Agents + Web App <agents/index>

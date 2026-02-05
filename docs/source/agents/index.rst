@@ -1,46 +1,36 @@
-Multi-Agent AI System
-=====================
+Agents and Web App
+==================
 
-PyHydroGeophysX includes a powerful multi-agent system for automating geophysical
-workflows using Large Language Models (LLMs). The system supports multiple providers
-including OpenAI GPT, Google Gemini, and Anthropic Claude.
+PyHydroGeophysX includes a multi-agent system for natural-language hydrogeophysical workflows.
+Start with the hosted app for quick use, then move to architecture and workflow docs.
+
+.. grid:: 1 2 2 2
+   :gutter: 2
+
+   .. grid-item-card:: Open Agent Web App
+      :link: webapp
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Launch guidance, required inputs, and direct app link.
+
+   .. grid-item-card:: Agent Quick Start
+      :link: quick_start
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Configure providers and run your first agent workflow.
 
 .. image:: /_static/agent.png
-   :alt: Multi-Agent System Overview
+   :alt: Multi-agent workflow overview
    :align: center
    :width: 600px
-
-|
-
-Key Capabilities
-----------------
-
-* **Natural Language Interface**: Describe workflows in plain English
-* **Automated Workflow Orchestration**: Intelligent agent coordination
-* **Multi-Method Data Fusion**: Combine ERT, seismic, and TDEM data
-* **Uncertainty Quantification**: Monte Carlo methods with layer-specific parameters
-* **Quality Control**: Automatic inversion evaluation and parameter optimization
-* **Comprehensive Reporting**: Generate publication-ready reports
-
-Agent Categories
-----------------
-
-**Input/Configuration Agents**
-    Parse natural language requests and load data from various instruments
-
-**Processing/Inversion Agents**
-    Perform ERT, seismic, and TDEM inversions with quality control
-
-**Conversion/Analysis Agents**
-    Convert geophysical properties to hydrological parameters
-
-**Output/Reporting Agents**
-    Generate comprehensive reports and visualizations
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents
 
+   webapp
    overview
    quick_start
    architecture

@@ -30,4 +30,6 @@ More Details
 ------------
 
 - :doc:`/agents/index`
+- :doc:`/agents/webapp`
+- Hosted app: `https://pyhydrogeophysx.streamlit.app/ <https://pyhydrogeophysx.streamlit.app/>`_
 - See `examples/Ex_multi_agent_workflow.ipynb` for a full workflow notebook.

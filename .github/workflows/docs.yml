@@ -57,35 +57,9 @@ jobs:
         mkdir -p docs/source/auto_examples/images
         mkdir -p docs/source/auto_examples/images/thumb
 
-    - name: Check for missing image references
+    - name: Check source image references
       run: |
-        echo "Running image reference check..."
-        python tools/check_docs_images.py
-        echo "All image references are valid"
-
-    - name: Verify key thumbnails exist
-      run: |
-        echo "Verifying gallery thumbnails..."
-        THUMBS_DIR="docs/source/auto_examples/images/thumb"
-        MISSING=0
-        
-        for thumb in \
-          sphx_glr_Ex_ERT_workflow_thumb.png \
-          sphx_glr_Ex_model_output_thumb.png \
-          sphx_glr_Ex_TDEM_workflow_thumb.png \
-          sphx_glr_Ex_3D_ERT_forward_thumb.png \
-          sphx_glr_Ex_ERT_data_process_thumb.png; do
-          if [ ! -f "$THUMBS_DIR/$thumb" ]; then
-            echo "Warning: Missing thumbnail: $thumb"
-            MISSING=$((MISSING + 1))
-          fi
-        done
-        
-        if [ $MISSING -gt 0 ]; then
-          echo "Warning: $MISSING thumbnails missing (will use placeholders)"
-        else
-          echo "All key thumbnails present"
-        fi
+        python tools/check_docs_images.py --skip-build-check
 
     - name: Check for pre-generated figures
       run: |
@@ -96,14 +70,7 @@ jobs:
           FIGURE_COUNT=$(ls docs/source/auto_examples/images/*.png | wc -l)
           echo "Total figures: $FIGURE_COUNT"
           
-          echo "Checking thumbnails..."
-          if ls docs/source/auto_examples/images/thumb/*.png 1> /dev/null 2>&1; then
-            echo "Found thumbnail images"
-            THUMB_COUNT=$(ls docs/source/auto_examples/images/thumb/*.png | wc -l)
-            echo "Total thumbnails: $THUMB_COUNT"
-          else
-            echo "No thumbnails found - will use auto-generated ones"
-          fi
+          echo "Thumbnail images are generated during Sphinx Gallery build."
         else
           echo "No pre-generated figures found"
           echo "Examples will show code only without figures"
@@ -112,7 +79,7 @@ jobs:
     - name: List example files
       run: |
         echo "Available example files:"
-        ls -la examples/Ex*.py || echo "No example files found"
+        ls -la examples/*.py || echo "No example files found"
 
     - name: Build documentation
       run: |
@@ -121,35 +88,39 @@ jobs:
         sphinx-apidoc -f -o source/api ../PyHydroGeophysX
         
         echo "Building HTML documentation with Sphinx Gallery..."
-        sphinx-build -b html source _build/html --keep-going -v -E
+        sphinx-build -b html source build/html --keep-going -v -E
         
         echo "Build completed with exit code: $?"
+
+    - name: Check built image references
+      run: |
+        python tools/check_docs_images.py --build-dir docs/build/html --require-build
 
     - name: Linkcheck
       run: |
         cd docs
-        sphinx-build -b linkcheck source _build/linkcheck
+        sphinx-build -b linkcheck source build/linkcheck
 
     - name: Check build results
       run: |
         echo "Checking build outputs..."
         
-        if [ -f docs/_build/html/index.html ]; then
+        if [ -f docs/build/html/index.html ]; then
           echo "Main documentation built successfully"
         else
           echo "ERROR: Main documentation not found"
         fi
         
-        if [ -f docs/_build/html/auto_examples/index.html ]; then
+        if [ -f docs/build/html/auto_examples/index.html ]; then
           echo "Examples gallery created"
           
           # Count example pages
-          EXAMPLE_COUNT=$(find docs/_build/html/auto_examples/ -name "Ex*.html" | wc -l)
+          EXAMPLE_COUNT=$(find docs/build/html/auto_examples/ -name "Ex*.html" | wc -l)
           echo "Example pages generated: $EXAMPLE_COUNT"
           
           # Check for figures in build
-          if ls docs/_build/html/auto_examples/images/*.png 1> /dev/null 2>&1; then
-            BUILD_FIGURE_COUNT=$(ls docs/_build/html/auto_examples/images/*.png | wc -l)
+          if ls docs/build/html/auto_examples/images/*.png 1> /dev/null 2>&1; then
+            BUILD_FIGURE_COUNT=$(ls docs/build/html/auto_examples/images/*.png | wc -l)
             echo "Figures included in build: $BUILD_FIGURE_COUNT"
           else
             echo "No figures in build directory"
@@ -160,19 +131,19 @@ jobs:
         
         # List some key files for debugging
         echo "Key documentation files:"
-        find docs/_build/html -name "*.html" -type f | head -10
+        find docs/build/html -name "*.html" -type f | head -10
 
     - name: Verify Sphinx Gallery output
       run: |
         echo "Sphinx Gallery specific checks..."
         
-        if [ -d docs/_build/html/auto_examples ]; then
+        if [ -d docs/build/html/auto_examples ]; then
           echo "Gallery directory structure:"
-          find docs/_build/html/auto_examples -type f -name "*.html" | head -5
+          find docs/build/html/auto_examples -type f -name "*.html" | head -5
           
-          if [ -d docs/_build/html/auto_examples/images ]; then
+          if [ -d docs/build/html/auto_examples/images ]; then
             echo "Images directory exists in build"
-            ls docs/_build/html/auto_examples/images/ | head -5
+            ls docs/build/html/auto_examples/images/ | head -5
           fi
         fi
 
@@ -181,7 +152,7 @@ jobs:
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/_build/html
+        publish_dir: ./docs/build/html
         force_orphan: true
 
     - name: Comment deployment info

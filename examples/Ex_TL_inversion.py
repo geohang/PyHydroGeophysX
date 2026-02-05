@@ -17,7 +17,7 @@ content changes and understanding hydrological processes in watersheds.
 The temporal regularization helps maintain consistency between consecutive
 time steps while allowing for realistic changes.
 """
-# sphinx_gallery_thumbnail_path = '_static/Ex_TL_inversion_fig_01.png'
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_TL_inversion_fig_01.png'
 
 import os
 import sys

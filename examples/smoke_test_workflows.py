@@ -5,6 +5,7 @@ Run:
     conda activate pg  # or your env
     python examples/smoke_test_workflows.py
 """
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/smoke_test_workflows_fig_01.png'
 
 from pathlib import Path
 import sys

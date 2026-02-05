@@ -17,7 +17,7 @@ The workflow includes:
 
 
 """
-# sphinx_gallery_thumbnail_path = '_static/sphx_glr_Ex_TDEM_workflow_thumb.png'
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_TDEM_workflow_fig_01.png'
 
 # %% [markdown]
 # ## Step 1: Import Required Modules
