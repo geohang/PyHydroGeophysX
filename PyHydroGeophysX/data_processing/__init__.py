@@ -13,3 +13,17 @@ __all__ = [
     "export_for_inversion",
     "LocalRef",
 ]
+
+from .io import (  # noqa: F401
+    read_seg2_seismic,
+    read_tem_fast,
+    export_to_vtk,
+    export_results_to_csv,
+)
+
+__all__ += [
+    "read_seg2_seismic",
+    "read_tem_fast",
+    "export_to_vtk",
+    "export_results_to_csv",
+]

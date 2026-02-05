@@ -337,3 +337,20 @@ try:
 except ImportError:
     JointERTSRTInversion = None
     JointERTSRTResult = None
+
+# Data processing IO utilities
+try:
+    from .data_processing import (
+        read_seg2_seismic,
+        read_tem_fast,
+        export_to_vtk,
+        export_results_to_csv,
+    )
+    __all__ += [
+        "read_seg2_seismic",
+        "read_tem_fast",
+        "export_to_vtk",
+        "export_results_to_csv",
+    ]
+except ImportError:
+    pass
