@@ -5,7 +5,7 @@ PyHydroGeophysX includes a powerful multi-agent system for automating geophysica
 workflows using Large Language Models (LLMs). The system supports multiple providers
 including OpenAI GPT, Google Gemini, and Anthropic Claude.
 
-.. image:: /_static/agent_workflow.png
+.. image:: /_static/agent.png
    :alt: Multi-Agent System Overview
    :align: center
    :width: 600px

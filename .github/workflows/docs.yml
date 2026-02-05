@@ -17,11 +17,11 @@ jobs:
 
     - name: Guard placeholders
       run: |
-        if grep -R -n "yourusername" README.md docs; then
+        if grep -R -n --exclude-dir=build --exclude-dir=_build --exclude-dir=.doctrees "yourusername" README.md docs; then
           echo "ERROR: Placeholder clone URL found"
           exit 1
         fi
-        if grep -R -n "Read the Docs" README.md docs; then
+        if grep -R -n --exclude-dir=build --exclude-dir=_build --exclude-dir=.doctrees "Read the Docs" README.md docs; then
           echo "ERROR: Outdated Read the Docs reference found"
           exit 1
         fi
