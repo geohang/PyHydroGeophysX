@@ -32,6 +32,7 @@ This technique is particularly valuable for watershed monitoring, groundwater
 management, and landslide early warning systems where geological structure
 plays a critical role in subsurface flow patterns.
 """
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_structure_TLresinv_fig_01.png'
 
 
 # %%

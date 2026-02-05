@@ -19,6 +19,7 @@ Uncertainty quantification is essential for reliable hydrological
 interpretation of geophysical data, providing confidence bounds on
 water content estimates and identifying regions of high/low certainty.
 """
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_MC_Hydro_fig_01.png'
 
 # %%
 import numpy as np

@@ -6,6 +6,7 @@
 This example demonstrates the complete workflow for 3D ERT forward modeling
 using PyHydroGeophysX, integrating hydrological model outputs.
 """
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_3D_ERT_forward_fig_01.png'
 
 # %% [markdown]
 # # 3D ERT Forward Modeling Workflow with Topography
@@ -186,6 +187,16 @@ plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'modflow_active_cells.png'), dpi=150)
 plt.show()
 
+###############################################################################
+# MODFLOW Active Cells Analysis
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This figure shows the fraction of active cells across all MODFLOW layers (left)
+# and the water content at the surface layer (right). The red contour indicates
+# regions with >80% active cells, helping identify optimal domain placement.
+#
+# *Figure saved to: modflow_active_cells.png*
+
 # Calculate optimal domain placement
 # Find the centroid of the high-activity region
 if len(rows_active) > 0 and len(cols_active) > 0:
@@ -265,6 +276,18 @@ ax.legend()
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'proposed_domain_placement.png'), dpi=150)
 plt.show()
+
+###############################################################################
+# Proposed Domain Placement
+# ~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This figure shows the suggested 20m x 20m domain placement (red dashed box)
+# centered in the region with fully active MODFLOW cells. The orange contour
+# indicates the 80% active cell boundary.
+#
+# .. image:: /auto_examples/images/Ex_3D_ERT_forward_fig_02.png
+#    :align: center
+#    :width: 700px
 
 # Calculate the optimal parameters for the domain setup
 print("\n" + "="*60)
@@ -397,6 +420,18 @@ ax2.set_title('3D Electrode Positions')
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'electrode_layout.png'), dpi=150)
 plt.show()
+
+###############################################################################
+# Electrode Layout with Topography
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# This figure shows the 5x5 electrode array with 4m spacing. The 2D view (left)
+# shows electrode positions colored by elevation, while the 3D view (right)
+# illustrates how electrodes follow the topographic surface.
+#
+# .. image:: /auto_examples/images/Ex_3D_ERT_forward_fig_03.png
+#    :align: center
+#    :width: 700px
 
 # %% [markdown]
 # ## Step 2: Create 3D Mesh with Topography Using mesh_3d.py
@@ -592,6 +627,18 @@ plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'hydro_data_slices.png'), dpi=150)
 plt.show()
 
+###############################################################################
+# Hydrological Data Slices
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Vertical cross-sections showing the water content (left) and porosity (right)
+# from MODFLOW. These hydrological properties will be interpolated to the 3D
+# mesh and converted to resistivity using the Waxman-Smits model.
+#
+# .. image:: /auto_examples/images/Ex_3D_ERT_forward_fig_04.png
+#    :align: center
+#    :width: 700px
+
 # %% [markdown]
 # ## Step 4: Interpolate Hydrological Properties to 3D Mesh
 # 
@@ -759,6 +806,18 @@ plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'resistivity_histogram.png'), dpi=150)
 plt.show()
 
+###############################################################################
+# Resistivity Distribution
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Histogram showing the distribution of resistivity values on the 3D mesh
+# after petrophysical conversion using the Waxman-Smits model. The log-scale
+# x-axis reveals the range of resistivity values in the model.
+#
+# .. image:: /auto_examples/images/Ex_3D_ERT_forward_fig_05.png
+#    :align: center
+#    :width: 700px
+
 # %% [markdown]
 # ## Step 6: Perform 3D ERT Forward Modeling
 
@@ -819,6 +878,18 @@ ax.set_title('Apparent Resistivity Matrix')
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, 'rhoa_matrix.png'), dpi=150)
 plt.show()
+
+###############################################################################
+# Apparent Resistivity Matrix
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Matrix representation of apparent resistivity data from the 3D ERT forward
+# modeling. Each cell represents a unique electrode configuration (AB injection
+# pair vs MN measurement pair) in the dipole-dipole survey.
+#
+# .. image:: /auto_examples/images/Ex_3D_ERT_forward_fig_06.png
+#    :align: center
+#    :width: 700px
 
 # %%
 # 3D visualization with PyVista (if available)
@@ -910,6 +981,19 @@ if PYVISTA_AVAILABLE:
     # Save screenshot
     pl.screenshot(os.path.join(output_dir, '3d_resistivity_model.png'))
     pl.show()
+
+###############################################################################
+# 3D Resistivity Model
+# ~~~~~~~~~~~~~~~~~~~~
+#
+# Interactive 3D visualization of the resistivity model using PyVista. The mesh
+# is clipped at the Y-center to reveal internal structure. Red spheres indicate
+# electrode positions on the topographic surface.
+#
+# .. image:: /auto_examples/images/Ex_3D_ERT_forward_fig_07.png
+#    :align: center
+#    :width: 700px
+
 else:
     print("PyVista not available. Skipping 3D visualization.")
     print("Install with: pip install pyvista")
@@ -1025,7 +1109,19 @@ if PYVISTA_AVAILABLE:
     # Save and show
     pl.screenshot(os.path.join(output_dir, '2d_slices_properties.png'))
     pl.show()
-    
+
+###############################################################################
+# 2D Property Slices
+# ~~~~~~~~~~~~~~~~~~
+#
+# Four-panel visualization showing Y-normal cross-sections of water content,
+# porosity, saturation, and resistivity. These slices are taken at the center
+# of the electrode array to show the vertical distribution of properties.
+#
+# .. image:: /auto_examples/images/Ex_3D_ERT_forward_fig_08.png
+#    :align: center
+#    :width: 700px
+
     # === Additional: Multiple X-Z slices at different Y positions ===
     print("\nCreating multiple cross-section visualization...")
     
@@ -1069,7 +1165,19 @@ if PYVISTA_AVAILABLE:
     # Don't link views here - let each panel have its own view
     pl2.screenshot(os.path.join(output_dir, '2d_slices_multi_y.png'))
     pl2.show()
-    
+
+###############################################################################
+# Multiple Y Cross-Sections
+# ~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Resistivity cross-sections at three different Y positions (6m, 10m, 14m),
+# showing the spatial variability of the subsurface resistivity structure
+# along the electrode array.
+#
+# .. image:: /auto_examples/images/Ex_3D_ERT_forward_fig_09.png
+#    :align: center
+#    :width: 700px
+
 else:
     print("PyVista not available for slice visualization.")
 
@@ -1126,6 +1234,18 @@ ax.set_title('2D Base Mesh for Prism Extrusion')
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, '2d_base_mesh.png'), dpi=150)
 plt.show()
+
+###############################################################################
+# 2D Base Mesh for Prism Extrusion
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The 2D triangular mesh that serves as the base for prism mesh creation.
+# Electrode positions are marked with magenta crosses. The mesh is refined
+# near electrodes and coarser at boundaries.
+#
+# .. image:: /auto_examples/images/Ex_3D_ERT_forward_fig_10.png
+#    :align: center
+#    :width: 700px
 
 # %%
 # Create z-discretization vector

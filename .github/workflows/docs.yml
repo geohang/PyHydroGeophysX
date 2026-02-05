@@ -15,6 +15,17 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Guard placeholders
+      run: |
+        if grep -R -n --exclude-dir=build --exclude-dir=_build --exclude-dir=.doctrees "yourusername" README.md docs; then
+          echo "ERROR: Placeholder clone URL found"
+          exit 1
+        fi
+        if grep -R -n --exclude-dir=build --exclude-dir=_build --exclude-dir=.doctrees "Read the Docs" README.md docs; then
+          echo "ERROR: Outdated Read the Docs reference found"
+          exit 1
+        fi
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -30,9 +41,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install sphinx==7.1.2
         pip install sphinx-rtd-theme==1.3.0
+        pip install pydata-sphinx-theme==0.14.4
         pip install myst-parser==2.0.0
         pip install nbsphinx==0.9.1
         pip install sphinx-copybutton==0.5.2
+        pip install sphinx-design==0.5.0
         pip install sphinx-gallery==0.14.0
         pip install numpy scipy matplotlib tqdm palettable Pillow
         # Install package in development mode with minimal dependencies
@@ -44,35 +57,38 @@ jobs:
         mkdir -p docs/source/auto_examples/images
         mkdir -p docs/source/auto_examples/images/thumb
 
+    - name: Check source image references
+      run: |
+        python tools/check_docs_images.py --skip-build-check
+
     - name: Check for pre-generated figures
       run: |
         echo "Checking for figures in docs/source/auto_examples/images/"
         if ls docs/source/auto_examples/images/*.png 1> /dev/null 2>&1; then
-          echo "✅ Found pre-generated figures:"
+          echo "Found pre-generated figures:"
           ls -la docs/source/auto_examples/images/ | grep '\.png$' | head -10
           FIGURE_COUNT=$(ls docs/source/auto_examples/images/*.png | wc -l)
           echo "Total figures: $FIGURE_COUNT"
           
-          echo "Checking thumbnails..."
-          if ls docs/source/auto_examples/images/thumb/*.png 1> /dev/null 2>&1; then
-            echo "✅ Found thumbnail images"
-            THUMB_COUNT=$(ls docs/source/auto_examples/images/thumb/*.png | wc -l)
-            echo "Total thumbnails: $THUMB_COUNT"
-          else
-            echo "ℹ️ No thumbnails found - will use auto-generated ones"
-          fi
+          echo "Thumbnail images are generated during Sphinx Gallery build."
         else
-          echo "⚠️ No pre-generated figures found"
+          echo "No pre-generated figures found"
           echo "Examples will show code only without figures"
         fi
 
     - name: List example files
       run: |
         echo "Available example files:"
-        ls -la examples/Ex*.py || echo "No example files found"
+        ls -la examples/*.py || echo "No example files found"
 
     - name: Build documentation
       run: |
+        echo "Cleaning stale generated docs artifacts..."
+        find docs/source/auto_examples -mindepth 1 -maxdepth 1 ! -name images -exec rm -rf {} +
+        rm -rf docs/source/auto_examples/images/thumb
+        mkdir -p docs/source/auto_examples/images/thumb
+        rm -rf docs/build/html
+
         cd docs
         echo "Generating API documentation..."
         sphinx-apidoc -f -o source/api ../PyHydroGeophysX
@@ -82,18 +98,27 @@ jobs:
         
         echo "Build completed with exit code: $?"
 
+    - name: Check built image references
+      run: |
+        python tools/check_docs_images.py --build-dir docs/build/html --require-build
+
+    - name: Linkcheck
+      run: |
+        cd docs
+        sphinx-build -b linkcheck source build/linkcheck
+
     - name: Check build results
       run: |
         echo "Checking build outputs..."
         
         if [ -f docs/build/html/index.html ]; then
-          echo "✅ Main documentation built successfully"
+          echo "Main documentation built successfully"
         else
-          echo "❌ Main documentation not found"
+          echo "ERROR: Main documentation not found"
         fi
         
         if [ -f docs/build/html/auto_examples/index.html ]; then
-          echo "✅ Examples gallery created"
+          echo "Examples gallery created"
           
           # Count example pages
           EXAMPLE_COUNT=$(find docs/build/html/auto_examples/ -name "Ex*.html" | wc -l)
@@ -102,12 +127,12 @@ jobs:
           # Check for figures in build
           if ls docs/build/html/auto_examples/images/*.png 1> /dev/null 2>&1; then
             BUILD_FIGURE_COUNT=$(ls docs/build/html/auto_examples/images/*.png | wc -l)
-            echo "✅ Figures included in build: $BUILD_FIGURE_COUNT"
+            echo "Figures included in build: $BUILD_FIGURE_COUNT"
           else
-            echo "ℹ️ No figures in build directory"
+            echo "No figures in build directory"
           fi
         else
-          echo "⚠️ Examples gallery not found"
+          echo "Warning: Examples gallery not found"
         fi
         
         # List some key files for debugging
@@ -139,6 +164,6 @@ jobs:
     - name: Comment deployment info
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: |
-        echo "🚀 Documentation deployed to GitHub Pages"
-        echo "📖 View at: https://geohang.github.io/PyHydroGeophysX/"
-        echo "🎯 Examples: https://geohang.github.io/PyHydroGeophysX/auto_examples/"
+        echo "Documentation deployed to GitHub Pages"
+        echo "View at: https://geohang.github.io/PyHydroGeophysX/"
+        echo "Examples: https://geohang.github.io/PyHydroGeophysX/auto_examples/"

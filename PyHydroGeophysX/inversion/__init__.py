@@ -51,3 +51,36 @@ __all__ = [
     # Windowed inversion
     'WindowedTimeLapseERTInversion'
 ]
+
+# SRT inversion
+from PyHydroGeophysX.inversion.srt_inversion import SRTInversion
+
+# SRT time-lapse inversion
+from PyHydroGeophysX.inversion.srt_time_lapse import TimeLapseSRTInversion
+
+# FDEM inversion
+from PyHydroGeophysX.inversion.fdem_inversion import FDEMInversion, FDEMInversionResult
+
+# Multi-method interface
+from PyHydroGeophysX.inversion.multi_method import GeophysicalInversion
+
+# Cross-method constraints
+from PyHydroGeophysX.inversion.cross_constraints import StructuralConstraint, PetrophysicalCoupling
+
+__all__ += [
+    'SRTInversion',
+    'TimeLapseSRTInversion',
+    'FDEMInversion',
+    'FDEMInversionResult',
+    'GeophysicalInversion',
+    'StructuralConstraint',
+    'PetrophysicalCoupling',
+]
+
+# Joint ERT-SRT inversion
+from PyHydroGeophysX.inversion.joint_ert_srt import JointERTSRTInversion, JointERTSRTResult
+
+__all__ += [
+    'JointERTSRTInversion',
+    'JointERTSRTResult',
+]

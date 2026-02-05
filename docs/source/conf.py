@@ -19,13 +19,15 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'sphinx_gallery.gen_gallery',
+    'sphinx_copybutton',
+    'sphinx_design',
 ]
 
 # Sphinx Gallery configuration - FINAL WORKING VERSION
 sphinx_gallery_conf = {
     'examples_dirs': '../../examples',           # Path to example scripts
     'gallery_dirs': 'auto_examples',             # Output gallery directory
-    'filename_pattern': '/Ex.*\.py$',            # Pattern to match example files
+    'filename_pattern': '/(Ex|EX).*\.py$',
     'plot_gallery': False,                       # Don't execute scripts (use pre-generated figures)
     'download_all_examples': True,               # Allow downloading scripts
     'abort_on_example_error': False,             # Continue on errors
@@ -39,9 +41,31 @@ sphinx_gallery_conf = {
 }
 
 # HTML theme
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'pydata_sphinx_theme'
 html_title = 'PyHydroGeophysX Documentation'
 html_logo = '_static/logo.png'
+
+html_theme_options = {
+    'navbar_start': ['navbar-logo'],
+    'navbar_center': ['navbar-nav'],
+    'navbar_end': ['search-button', 'navbar-icon-links'],
+    'icon_links': [
+        {
+            'name': 'GitHub',
+            'url': 'https://github.com/geohang/PyHydroGeophysX',
+            'icon': 'fa-brands fa-github',
+        },
+    ],
+    'use_edit_page_button': True,
+    'show_toc_level': 2,
+}
+
+html_context = {
+    'github_user': 'geohang',
+    'github_repo': 'PyHydroGeophysX',
+    'github_version': 'main',
+    'doc_path': 'docs/source',
+}
 
 # Static files
 html_static_path = ['_static']
@@ -53,7 +77,8 @@ os.makedirs(os.path.join(os.path.dirname(__file__), '_static'), exist_ok=True)
 # Mock imports for documentation build
 autodoc_mock_imports = [
     'pygimli', 'flopy', 'parflow', 'cupy', 'joblib', 'meshop',
-    'tqdm', 'matplotlib', 'scipy', 'numpy'
+    'tqdm', 'matplotlib', 'scipy', 'numpy', 'simpeg', 'discretize',
+    'resipy', 'openai', 'google', 'google.generativeai', 'anthropic'
 ]
 
 # GitHub Pages

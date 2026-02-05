@@ -90,6 +90,7 @@ class ContextInputAgent(BaseAgent):
         Returns:
             Dict containing workflow_config ready for AgentCoordinator
         """
+        user_request_lower = user_request.lower()
         print("Parsing request with multi-stage extraction:")
         print("  Stage 1: Extracting ERT inversion configuration...")
         
@@ -112,20 +113,28 @@ class ContextInputAgent(BaseAgent):
         climate_prompt = self._create_climate_prompt(user_request)
         climate_response = self.query_llm(climate_prompt)
         climate_config = self._extract_config_from_response(climate_response)
+
+        # STAGE 4: Extract hydrological model output configuration (MODFLOW / ParFlow)
+        hydro_config = {}
+        hydro_keywords = ['modflow', 'parflow', 'par flow', 'watercontent', 'saturation', 'porosity', 'hydrological model']
+        if any(kw in user_request_lower for kw in hydro_keywords):
+            print("  Stage 4: Extracting hydrological model output configuration...")
+            hydro_prompt = self._create_hydro_model_prompt(user_request)
+            hydro_response = self.query_llm(hydro_prompt)
+            hydro_config = self._extract_config_from_response(hydro_response)
         
-        # STAGE 4: Extract TDEM configuration (if electromagnetic mentioned)
+        # STAGE 5: Extract TDEM configuration (if electromagnetic mentioned)
         tdem_config = {}
         tdem_keywords = ['tdem', 'tem ', 'time-domain electromagnetic', 'electromagnetic sounding',
                         'loop source', 'transient electromagnetic', 'simpeg']
         if any(kw in user_request.lower() for kw in tdem_keywords):
-            print("  Stage 4: Extracting TDEM configuration...")
+            print("  Stage 5: Extracting TDEM configuration...")
             tdem_prompt = self._create_tdem_prompt(user_request)
             tdem_response = self.query_llm(tdem_prompt)
             tdem_config = self._extract_config_from_response(tdem_response)
         
-        # STAGE 5: Extract seismic configuration (if seismic mentioned without ERT fusion)
+        # STAGE 6: Extract seismic configuration (if seismic mentioned without ERT fusion)
         seismic_config = {}
-        user_request_lower = user_request.lower()
         seismic_keywords = ['seismic refraction', 'srt inversion', 'travel time', 'velocity model',
                            'velocity tomography', 'p-wave', 'first arrival', 'seismic tomography']
         # Only extract seismic config if seismic is mentioned but not as part of ERT fusion
@@ -134,13 +143,19 @@ class ContextInputAgent(BaseAgent):
                           'resistivity' not in user_request_lower and
                           'fusion' not in user_request_lower)
         if is_seismic_only:
-            print("  Stage 5: Extracting seismic configuration...")
+            print("  Stage 6: Extracting seismic configuration...")
             seismic_prompt = self._create_seismic_prompt(user_request)
             seismic_response = self.query_llm(seismic_prompt)
             seismic_config = self._extract_config_from_response(seismic_response)
         
         # Merge configurations
-        workflow_config = {**inversion_config, **fusion_config, **climate_config, **tdem_config, **seismic_config}
+        workflow_config = {**inversion_config, **fusion_config, **climate_config, **hydro_config, **tdem_config, **seismic_config}
+
+        # Detect ERT data processing intent (QC/export without inversion)
+        processing_keywords = ['data processing', 'quality control', 'qc', 'preprocess', 'export', 'resipy']
+        inversion_keywords = ['invert', 'inversion', 'tomography', 'time-lapse', 'timelapse']
+        if any(kw in user_request_lower for kw in processing_keywords) and not any(kw in user_request_lower for kw in inversion_keywords):
+            workflow_config['ert_data_processing'] = True
         
         # Fallback: Extract petrophysical parameters using regex if LLM missed them
         if not workflow_config.get('petrophysical_params') or len(workflow_config.get('petrophysical_params', {})) == 0:
@@ -154,6 +169,13 @@ class ContextInputAgent(BaseAgent):
             if electrode_file:
                 workflow_config['electrode_file'] = electrode_file
                 print(f"  ⚠️  LLM did not extract electrode file. Using regex fallback: {electrode_file}")
+
+        # Fallback: Extract hydrological model config using regex if LLM missed it
+        if any(kw in user_request_lower for kw in ['modflow', 'parflow', 'par flow']):
+            hydro_regex = self._extract_hydro_model_regex(user_request)
+            for key, value in hydro_regex.items():
+                if value is not None and key not in workflow_config:
+                    workflow_config[key] = value
         
         # Validate and set defaults
         workflow_config = self._validate_and_complete_config(workflow_config)
@@ -273,6 +295,79 @@ class ContextInputAgent(BaseAgent):
                     files.append(match)
         
         return files
+
+    def _extract_hydro_model_regex(self, text: str) -> Dict[str, Any]:
+        """
+        Extract MODFLOW/ParFlow configuration using regex as a fallback.
+
+        Looks for:
+        - modflow_dir / parflow_dir / model_directory
+        - run_name / model_name
+        - idomain file
+        - timestep / nlay / plot_layer
+        """
+        import re
+
+        def _find_path(patterns: list) -> Optional[str]:
+            for pattern in patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    value = match.group(1).strip().strip('"').strip("'")
+                    return value
+            return None
+
+        modflow_dir = _find_path([
+            r'modflow\s+(?:dir|directory|folder|path)\s*[:=]\s*([^\s,]+)',
+            r'modflow\s+workspace\s*[:=]\s*([^\s,]+)',
+        ])
+        parflow_dir = _find_path([
+            r'parflow\s+(?:dir|directory|folder|path)\s*[:=]\s*([^\s,]+)',
+            r'par\s*flow\s+(?:dir|directory|folder|path)\s*[:=]\s*([^\s,]+)',
+        ])
+        model_directory = _find_path([
+            r'model\s+(?:dir|directory|folder|path)\s*[:=]\s*([^\s,]+)'
+        ])
+
+        run_name = _find_path([r'run[_\s]*name\s*[:=]\s*([^\s,]+)'])
+        model_name = _find_path([r'model[_\s]*name\s*[:=]\s*([^\s,]+)'])
+        idomain_file = _find_path([
+            r'idomain\s*(?:file|path)?\s*[:=]\s*([^\s,]+)',
+            r'\b(id\.txt)\b'
+        ])
+
+        def _find_int(pattern: str) -> Optional[int]:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                try:
+                    return int(match.group(1))
+                except ValueError:
+                    return None
+            return None
+
+        timestep = _find_int(r'timestep\s*[:=]\s*(\d+)')
+        nlay = _find_int(r'nlay\s*[:=]\s*(\d+)')
+        plot_layer = _find_int(r'plot\s*layer\s*[:=]\s*(\d+)')
+
+        hydro_model = None
+        if "modflow" in text.lower() and "parflow" in text.lower():
+            hydro_model = "both"
+        elif "modflow" in text.lower():
+            hydro_model = "modflow"
+        elif "parflow" in text.lower() or "par flow" in text.lower():
+            hydro_model = "parflow"
+
+        return {
+            "hydro_model": hydro_model,
+            "modflow_dir": modflow_dir,
+            "parflow_dir": parflow_dir,
+            "model_directory": model_directory,
+            "run_name": run_name,
+            "model_name": model_name,
+            "idomain_file": idomain_file,
+            "timestep": timestep,
+            "nlay": nlay,
+            "plot_layer": plot_layer,
+        }
     
     def _build_context(self, available_data: Optional[Dict[str, Any]]) -> str:
         """Build context string about available data and options."""
@@ -500,6 +595,69 @@ Example output (climate requested):
 Example output (no climate):
 {{
   "use_climate": false
+}}
+
+Generate JSON now:"""
+        return prompt
+
+    def _create_hydro_model_prompt(self, user_request: str) -> str:
+        """Create focused prompt for hydrological model output configuration (MODFLOW / ParFlow)."""
+        prompt = f"""You are extracting hydrological model output loading configuration.
+
+User Request:
+{user_request}
+
+Extract ONLY hydrological model output parameters in JSON format:
+
+1. **Model type**:
+   - hydro_model: "modflow", "parflow", "both", or null
+
+2. **Directories / paths**:
+   - modflow_dir: Path to MODFLOW model directory
+   - parflow_dir: Path to ParFlow model directory
+   - model_directory: If a shared model directory is given, put it here
+   - idomain_file: Path to MODFLOW idomain/id.txt file (if mentioned)
+
+3. **Model identifiers**:
+   - model_name: MODFLOW model name (for porosity via flopy)
+   - run_name: ParFlow run name (prefix for .out.satur.*.pfb files)
+
+4. **Load options**:
+   - timestep: MODFLOW timestep index (integer)
+   - parflow_timestep: ParFlow timestep index (integer)
+   - nlay: Number of MODFLOW layers (integer)
+   - plot_layer: Layer index to visualize (integer)
+   - load_water_content: true/false
+   - load_porosity: true/false
+   - load_saturation: true/false
+
+IMPORTANT:
+- Focus ONLY on model output loading (not inversion/ERT/seismic)
+- Return ONLY valid JSON, no explanatory text
+- If a field is not mentioned, omit it or set to null
+
+Example output (MODFLOW):
+{{
+  "hydro_model": "modflow",
+  "modflow_dir": "examples/data/modflow",
+  "idomain_file": "examples/data/modflow/id.txt",
+  "model_name": "TLnewtest2sfb2",
+  "timestep": 1,
+  "nlay": 3,
+  "plot_layer": 0,
+  "load_water_content": true,
+  "load_porosity": true
+}}
+
+Example output (ParFlow):
+{{
+  "hydro_model": "parflow",
+  "parflow_dir": "examples/data/parflow/test2",
+  "run_name": "test2",
+  "parflow_timestep": 0,
+  "plot_layer": 19,
+  "load_saturation": true,
+  "load_porosity": true
 }}
 
 Generate JSON now:"""

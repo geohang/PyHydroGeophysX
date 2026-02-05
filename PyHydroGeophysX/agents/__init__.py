@@ -28,6 +28,7 @@ from .structure_constraint_agent import StructureConstraintAgent
 from .petrophysics_agent import PetrophysicsAgent
 from .code_generation_agent import CodeGenerationAgent
 from .tdem_agent import TDEMAgent
+from .model_output_agent import ModelOutputAgent
 
 __all__ = [
     'AgentCoordinator',
@@ -44,5 +45,12 @@ __all__ = [
     'StructureConstraintAgent',
     'PetrophysicsAgent',
     'CodeGenerationAgent',
-    'TDEMAgent'
+    'TDEMAgent',
+    'ModelOutputAgent'
+]
+
+from .geophysical_inversion_agent import GeophysicalInversionAgent
+
+__all__ += [
+    'GeophysicalInversionAgent'
 ]

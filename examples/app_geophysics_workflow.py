@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Add parent directory to path so local package can be imported when run from examples/
 CURRENT_DIR = Path(__file__).parent
@@ -209,11 +210,52 @@ section.main > div {
     font-weight: 600;
     margin-bottom: 0.5rem;
 }
+
+/* Make tabs larger and more prominent */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+    background-color: #f0f4f8;
+    padding: 0.5rem;
+    border-radius: 0.6rem;
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: 60px;
+    padding: 0 24px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--phgx-dark);
+    background-color: white;
+    border-radius: 0.5rem;
+    border: 1px solid #e1e5ec;
+    white-space: pre-wrap;
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    background-color: #e8f4f8;
+    border-color: var(--phgx-accent);
+}
+
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, var(--phgx-blue) 0%, var(--phgx-accent) 100%) !important;
+    color: white !important;
+    border-color: var(--phgx-blue) !important;
+}
+
+.stTabs [data-baseweb="tab-panel"] {
+    padding-top: 1.5rem;
+}
 """
 
 st.markdown(f"<style>{CUSTOM_CSS}</style>", unsafe_allow_html=True)
 
 EXAMPLE_REQUESTS: Dict[str, str] = {
+    "ParFlow": """Load ParFlow outputs. I uploaded a saturation .pfb file.
+Also uploaded porosity .pfb file.
+Convert saturation to water content, then to resistivity with rho_sat=541 and n=1.24.""",
+    "MODFLOW": """Load MODFLOW outputs. I uploaded id.txt (idomain file).
+Model name: TLnewtest2sfb2. Timestep: 1. Number of layers: 3.
+Convert water content to resistivity using rho_sat=541 and n=1.24.""",
     "Standard ERT": """Run a standard ERT inversion using the DAS-1 instrument.
 Data file: 20171105_1418.Data
 Electrode file: electrodes.dat
@@ -239,14 +281,58 @@ Regularization lambda: 50
 Vertical weight: 0.2
 Velocity constraints: 500-5000 m/s
 Parametric depth: 60 m
-Extract velocity interfaces at: 1200 m/s (regolith-bedrock), 5000 m/s (fractured-fresh)""",
-    "TDEM Inversion": """Run a TDEM (Time-Domain Electromagnetic) inversion.
-Data file: tdem_synthetic_data.txt
-Loop source radius: 10 meters
-Number of inversion layers: 20
-Use sparse regularization (IRLS): yes
-Maximum iterations: 50"""
+Extract velocity interfaces at: 1200 m/s (regolith-bedrock), 5000 m/s (fractured-fresh)"""
 }
+
+DATA_LINKS: Dict[str, str] = {
+    "Example data folder (all)": "https://github.com/geohang/PyHydroGeophysX/tree/main/examples/data",
+}
+
+# Example-specific data links organized by workflow type
+EXAMPLE_DATA_LINKS: Dict[str, Dict[str, str]] = {
+    "ParFlow Example": {
+        "description": "Load ParFlow saturation outputs and convert to resistivity",
+        "notebook": "https://github.com/geohang/PyHydroGeophysX/blob/main/examples/Ex_model_output.ipynb",
+        "parflow_data": "https://github.com/geohang/PyHydroGeophysX/tree/main/examples/data/parflow/test2",
+        "files": ["test2.out.satur.00005.pfb", "test2.out.porosity.pfb", "test2.out.mask.pfb"],
+    },
+    "MODFLOW Example": {
+        "description": "Load MODFLOW water content outputs and convert to resistivity",
+        "notebook": "https://github.com/geohang/PyHydroGeophysX/blob/main/examples/Ex_model_output.ipynb",
+        "modflow_data": "https://github.com/geohang/PyHydroGeophysX/tree/main/examples/data/modflow",
+        "files": ["id.txt", "WaterContent"],
+    },
+    "ERT Example (Ex1)": {
+        "description": "Standard ERT inversion with DAS-1 instrument data from Snowy Range, Wyoming",
+        "notebook": "https://github.com/geohang/PyHydroGeophysX/blob/main/examples/Ex_Unified_Workflow_ex1.ipynb",
+        "ert_data": "https://github.com/geohang/PyHydroGeophysX/tree/main/examples/data/ERT/DAS",
+        "files": ["20171105_1418.Data", "electrodes.dat"],
+    },
+    "Time-Lapse Example (Ex2)": {
+        "description": "Time-lapse ERT monitoring with climate integration from Mt. Snodgrass, Colorado",
+        "notebook": "https://github.com/geohang/PyHydroGeophysX/blob/main/examples/Ex_Unified_Workflow_ex2.ipynb",
+        "ert_data": "https://github.com/geohang/PyHydroGeophysX/tree/main/examples/data/ERT/E4D",
+        "files": ["2022-03-26_0030.ohm", "2022-04-26_0030.ohm", "2022-05-26_0030.ohm", "2022-06-26_0030.ohm"],
+    },
+    "Data Fusion Example (Ex3)": {
+        "description": "Multi-method integration: Seismic + ERT with structure constraints",
+        "notebook": "https://github.com/geohang/PyHydroGeophysX/blob/main/examples/Ex_Unified_Workflow_ex3.ipynb",
+        "seismic_data": "https://github.com/geohang/PyHydroGeophysX/tree/main/examples/data/Seismic",
+        "ert_data": "https://github.com/geohang/PyHydroGeophysX/tree/main/examples/data/ERT/Bert",
+        "files": ["srtfieldline2.dat (seismic)", "fielddataline2.dat (ERT)"],
+    },
+}
+
+AUTHOR_LINK = "https://sites.google.com/view/hangchen"
+
+STANDARD_ERT_TUTORIAL_IMAGES = [
+    ("Step 1", "step1.png"),
+    ("Step 2", "Step2.png"),
+    ("Final result 1", "Final_result_1.png"),
+    ("Final result 2", "Final_result_2.png"),
+    ("Resistivity model", "resistivity_model (5).png"),
+    ("Water content", "water_content.png"),
+]
 
 
 def init_session_state() -> None:
@@ -276,16 +362,17 @@ def render_header() -> None:
         '<div class="phgx-author-line">'
         '<span class="phgx-version-badge">v1.0</span>'
         '<span class="phgx-author-text">Developed by <a href="https://sites.google.com/view/hangchen" target="_blank">Hang Chen</a> · University of Iowa</span>'
+        '<a href="https://www.youtube.com/watch?v=d4lgs_hQqDo" target="_blank" style="margin-left: 1rem; background: #ff0000; color: white; padding: 0.3rem 0.8rem; border-radius: 0.4rem; font-size: 0.85rem; font-weight: 600; text-decoration: none;">▶ Video Tutorial</a>'
         '</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
         '<div class="phgx-pill">Unified Workflow</div>'
+        '<div class="phgx-pill">MODFLOW/ParFlow</div>'
         '<div class="phgx-pill">ERT</div>'
         '<div class="phgx-pill">TDEM</div>'
         '<div class="phgx-pill">Seismic</div>'
-        '<div class="phgx-pill">Data Fusion</div>'
-        '<div class="phgx-pill">Climate</div>',
+        '<div class="phgx-pill">Data Fusion</div>',
         unsafe_allow_html=True,
     )
 
@@ -298,6 +385,1665 @@ def render_example_buttons() -> None:
             st.session_state.user_request = text
             st.rerun()
     st.caption("Click any example to auto-fill the request box.")
+
+
+def render_tutorial_tab() -> None:
+    st.subheader("Tutorial")
+
+    # Video Tutorial
+    st.markdown("### Video Tutorial")
+    st.video("https://www.youtube.com/watch?v=d4lgs_hQqDo")
+
+    st.markdown("---")
+    st.markdown(
+        """
+<div class="phgx-card">
+    <div class="phgx-subtitle">Run a workflow in six steps</div>
+    <ol>
+        <li>Initialize the context agent in the sidebar (provider, model, API key).</li>
+        <li>Pick sample files from GitHub or upload your own measurements.</li>
+        <li>Describe the workflow in plain language with file names and parameters.</li>
+        <li>Use the example buttons to auto-fill, then edit the request to match your data.</li>
+        <li>Click "Run workflow" and watch the progress and execution plan.</li>
+        <li>Download the report files and review the interpretation summary.</li>
+    </ol>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+    # API Key Setup Section
+    st.markdown("### How to Get an API Key")
+    with st.expander("Step-by-step guide to obtain LLM API keys", expanded=False):
+        st.markdown("""
+PyHydroGeophysX requires an LLM (Large Language Model) API key to power its natural language processing capabilities.
+You can use any of the following providers:
+
+#### Option 1: OpenAI (Recommended for beginners)
+1. Go to [OpenAI Platform](https://platform.openai.com/signup)
+2. Create an account or sign in with Google/Microsoft
+3. Navigate to **API Keys** in the left sidebar (or go to [API Keys page](https://platform.openai.com/api-keys))
+4. Click **"Create new secret key"**
+5. Give it a name (e.g., "PyHydroGeophysX") and click **Create**
+6. **Copy the key immediately** - you won't be able to see it again!
+7. Add billing information at [Billing](https://platform.openai.com/account/billing) (required for API access)
+
+**Recommended models:** `gpt-4o-mini` (fast & cheap), `gpt-4o` (more capable)
+
+#### Option 2: Anthropic (Claude)
+1. Go to [Anthropic Console](https://console.anthropic.com/)
+2. Create an account and verify your email
+3. Navigate to **API Keys** in the settings
+4. Click **"Create Key"**
+5. Copy and save your API key securely
+6. Add billing information in the Billing section
+
+**Recommended models:** `claude-3-5-sonnet-20241022`, `claude-3-haiku-20240307` (faster)
+
+#### Option 3: Google (Gemini)
+1. Go to [Google AI Studio](https://aistudio.google.com/)
+2. Sign in with your Google account
+3. Click **"Get API Key"** in the top right
+4. Select or create a Google Cloud project
+5. Copy your API key
+
+**Recommended models:** `gemini-1.5-flash` (fast), `gemini-1.5-pro` (more capable)
+
+---
+
+**Important Tips:**
+- Keep your API key **secret** - never share it publicly or commit it to GitHub
+- API usage is **pay-per-use** - typical workflow costs $0.01-0.10 per run
+- Start with cheaper models (`gpt-4o-mini`, `claude-3-haiku`, `gemini-1.5-flash`) for testing
+- Set up **usage limits** in your provider's dashboard to avoid unexpected charges
+        """)
+
+        st.info("💡 **Tip:** OpenAI's `gpt-4o-mini` offers the best balance of cost and performance for most hydrogeophysics workflows.")
+
+    st.markdown("---")
+
+    st.markdown("### Example Data from GitHub")
+    for label, link in DATA_LINKS.items():
+        st.markdown(f"- [{label}]({link})")
+
+    st.markdown("---")
+
+    # Hydrological Model Output Tutorial
+    st.markdown("### Example 0: Hydrological Model Outputs (MODFLOW / ParFlow)")
+    with st.expander("Step-by-step tutorial for MODFLOW/ParFlow outputs", expanded=False):
+        st.markdown("""
+This tutorial shows how to **load MODFLOW or ParFlow outputs** and **convert them into geophysical properties** (resistivity or velocity).
+
+**Supported Models:**
+- **MODFLOW**: Water content + porosity arrays (requires `flopy` for porosity)
+- **ParFlow**: Saturation + porosity + mask arrays (now works **without** `parflow` package!)
+
+**Workflow:**
+1. Upload hydrological model output file(s) - including porosity if available
+2. Describe the conversion using natural language
+3. Get resistivity or velocity outputs for comparison with geophysical data
+""")
+
+        st.markdown("#### A) ParFlow Workflow (Recommended - No extra packages needed)")
+        st.markdown("""
+**Step 1:** Upload ParFlow `.pfb` files:
+- Saturation file (e.g., `test2.out.satur.00005.pfb`)
+- Porosity file (e.g., `test2.out.porosity.pfb`) - optional but recommended
+- Mask file (e.g., `test2.out.mask.pfb`) - optional
+
+**Step 2:** Use this natural language request:
+""")
+        st.code("""Load ParFlow outputs. I uploaded a saturation .pfb file.
+Also uploaded porosity .pfb file.
+Convert saturation to water content, then to resistivity with rho_sat=541 and n=1.24.""", language="text")
+        
+        st.markdown("""
+**What happens:**
+- The system reads the PFB files directly (no `parflow` package needed!)
+- Saturation × Porosity → Water content
+- Water content → Resistivity (or velocity) using petrophysical models
+- Generates plots and reports
+""")
+
+        st.markdown("#### B) MODFLOW Workflow")
+        st.markdown("""
+**Step 1:** Upload MODFLOW files:
+- `id.txt` (idomain file)
+- The `WaterContent` binary file should be in the same directory
+
+**Step 2:** Use this natural language request:
+""")
+        st.code("""Load MODFLOW outputs. I uploaded id.txt (idomain file).
+Model name: TLnewtest2sfb2. Timestep: 1. Number of layers: 3.
+Convert water content to resistivity using rho_sat=541 and n=1.24.""", language="text")
+
+        st.markdown("""
+**Petrophysical Parameters:**
+- `rho_sat`: Saturated resistivity (Ω·m) - typically 50-1000 depending on pore water salinity
+- `n`: Saturation exponent (dimensionless) - typically 1.2-2.5
+- `porosity`: Can be uploaded as a file or specified as a constant value
+""")
+
+        st.success("✅ **New Feature:** ParFlow .pfb files can now be read without installing the `parflow` Python package!")
+
+        st.info("💡 **Tip:** Use the **'ParFlow'** or **'MODFLOW'** example buttons above to auto-fill a working request.")
+
+    # ERT Example Tutorial
+    st.markdown("### Example 1: Standard ERT Inversion")
+    with st.expander("Step-by-step tutorial for ERT workflow", expanded=False):
+        ex1 = EXAMPLE_DATA_LINKS["ERT Example (Ex1)"]
+        st.markdown(f"**Description:** {ex1['description']}")
+        st.markdown(f"**Jupyter Notebook:** [Ex_Unified_Workflow_ex1.ipynb]({ex1['notebook']})")
+        st.markdown(f"**Data Files:** [ERT/DAS folder]({ex1['ert_data']})")
+        st.markdown(f"- Files needed: `{', '.join(ex1['files'])}`")
+
+        st.markdown("#### Step-by-Step Instructions")
+        st.markdown("""
+1. **Download the data files** from the GitHub link above or upload your own ERT data
+2. **Initialize the system** in the sidebar with your LLM API key
+3. **Describe your workflow** in the text area. Example request:
+        """)
+        st.code("""We have ERT data from DAS-1 instrument at examples/data/ERT/DAS/20171105_1418.Data
+and electrode file in examples/data/ERT/DAS/electrodes.dat
+in the Snowy Range in southeastern Wyoming. The bedrock consists of foliated gneiss in the Cheyenne Belt.
+Use specific petrophysical parameters: rho_sat = 541, porosity = 0.37, n = 1.24""", language="text")
+        st.markdown("""
+4. **Click "Run workflow"** - the system will:
+   - Parse your natural language request
+   - Load ERT data and electrode positions
+   - Run resistivity inversion
+   - Convert to water content using petrophysical parameters
+5. **Review results** - download the generated report with resistivity and water content models
+        """)
+
+        st.markdown("#### Standard ERT Inversion Screenshots")
+        image_dir = CURRENT_DIR / "images"
+        for caption, filename in STANDARD_ERT_TUTORIAL_IMAGES:
+            image_path = image_dir / filename
+            if image_path.exists():
+                st.image(str(image_path), caption=caption, width="stretch")
+            else:
+                st.warning(f"Missing tutorial image: {image_path}")
+
+    # Time-Lapse Example Tutorial
+    st.markdown("### Example 2: Time-Lapse ERT with Climate Integration")
+    with st.expander("Step-by-step tutorial for Time-Lapse workflow", expanded=False):
+        ex2 = EXAMPLE_DATA_LINKS["Time-Lapse Example (Ex2)"]
+        st.markdown(f"**Description:** {ex2['description']}")
+        st.markdown(f"**Jupyter Notebook:** [Ex_Unified_Workflow_ex2.ipynb]({ex2['notebook']})")
+        st.markdown(f"**Data Files:** [ERT/E4D folder]({ex2['ert_data']})")
+        st.markdown(f"- Files needed: `{', '.join(ex2['files'])}`")
+
+        st.markdown("#### Step-by-Step Instructions")
+        st.markdown("""
+1. **Download all 4 time-lapse files** from the GitHub link above
+2. **Initialize the system** in the sidebar with your LLM API key
+3. **Describe your workflow** including all timestep files and climate parameters:
+        """)
+        st.code("""I need to run a TIME-LAPSE ERT inversion to monitor moisture infiltration.
+
+DATA FILES FOR TIME-LAPSE INVERSION:
+Please use these 4 E4D format data files located in folder data/ERT/E4D:
+- 2022-03-26_0030.ohm (BASELINE)
+- 2022-04-26_0030.ohm
+- 2022-05-26_0030.ohm
+- 2022-06-26_0030.ohm
+
+INVERSION SETTINGS:
+- Temporal Regularization Parameter: 10
+- Spatial Regularization (lambda): 15
+
+CLIMATE DATA INTEGRATION:
+- Site Coordinates: 38.92584°N, -106.97998°W
+- Date Range: March 2022 to June 2022
+- Variables: precipitation, temperature, solar radiation""", language="text")
+        st.markdown("""
+4. **Click "Run workflow"** - the system will:
+   - Detect time-lapse mode from multiple files
+   - Run temporal inversion with regularization
+   - Fetch climate data from DayMet API
+   - Correlate resistivity changes with precipitation and temperature
+5. **Review temporal results** - see how subsurface moisture responds to climate events
+        """)
+
+    # Data Fusion Example Tutorial
+    st.markdown("### Example 3: Data Fusion (Seismic + ERT)")
+    with st.expander("Step-by-step tutorial for Data Fusion workflow", expanded=False):
+        ex3 = EXAMPLE_DATA_LINKS["Data Fusion Example (Ex3)"]
+        st.markdown(f"**Description:** {ex3['description']}")
+        st.markdown(f"**Jupyter Notebook:** [Ex_Unified_Workflow_ex3.ipynb]({ex3['notebook']})")
+        st.markdown(f"**Data Files:**")
+        st.markdown(f"- Seismic: [Seismic folder]({ex3['seismic_data']})")
+        st.markdown(f"- ERT: [ERT/Bert folder]({ex3['ert_data']})")
+        st.markdown(f"- Files needed: `{', '.join(ex3['files'])}`")
+
+        st.markdown("#### Step-by-Step Instructions")
+        st.markdown("""
+1. **Download both seismic and ERT data files** from the GitHub links above
+2. **Initialize the system** in the sidebar with your LLM API key
+3. **Describe your multi-method workflow** with layer-specific parameters:
+        """)
+        st.code("""I need to characterize subsurface water content using a multi-method approach:
+
+1. First, use field seismic refraction data to identify the boundary between regolith and fractured bedrock.
+   The seismic data is in 'data/Seismic/srtfieldline2.dat' (BERT format)
+   Use a velocity threshold of 1000 m/s to extract the interface.
+
+2. Then, use this seismic structure to constrain ERT inversion.
+   The ERT data is in 'data/ERT/Bert/fielddataline2.dat' (BERT format).
+   Apply moderate regularization (lambda=20).
+
+3. Finally, convert to water content using layer-specific petrophysical parameters.
+   Use Monte Carlo uncertainty analysis with 100 realizations.
+   - Regolith layer: rho_sat (50-250 Ωm), n (1.3-2.2), porosity (0.25-0.5)
+   - Fractured bedrock layer: rho_sat (165-350 Ωm), n (2.0-2.2), porosity (0.2-0.3)""", language="text")
+        st.markdown("""
+4. **Click "Run workflow"** - the system will:
+   - Run seismic velocity inversion
+   - Extract layer interface at velocity threshold
+   - Use seismic structure to constrain ERT inversion
+   - Apply layer-specific petrophysics with uncertainty quantification
+5. **Review integrated results** - get water content with Monte Carlo uncertainty bounds
+        """)
+
+    st.markdown("---")
+    st.markdown("### Request Template (Quick Reference)")
+    st.code(
+        """Run a standard ERT inversion using the DAS-1 instrument.
+Data file: 20171105_1418.Data
+Electrode file: electrodes.dat
+Petrophysics: rho_sat=541, porosity=0.37, n=1.24
+Regularization lambda: 15""",
+        language="text",
+    )
+    st.markdown(
+        """
+**Tips**
+- Use the upload area if your local filenames differ from the examples.
+- Time-lapse data can be listed as multiple files or uploaded together.
+- Add geology hints, water content targets, or climate context for richer interpretations.
+"""
+    )
+def render_concepts_tab() -> None:
+    st.subheader("Hydrogeophysics Concepts")
+    st.markdown(
+        """
+Hydrogeophysics links geophysical measurements to subsurface water, structure, and flow.
+The workflows in this app focus on the methods below.
+"""
+    )
+
+    col_a, col_b = st.columns([3, 2])
+    with col_a:
+        st.markdown(
+            """
+<div class="phgx-card" style="margin-bottom: 0.9rem;">
+    <div class="phgx-subtitle">Electrical Resistivity Tomography (ERT)</div>
+    <ul>
+        <li>Injects current through electrodes and measures voltage to map resistivity.</li>
+        <li>Sensitive to water content, salinity, and lithology contrasts.</li>
+        <li>Time-lapse ERT tracks changes such as recharge, pumping, or snowmelt.</li>
+    </ul>
+</div>
+<div class="phgx-card" style="margin-bottom: 0.9rem;">
+    <div class="phgx-subtitle">Seismic Refraction Tomography (SRT)</div>
+    <ul>
+        <li>Uses first-arrival travel times to estimate P-wave velocity structure.</li>
+        <li>Highlights layer boundaries and depth to bedrock or weathered zones.</li>
+    </ul>
+</div>
+<div class="phgx-card" style="margin-bottom: 0.9rem;">
+    <div class="phgx-subtitle">Time-Domain Electromagnetics (TDEM)</div>
+    <ul>
+        <li>Induces eddy currents with a transmitter loop and measures decay response.</li>
+        <li>Well suited for depth sounding of conductivity and salinity variations.</li>
+    </ul>
+</div>
+<div class="phgx-card">
+    <div class="phgx-subtitle">Data Fusion + Petrophysics</div>
+    <ul>
+        <li>Combines ERT and seismic data to reduce ambiguity in subsurface models.</li>
+        <li>Petrophysical transforms connect resistivity to water content or porosity.</li>
+    </ul>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
+    with col_b:
+        st.markdown("#### Interactive Survey Visualization")
+        html_sim = """
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #f8fafc; color: #1f2937; }
+  #phgx-sim-container { border: 1px solid #d6dde6; border-radius: 12px; padding: 14px; background: linear-gradient(180deg, #f9fbff 0%, #eef4fb 100%); }
+  .phgx-sim-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .phgx-sim-title { font-size: 15px; font-weight: 700; color: #1b262c; }
+  .phgx-sim-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+  .phgx-sim-btn { border: 1px solid #cbd5e1; background: #ffffff; color: #0f4c75; padding: 6px 14px; font-size: 12px; font-weight: 600; border-radius: 999px; cursor: pointer; transition: all 0.2s; }
+  .phgx-sim-btn:hover { background: #e8f4f8; }
+  .phgx-sim-btn.active { background: linear-gradient(135deg, #0f4c75 0%, #3d6cb9 100%); color: #fff; border-color: #0f4c75; }
+  #phgx-sim-canvas { width: 100%; height: auto; border-radius: 8px; background: #fff; border: 1px solid #e1e5ec; }
+  #phgx-sim-legend { margin-top: 10px; font-size: 11px; color: #475569; line-height: 1.4; padding: 8px 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #e1e5ec; }
+  .legend-title { font-weight: 600; color: #1b262c; margin-bottom: 4px; }
+  #phgx-sim-info { margin-top: 8px; font-size: 11px; color: #64748b; }
+</style>
+</head>
+<body>
+<div id="phgx-sim-container">
+  <div class="phgx-sim-header">
+    <div class="phgx-sim-title">Geophysical Survey Simulator</div>
+    <div class="phgx-sim-buttons">
+      <button class="phgx-sim-btn active" data-mode="ert">ERT</button>
+      <button class="phgx-sim-btn" data-mode="seismic">Seismic</button>
+      <button class="phgx-sim-btn" data-mode="tdem">TDEM</button>
+    </div>
+  </div>
+  <canvas id="phgx-sim-canvas"></canvas>
+  <div id="phgx-sim-legend"></div>
+  <div id="phgx-sim-info"></div>
+</div>
+
+<script>
+(() => {
+  const container = document.getElementById("phgx-sim-container");
+  const canvas = document.getElementById("phgx-sim-canvas");
+  const ctx = canvas.getContext("2d");
+  const legend = document.getElementById("phgx-sim-legend");
+  const info = document.getElementById("phgx-sim-info");
+  const buttons = container.querySelectorAll(".phgx-sim-btn");
+
+  const legendData = {
+    ert: {
+      title: "Electrical Resistivity Tomography (ERT)",
+      text: "Current injected at A flows to B through the subsurface. The sensitivity pattern (red shading) shows where the measurement is most sensitive - forming a 'banana' shape between electrodes. Potential difference measured at M-N relates to subsurface resistivity.",
+      layers: ["Soil (200 Ωm)", "Saturated (80 Ωm)", "Bedrock (1000 Ωm)"]
+    },
+    seismic: {
+      title: "Seismic Refraction Tomography (SRT)",
+      text: "P-waves expand as wavefronts from source. At layer interfaces, waves refract according to Snell's law. Head waves travel along faster layers and return to surface. At crossover distance, refracted wave arrives before direct wave.",
+      layers: ["Layer 1: 500 m/s", "Layer 2: 1500 m/s", "Layer 3: 3000 m/s"]
+    },
+    tdem: {
+      title: "Time-Domain Electromagnetics (TDEM)",
+      text: "After Tx current shutoff, the decaying magnetic field induces eddy currents that form 'smoke rings' expanding outward and downward. Conductive layers (low resistivity) sustain currents longer, producing stronger late-time response.",
+      layers: ["Resistive (500 Ωm)", "Conductive (20 Ωm)", "Resistive (800 Ωm)"]
+    }
+  };
+
+  let mode = "ert";
+  let t = 0;
+  let lastWidth = 0;
+
+  // Layer model with resistivity/velocity
+  const geoModel = {
+    layers: [
+      { y: 0.18, h: 0.15, color: "#d4a574", rho: 200, vel: 500, name: "Dry soil" },
+      { y: 0.33, h: 0.22, color: "#6ba3c7", rho: 80, vel: 1500, name: "Saturated" },
+      { y: 0.55, h: 0.45, color: "#8b7355", rho: 1000, vel: 3000, name: "Bedrock" }
+    ]
+  };
+
+  function resize() {
+    const width = Math.max(320, container.clientWidth - 28);
+    const height = 300;
+    if (width !== lastWidth) {
+      canvas.width = width;
+      canvas.height = height;
+      lastWidth = width;
+    }
+  }
+
+  function setMode(next) {
+    mode = next;
+    t = 0;
+    buttons.forEach(btn => btn.classList.toggle("active", btn.dataset.mode === next));
+    const data = legendData[next];
+    legend.innerHTML = `<div class="legend-title">${data.title}</div>${data.text}<br><small><b>Model:</b> ${data.layers.join(" | ")}</small>`;
+  }
+
+  buttons.forEach(btn => btn.addEventListener("click", () => setMode(btn.dataset.mode)));
+
+  function drawGround(groundY) {
+    const w = canvas.width, h = canvas.height;
+
+    // Sky
+    ctx.fillStyle = "#e3f2fd";
+    ctx.fillRect(0, 0, w, groundY);
+
+    // Draw geological layers
+    geoModel.layers.forEach((layer, i) => {
+      const ly = h * layer.y;
+      const lh = h * layer.h;
+      ctx.fillStyle = layer.color;
+      ctx.fillRect(0, ly, w, lh);
+
+      // Layer texture
+      ctx.globalAlpha = 0.3;
+      for (let j = 0; j < 20; j++) {
+        ctx.fillStyle = i === 1 ? "#4a90a4" : "#5d4e37";
+        const px = (j * 47 + i * 13) % w;
+        const py = ly + 5 + (j * 17) % (lh - 10);
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    });
+
+    // Ground surface
+    ctx.strokeStyle = "#2d5016";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(w, groundY);
+    ctx.stroke();
+
+    // Layer boundaries with labels
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = "#00000044";
+    ctx.lineWidth = 1;
+    ctx.font = "9px sans-serif";
+    ctx.fillStyle = "#555";
+    ctx.textAlign = "right";
+
+    [0.33, 0.55].forEach((y, i) => {
+      ctx.beginPath();
+      ctx.moveTo(0, h * y);
+      ctx.lineTo(w, h * y);
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Depth scale
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#333";
+    ctx.fillText("0m", 4, groundY + 12);
+    ctx.fillText("5m", 4, h * 0.42);
+    ctx.fillText("15m", 4, h * 0.65);
+    ctx.fillText("30m", 4, h * 0.90);
+  }
+
+  function drawERT(groundY) {
+    const w = canvas.width, h = canvas.height;
+    const electrodeY = groundY;
+
+    // Animated dipole-dipole array - electrodes move through different n-levels
+    const cycleTime = 6; // seconds per full cycle
+    const animPhase = (t % cycleTime) / cycleTime;
+
+    // Dipole spacing (a) and n-level animation (1 to 5)
+    const dipoleSpacing = 35; // electrode spacing within dipole
+    const nLevel = 1 + Math.floor(animPhase * 5); // n = 1, 2, 3, 4, 5
+    const nProgress = (animPhase * 5) % 1; // smooth transition within each n
+
+    // Fixed current dipole A-B position
+    const aX = w * 0.15;
+    const bX = aX + dipoleSpacing;
+
+    // Moving potential dipole M-N based on n-level
+    const separation = nLevel * dipoleSpacing;
+    const mX = bX + separation;
+    const nX = mX + dipoleSpacing;
+
+    // Calculate geometric factor K for dipole-dipole: K = π * n * (n+1) * (n+2) * a
+    const geoFactor = Math.PI * nLevel * (nLevel + 1) * (nLevel + 2) * (dipoleSpacing / 100);
+
+    // Subsurface resistivity (two-layer model)
+    const rho1 = 100; // top layer resistivity (Ohm-m)
+    const rho2 = 500; // bottom layer resistivity (Ohm-m)
+
+    // Apparent resistivity changes with depth of investigation
+    const depthFactor = Math.min(1, nLevel / 3);
+    const apparentRho = rho1 * (1 - depthFactor) + rho2 * depthFactor;
+
+    // Calculate voltage: V = I * rho / K (I = 1A assumed)
+    const current = 100; // mA
+    const voltage = (current * apparentRho / geoFactor / 10);
+
+    // Draw sensitivity pattern (banana-shaped) - size depends on n-level
+    const midAB = (aX + bX) / 2;
+    const midMN = (mX + nX) / 2;
+    const centerX = (midAB + midMN) / 2;
+    const sepDist = midMN - midAB;
+    const maxDepth = sepDist * 0.5;
+
+    // Sensitivity contours
+    for (let level = 5; level >= 1; level--) {
+      const alpha = 0.06 + level * 0.035;
+      const depth = maxDepth * (level / 5);
+      const curveWidth = sepDist * (0.25 + level * 0.12);
+
+      ctx.fillStyle = `rgba(220, 50, 50, ${alpha})`;
+      ctx.beginPath();
+      ctx.moveTo(midAB, electrodeY);
+      ctx.quadraticCurveTo(centerX - curveWidth/3, electrodeY + depth * 0.7, centerX, electrodeY + depth);
+      ctx.quadraticCurveTo(centerX + curveWidth/3, electrodeY + depth * 0.7, midMN, electrodeY);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Equipotential lines near current electrodes
+    ctx.strokeStyle = "rgba(37, 99, 235, 0.35)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    for (let i = -2; i <= 2; i++) {
+      if (i === 0) continue;
+      const px = (aX + bX) / 2 + i * 12;
+      ctx.beginPath();
+      ctx.moveTo(px - i * 4, electrodeY);
+      ctx.quadraticCurveTo(px, electrodeY + 50, px + i * 4, electrodeY + 90);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Draw electrodes
+    const drawElectrode = (x, label, isSource) => {
+      ctx.fillStyle = isSource ? "#dc2626" : "#2563eb";
+      ctx.fillRect(x - 2, electrodeY - 14, 4, 16);
+      ctx.beginPath();
+      ctx.arc(x, electrodeY - 16, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#1f2937";
+      ctx.font = "bold 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(label, x, electrodeY - 24);
+    };
+
+    drawElectrode(aX, "A", true);
+    drawElectrode(bX, "B", true);
+    drawElectrode(mX, "M", false);
+    drawElectrode(nX, "N", false);
+
+    // Connection line between M and N (voltmeter wires)
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(mX, electrodeY - 16);
+    ctx.lineTo(mX, electrodeY - 38);
+    ctx.lineTo(nX, electrodeY - 38);
+    ctx.lineTo(nX, electrodeY - 16);
+    ctx.stroke();
+
+    // Voltmeter display box
+    const vmX = (mX + nX) / 2;
+    ctx.fillStyle = "#dbeafe";
+    ctx.strokeStyle = "#2563eb";
+    ctx.beginPath();
+    ctx.roundRect(vmX - 28, electrodeY - 54, 56, 22, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    // Display voltage value (changes with electrode positions)
+    ctx.fillStyle = "#1e40af";
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("ΔV=" + voltage.toFixed(1) + "mV", vmX, electrodeY - 39);
+
+    // n-level indicator
+    ctx.fillStyle = "#7c3aed";
+    ctx.font = "bold 11px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("n = " + nLevel, w - 75, electrodeY - 55);
+
+    // Apparent resistivity indicator
+    ctx.fillStyle = "#065f46";
+    ctx.font = "10px sans-serif";
+    ctx.fillText("ρₐ = " + apparentRho.toFixed(0) + " Ωm", w - 75, electrodeY - 40);
+
+    // Layer resistivities label
+    ctx.fillStyle = "#666";
+    ctx.font = "9px sans-serif";
+    ctx.fillText("ρ₁=" + rho1 + "Ωm", 5, h * 0.26);
+    ctx.fillText("ρ₂=" + rho2 + "Ωm", 5, h * 0.48);
+
+    info.textContent = "Dipole-Dipole array (n=" + nLevel + "): As n increases, M-N moves away from A-B, probing deeper. Voltage decreases with distance.";
+  }
+
+  function drawSeismic(groundY) {
+    const w = canvas.width, h = canvas.height;
+    const sourceX = 40;
+    const nGeophones = 12;
+
+    // Layer interfaces
+    const interface1 = h * 0.33;
+    const interface2 = h * 0.55;
+
+    // Velocities
+    const v1 = 500, v2 = 1500, v3 = 3000;
+
+    // Critical angles
+    const ic1 = Math.asin(v1 / v2);
+    const ic2 = Math.asin(v1 / v3);
+
+    // Animation timing
+    const cycleTime = 5;
+    const waveT = t % cycleTime;
+    const waveRadius = waveT * 60;
+
+    // Draw source
+    ctx.fillStyle = "#dc2626";
+    ctx.beginPath();
+    ctx.arc(sourceX, groundY - 8, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 8px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("S", sourceX, groundY - 5);
+
+    // Draw geophones
+    for (let i = 0; i < nGeophones; i++) {
+      const gx = 80 + i * ((w - 100) / (nGeophones - 1));
+      ctx.fillStyle = "#059669";
+      ctx.beginPath();
+      ctx.moveTo(gx, groundY - 2);
+      ctx.lineTo(gx - 4, groundY - 10);
+      ctx.lineTo(gx + 4, groundY - 10);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Direct wave (circular wavefront in layer 1)
+    if (waveRadius > 0 && waveRadius < w) {
+      ctx.strokeStyle = "#dc262699";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(sourceX, groundY, waveRadius, -0.3, 0.3);
+      ctx.stroke();
+
+      // Wavefront label
+      if (waveRadius > 40 && waveRadius < 150) {
+        ctx.fillStyle = "#dc2626";
+        ctx.font = "9px sans-serif";
+        ctx.fillText("Direct (V₁)", sourceX + waveRadius * 0.7, groundY - 10);
+      }
+    }
+
+    // Refracted wave at interface 1
+    const timeToInterface1 = (interface1 - groundY) / (v1 * 0.08);
+    if (waveT > timeToInterface1 * 0.3) {
+      const refractT = waveT - timeToInterface1 * 0.3;
+      const headwaveDist = refractT * v2 * 0.08;
+
+      // Down-going ray at critical angle
+      ctx.strokeStyle = "#f59e0b99";
+      ctx.lineWidth = 2;
+      const critX = sourceX + (interface1 - groundY) * Math.tan(ic1);
+      ctx.beginPath();
+      ctx.moveTo(sourceX, groundY);
+      ctx.lineTo(critX, interface1);
+      ctx.stroke();
+
+      // Head wave along interface
+      if (headwaveDist > 0) {
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(critX, interface1);
+        ctx.lineTo(Math.min(critX + headwaveDist, w - 20), interface1);
+        ctx.stroke();
+
+        // Up-going rays
+        ctx.strokeStyle = "#f59e0b66";
+        ctx.lineWidth = 1;
+        for (let i = 2; i < nGeophones; i++) {
+          const gx = 80 + i * ((w - 100) / (nGeophones - 1));
+          if (gx > critX && gx < critX + headwaveDist) {
+            ctx.beginPath();
+            ctx.moveTo(gx, interface1);
+            ctx.lineTo(gx, groundY);
+            ctx.stroke();
+          }
+        }
+
+        if (headwaveDist > 50 && headwaveDist < 180) {
+          ctx.fillStyle = "#f59e0b";
+          ctx.font = "9px sans-serif";
+          ctx.fillText("Head wave (V₂)", critX + headwaveDist * 0.5, interface1 - 5);
+        }
+      }
+    }
+
+    // Refracted wave at interface 2
+    const timeToInterface2 = (interface2 - groundY) / (v1 * 0.06);
+    if (waveT > timeToInterface2 * 0.4) {
+      const refractT2 = waveT - timeToInterface2 * 0.4;
+      const headwaveDist2 = refractT2 * v3 * 0.1;
+
+      ctx.strokeStyle = "#8b5cf699";
+      ctx.lineWidth = 2;
+      const critX2 = sourceX + (interface2 - groundY) * Math.tan(ic2) * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(sourceX, groundY);
+      ctx.lineTo(critX2, interface2);
+      ctx.stroke();
+
+      if (headwaveDist2 > 0) {
+        ctx.strokeStyle = "#8b5cf6";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(critX2, interface2);
+        ctx.lineTo(Math.min(critX2 + headwaveDist2, w - 20), interface2);
+        ctx.stroke();
+
+        if (headwaveDist2 > 40 && headwaveDist2 < 150) {
+          ctx.fillStyle = "#8b5cf6";
+          ctx.font = "9px sans-serif";
+          ctx.fillText("Head wave (V₃)", critX2 + headwaveDist2 * 0.4, interface2 - 5);
+        }
+      }
+    }
+
+    // Travel-time plot
+    const plotX = w - 100, plotY = groundY + 15, plotW = 90, plotH = 70;
+    ctx.fillStyle = "#ffffffee";
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = 1;
+    ctx.fillRect(plotX, plotY, plotW, plotH);
+    ctx.strokeRect(plotX, plotY, plotW, plotH);
+
+    // Axes
+    ctx.fillStyle = "#334155";
+    ctx.font = "8px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("t (ms)", plotX + 2, plotY + 10);
+    ctx.fillText("x (m)", plotX + plotW - 22, plotY + plotH - 3);
+
+    // Travel-time curves
+    const xScale = (plotW - 10) / 100;
+    const tScale = (plotH - 15) / 80;
+
+    // Direct wave: t = x/v1
+    ctx.strokeStyle = "#dc2626";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x <= 100; x += 2) {
+      const tt = x / 0.5; // t in ms
+      const px = plotX + 5 + x * xScale;
+      const py = plotY + plotH - 5 - tt * tScale;
+      if (py > plotY + 10) {
+        x === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+
+    // Refracted V2: t = 2*z1*cos(ic)/v1 + x/v2
+    ctx.strokeStyle = "#f59e0b";
+    ctx.beginPath();
+    const ti1 = 15; // intercept time
+    const crossover1 = 35;
+    for (let x = crossover1; x <= 100; x += 2) {
+      const tt = ti1 + x / 1.5;
+      const px = plotX + 5 + x * xScale;
+      const py = plotY + plotH - 5 - tt * tScale;
+      if (py > plotY + 10) {
+        x === crossover1 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+
+    // Refracted V3
+    ctx.strokeStyle = "#8b5cf6";
+    ctx.beginPath();
+    const ti2 = 25;
+    const crossover2 = 60;
+    for (let x = crossover2; x <= 100; x += 2) {
+      const tt = ti2 + x / 3;
+      const px = plotX + 5 + x * xScale;
+      const py = plotY + plotH - 5 - tt * tScale;
+      if (py > plotY + 10) {
+        x === crossover2 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+
+    // Crossover distance marker
+    ctx.fillStyle = "#065f46";
+    ctx.font = "7px sans-serif";
+    ctx.fillText("Xc", plotX + 5 + crossover1 * xScale - 5, plotY + plotH - 8);
+
+    info.textContent = "Seismic refraction: Snell's law at interfaces. Head waves travel at V₂, V₃. Crossover distance Xc where refracted arrives first.";
+  }
+
+  function drawTDEM(groundY) {
+    const w = canvas.width, h = canvas.height;
+    const loopCenterX = w * 0.4;
+    const loopRadius = 50;
+
+    // Conductive layer (low resistivity)
+    const condTop = h * 0.33;
+    const condBot = h * 0.55;
+
+    // Animation phase
+    const cycleTime = 4;
+    const phase = (t % cycleTime) / cycleTime;
+
+    // Transmitter loop
+    ctx.strokeStyle = "#0f766e";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(loopCenterX, groundY - 5, loopRadius, 8, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = "#0f766e";
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Tx Loop", loopCenterX, groundY - 18);
+
+    // Receiver
+    const rxX = loopCenterX;
+    ctx.fillStyle = "#7c3aed";
+    ctx.beginPath();
+    ctx.arc(rxX, groundY - 5, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = "8px sans-serif";
+    ctx.fillText("Rx", rxX + 12, groundY - 2);
+
+    // Current waveform indicator
+    ctx.fillStyle = "#f8fafc";
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 1;
+    const cwX = 15, cwY = groundY - 50, cwW = 50, cwH = 35;
+    ctx.fillRect(cwX, cwY, cwW, cwH);
+    ctx.strokeRect(cwX, cwY, cwW, cwH);
+
+    ctx.fillStyle = "#334155";
+    ctx.font = "7px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Tx Current", cwX + 2, cwY + 8);
+
+    // Draw current waveform
+    ctx.strokeStyle = "#0f766e";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cwX + 5, cwY + 25);
+    ctx.lineTo(cwX + 15, cwY + 25);
+    ctx.lineTo(cwX + 15, cwY + 12);
+    ctx.lineTo(cwX + 35, cwY + 12);
+    ctx.lineTo(cwX + 35, cwY + 25);
+    ctx.lineTo(cwX + 45, cwY + 25);
+    ctx.stroke();
+
+    // Time indicator on waveform
+    const timeX = cwX + 5 + phase * 40;
+    ctx.fillStyle = "#dc2626";
+    ctx.beginPath();
+    ctx.arc(timeX, phase < 0.25 ? cwY + 25 : (phase < 0.75 ? cwY + 12 : cwY + 25), 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Phase 1: Current ON - Primary field
+    if (phase < 0.25) {
+      ctx.strokeStyle = "rgba(15, 118, 110, 0.5)";
+      ctx.lineWidth = 2;
+
+      // Primary magnetic field lines
+      for (let i = 1; i <= 4; i++) {
+        const fieldDepth = groundY + i * 25;
+        const fieldWidth = loopRadius + i * 30;
+        ctx.beginPath();
+        ctx.moveTo(loopCenterX - fieldWidth, fieldDepth);
+        ctx.quadraticCurveTo(loopCenterX, fieldDepth + i * 10, loopCenterX + fieldWidth, fieldDepth);
+        ctx.stroke();
+
+        // Field direction arrows
+        ctx.fillStyle = "rgba(15, 118, 110, 0.6)";
+        ctx.beginPath();
+        ctx.moveTo(loopCenterX + fieldWidth - 10, fieldDepth - 3);
+        ctx.lineTo(loopCenterX + fieldWidth, fieldDepth);
+        ctx.lineTo(loopCenterX + fieldWidth - 10, fieldDepth + 3);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = "#0f766e";
+      ctx.font = "9px sans-serif";
+      ctx.fillText("Primary B-field (Tx ON)", loopCenterX, h * 0.85);
+    }
+
+    // Phase 2: Current OFF - Eddy currents (smoke rings)
+    if (phase >= 0.25) {
+      const diffusePhase = (phase - 0.25) / 0.75;
+
+      // "Smoke ring" eddy currents expanding and diffusing down
+      const nRings = 5;
+      for (let ring = 0; ring < nRings; ring++) {
+        const ringAge = diffusePhase - ring * 0.12;
+        if (ringAge < 0 || ringAge > 1) continue;
+
+        // Ring expands outward and moves down with sqrt(t) behavior
+        const ringDepth = groundY + 20 + Math.sqrt(ringAge) * (h - groundY - 40);
+        const ringRadius = loopRadius * (0.8 + ringAge * 1.5);
+
+        // Decay is faster in resistive layers, slower in conductive
+        let decay;
+        if (ringDepth < condTop) {
+          decay = Math.exp(-ringAge * 4); // Fast decay in resistive
+        } else if (ringDepth < condBot) {
+          decay = Math.exp(-ringAge * 1.5); // Slow decay in conductive
+        } else {
+          decay = Math.exp(-ringAge * 5); // Fast decay in resistive
+        }
+
+        // Draw eddy current ring
+        ctx.strokeStyle = `rgba(234, 88, 12, ${decay * 0.8})`;
+        ctx.lineWidth = 2.5 * decay + 0.5;
+        ctx.beginPath();
+        ctx.ellipse(loopCenterX, ringDepth, ringRadius, 6 + ring * 2, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Current direction indicators
+        if (decay > 0.3) {
+          const arrowAngle = t * 4 + ring;
+          for (let a = 0; a < 4; a++) {
+            const angle = arrowAngle + a * Math.PI / 2;
+            const ax = loopCenterX + Math.cos(angle) * ringRadius;
+            const ay = ringDepth + Math.sin(angle) * (6 + ring * 2);
+            ctx.fillStyle = `rgba(234, 88, 12, ${decay})`;
+            ctx.beginPath();
+            ctx.arc(ax, ay, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // Secondary field going up to receiver
+      const secIntensity = Math.exp(-diffusePhase * 2) * 0.6;
+      if (secIntensity > 0.1) {
+        ctx.strokeStyle = `rgba(124, 58, 237, ${secIntensity})`;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        for (let i = 1; i <= 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(loopCenterX - 20 - i * 8, groundY - 5 - i * 8);
+          ctx.quadraticCurveTo(loopCenterX, groundY - 5 - i * 12, loopCenterX + 20 + i * 8, groundY - 5 - i * 8);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
+
+      ctx.fillStyle = "#ea580c";
+      ctx.font = "9px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Eddy currents diffuse (smoke rings)", loopCenterX, h * 0.85);
+    }
+
+    // Decay curve plot
+    const dcX = w - 95, dcY = groundY + 20, dcW = 85, dcH = 65;
+    ctx.fillStyle = "#ffffffee";
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 1;
+    ctx.fillRect(dcX, dcY, dcW, dcH);
+    ctx.strokeRect(dcX, dcY, dcW, dcH);
+
+    ctx.fillStyle = "#334155";
+    ctx.font = "8px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Voltage Decay", dcX + 2, dcY + 10);
+    ctx.fillText("log(V)", dcX + 2, dcY + 22);
+    ctx.fillText("log(t)", dcX + dcW - 22, dcY + dcH - 2);
+
+    // Draw decay curve with slope change at conductive layer
+    ctx.strokeStyle = "#7c3aed";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < dcW - 12; i++) {
+      const tNorm = i / (dcW - 12);
+      let v;
+      if (tNorm < 0.3) {
+        v = Math.exp(-tNorm * 4) * 0.9; // Early time - steep
+      } else if (tNorm < 0.7) {
+        v = Math.exp(-0.3 * 4) * Math.exp(-(tNorm - 0.3) * 1.5) * 0.9; // Conductive layer - slower decay
+      } else {
+        v = Math.exp(-0.3 * 4) * Math.exp(-0.4 * 1.5) * Math.exp(-(tNorm - 0.7) * 5) * 0.9;
+      }
+      const px = dcX + 6 + i;
+      const py = dcY + 28 + (1 - v) * (dcH - 35);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Slope annotation
+    ctx.fillStyle = "#6b7280";
+    ctx.font = "7px sans-serif";
+    ctx.fillText("slow", dcX + dcW * 0.4, dcY + 45);
+    ctx.fillText("(cond.)", dcX + dcW * 0.38, dcY + 52);
+
+    // Current time marker
+    if (phase >= 0.25) {
+      const tPos = (phase - 0.25) / 0.75;
+      const cursorX = dcX + 6 + tPos * (dcW - 12);
+      ctx.fillStyle = "#dc2626";
+      ctx.beginPath();
+      ctx.arc(cursorX, dcY + dcH - 10, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    info.textContent = "TDEM: After Tx off, eddy currents diffuse as 'smoke rings'. Conductive layers slow decay rate → detectable in late-time response.";
+  }
+
+  function animate() {
+    resize();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const groundY = canvas.height * 0.18;
+    drawGround(groundY);
+
+    if (mode === "ert") drawERT(groundY);
+    else if (mode === "seismic") drawSeismic(groundY);
+    else if (mode === "tdem") drawTDEM(groundY);
+
+    t += 0.025;
+    requestAnimationFrame(animate);
+  }
+
+  setMode(mode);
+  animate();
+})();
+</script>
+</body>
+</html>
+"""
+        components.html(html_sim, height=450)
+        st.caption("Interactive visualization showing geophysical survey physics. Click tabs to explore different methods.")
+
+    # LLM-powered explanation section
+    st.markdown("---")
+    st.markdown("### 🤖 Ask AI About Hydrogeophysics")
+    st.markdown(
+        """
+<div class="phgx-card">
+    <div class="phgx-subtitle">Get AI-Powered Explanations</div>
+    <p style="margin-bottom: 0.5rem; color: #475569;">
+        Use the initialized LLM to ask questions about hydrogeophysics concepts,
+        get help with Python code, or understand your geophysical data.
+    </p>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+    # Initialize session state for AI chat
+    if "concept_chat_history" not in st.session_state:
+        st.session_state.concept_chat_history = []
+    if "pending_question" not in st.session_state:
+        st.session_state.pending_question = ""
+
+    # Check if there's a pending question from button click
+    initial_value = ""
+    if st.session_state.pending_question:
+        initial_value = st.session_state.pending_question
+        st.session_state.pending_question = ""  # Clear it after using
+
+    # Example questions as buttons
+    st.markdown("**Quick questions:**")
+    example_questions = [
+        "What is Archie's Law and how is it used in hydrogeophysics?",
+        "How do I choose regularization parameters for ERT inversion?",
+        "What is the difference between Wenner and Dipole-Dipole arrays?",
+        "Show me Python code with PyHydroGeophysX to run ERT inversion and plot results",
+    ]
+
+    cols = st.columns(2)
+    for idx, question in enumerate(example_questions):
+        if cols[idx % 2].button(question, key=f"example_q_{idx}", width="stretch"):
+            st.session_state.pending_question = question
+            st.rerun()
+
+    # Text input for custom questions
+    user_question = st.text_area(
+        "Or type your own question:",
+        value=initial_value,
+        height=100,
+        placeholder="Ask about ERT, seismic, petrophysics, Python code, or any hydrogeophysics concept...",
+    )
+
+    col_ask, col_clear = st.columns([3, 1])
+    ask_clicked = col_ask.button("🔍 Ask AI", type="primary", width="stretch")
+    clear_clicked = col_clear.button("Clear History", width="stretch")
+
+    if clear_clicked:
+        st.session_state.concept_chat_history = []
+        st.session_state.pending_question = ""
+        st.rerun()
+
+    if ask_clicked and user_question.strip():
+        if not st.session_state.context_agent:
+            st.warning("Please initialize the system in the sidebar first (set your API key).")
+        else:
+            with st.spinner("Thinking..."):
+                try:
+                    # Build context-aware prompt for hydrogeophysics
+                    system_context = """You are a helpful hydrogeophysics expert assistant for PyHydroGeophysX.
+You help users understand geophysical concepts, Python code for geophysical analysis,
+and best practices for ERT, seismic, TDEM, and petrophysical workflows.
+
+## PyHydroGeophysX Library Overview
+PyHydroGeophysX is an AI-powered hydrogeophysics workflow system. When users ask for code examples,
+ALWAYS show how to use PyHydroGeophysX agents first, then optionally show lower-level PyGIMLi code.
+
+### Key PyHydroGeophysX Components:
+1. **ContextInputAgent** - Parses natural language requests into workflow configurations
+2. **BaseAgent.run_unified_agent_workflow()** - Main entry point for all workflows
+3. **ERTAgent** - Handles ERT inversion using ResIPy/PyGIMLi
+4. **SeismicAgent** - Handles seismic refraction tomography
+5. **PetrophysicsAgent** - Converts resistivity to water content using Archie's Law
+6. **TimeLapseAgent** - Handles multi-timestep ERT with temporal regularization
+7. **DataFusionAgent** - Integrates seismic + ERT with structure constraints
+8. **ClimateAgent** - Fetches and integrates meteorological data from DayMet
+
+### Example PyHydroGeophysX Usage Patterns:
+
+**Standard ERT Workflow:**
+```python
+from PyHydroGeophysX.agents import BaseAgent, ContextInputAgent
+
+# Initialize context agent
+context_agent = ContextInputAgent(api_key=api_key, model='gpt-4o-mini', llm_provider='openai')
+
+# Define workflow in natural language
+user_request = '''Run ERT inversion on data.ohm with electrode file electrodes.dat.
+Use regularization lambda=20 and convert to water content with rho_sat=500, porosity=0.35, n=1.5'''
+
+# Parse and execute
+config = context_agent.parse_request(user_request)
+results, plan, interpretation, files = BaseAgent.run_unified_agent_workflow(
+    config, api_key, 'gpt-4o-mini', 'openai', output_dir
+)
+```
+
+**Time-Lapse ERT:**
+```python
+user_request = '''Run time-lapse ERT on files: baseline.ohm, time1.ohm, time2.ohm
+Temporal regularization: 10, Spatial lambda: 15
+Fetch climate data for coordinates 38.9N, -107.0W from March to June 2022'''
+```
+
+**Data Fusion (Seismic + ERT):**
+```python
+user_request = '''Use seismic data srt_data.dat with velocity threshold 1000 m/s
+to constrain ERT inversion of ert_data.dat.
+Layer petrophysics: regolith (rho_sat 50-250), bedrock (rho_sat 200-500)'''
+```
+
+### Key Parameters:
+- **lambda (regularization)**: Controls smoothness (typical: 10-50, higher=smoother)
+- **rho_sat**: Saturated resistivity in Archie's Law (Ωm)
+- **porosity**: Rock/soil porosity (0-1)
+- **n**: Archie's saturation exponent (typically 1.3-2.5)
+- **velocity_threshold**: For seismic layer extraction (m/s)
+
+When providing code examples:
+1. FIRST show PyHydroGeophysX natural language approach
+2. THEN optionally show equivalent PyGIMLi/low-level code if relevant
+3. Use NumPy and matplotlib for data manipulation and plotting
+4. Be concise but thorough. Use bullet points for clarity when appropriate.
+5. If asked about specific parameters, provide typical ranges and explain the physical meaning."""
+
+                    full_prompt = f"{system_context}\n\nUser question: {user_question}"
+
+                    # Use the context agent's LLM to get a response
+                    response = st.session_state.context_agent.query_llm(full_prompt)
+
+                    # Add to chat history
+                    st.session_state.concept_chat_history.append({
+                        "question": user_question,
+                        "answer": response
+                    })
+
+                    # Rerun to show the response (text area will be empty on next run)
+                    st.rerun()
+
+                except Exception as e:
+                    st.error(f"Error getting AI response: {e}")
+
+    # Display chat history
+    if st.session_state.concept_chat_history:
+        st.markdown("---")
+        st.markdown("### Conversation History")
+        for i, chat in enumerate(reversed(st.session_state.concept_chat_history)):
+            with st.expander(f"Q: {chat['question'][:60]}...", expanded=(i == 0)):
+                st.markdown(f"**Question:** {chat['question']}")
+                st.markdown("---")
+                st.markdown(f"**Answer:**\n\n{chat['answer']}")
+
+
+def render_author_tab() -> None:
+    # Custom CSS for author page
+    st.markdown("""
+    <style>
+    .ship-header {
+        background: linear-gradient(135deg, #0f4c75 0%, #3d6cb9 50%, #2d9c5b 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    .ship-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .ship-subtitle {
+        font-size: 1rem;
+        opacity: 0.9;
+        line-height: 1.6;
+    }
+    .profile-card {
+        background: #f8fafc;
+        border: 1px solid #e1e5ec;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .profile-name {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #1b262c;
+    }
+    .profile-title {
+        font-size: 1rem;
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+    .profile-contact {
+        font-size: 0.9rem;
+        color: #64748b;
+    }
+    .news-item {
+        padding: 1rem;
+        border-left: 4px solid #3d6cb9;
+        background: #f8fafc;
+        margin-bottom: 0.8rem;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+    .news-date {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+    .news-content {
+        font-size: 0.95rem;
+        color: #334155;
+        margin-top: 0.3rem;
+    }
+    .link-card {
+        display: block;
+        padding: 1.2rem;
+        background: white;
+        border: 1px solid #e1e5ec;
+        border-radius: 0.75rem;
+        text-decoration: none;
+        color: inherit;
+        margin-bottom: 0.8rem;
+        transition: all 0.2s ease;
+    }
+    .link-card:hover {
+        border-color: #3d6cb9;
+        box-shadow: 0 4px 12px rgba(61, 108, 185, 0.15);
+        transform: translateY(-2px);
+    }
+    .link-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #0f4c75;
+        margin-bottom: 0.3rem;
+    }
+    .link-card-desc {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    .member-card {
+        background: white;
+        border: 1px solid #e1e5ec;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 0.8rem;
+    }
+    .member-role {
+        font-size: 0.75rem;
+        color: white;
+        background: #3d6cb9;
+        padding: 0.2rem 0.6rem;
+        border-radius: 1rem;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
+    .member-name {
+        font-weight: 600;
+        color: #1b262c;
+    }
+    .member-info {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # SHIP Lab Header
+    st.markdown("""
+    <div class="ship-header">
+        <div class="ship-title">SHIP Lab</div>
+        <div class="ship-subtitle">
+            <strong>S</strong>ustainability, <strong>H</strong>ydrogeophysics, <strong>I</strong>maging, & <strong>P</strong>rediction<br>
+            Advancing Earth systems understanding through integrated research approaches
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # PI Profile Card
+    col_profile, col_contact = st.columns([2, 1])
+
+    with col_profile:
+        st.markdown("""
+        <div class="profile-card">
+            <div class="profile-name">Hang Chen, Ph.D.</div>
+            <div class="profile-title">
+                Assistant Professor, School of Earth, Environment, and Sustainability<br>
+                University of Iowa | Affiliated Faculty, Lawrence Berkeley National Laboratory
+            </div>
+            <div class="profile-contact">
+                📧 hchen117@uiowa.edu &nbsp;|&nbsp; 📍 23 Trowbridge Hall, Iowa City, IA
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_contact:
+        st.markdown("[🌐 **Visit Full Website**](https://sites.google.com/view/hangchen)")
+        st.markdown("[💻 **GitHub**](https://github.com/geohang)")
+
+    st.markdown("---")
+
+    # Sub-tabs inside the Author tab
+    sub_tab3, sub_tab1, sub_tab4, sub_tab5, sub_tab6 = st.tabs([
+        "🔬 Research",
+        "🏠 Lab & People",
+        "📄 Publications",
+        "📚 Teaching",
+        "💻 Open Source"
+    ])
+
+    # --- Lab & People Tab ---
+    with sub_tab1:
+        st.markdown("### SHIP Lab Members")
+        st.markdown("*For full details, visit [SHIP Lab & People](https://sites.google.com/view/hangchen)*")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role">Principal Investigator</div>
+                <div class="member-name">Hang Chen</div>
+                <div class="member-info">Assistant Professor, University of Iowa</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role">PhD Student</div>
+                <div class="member-name">Chen Xiong</div>
+                <div class="member-info">Hydrogeophysics Research</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role" style="background: #f59e0b;">Undergraduate</div>
+                <div class="member-name">Cameron Roach</div>
+                <div class="member-info">Gravity and Magnetic data joint inversion for geological hydrogen exploration</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role">Master's Student</div>
+                <div class="member-name">Weiyu Guo</div>
+                <div class="member-info">Geophysical Modeling</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role" style="background: #f59e0b;">Undergraduate</div>
+                <div class="member-name">Jax Waller</div>
+                <div class="member-info">Processing airborne electromagnetic data</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="member-card">
+                <div class="member-role" style="background: #2d9c5b;">Open Position</div>
+                <div class="member-name">Postdoc Opening</div>
+                <div class="member-info">Contact for opportunities!</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.info("🎓 **Interested in joining?** Visit [Opportunities](https://sites.google.com/view/hangchen/opportunities) for current openings.")
+
+    # --- Research Tab ---
+    with sub_tab3:
+        st.markdown("### Research")
+        st.markdown("*For detailed descriptions, visit [Research](https://sites.google.com/view/hangchen/research_1)*")
+
+        # Research Methods
+        st.markdown("#### Research Methods")
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">📡 1. Advanced 4D Geophysical Imaging</div>
+            <div class="link-card-desc">Joint inversion, structurally-constrained inversion, temporal constraint integration</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">💧 2. Integrated Hydrological Modeling</div>
+            <div class="link-card-desc">Geophysics-informed hydrologic modeling, subsurface parameterization</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">🤖 3. AI-driven Solutions</div>
+            <div class="link-card-desc">Deep learning inversion, AI agents, pattern recognition, automated workflows</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        # Research Applications
+        st.markdown("#### Research Applications")
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">🌊 1. Integrated Watershed Analysis & Management</div>
+            <div class="link-card-desc">Surface-groundwater interactions, climate impacts, sustainable water management</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">🏔️ 2. Critical Zone Ecosystem Dynamics</div>
+            <div class="link-card-desc">Rock-soil-plant-atmosphere interactions, ecosystem resilience, bedrock hydrology</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">☢️ 3. Environmental Monitoring & Protection</div>
+            <div class="link-card-desc">Nuclear waste disposal monitoring, 4D THM process characterization</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">⛏️ 4. Critical Mineral & Resource Characterization</div>
+            <div class="link-card-desc">Electromagnetic methods for mineral deposits, geothermal resource assessment</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
+            <div class="link-card-title">⚡ 5. Geological Hydrogen Exploration</div>
+            <div class="link-card-desc">Natural hydrogen accumulation identification using integrated geophysical methods</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+    # --- Publications Tab ---
+    with sub_tab4:
+        st.markdown("### Selected Publications")
+        st.markdown("*For complete list, visit [Publications](https://sites.google.com/view/hangchen/publications)*")
+
+        pubs_preview = [
+            ("2025", "Development of an ERT-based framework for bentonite buffers monitoring - Part I & II", "JGR: Solid Earth"),
+            ("2024", "Electrical resistivity changes during heating experiments in salt formations", "Geophysical Research Letters"),
+            ("2024", "Influence of subsurface critical zone structure on hydrological partitioning", "Geophysical Research Letters"),
+            ("2023", "Geophysics-informed hydrologic modeling of a mountain headwater catchment", "Water Resources Research"),
+        ]
+
+        for year, title, journal in pubs_preview:
+            st.markdown(f"**{year}** | {title} - *{journal}*")
+
+        st.markdown("---")
+        st.markdown("[📄 **View All Publications →**](https://sites.google.com/view/hangchen/publications)")
+
+    # --- Teaching Tab ---
+    with sub_tab5:
+        st.markdown("### Teaching")
+        st.markdown("*For course materials, visit [Teaching](https://sites.google.com/view/hangchen/teaching)*")
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/teaching" target="_blank" class="link-card">
+            <div class="link-card-title">📖 Courses at University of Iowa</div>
+            <div class="link-card-desc">Hydrogeophysics, Environmental Geophysics, Data Analysis in Geosciences</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <a href="https://sites.google.com/view/hangchen/teaching" target="_blank" class="link-card">
+            <div class="link-card-title">🎓 Student Mentoring</div>
+            <div class="link-card-desc">Graduate and undergraduate research opportunities available</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("[📚 **View Teaching Page →**](https://sites.google.com/view/hangchen/teaching)")
+
+    # --- Open Source Tab ---
+    with sub_tab6:
+        st.markdown("### Open Source Projects")
+        st.markdown("*For all codes, visit [Open Source Codes](https://sites.google.com/view/hangchen/open-source-codes)*")
+
+        st.markdown("""
+        <a href="https://github.com/geohang/PyHydroGeophysX" target="_blank" class="link-card">
+            <div class="link-card-title">🐍 PyHydroGeophysX</div>
+            <div class="link-card-desc">AI-powered hydrogeophysics workflow platform - ERT, Seismic, TDEM inversion with LLM agents</div>
+        </a>
+        """, unsafe_allow_html=True)
+
+        st.markdown("[💻 **View All Open Source Projects →**](https://sites.google.com/view/hangchen/open-source-codes)")
+
+        st.markdown("---")
+        st.markdown("### Acknowledgments")
+        st.markdown("""
+        PyHydroGeophysX development is supported by:
+        - University of Iowa
+        - Lawrence Berkeley National Laboratory
+
+        Special thanks to **ResIPy**, **PyGIMLi**, and **SimPEG** for their excellent geophysical libraries.
+        """)
+
+
+def render_local_deployment_tab() -> None:
+    st.subheader("Local Deployment")
+    st.markdown(
+        """
+# PyHydroGeophysX - Quick Start Guide
+
+## 🚀 Get Started in 3 Steps
+
+### Step 0: Download the GitHub Repository
+```bash
+git clone https://github.com/geohang/PyHydroGeophysX.git
+cd PyHydroGeophysX
+```
+
+### Step 1: Launch the Web App
+```bash
+cd examples
+streamlit run app_geophysics_workflow.py
+```
+Or use the launcher scripts:
+- **Windows**: `start_webapp.bat`
+- **Linux/Mac**: `./start_webapp.sh`
+
+### Step 2: Configure API Key
+In the sidebar:
+1. Select LLM provider (OpenAI recommended)
+2. Enter your API key
+3. Click "🚀 Initialize System"
+
+### Step 3: Run Your First Workflow
+1. Choose a workflow example or describe your data
+2. Upload files if needed
+3. Click **Run workflow** and review the report outputs
+"""
+    )
+
+
+def render_workflow_tab(sidebar_state: Dict[str, str]) -> None:
+    st.markdown("---")
+    st.info(
+        "Cloud resources are limited. For big datasets, use the Local Deployment tab so you can run the same web interface with local compute."
+    )
+    st.subheader("Describe your workflow")
+    request_text = st.text_area(
+        "Describe what you want to do (files, parameters, outputs)",
+        value=st.session_state.user_request,
+        height=180,
+        placeholder="Example: Run a time-lapse ERT inversion on four surveys...",
+    )
+    st.session_state.user_request = request_text
+
+    render_example_buttons()
+
+    if not st.session_state.context_agent:
+        st.warning("Initialize the system from the sidebar before running. You can still draft your request below.")
+
+    st.markdown("---")
+    st.subheader("Upload data (optional)")
+    st.caption("Upload any data files here; the app will map them by filename. Otherwise, just reference paths in your description.")
+    uploaded_files = st.file_uploader(
+        "Data files",
+        accept_multiple_files=True,
+        type=["ohm", "dat", "data", "txt", "sgy", "segy", "pfb", "nam"],
+        help="Single upload area for ERT, seismic, electrodes, etc.",
+    )
+
+    st.markdown("---")
+    run_clicked = st.button("Run workflow", type="primary", width="stretch")
+
+    if run_clicked:
+        if not request_text.strip():
+            st.error("Please describe your workflow.")
+            return
+        if not st.session_state.context_agent:
+            st.error("Initialize the system in the sidebar before running.")
+            return
+
+        output_path = Path(sidebar_state["output_dir"]).expanduser()
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # Parse uploads
+        upload_overrides: Dict[str, str] = {}
+        saved_paths = handle_uploads(output_path, uploaded_files, upload_overrides)
+
+        # Merge uploaded workflow overrides into the text-derived config during run_workflow
+        st.session_state.workflow_config = upload_overrides
+
+        run_workflow(request_text, upload_overrides, saved_paths, output_path)
+
+    if st.session_state.workflow_result:
+        st.markdown("---")
+        render_results()
 
 
 def render_sidebar() -> Dict[str, str]:
@@ -328,8 +2074,8 @@ def render_sidebar() -> Dict[str, str]:
     output_dir = st.sidebar.text_input("Output directory", value=st.session_state.output_dir)
 
     col_a, col_b = st.sidebar.columns(2)
-    init_clicked = col_a.button("Initialize", type="primary", use_container_width=True)
-    reset_clicked = col_b.button("Reset state", use_container_width=True)
+    init_clicked = col_a.button("Initialize", type="primary", width="stretch")
+    reset_clicked = col_b.button("Reset state", width="stretch")
 
     if reset_clicked:
         for key in ["context_agent", "workflow_result", "workflow_config", "upload_dir"]:
@@ -409,14 +2155,47 @@ def handle_uploads(
         return ("tdem" in name or "tem_" in name or "electromagnetic" in name) and p.suffix.lower() in [".txt", ".dat", ".csv"]
     
     tdem_candidates = [p for p in all_paths if is_tdem(p)]
+
+    # Detect hydrological model files (MODFLOW / ParFlow)
+    def is_modflow_idomain(p: Path) -> bool:
+        return p.name.lower() in ["id.txt", "idomain.txt", "idomain.dat"]
+
+    def is_modflow_watercontent(p: Path) -> bool:
+        return p.name.lower() == "watercontent"
+
+    def is_modflow_nam(p: Path) -> bool:
+        return p.suffix.lower() == ".nam"
+
+    def is_parflow_pfb(p: Path) -> bool:
+        return p.suffix.lower() == ".pfb"
+
+    def infer_parflow_run_name(p: Path) -> Optional[str]:
+        name_lower = p.name.lower()
+        patterns = [".out.satur.", ".out.press.", ".out.porosity", ".out.mask"]
+        for pattern in patterns:
+            if pattern in name_lower:
+                idx = name_lower.index(pattern)
+                return p.name[:idx]
+        return None
+
+    modflow_idomain_files = [p for p in all_paths if is_modflow_idomain(p)]
+    modflow_wc_files = [p for p in all_paths if is_modflow_watercontent(p)]
+    modflow_nam_files = [p for p in all_paths if is_modflow_nam(p)]
+    parflow_pfb_files = [p for p in all_paths if is_parflow_pfb(p)]
+    has_modflow = bool(modflow_idomain_files or modflow_wc_files or modflow_nam_files)
+    has_parflow = bool(parflow_pfb_files)
     
-    # Data candidates exclude electrode files, seismic files, and TDEM files
+    def is_hydro(p: Path) -> bool:
+        return is_modflow_idomain(p) or is_modflow_watercontent(p) or is_modflow_nam(p) or is_parflow_pfb(p)
+
+    # Data candidates exclude electrode files, seismic files, TDEM files, and hydro model files
     data_candidates = [
         p for p in all_paths
         if p.suffix.lower() in [".ohm", ".data", ".dat", ".txt"]
         and not is_electrode(p)
         and "seis" not in p.name.lower()
         and not is_tdem(p)
+        and not is_hydro(p)
     ]
     seismic_candidates = [p for p in all_paths if "seis" in p.name.lower() or p.suffix.lower() in [".sgy", ".segy"]]
 
@@ -435,6 +2214,40 @@ def handle_uploads(
     
     if tdem_candidates:
         workflow_config["tdem_file"] = str(tdem_candidates[0])
+
+    # Hydrological model upload handling (single-file friendly)
+    if has_modflow or has_parflow:
+        if has_modflow and has_parflow:
+            workflow_config["hydro_model"] = "both"
+        elif has_modflow:
+            workflow_config["hydro_model"] = "modflow"
+        else:
+            workflow_config["hydro_model"] = "parflow"
+
+    if modflow_idomain_files:
+        workflow_config["idomain_file"] = str(modflow_idomain_files[0])
+        workflow_config["modflow_dir"] = str(modflow_idomain_files[0].parent)
+    if modflow_wc_files:
+        workflow_config["modflow_dir"] = str(modflow_wc_files[0].parent)
+        workflow_config["load_water_content"] = True
+    if modflow_nam_files and "modflow_dir" not in workflow_config:
+        workflow_config["modflow_dir"] = str(modflow_nam_files[0].parent)
+
+    if parflow_pfb_files:
+        # Use the first PFB file to infer run_name and set directory
+        first_pfb = parflow_pfb_files[0]
+        workflow_config["parflow_dir"] = str(first_pfb.parent)
+        run_name = infer_parflow_run_name(first_pfb)
+        if run_name:
+            workflow_config["run_name"] = run_name
+        # Set load flags based on filename patterns
+        name_lower = first_pfb.name.lower()
+        if ".out.satur." in name_lower:
+            workflow_config["load_saturation"] = True
+        if ".out.porosity" in name_lower:
+            workflow_config["load_porosity"] = True
+        if ".out.mask" in name_lower:
+            workflow_config["load_mask"] = True
 
     # Expose all uploads for downstream agents
     workflow_config["uploaded_files"] = {p.name: str(p) for p in all_paths}
@@ -536,6 +2349,20 @@ def _detect_workflow_type(config: Dict) -> str:
     """Detect workflow type from configuration."""
     config_keys = set(config.keys())
     user_request = config.get('user_request', '').lower()
+    
+    # ERT data processing detection (QC/export)
+    processing_keywords = ['data processing', 'quality control', 'qc', 'preprocess', 'export', 'resipy']
+    inversion_keywords = ['invert', 'inversion', 'tomography', 'time-lapse', 'timelapse']
+    if (config.get('ert_data_processing') or
+        (any(kw in user_request for kw in processing_keywords) and not any(kw in user_request for kw in inversion_keywords))):
+        return "ERT Data Processing"
+    
+    # Hydrological model output detection (MODFLOW / ParFlow)
+    hydro_keywords = ['modflow', 'parflow', 'par flow', 'hydrological model', 'watercontent', 'saturation', 'porosity']
+    mentions_hydro = config.get('hydro_model') or any(kw in user_request for kw in hydro_keywords)
+    mentions_geophysics = any(kw in user_request for kw in ['ert', 'seismic', 'tdem', 'inversion', 'forward'])
+    if mentions_hydro and not mentions_geophysics:
+        return "Hydrological Model Output"
     
     # TDEM detection
     if (config.get('tdem_file') or config.get('tdem_mode') or
@@ -702,57 +2529,28 @@ def main() -> None:
     
     sidebar_state = render_sidebar()
 
-    st.markdown("---")
-    st.subheader("Describe your workflow")
-    request_text = st.text_area(
-        "Describe what you want to do (files, parameters, outputs)",
-        value=st.session_state.user_request,
-        height=180,
-        placeholder="Example: Run a time-lapse ERT inversion on four surveys...",
-    )
-    st.session_state.user_request = request_text
+    tab_workflow, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs([
+        "🚀 Run Workflow",
+        "📖 Step-by-Step Tutorials",
+        "🔬 Learn Hydrogeophysics & Ask AI",
+        "💻 Local Deployment",
+        "👤 About Author",
+    ])
 
-    render_example_buttons()
+    with tab_workflow:
+        render_workflow_tab(sidebar_state)
 
-    if not st.session_state.context_agent:
-        st.warning("Initialize the system from the sidebar before running. You can still draft your request below.")
+    with tab_tutorial:
+        render_tutorial_tab()
 
-    st.markdown("---")
-    st.subheader("Upload data (optional)")
-    st.caption("Upload any data files here; the app will map them by filename. Otherwise, just reference paths in your description.")
-    uploaded_files = st.file_uploader(
-        "Data files",
-        accept_multiple_files=True,
-        type=["ohm", "dat", "data", "txt", "sgy", "segy"],
-        help="Single upload area for ERT, seismic, electrodes, etc.",
-    )
+    with tab_concepts:
+        render_concepts_tab()
 
-    st.markdown("---")
-    run_clicked = st.button("Run workflow", type="primary", use_container_width=True)
+    with tab_local:
+        render_local_deployment_tab()
 
-    if run_clicked:
-        if not request_text.strip():
-            st.error("Please describe your workflow.")
-            return
-        if not st.session_state.context_agent:
-            st.error("Initialize the system in the sidebar before running.")
-            return
-
-        output_path = Path(sidebar_state["output_dir"]).expanduser()
-        output_path.mkdir(parents=True, exist_ok=True)
-
-        # Parse uploads
-        upload_overrides: Dict[str, str] = {}
-        saved_paths = handle_uploads(output_path, uploaded_files, upload_overrides)
-
-        # Merge uploaded workflow overrides into the text-derived config during run_workflow
-        st.session_state.workflow_config = upload_overrides
-
-        run_workflow(request_text, upload_overrides, saved_paths, output_path)
-
-    if st.session_state.workflow_result:
-        st.markdown("---")
-        render_results()
+    with tab_author:
+        render_author_tab()
     
     # Render support section in sidebar
     with st.sidebar:

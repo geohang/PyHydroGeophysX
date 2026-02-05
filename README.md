@@ -15,6 +15,12 @@ A comprehensive Python package for integrating hydrological model outputs with g
 For a detailed conceptual framework and application, see:
 Chen, H., Niu, Q., Mendieta, A., Bradford, J., & McNamara, J. (2023). Geophysics‐informed hydrologic modeling of a mountain headwater catchment for studying hydrological partitioning in the critical zone. Water Resources Research, 59(12), e2023WR035280. https://doi.org/10.1029/2023WR035280
 
+## Quick Links
+
+- Documentation: https://geohang.github.io/PyHydroGeophysX/
+- Examples gallery: https://geohang.github.io/PyHydroGeophysX/auto_examples/index.html
+- Agent web app: https://pyhydrogeophysx.streamlit.app/
+
 ## 🌟 Key Features
 
 - 🌊 **Hydrological Model Integration:** Seamless loading and processing of MODFLOW and ParFlow outputs  
@@ -22,38 +28,78 @@ Chen, H., Niu, Q., Mendieta, A., Bradford, J., & McNamara, J. (2023). Geophysics
 - 🤖 **Multi-Agent AI System:** Automatic cross-modal geophysics agent supporting multiple LLM APIs (GPT, Gemini, Claude) for automated workflows processing ERT, seismic, and other geophysical data into hydrologic information
 - 🧊 **3D ERT Modeling:** Complete 3D mesh creation, forward modeling, and visualization with topography and MODFLOW integration **NEW**
 - 📡 **TDEM Forward & Inversion:** Time-Domain Electromagnetic (TDEM) forward modeling and inversion using SimPEG **NEW**
+- 📶 **FDEM Forward & Inversion:** Frequency-Domain EM modeling and inversion for 1D layered Earth using SimPEG **NEW**
+- 🧭 **SRT Inversion Module:** Dedicated SRT inversion class with log-slowness Gauss-Newton optimization **NEW**
+- 🔗 **Joint ERT+SRT Inversion:** Structure-constrained and geostatistical joint inversion workflows **NEW**
+- 🧱 **Cross-Constraint Utilities:** Cross-gradient and structural constraint builders for cooperative inversion **NEW**
+- 🧩 **Unified Inversion Interface:** Single factory API for ERT/SRT/TDEM/FDEM/joint inversion dispatch **NEW**
 - 🪨 **Petrophysical Relationships:** Advanced models for converting between water content, saturation, resistivity, and seismic velocity  
-- ⚡ **Forward Modeling:** Complete ERT, SRT, and TDEM forward modeling capabilities with synthetic data generation  
+- ⚡ **Forward Modeling:** Complete ERT, SRT, TDEM, and FDEM forward modeling capabilities with synthetic data generation  
 - 🔄 **Time-Lapse Inversion:** Sophisticated algorithms for time-lapse ERT inversion with temporal regularization  
 - 🏔️ **Structure-Constrained Inversion:** Integration of seismic velocity interfaces for constrained ERT inversion  
 - 🔬 **Uncertainty Quantification:** Monte Carlo methods for parameter uncertainty assessment  
 - 🚀 **High Performance:** GPU acceleration support (CUDA/CuPy) and parallel processing capabilities  
 - 💡 **Advanced Solvers:** Multiple linear solvers (CGLS, LSQR, RRLS) with optional GPU acceleration
 
+## Key Workflows
+
+- Field ERT ingestion, QC, visualization, and export for inversion (RESIPY-compatible).
+- HM -> GM: MODFLOW/ParFlow outputs -> petrophysics -> 2D/3D forward responses for ERT/SRT/TDEM, including time-lapse monitoring and survey sensitivity.
+- GM -> HM: single-time, time-lapse, and windowed inversions with temporal regularization; extract seismic interfaces and velocity structure for constrained meshes and hydrologic parameterization.
+- Iterative ModEx loop: use model results to guide survey design and use geophysical inversions to calibrate and parameterize hydrologic models.
+- Multi-physics and uncertainty workflows: combine ERT/SRT/EM and Monte Carlo to quantify parameter uncertainty.
+
+## New Inversion Interfaces (v0.2)
+
+```python
+from PyHydroGeophysX.inversion import GeophysicalInversion, JointERTSRTInversion
+
+# Unified method dispatch: "ert", "srt", "tdem", "fdem", "joint_ert_srt"
+inv = GeophysicalInversion("srt", data_file="path/to/survey.sgt")
+srt_result = inv.run()
+
+# Joint ERT + SRT inversion with structure/geostatistical options
+joint = JointERTSRTInversion(
+    ert_data="path/to/ert.dat",
+    srt_data="path/to/srt.sgt",
+    regularization_mode="geostat",
+    cross_gradient_mode="direct",
+)
+joint_result = joint.run()
+```
+
 ## 📋 Requirements
 
-- Python 3.8 or higher  
-- NumPy, SciPy, Matplotlib  
-- PyGIMLi (for geophysical modeling)  
-- Optional: CuPy (for GPU acceleration), joblib (for parallel processing)
+- Python 3.8 or higher
+- Core: NumPy, SciPy, Matplotlib, tqdm
+- Optional geophysics engines: PyGIMLi, SimPEG, RESIPY, FloPy
+- Optional acceleration: CuPy, joblib
 
 ## 🛠️ Installation
 ### From PyPI (Recommended)
 
+```bash
 pip install pyhydrogeophysx
+```
+
+Install geophysics features (recommended for inversion/forward workflows):
+
+```bash
+pip install "pyhydrogeophysx[geophysics]"
+```
+
+Install geophysics + agents:
+
+```bash
+pip install "pyhydrogeophysx[geophysics,agents]"
+```
 
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/PyHydroGeophysX.git
+git clone https://github.com/geohang/PyHydroGeophysX.git
 cd PyHydroGeophysX
 pip install -e .
-```
-
-### Dependencies
-
-```bash
-pip install numpy scipy matplotlib pygimli joblib tqdm
 ```
 
 For GPU support (optional):
@@ -67,13 +113,13 @@ pip install cupy-cuda11x  # Replace with your CUDA version
 
 ## 📚 Documentation
 
-Comprehensive documentation is available at Read the Docs.
+Comprehensive documentation is available at https://geohang.github.io/PyHydroGeophysX/.
 
 To build documentation locally:
 
 ```bash
 cd docs
-make html
+make html  # On Windows: .\\make.bat html
 ```
 
 ## 🗂️ Package Structure
@@ -103,12 +149,19 @@ PyHydroGeophysX/
 ├── forward/            # Forward modeling
 │   ├── ert_forward.py      # 2D/3D ERT forward modeling
 │   ├── srt_forward.py      # Seismic forward modeling
-│   └── tdem_forward.py     # TDEM forward modeling **NEW**
+│   ├── tdem_forward.py     # TDEM forward modeling
+│   └── fdem_forward.py     # FDEM forward modeling **NEW**
 ├── inversion/          # Inverse modeling
 │   ├── ert_inversion.py    # Single-time ERT inversion
+│   ├── srt_inversion.py    # Single-time SRT inversion **NEW**
+│   ├── srt_time_lapse.py   # Time-lapse SRT inversion **NEW**
 │   ├── time_lapse.py       # Time-lapse inversion
 │   ├── windowed.py         # Windowed time-lapse for large datasets
-│   └── tdem_inversion.py   # TDEM inversion with SimPEG **NEW**
+│   ├── tdem_inversion.py   # TDEM inversion with SimPEG
+│   ├── fdem_inversion.py   # FDEM inversion with SimPEG **NEW**
+│   ├── joint_ert_srt.py    # Joint ERT+SRT inversion **NEW**
+│   ├── cross_constraints.py # Cross-gradient/structural constraints **NEW**
+│   └── multi_method.py     # Unified inversion interface **NEW**
 ├── solvers/            # Linear algebra solvers
 │   └── linear_solvers.py   # CGLS, LSQR, RRLS with GPU support
 ├── Hydro_modular/      # Direct hydro-to-geophysics conversion
@@ -129,9 +182,13 @@ The examples folder provides paired Jupyter notebooks (.ipynb) and Python script
 - Ex_structure_TLresinv: Structure‑constrained time‑lapse resistivity inversion (notebook: Ex_structure_TLresinv.ipynb, script: Ex_structure_TLresinv.py).
 - EX_SRT_forward: Seismic refraction tomography forward modeling and synthetic travel times (notebook: EX_SRT_forward.ipynb, script: EX_SRT_forward.py).
 - Ex_SRT_inv: Seismic refraction tomography inversion workflow (notebook: Ex_SRT_inv.ipynb, script: Ex_SRT_inv.py).
+- **Ex_SRT_custom_inversion**: SRT inversion using the packaged `SRTInversion` class (script: Ex_SRT_custom_inversion.py). **NEW**
 - Ex_MC_Hydro: Monte Carlo uncertainty quantification for hydro‑to‑resistivity conversion (notebook: Ex_MC_Hydro.ipynb, script: Ex_MC_Hydro.py).
 - **Ex_3D_ERT_forward**: 3D ERT forward modeling with MODFLOW integration using Mesh3DCreator and PyVista visualization (notebook: Ex_3D_ERT_forward.ipynb). **NEW**
 - **Ex_TDEM_workflow**: Time-Domain Electromagnetic (TDEM) forward modeling and inversion from hydrological models using SimPEG (notebook: Ex_TDEM_workflow.ipynb). **NEW**
+- **Ex_FDEM_workflow**: Frequency-domain EM forward modeling and inversion (script: Ex_FDEM_workflow.py). **NEW**
+- **Ex_cross_constraints**: Structural and cross-gradient constraints across methods (script: Ex_cross_constraints.py). **NEW**
+- **Ex_hydro_to_multigeophys**: Hydro -> petrophysics -> multi-method forward/inversion workflow (script: Ex_hydro_to_multigeophys.py). **NEW**
 
 
 ## 🚀 Quick Start

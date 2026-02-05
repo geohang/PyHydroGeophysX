@@ -1,45 +1,72 @@
-inversion package
-=================
+Inversion Module
+================
 
-Submodules
-----------
+Core Inversion Classes
+----------------------
 
-inversion.base module
----------------------
-
-.. automodule:: inversion.base
+.. automodule:: PyHydroGeophysX.inversion.ert_inversion
    :members:
    :undoc-members:
    :show-inheritance:
 
-inversion.ert\_inversion module
--------------------------------
-
-.. automodule:: inversion.ert_inversion
+.. automodule:: PyHydroGeophysX.inversion.srt_inversion
    :members:
    :undoc-members:
    :show-inheritance:
 
-inversion.time\_lapse module
-----------------------------
-
-.. automodule:: inversion.time_lapse
+.. automodule:: PyHydroGeophysX.inversion.time_lapse
    :members:
    :undoc-members:
    :show-inheritance:
 
-inversion.windowed module
--------------------------
-
-.. automodule:: inversion.windowed
+.. automodule:: PyHydroGeophysX.inversion.srt_time_lapse
    :members:
    :undoc-members:
    :show-inheritance:
 
-Module contents
----------------
+.. automodule:: PyHydroGeophysX.inversion.windowed
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-.. automodule:: inversion
+EM Inversion
+------------
+
+.. automodule:: PyHydroGeophysX.inversion.tdem_inversion
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.inversion.fdem_inversion
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Joint and Multi-Method Inversion
+--------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.joint_ert_srt
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.inversion.multi_method
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Cross-Constraint Utilities
+--------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.cross_constraints
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Base Classes
+------------
+
+.. automodule:: PyHydroGeophysX.inversion.base
    :members:
    :undoc-members:
    :show-inheritance:

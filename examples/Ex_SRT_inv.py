@@ -18,6 +18,7 @@ Interface Extraction: For the long profile, the script uses the extract_velocity
 Exporting Results: The coordinates of the extracted interfaces are saved to text files, making them available for constraining other models, such as hydrogeological simulations.
 
 """
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_SRT_inv_fig_01.png'
 
 
 

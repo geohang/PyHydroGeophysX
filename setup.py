@@ -23,7 +23,7 @@ setup(
     name="PyHydroGeophysX",
     version="0.2.0",
     author="Hang Chen",
-    author_email="your_email@example.com",
+    author_email="hangchen.work@gmail.com",
     description="A Python package for hydrological-geophysical model integration and inversion.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -46,6 +46,7 @@ setup(
     extras_require={
         "geophysics": [
             "pygimli>=1.5",   # Optional, heavy dependencies for real geophysical usage
+            "simpeg>=0.20",   # EM forward/inversion engines (TDEM/FDEM)
             "resipy>=3.4.0",  # ERT data processing and inversion
             "flopy",
             "cupy",
@@ -67,9 +68,11 @@ setup(
         "docs": [
             "sphinx>=7.1.2",
             "sphinx-rtd-theme>=1.3.0",
+            "pydata-sphinx-theme>=0.14.0",
             "myst-parser>=2.0.0",
             "nbsphinx>=0.9.1",
             "sphinx-copybutton>=0.5.2",
+            "sphinx-design>=0.5.0",
             "sphinx-gallery>=0.14.0",
             "palettable",
             "Pillow",  # For image processing
@@ -83,12 +86,13 @@ setup(
         ],
         "all": [
             # Combines all optional dependencies
-            "pygimli>=1.5", "resipy>=3.4.0", "flopy", "cupy", "parflow", "joblib", "meshop",
+            "pygimli>=1.5", "simpeg>=0.20", "resipy>=3.4.0", "flopy", "cupy", "parflow", "joblib", "meshop",
             "openai>=1.0.0", "google-generativeai>=0.3.0", "anthropic>=0.18.0", "markdown>=3.0",
             "pydaymet>=0.16.0", "pandas>=1.3.0", "xarray>=0.19.0",
             "sphinx>=7.1.2", "sphinx-rtd-theme>=1.3.0", "myst-parser>=2.0.0",
-            "nbsphinx>=0.9.1", "sphinx-copybutton>=0.5.2", "sphinx-gallery>=0.14.0",
-            "palettable", "Pillow", "pytest>=6.0", "pytest-cov", "black", "flake8", "mypy",
+            "pydata-sphinx-theme>=0.14.0", "nbsphinx>=0.9.1", "sphinx-copybutton>=0.5.2",
+            "sphinx-design>=0.5.0", "sphinx-gallery>=0.14.0", "palettable", "Pillow",
+            "pytest>=6.0", "pytest-cov", "black", "flake8", "mypy",
         ]
     },
     include_package_data=True,
@@ -110,7 +114,7 @@ setup(
         "Topic :: Scientific/Engineering :: Hydrology",
         "Topic :: Scientific/Engineering :: Physics",
         "Topic :: Scientific/Engineering :: Mathematics",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",

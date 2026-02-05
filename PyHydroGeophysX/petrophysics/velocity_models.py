@@ -6,6 +6,72 @@ from scipy.optimize import fsolve, root
 from typing import Tuple, Optional, Union, List, Dict, Any
 
 
+def water_content_to_velocity(water_content: np.ndarray, 
+                               v_dry: float = 3500.0,
+                               v_sat: float = 4500.0,
+                               porosity: Union[float, np.ndarray] = 0.3,
+                               model: str = 'linear') -> np.ndarray:
+    """
+    Convert water content to seismic P-wave velocity using empirical relationships.
+    
+    This provides a simplified empirical relationship between water content 
+    and seismic velocity, suitable for shallow subsurface applications.
+    
+    Args:
+        water_content: Volumetric water content (θ), typically 0-porosity
+        v_dry: P-wave velocity when fully dry (m/s), default 3500
+        v_sat: P-wave velocity when fully saturated (m/s), default 4500
+        porosity: Porosity values (φ), can be scalar or array
+        model: Velocity model type:
+            - 'linear': Linear interpolation between dry and saturated velocities
+            - 'wyllie': Wyllie time-average equation
+            - 'raymer': Raymer-Hunt-Gardner equation
+            
+    Returns:
+        P-wave velocity array (m/s)
+    """
+    # Calculate saturation from water content and porosity
+    # S = θ / φ
+    saturation = np.clip(water_content / porosity, 0.0, 1.0)
+    
+    if model == 'linear':
+        # Linear interpolation between dry and saturated velocities
+        # Vp = V_dry + S * (V_sat - V_dry)
+        velocity = v_dry + saturation * (v_sat - v_dry)
+        
+    elif model == 'wyllie':
+        # Wyllie time-average equation
+        # 1/Vp = φ*S/V_water + φ*(1-S)/V_air + (1-φ)/V_mineral
+        v_water = 1500.0  # P-wave velocity in water (m/s)
+        v_air = 340.0     # P-wave velocity in air (m/s)
+        v_mineral = 6000.0  # P-wave velocity in mineral (m/s)
+        
+        # Fluid velocity (weighted by saturation)
+        v_fluid = 1.0 / (saturation / v_water + (1 - saturation) / v_air + 1e-10)
+        
+        # Time-average
+        slowness = porosity / v_fluid + (1 - porosity) / v_mineral
+        velocity = 1.0 / (slowness + 1e-10)
+        
+    elif model == 'raymer':
+        # Raymer-Hunt-Gardner equation (simplified)
+        # Vp = (1 - φ)^2 * V_mineral + φ * V_fluid
+        v_water = 1500.0
+        v_air = 340.0
+        v_mineral = 6000.0
+        
+        v_fluid = saturation * v_water + (1 - saturation) * v_air
+        velocity = (1 - porosity)**2 * v_mineral + porosity * v_fluid
+        
+    else:
+        raise ValueError(f"Unknown velocity model: {model}. Use 'linear', 'wyllie', or 'raymer'.")
+    
+    # Clip to physically reasonable range
+    velocity = np.clip(velocity, 200.0, 8000.0)
+    
+    return velocity
+
+
 class BaseVelocityModel:
     """Base class for seismic velocity models."""
     

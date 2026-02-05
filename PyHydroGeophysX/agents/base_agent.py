@@ -235,6 +235,24 @@ class BaseAgent(ABC):
 
         # Detect workflow type with priority order
         user_request_lower = workflow_config.get('user_request', '').lower()
+
+        # Precompute intent flags
+        mentions_ert = ('ert' in user_request_lower) or bool(workflow_config.get('ert_file'))
+        mentions_seismic = ('seismic' in user_request_lower) or bool(workflow_config.get('seismic_file'))
+        mentions_tdem = ('tdem' in user_request_lower) or bool(workflow_config.get('tdem_file'))
+        inversion_keywords = ['invert', 'inversion', 'tomography', 'forward']
+        mentions_inversion = any(kw in user_request_lower for kw in inversion_keywords)
+
+        hydro_keywords = ['modflow', 'parflow', 'par flow', 'hydrological model', 'watercontent', 'saturation', 'porosity']
+        mentions_hydro = any(kw in user_request_lower for kw in hydro_keywords) or bool(workflow_config.get('hydro_model'))
+        hydro_only = mentions_hydro and not (mentions_ert or mentions_seismic or mentions_tdem or mentions_inversion)
+
+        processing_keywords = ['data processing', 'quality control', 'qc', 'preprocess', 'export', 'resipy']
+        ert_processing = bool(workflow_config.get('ert_data_processing')) or (
+            bool(workflow_config.get('ert_file')) and
+            any(kw in user_request_lower for kw in processing_keywords) and
+            not any(kw in user_request_lower for kw in inversion_keywords)
+        )
         
         # TDEM: check for TDEM-specific keys
         if (workflow_config.get('tdem_file') or 
@@ -254,10 +272,16 @@ class BaseAgent(ABC):
               'travel time' in user_request_lower):
             workflow_type = 'seismic'
             
-        # Time-lapse: check for time-lapse specific keys
-        elif ('timelapse_files' in config_keys or 
-            'timelapse_params' in config_keys or 
-            'climate_config' in config_keys):
+        # Hydrological model output loading (MODFLOW/ParFlow) takes priority over time-lapse
+        elif workflow_config.get('hydro_model') in ['modflow', 'parflow', 'both'] or hydro_only:
+            workflow_type = 'model_output'
+
+        # Time-lapse: check for time-lapse specific keys (explicit file lists/params only)
+        elif (not hydro_only and (
+            'timelapse_files' in config_keys or 
+            'time_lapse_files' in config_keys or
+            'timelapse_params' in config_keys or
+            workflow_config.get('inversion_mode') == 'time-lapse')):
             workflow_type = 'time_lapse'
             
         # Data fusion: check for fusion-specific indicators WITH actual values
@@ -271,6 +295,11 @@ class BaseAgent(ABC):
                len(workflow_config.get('methods', [])) > 1 and  # Has multiple methods
                'seismic' in workflow_config.get('methods', []))):  # Including seismic
             workflow_type = 'data_fusion'
+
+        # ERT data processing (QC/export without inversion)
+        elif ert_processing:
+            workflow_type = 'ert_data_process'
+
             
         # Direct ERT: single ERT file without real fusion indicators
         elif workflow_config.get('ert_file'):
@@ -807,6 +836,192 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
                 else:
                     print(f"\nReport generation failed: {report_results.get('error', 'Unknown error')}")
                     print("  Check logs for details")
+
+        elif workflow_type == 'ert_data_process':
+            # ERT data processing workflow (QC + export)
+            from .ert_loader_agent import ERTLoaderAgent
+            from PyHydroGeophysX.data_processing.ert_data_agent import export_for_inversion
+
+            ert_loader = ERTLoaderAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+
+            data_file = workflow_config.get('ert_file') or workflow_config.get('data_file')
+            if not data_file:
+                raise ValueError("No ERT data file specified for processing.")
+
+            # Normalize file path
+            data_file_path = Path(data_file)
+            project_dir = workflow_config.get('project_dir', '.')
+            if not data_file_path.exists():
+                if project_dir and project_dir != '.':
+                    combined_path = Path(project_dir) / data_file_path.name
+                    if combined_path.exists():
+                        data_file_path = combined_path
+                    elif combined_path.parts and combined_path.parts[0] == 'examples':
+                        combined_path = Path(*combined_path.parts[1:])
+                        if combined_path.exists():
+                            data_file_path = combined_path
+                if not data_file_path.exists() and data_file_path.parts and data_file_path.parts[0] == 'examples':
+                    alt_path = Path(*data_file_path.parts[1:])
+                    if alt_path.exists():
+                        data_file_path = alt_path
+
+            electrode_file = workflow_config.get('electrode_file')
+            if electrode_file:
+                electrode_file_path = Path(electrode_file)
+                if not electrode_file_path.exists():
+                    if project_dir and project_dir != '.':
+                        combined_path = Path(project_dir) / electrode_file_path.name
+                        if combined_path.exists():
+                            electrode_file_path = combined_path
+                        elif combined_path.parts and combined_path.parts[0] == 'examples':
+                            combined_path = Path(*combined_path.parts[1:])
+                            if combined_path.exists():
+                                electrode_file_path = combined_path
+                    if not electrode_file_path.exists() and electrode_file_path.parts and electrode_file_path.parts[0] == 'examples':
+                        alt_path = Path(*electrode_file_path.parts[1:])
+                        if alt_path.exists():
+                            electrode_file_path = alt_path
+                electrode_file = str(electrode_file_path)
+
+            update_progress("Loading ERT data", 0.20, f"File: {data_file_path.name}")
+            load_result = ert_loader.execute({
+                'data_file': str(data_file_path),
+                'instrument': workflow_config.get('instrument', 'E4D'),
+                'project_dir': workflow_config.get('project_dir', str(data_file_path.parent)),
+                'electrode_file': electrode_file,
+                'crs': workflow_config.get('crs', 'local'),
+                'quality_check': True,
+                'output_dir': str(output_dir / 'ert_processing')
+            })
+
+            if load_result.get('status') != 'success':
+                raise ValueError(f"ERT data processing failed: {load_result.get('error')}")
+
+            ert_data = load_result.get('ert_data')
+            qc_artifacts = ert_loader.get_context('qc_artifacts') or {}
+
+            export_requested = workflow_config.get('export_for_inversion')
+            if export_requested is None:
+                export_requested = 'export' in user_request_lower or 'bert' in user_request_lower or 'pgimli' in user_request_lower
+
+            export_file = None
+            if export_requested and ert_data is not None:
+                update_progress("Exporting data", 0.40, "Preparing inversion-ready format")
+                export_format = workflow_config.get('export_format', 'pgimli')
+                export_file = export_for_inversion(ert_data, outdir=str(output_dir / 'ert_processing'), fmt=export_format)
+
+            results = {
+                'status': 'success',
+                'ert_data': ert_data,
+                'qc_results': load_result.get('qc_results'),
+                'qc_artifacts': qc_artifacts,
+                'export_file': export_file,
+                'output_dir': str(output_dir / 'ert_processing')
+            }
+
+            execution_plan = [
+                {'step': 'Load ERT Data', 'agent': 'ERTLoaderAgent',
+                 'description': 'Load and validate ERT data', 'outputs': ['ert_data']},
+                {'step': 'QC Diagnostics', 'agent': 'ERTLoaderAgent',
+                 'description': 'Generate quality control artifacts', 'outputs': ['qc_plots']},
+                {'step': 'Export', 'agent': 'ERTLoaderAgent',
+                 'description': 'Export data for inversion', 'outputs': ['bert_data.dat']},
+            ]
+
+            interpretation = "ERT data processing completed. QC artifacts and export files are ready."
+
+            report_text = f"""# ERT Data Processing Report
+
+**Data file:** `{data_file_path.name}`
+**Instrument:** {workflow_config.get('instrument', 'E4D')}
+**Electrodes:** {len(ert_data.electrodes) if ert_data else 'N/A'}
+**Measurements:** {len(ert_data.observations) if ert_data else 'N/A'}
+
+## QC Artifacts
+{chr(10).join(f"- {k}: {v}" for k, v in (qc_artifacts or {}).items()) if qc_artifacts else "No QC artifacts generated."}
+
+## Export
+{f"Exported file: `{export_file}`" if export_file else "Export not requested."}
+"""
+            report_file = output_dir / 'ert_processing_report.md'
+            with open(report_file, 'w', encoding='utf-8') as f:
+                f.write(report_text)
+
+            report_files = {'report_markdown': str(report_file)}
+            from .report_agent import ReportAgent
+            report_agent = ReportAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+            html_file = report_agent._save_html_report(report_text, str(output_dir), 'ert_processing_report')
+            if html_file:
+                report_files['report_html'] = html_file
+
+        elif workflow_type == 'model_output':
+            # Hydrological model output loading (MODFLOW / ParFlow)
+            from .model_output_agent import ModelOutputAgent
+            model_agent = ModelOutputAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+
+            update_progress("Loading hydrological model outputs", 0.20, "Reading MODFLOW/ParFlow data")
+            model_input = {**workflow_config, 'output_dir': str(output_dir / 'model_output')}
+            results = model_agent.execute(model_input)
+
+            execution_plan = []
+            if results.get('modflow'):
+                execution_plan.append({'step': 'Load MODFLOW Outputs', 'agent': 'ModelOutputAgent',
+                                       'description': 'Load water content and porosity from MODFLOW',
+                                       'outputs': ['water_content', 'porosity']})
+            if results.get('parflow'):
+                execution_plan.append({'step': 'Load ParFlow Outputs', 'agent': 'ModelOutputAgent',
+                                       'description': 'Load saturation and porosity from ParFlow',
+                                       'outputs': ['saturation', 'porosity']})
+
+            interpretation = "Hydrological model outputs loaded successfully."
+            if results.get('warnings'):
+                interpretation += f" Warnings: {', '.join(results['warnings'])}"
+
+            report_text = "# Hydrological Model Output Report\n\n"
+            if results.get('modflow'):
+                mod = results['modflow']
+                report_text += "## MODFLOW\n"
+                report_text += f"- Model directory: `{mod.get('model_directory')}`\n"
+                report_text += f"- Water content file: `{mod.get('water_content_file')}`\n"
+                if mod.get('porosity_file'):
+                    report_text += f"- Porosity file: `{mod.get('porosity_file')}`\n"
+                if mod.get('resistivity_file'):
+                    report_text += f"- Resistivity file: `{mod.get('resistivity_file')}`\n"
+                if mod.get('resistivity_stats'):
+                    rs = mod['resistivity_stats']
+                    report_text += f"- Resistivity stats: min={rs.get('min')}, max={rs.get('max')}, mean={rs.get('mean')}\n"
+                report_text += "\n"
+                if mod.get('plots'):
+                    for _, path in mod['plots'].items():
+                        report_text += f"![MODFLOW Plot]({Path(path).name})\n\n"
+            if results.get('parflow'):
+                par = results['parflow']
+                report_text += "## ParFlow\n"
+                report_text += f"- Model directory: `{par.get('model_directory')}`\n"
+                report_text += f"- Saturation file: `{par.get('saturation_file')}`\n"
+                report_text += f"- Porosity file: `{par.get('porosity_file')}`\n"
+                if par.get('mask_file'):
+                    report_text += f"- Mask file: `{par.get('mask_file')}`\n"
+                if par.get('resistivity_file'):
+                    report_text += f"- Resistivity file: `{par.get('resistivity_file')}`\n"
+                if par.get('resistivity_stats'):
+                    rs = par['resistivity_stats']
+                    report_text += f"- Resistivity stats: min={rs.get('min')}, max={rs.get('max')}, mean={rs.get('mean')}\n"
+                report_text += "\n"
+                if par.get('plots'):
+                    for _, path in par['plots'].items():
+                        report_text += f"![ParFlow Plot]({Path(path).name})\n\n"
+
+            report_file = output_dir / 'hydro_model_output_report.md'
+            with open(report_file, 'w', encoding='utf-8') as f:
+                f.write(report_text)
+
+            report_files = {'report_markdown': str(report_file)}
+            from .report_agent import ReportAgent
+            report_agent = ReportAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+            html_file = report_agent._save_html_report(report_text, str(output_dir), 'hydro_model_output_report')
+            if html_file:
+                report_files['report_html'] = html_file
 
         elif workflow_type == 'direct_ert':
             # Use ERT agents for direct ERT workflow

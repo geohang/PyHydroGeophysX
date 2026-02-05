@@ -17,6 +17,7 @@ The workflow includes:
 
 
 """
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_TDEM_workflow_fig_01.png'
 
 # %% [markdown]
 # ## Step 1: Import Required Modules
@@ -218,6 +219,18 @@ plt.tight_layout()
 plt.savefig(os.path.join(output_dir, "true_model_profiles.png"), dpi=150)
 plt.show()
 
+###############################################################################
+# True Model Profiles
+# ~~~~~~~~~~~~~~~~~~~
+#
+# Vertical profiles of porosity, water content, saturation, and conductivity
+# extracted from the MODFLOW model. The conductivity is calculated using the
+# Waxman-Smits petrophysical model with layer-specific parameters.
+#
+# .. image:: /auto_examples/images/Ex_TDEM_workflow_fig_01.png
+#    :align: center
+#    :width: 700px
+
 # %% [markdown]
 # ## Step 5: TDEM Forward Modeling
 # 
@@ -285,6 +298,18 @@ plt.tight_layout()
 plt.savefig(os.path.join(output_dir, "synthetic_tdem_data.png"), dpi=150)
 plt.show()
 
+###############################################################################
+# Synthetic TDEM Data
+# ~~~~~~~~~~~~~~~~~~~
+#
+# TDEM sounding data generated from the MODFLOW-derived conductivity model.
+# The clean forward response (blue line), noisy observations (black circles),
+# and uncertainty bounds (gray shading) are shown on log-log axes.
+#
+# .. image:: /auto_examples/images/Ex_TDEM_workflow_fig_02.png
+#    :align: center
+#    :width: 700px
+
 # %% [markdown]
 # ## Step 7: Save Synthetic Data
 
@@ -341,6 +366,18 @@ tdem_inv.plot_result(
     true_model=(layer_thicknesses, conductivity),
     save_path=os.path.join(output_dir, "inversion_result.png")
 )
+
+###############################################################################
+# TDEM Inversion Result
+# ~~~~~~~~~~~~~~~~~~~~~
+#
+# Comparison of the true conductivity model with the recovered model from
+# TDEM inversion. The inversion uses IRLS (Iteratively Reweighted Least Squares)
+# regularization for sparse model recovery.
+#
+# .. image:: /auto_examples/images/Ex_TDEM_workflow_fig_03.png
+#    :align: center
+#    :width: 700px
 
 # %% [markdown]
 # ## Step 10: Detailed Model Comparison
@@ -414,6 +451,18 @@ plt.tight_layout()
 plt.savefig(os.path.join(output_dir, "model_comparison_detailed.png"), dpi=150)
 plt.show()
 
+###############################################################################
+# Detailed Model Comparison
+# ~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# Side-by-side comparison of conductivity (left) and resistivity (right) models.
+# The true model (black), L2 regularized model (blue), and sparse IRLS model (red)
+# are shown to compare different regularization approaches.
+#
+# .. image:: /auto_examples/images/Ex_TDEM_workflow_fig_04.png
+#    :align: center
+#    :width: 700px
+
 # %%
 # Data fit comparison
 fig, axes = plt.subplots(1, 2, figsize=(14, 6))
@@ -448,6 +497,18 @@ ax2.grid(True, alpha=0.5)
 plt.tight_layout()
 plt.savefig(os.path.join(output_dir, "data_fit.png"), dpi=150)
 plt.show()
+
+###############################################################################
+# Data Fit and Residuals
+# ~~~~~~~~~~~~~~~~~~~~~~
+#
+# Assessment of inversion quality: (left) comparison of observed, predicted,
+# and true TDEM data showing the data fit; (right) normalized residuals with
+# ±2σ bounds (green shading) indicating good fit when residuals fall within.
+#
+# .. image:: /auto_examples/images/Ex_TDEM_workflow_fig_05.png
+#    :align: center
+#    :width: 700px
 
 # %% [markdown]
 # ## Step 11: Inversion Statistics

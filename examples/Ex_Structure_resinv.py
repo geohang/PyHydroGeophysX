@@ -17,6 +17,7 @@ Structure-constrained inversion significantly improves the accuracy of
 resistivity models by incorporating a priori geological information,
 leading to more reliable hydrological interpretations.
 """
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_Structure_resinv_fig_01.png'
 
 # %%
 import matplotlib.pyplot as plt
