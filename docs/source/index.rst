@@ -1,158 +1,84 @@
-PyHydroGeophysX Documentation
-==============================
+PyHydroGeophysX
+===============
 
-.. image:: _static/logo.png
-   :alt: PyHydroGeophysX Logo
-   :align: center
-   :width: 400px
+PyHydroGeophysX is an open-source Python toolkit for turning hydrologic model outputs into
+geophysical responses and inversions (ERT, SRT, TDEM). It is built for watershed and
+critical-zone researchers who need repeatable hydro-to-geophysics workflows.
 
-|
+Key Workflows
+-------------
 
-.. image:: https://img.shields.io/badge/python-3.8+-blue.svg
-   :target: https://www.python.org/downloads/
-   :alt: Python Version
+- Field ERT QC and export for inversion.
+- Hydro outputs -> petrophysics -> geophysics forward response.
+- Time-lapse or structure-constrained inversion for monitoring.
 
-.. image:: https://img.shields.io/badge/License-MIT-yellow.svg
-   :target: https://opensource.org/licenses/MIT
-   :alt: License
-
-What is PyHydroGeophysX?
-------------------------
-
-**PyHydroGeophysX** is a Python package for integrating hydrological model outputs
-with geophysical forward modeling and inversion—designed for researchers and 
-practitioners working on watershed monitoring, groundwater characterization, and
-hydrogeophysical modeling.
-
-If you work with **MODFLOW** or **ParFlow** hydrological models and want to 
-simulate or invert **ERT**, **SRT**, or **TDEM** geophysical data, this package 
-provides a complete workflow from hydrology to geophysics.
-
-
-🚀 Key Workflows
-----------------
-
-PyHydroGeophysX supports three primary use cases:
-
-1. **Field ERT QC & Export**
-   
-   Load field ERT data from commercial instruments (Syscal, ABEM, E4D, etc.),
-   perform quality control with diagnostic plots, and export to inversion formats.
-
-2. **Hydro Model → Petrophysics → Geophysics**
-   
-   Load MODFLOW/ParFlow outputs, convert water content to resistivity or velocity
-   using petrophysical models (Archie, Waxman-Smits, DEM), and run forward modeling.
-
-3. **Time-Lapse & Structure-Constrained Inversion**
-   
-   Perform time-lapse ERT inversion with temporal regularization, or use seismic
-   velocity interfaces to constrain resistivity inversion for improved imaging.
-
-
-📦 Quick Install
-----------------
-
-.. code-block:: bash
-
-   # From PyPI
-   pip install PyHydroGeophysX
-
-   # From source (for latest features)
-   git clone https://github.com/geohang/PyHydroGeophysX.git
-   cd PyHydroGeophysX
-   pip install -e .
-
-
-⚡ Minimal Example
-------------------
+Quickstart
+----------
 
 .. code-block:: python
 
    import numpy as np
-   from PyHydroGeophysX.model_output import MODFLOWWaterContent
    from PyHydroGeophysX.petrophysics import water_content_to_resistivity
 
-   # Load MODFLOW water content
-   processor = MODFLOWWaterContent("path/to/modflow", idomain)
-   wc = processor.load_timestep(0)
+   wc = np.linspace(0.1, 0.4, 6).reshape(2, 3)
+   rho = water_content_to_resistivity(wc, rhos=100.0, n=2.0, porosity=0.3)
+   print(rho)
 
-   # Convert to resistivity using Archie's law
-   resistivity = water_content_to_resistivity(
-       water_content=wc,
-       rho_saturated=100.0,
-       saturation_exponent_n=2.0,
-       porosity=0.3
-   )
+Start Here
+----------
 
-   print(f"Resistivity range: {resistivity.min():.1f} - {resistivity.max():.1f} Ohm-m")
+.. grid:: 1 2 3 3
+   :gutter: 2
 
+   .. grid-item-card:: Installation
+      :link: installation
+      :link-type: doc
+      :class-card: sd-card-hover
 
-🌟 Key Features
----------------
+      Install PyHydroGeophysX and optional dependencies.
 
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
+   .. grid-item-card:: Documentation
+      :link: documentation/index
+      :link-type: doc
+      :class-card: sd-card-hover
 
-   * - Feature
-     - Description
-   * - **ERT Data Processing**
-     - Load field data from 14+ commercial instruments with RESIPY integration
-   * - **Multi-Agent AI System** *(NEW)*
-     - Automated cross-modal geophysics workflows with LLM support
-   * - **3D ERT Modeling** *(NEW)*
-     - Complete 3D mesh creation, forward modeling, and PyVista visualization
-   * - **TDEM Forward & Inversion** *(NEW)*
-     - Time-Domain Electromagnetic modeling using SimPEG
-   * - **Petrophysical Models**
-     - Archie, Waxman-Smits, DEM, Hertz-Mindlin rock physics models
-   * - **Time-Lapse Inversion**
-     - Temporal regularization for monitoring applications
-   * - **Structure-Constrained Inversion**
-     - Use seismic interfaces to constrain ERT inversion
-   * - **Uncertainty Quantification**
-     - Monte Carlo methods for parameter uncertainty
+      User guide and task-oriented references.
 
+   .. grid-item-card:: Tutorials
+      :link: tutorials/index
+      :link-type: doc
+      :class-card: sd-card-hover
 
-📚 Documentation
-----------------
+      End-to-end walkthroughs.
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Getting Started
+   .. grid-item-card:: Examples
+      :link: auto_examples/index
+      :link-type: doc
+      :class-card: sd-card-hover
 
-   installation
-   quickstart
+      Gallery of runnable scripts.
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Tutorials & Workflows
+   .. grid-item-card:: API Reference
+      :link: api/index
+      :link-type: doc
+      :class-card: sd-card-hover
 
-   tutorials/index
+      Complete Python API docs.
+
+   .. grid-item-card:: Agents
+      :link: documentation/agents
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Multi-agent system usage and limitations.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Examples Gallery
+   :maxdepth: 1
+   :hidden:
 
-   auto_examples/index
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Multi-Agent AI System
-
-   agents/index
-
-.. toctree::
-   :maxdepth: 2
-   :caption: API Reference
-
-   api/index
-
-
-Indices and Tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   Home <self>
+   Documentation <documentation/index>
+   Installation <installation>
+   Tutorials <tutorials/index>
+   Examples <auto_examples/index>
+   API Reference <api/index>

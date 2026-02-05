@@ -15,6 +15,17 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Guard placeholders
+      run: |
+        if grep -R -n "yourusername" README.md docs; then
+          echo "ERROR: Placeholder clone URL found"
+          exit 1
+        fi
+        if grep -R -n "Read the Docs" README.md docs; then
+          echo "ERROR: Outdated Read the Docs reference found"
+          exit 1
+        fi
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -30,9 +41,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install sphinx==7.1.2
         pip install sphinx-rtd-theme==1.3.0
+        pip install pydata-sphinx-theme==0.14.4
         pip install myst-parser==2.0.0
         pip install nbsphinx==0.9.1
         pip install sphinx-copybutton==0.5.2
+        pip install sphinx-design==0.5.0
         pip install sphinx-gallery==0.14.0
         pip install numpy scipy matplotlib tqdm palettable Pillow
         # Install package in development mode with minimal dependencies
@@ -108,30 +121,35 @@ jobs:
         sphinx-apidoc -f -o source/api ../PyHydroGeophysX
         
         echo "Building HTML documentation with Sphinx Gallery..."
-        sphinx-build -b html source build/html --keep-going -v -E
+        sphinx-build -b html source _build/html --keep-going -v -E
         
         echo "Build completed with exit code: $?"
+
+    - name: Linkcheck
+      run: |
+        cd docs
+        sphinx-build -b linkcheck source _build/linkcheck
 
     - name: Check build results
       run: |
         echo "Checking build outputs..."
         
-        if [ -f docs/build/html/index.html ]; then
+        if [ -f docs/_build/html/index.html ]; then
           echo "Main documentation built successfully"
         else
           echo "ERROR: Main documentation not found"
         fi
         
-        if [ -f docs/build/html/auto_examples/index.html ]; then
+        if [ -f docs/_build/html/auto_examples/index.html ]; then
           echo "Examples gallery created"
           
           # Count example pages
-          EXAMPLE_COUNT=$(find docs/build/html/auto_examples/ -name "Ex*.html" | wc -l)
+          EXAMPLE_COUNT=$(find docs/_build/html/auto_examples/ -name "Ex*.html" | wc -l)
           echo "Example pages generated: $EXAMPLE_COUNT"
           
           # Check for figures in build
-          if ls docs/build/html/auto_examples/images/*.png 1> /dev/null 2>&1; then
-            BUILD_FIGURE_COUNT=$(ls docs/build/html/auto_examples/images/*.png | wc -l)
+          if ls docs/_build/html/auto_examples/images/*.png 1> /dev/null 2>&1; then
+            BUILD_FIGURE_COUNT=$(ls docs/_build/html/auto_examples/images/*.png | wc -l)
             echo "Figures included in build: $BUILD_FIGURE_COUNT"
           else
             echo "No figures in build directory"
@@ -142,19 +160,19 @@ jobs:
         
         # List some key files for debugging
         echo "Key documentation files:"
-        find docs/build/html -name "*.html" -type f | head -10
+        find docs/_build/html -name "*.html" -type f | head -10
 
     - name: Verify Sphinx Gallery output
       run: |
         echo "Sphinx Gallery specific checks..."
         
-        if [ -d docs/build/html/auto_examples ]; then
+        if [ -d docs/_build/html/auto_examples ]; then
           echo "Gallery directory structure:"
-          find docs/build/html/auto_examples -type f -name "*.html" | head -5
+          find docs/_build/html/auto_examples -type f -name "*.html" | head -5
           
-          if [ -d docs/build/html/auto_examples/images ]; then
+          if [ -d docs/_build/html/auto_examples/images ]; then
             echo "Images directory exists in build"
-            ls docs/build/html/auto_examples/images/ | head -5
+            ls docs/_build/html/auto_examples/images/ | head -5
           fi
         fi
 
@@ -163,7 +181,7 @@ jobs:
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs/build/html
+        publish_dir: ./docs/_build/html
         force_orphan: true
 
     - name: Comment deployment info

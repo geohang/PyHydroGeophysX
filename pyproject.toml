@@ -8,7 +8,7 @@ version = "0.2.0"
 description = "A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, featuring an automatic cross-modal geophysics agent for subsurface hydrology"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = {text = "Apache-2.0"}
 authors = [
     {name = "Hang Chen", email = "hangchen.work@gmail.com"},
 ]
@@ -28,7 +28,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Hydrology",
     "Topic :: Scientific/Engineering :: Physics",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",

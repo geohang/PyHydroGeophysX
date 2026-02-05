@@ -45,7 +45,7 @@ pip install pyhydrogeophysx
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/PyHydroGeophysX.git
+git clone https://github.com/geohang/PyHydroGeophysX.git
 cd PyHydroGeophysX
 pip install -e .
 ```
@@ -67,13 +67,13 @@ pip install cupy-cuda11x  # Replace with your CUDA version
 
 ## 📚 Documentation
 
-Comprehensive documentation is available at Read the Docs.
+Comprehensive documentation is available at https://geohang.github.io/PyHydroGeophysX/.
 
 To build documentation locally:
 
 ```bash
 cd docs
-make html
+make html  # On Windows: .\\make.bat html
 ```
 
 ## 🗂️ Package Structure

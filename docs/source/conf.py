@@ -19,6 +19,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'sphinx_gallery.gen_gallery',
+    'sphinx_copybutton',
+    'sphinx_design',
 ]
 
 # Sphinx Gallery configuration - FINAL WORKING VERSION
@@ -39,9 +41,31 @@ sphinx_gallery_conf = {
 }
 
 # HTML theme
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'pydata_sphinx_theme'
 html_title = 'PyHydroGeophysX Documentation'
 html_logo = '_static/logo.png'
+
+html_theme_options = {
+    'navbar_start': ['navbar-logo'],
+    'navbar_center': ['navbar-nav'],
+    'navbar_end': ['search-button', 'navbar-icon-links'],
+    'icon_links': [
+        {
+            'name': 'GitHub',
+            'url': 'https://github.com/geohang/PyHydroGeophysX',
+            'icon': 'fa-brands fa-github',
+        },
+    ],
+    'use_edit_page_button': True,
+    'show_toc_level': 2,
+}
+
+html_context = {
+    'github_user': 'geohang',
+    'github_repo': 'PyHydroGeophysX',
+    'github_version': 'main',
+    'doc_path': 'docs/source',
+}
 
 # Static files
 html_static_path = ['_static']
