@@ -8,9 +8,15 @@ critical-zone researchers who need repeatable hydro-to-geophysics workflows.
 Key Workflows
 -------------
 
-- Field ERT QC and export for inversion.
-- Hydro outputs -> petrophysics -> geophysics forward response.
-- Time-lapse or structure-constrained inversion for monitoring.
+- Field ERT ingestion, QC, visualization, and export for inversion (RESIPY-compatible).
+- Hydrologic model outputs (MODFLOW/ParFlow) -> petrophysics -> 2D/3D forward responses
+  for ERT/SRT/EM, including time-lapse monitoring and survey sensitivity.
+- Single-time, time-lapse, and windowed inversions with temporal regularization for
+  monitoring datasets.
+- Structure-constrained inversion and GM -> HM transfer: extract seismic interfaces and
+  velocity structure to build meshes and parameterize hydrologic models.
+- Multi-physics and uncertainty workflows: integrate ERT/SRT/EM and Monte Carlo to
+  quantify parameter uncertainty.
 
 Quickstart
 ----------

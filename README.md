@@ -30,6 +30,14 @@ Chen, H., Niu, Q., Mendieta, A., Bradford, J., & McNamara, J. (2023). Geophysics
 - 🚀 **High Performance:** GPU acceleration support (CUDA/CuPy) and parallel processing capabilities  
 - 💡 **Advanced Solvers:** Multiple linear solvers (CGLS, LSQR, RRLS) with optional GPU acceleration
 
+## Key Workflows
+
+- Field ERT ingestion, QC, visualization, and export for inversion (RESIPY-compatible).
+- HM -> GM: MODFLOW/ParFlow outputs -> petrophysics -> 2D/3D forward responses for ERT/SRT/TDEM, including time-lapse monitoring and survey sensitivity.
+- GM -> HM: single-time, time-lapse, and windowed inversions with temporal regularization; extract seismic interfaces and velocity structure for constrained meshes and hydrologic parameterization.
+- Iterative ModEx loop: use model results to guide survey design and use geophysical inversions to calibrate and parameterize hydrologic models.
+- Multi-physics and uncertainty workflows: combine ERT/SRT/EM and Monte Carlo to quantify parameter uncertainty.
+
 ## 📋 Requirements
 
 - Python 3.8 or higher  
