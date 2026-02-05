@@ -4,7 +4,6 @@ Smoke test for hydrological model output workflow.
 Runs MODFLOW and ParFlow model output loading (and resistivity conversion)
 using the unified workflow dispatcher.
 """
-# sphinx_gallery_thumbnail_path = 'auto_examples/images/smoke_test_model_output_agent_fig_01.png'
 
 from pathlib import Path
 import sys

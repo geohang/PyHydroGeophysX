@@ -4,7 +4,6 @@ PyHydroGeophysX Streamlit Web Application
 Natural-language interface for geophysical workflows.
 Usage: streamlit run app_geophysics_workflow.py
 """
-# sphinx_gallery_thumbnail_path = 'auto_examples/images/app_geophysics_workflow_fig_01.png'
 
 import os
 import sys

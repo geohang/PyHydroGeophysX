@@ -8,7 +8,7 @@ Open the App
 ------------
 
 - Live URL: `https://pyhydrogeophysx.streamlit.app/ <https://pyhydrogeophysx.streamlit.app/>`_
-- Local script reference: :doc:`/auto_examples/app_geophysics_workflow`
+- Local implementation script: ``examples/app_geophysics_workflow.py``
 
 What It Does
 ------------
