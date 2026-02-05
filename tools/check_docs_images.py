@@ -15,7 +15,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Sequence
+from typing import Iterable, List, Sequence, Tuple
 
 REF_PATTERN = re.compile(r"/auto_examples/images/(?:thumb/)?[^\s'\"`<>)]+")
 
@@ -104,13 +104,33 @@ def validate_source_paths(
 def validate_built_paths(
     occurrences: Sequence[RefOccurrence],
     build_html_dir: Path,
-) -> List[RefOccurrence]:
+    alternate_build_dirs: Sequence[Path] = (),
+) -> Tuple[List[RefOccurrence], List[Tuple[RefOccurrence, Path]]]:
     missing: List[RefOccurrence] = []
+    resolved_in_alternate: List[Tuple[RefOccurrence, Path]] = []
     for occ in occurrences:
-        expected = build_html_dir / normalize_ref(occ.ref_path)
-        if not exists_case_sensitive(expected):
+        normalized = normalize_ref(occ.ref_path)
+        candidates_primary = [
+            build_html_dir / normalized,
+            build_html_dir / "_images" / normalized.name,
+        ]
+        if any(exists_case_sensitive(candidate) for candidate in candidates_primary):
+            continue
+
+        resolved = False
+        for alt_dir in alternate_build_dirs:
+            candidates_alt = [
+                alt_dir / normalized,
+                alt_dir / "_images" / normalized.name,
+            ]
+            if any(exists_case_sensitive(candidate) for candidate in candidates_alt):
+                resolved_in_alternate.append((occ, alt_dir))
+                resolved = True
+                break
+
+        if not resolved:
             missing.append(occ)
-    return missing
+    return missing, resolved_in_alternate
 
 
 def print_missing(
@@ -187,15 +207,41 @@ def main() -> int:
     print_missing("Missing source artifacts", source_missing, repo_root)
 
     build_missing: List[RefOccurrence] = []
+    resolved_in_alt: List[Tuple[RefOccurrence, Path]] = []
     if not args.skip_build_check:
+        alt_build_dirs = [
+            (repo_root / "docs" / "_build" / "html").resolve(),
+            (repo_root / "docs" / "build" / "html").resolve(),
+        ]
+        alt_build_dirs = [
+            path for path in alt_build_dirs
+            if path != build_html_dir and path.is_dir()
+        ]
+
         if not build_html_dir.is_dir():
             if args.require_build:
                 print(f"ERROR: Build directory does not exist: {build_html_dir}")
                 return 1
             print(f"Build directory not found; skipping build artifact checks: {build_html_dir}")
         else:
-            build_missing = validate_built_paths(occurrences, build_html_dir)
+            build_missing, resolved_in_alt = validate_built_paths(
+                occurrences,
+                build_html_dir,
+                alternate_build_dirs=alt_build_dirs,
+            )
             print_missing("Missing built artifacts", build_missing, repo_root)
+
+            if resolved_in_alt:
+                alt_dirs_used = sorted({path for _, path in resolved_in_alt})
+                alt_dirs_display = ", ".join(str(path) for path in alt_dirs_used)
+                print(
+                    "Warning: some built artifacts were resolved from alternate build "
+                    f"directory/directories: {alt_dirs_display}"
+                )
+                print(
+                    "Hint: align your sphinx-build output path with --build-dir for "
+                    "deterministic CI checks."
+                )
 
     if source_missing or build_missing:
         print(

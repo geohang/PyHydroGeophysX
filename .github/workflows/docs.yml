@@ -83,6 +83,12 @@ jobs:
 
     - name: Build documentation
       run: |
+        echo "Cleaning stale generated docs artifacts..."
+        find docs/source/auto_examples -mindepth 1 -maxdepth 1 ! -name images -exec rm -rf {} +
+        rm -rf docs/source/auto_examples/images/thumb
+        mkdir -p docs/source/auto_examples/images/thumb
+        rm -rf docs/build/html
+
         cd docs
         echo "Generating API documentation..."
         sphinx-apidoc -f -o source/api ../PyHydroGeophysX
