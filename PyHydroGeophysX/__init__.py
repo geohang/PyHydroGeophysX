@@ -5,7 +5,7 @@ This package integrates MODFLOW hydrological model outputs with geophysical forw
 and inversion, specializing in electrical resistivity tomography (ERT) and seismic velocity modeling.
 """
 
-__version__ = '0.1.0'
+__version__ = '0.3.0'
 
 # Track available features
 PYGIMLI_AVAILABLE = False
