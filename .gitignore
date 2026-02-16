@@ -66,3 +66,6 @@ Thumbs.db
 
 # PyPI publishing
 .twine/
+
+# Sphinx temporary files
+*.rst.new

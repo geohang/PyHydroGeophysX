@@ -1,10 +1,10 @@
 Joint inversion comparison
 ==========================
 cross_gradient_joint
-  final ERT chi2: 1.322679
-  final SRT chi2: 3.509678
-  iterations: 11
+  final ERT chi2: 1.221031
+  final SRT chi2: 4.499937
+  iterations: 20
 geostat_joint
-  final ERT chi2: 1.239159
-  final SRT chi2: 4.272848
+  final ERT chi2: 1.237294
+  final SRT chi2: 4.264085
   iterations: 11

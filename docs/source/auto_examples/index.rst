@@ -30,9 +30,11 @@ The examples are organized to show the complete workflow from loading hydrologic
 **Advanced Applications:**
 
 * **Ex_Structure_resinv.py**: Structure-constrained resistivity inversion
+* **Ex_joint_inversion.py**: Joint ERT-SRT inversion with cross-gradient coupling and geostatistical regularization
 * **Ex_MC_Hydro.py**: Monte Carlo uncertainty quantification for water content estimation
 
 Each example includes detailed comments and demonstrates best practices for watershed geophysical monitoring applications.
+
 
 
 .. raw:: html
@@ -179,6 +181,23 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
+    <div class="sphx-glr-thumbcontainer" tooltip="This example compares two joint inversion strategies using the same ERT/SRT data:">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_joint_inversion_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_Ex_joint_inversion.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Joint ERT-SRT Inversion: Cross-Gradient vs Geostatistics</div>
+    </div>
+
+
+.. raw:: html
+
     <div class="sphx-glr-thumbcontainer" tooltip="This example uses real hydrological model outputs from examples/data and builds one 2D profile (single snapshot). All geophysical methods are then simulated on the same profile:">
 
 .. only:: html
@@ -295,6 +314,7 @@ Each example includes detailed comments and demonstrates best practices for wate
       <div class="sphx-glr-thumbnail-title">3D ERT Forward Modeling with MODFLOW Integration</div>
     </div>
 
+
 .. thumbnail-parent-div-close
 
 .. raw:: html
@@ -313,6 +333,7 @@ Each example includes detailed comments and demonstrates best practices for wate
    /auto_examples/Ex_structure_TLresinv
    /auto_examples/Ex_TL_inversion
    /auto_examples/Ex_SRT_inv
+   /auto_examples/Ex_joint_inversion
    /auto_examples/Ex_hydro_to_multigeophys
    /auto_examples/Ex_TDEM_workflow
    /auto_examples/EX_SRT_forward

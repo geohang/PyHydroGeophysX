@@ -790,6 +790,8 @@ class JointERTSRTInversion(InversionBase):
         dr_final, _ = self._ert_forward_and_jac(mr)
         dt_final, _ = self._srt_forward_and_jac(mv)
 
+        n_cells = int(self.mesh.cellCount())
+
         # --- ERT coverage (same as ERTInversion) ---
         try:
             ert_model_lin = np.exp(mr)
@@ -801,29 +803,43 @@ class JointERTSRTInversion(InversionBase):
                 1.0 / pg.Vector(dr_lin),
                 1.0 / pg.Vector(ert_model_lin),
             )
-            paramSizes = np.zeros(len(ert_model_lin))
+            covTrans = np.asarray(covTrans, dtype=float).ravel()
             ert_para = self.ert_fop.paraDomain
+            paramSizes = np.zeros(len(covTrans))
             for c in ert_para.cells():
-                paramSizes[c.marker()] += c.size()
-            ert_coverage = np.log10(np.asarray(covTrans, dtype=float) / paramSizes)
+                idx = c.marker()
+                if 0 <= idx < len(paramSizes):
+                    paramSizes[idx] += c.size()
+            paramSizes = np.clip(paramSizes, 1e-12, None)
+            ert_coverage = np.log10(covTrans / paramSizes)
+            # Ensure size matches mesh
+            if ert_coverage.size != n_cells:
+                ert_coverage = None
         except Exception:
             ert_coverage = None
 
-        # --- SRT coverage (same as SRTInversion / TravelTimeManager) ---
+        # --- SRT coverage (Jacobian-based ray coverage) ---
         try:
             srt_slowness = np.exp(mv)
             self.srt_fop.createJacobian(pg.Vector(srt_slowness))
-            if self.srt_manager is not None and hasattr(self.srt_manager, "standardizedCoverage"):
-                if hasattr(self.srt_fop, "createConstraints"):
-                    self.srt_fop.createConstraints()
-                srt_coverage = np.asarray(self.srt_manager.standardizedCoverage(), dtype=float).ravel()
-            else:
-                J = self.srt_fop.jacobian()
-                ray_cov = np.asarray(J.transMult(np.ones(J.rows())), dtype=float).ravel()
+            J_srt = self.srt_fop.jacobian()
+            ray_cov = np.asarray(
+                J_srt.transMult(np.ones(J_srt.rows())), dtype=float
+            ).ravel()
+            # Try standardized coverage: sign(|C^T * C * ray_coverage|)
+            try:
                 Ctmp2 = pg.matrix.RSparseMapMatrix()
                 self.srt_fop.regionManager().fillConstraints(Ctmp2)
                 C2 = pg.utils.sparseMatrix2coo(Ctmp2).tocsr()
                 srt_coverage = np.sign(np.abs(C2.T.dot(C2.dot(ray_cov))))
+            except Exception:
+                srt_coverage = None
+            # Fallback: threshold raw ray coverage
+            if srt_coverage is None or srt_coverage.size != n_cells:
+                if ray_cov.size == n_cells:
+                    srt_coverage = np.sign(ray_cov)
+                else:
+                    srt_coverage = None
         except Exception:
             srt_coverage = None
 

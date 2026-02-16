@@ -19,7 +19,7 @@
 
 
 Ex. Loading and Processing Hydrological Model Outputs
-==================================================
+====================================================
 
 This example demonstrates how to load and process outputs from different 
 hydrological models using PyHydroGeophysX. We show examples for both 

@@ -31,7 +31,8 @@ for _ext in ['sphinx_copybutton', 'sphinx_design']:
 sphinx_gallery_conf = {
     'examples_dirs': '../../examples',           # Path to example scripts
     'gallery_dirs': 'auto_examples',             # Output gallery directory
-    'filename_pattern': '/(Ex|EX).*\.py$',
+    'filename_pattern': r'/(Ex|EX)_.*\.py$',
+    'ignore_pattern': r'app_.*\.py$',
     'plot_gallery': False,                       # Don't execute scripts (use pre-generated figures)
     'download_all_examples': True,               # Allow downloading scripts
     'abort_on_example_error': False,             # Continue on errors
