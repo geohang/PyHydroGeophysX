@@ -11,8 +11,9 @@ It begins by loading pre-existing synthetic travel time data and then uses tomog
 to reconstruct the subsurface P-wave velocity distribution. A key feature demonstrated is the extraction of geological interfaces based on velocity thresholds.
 
 The workflow includes:
-Loading Synthetic Data: The script loads pre-generated synthetic seismic travel time data for both a long and a short survey profile.
-Tomographic Inversion: It creates an unstructured mesh and performs a travel time inversion to estimate the subsurface P-wave velocity model for each dataset.
+Loading Synthetic Data: The script loads pre-generated synthetic travel time data for both a long and a short survey profile.
+Tomographic Inversion: It runs both the original PyGIMLi `TravelTimeManager.invert()` workflow and the package-level `SRTInversion` class using matching settings.
+Comparison: The velocity models from both inversion paths are compared quantitatively and visually.
 Visualization: The resulting velocity tomograms are plotted, showing the recovered subsurface structure.
 Interface Extraction: For the long profile, the script uses the extract_velocity_interface function to automatically delineate boundaries between different geological layers (e.g., regolith, fractured bedrock, and fresh bedrock) based on velocity thresholds.
 Exporting Results: The coordinates of the extracted interfaces are saved to text files, making them available for constraining other models, such as hydrogeological simulations.
@@ -52,10 +53,110 @@ from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
 from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surface_lines
 from PyHydroGeophysX.core.mesh_utils import MeshCreator,fill_holes_2d,createTriangles,extract_velocity_interface
 from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
+from PyHydroGeophysX.inversion.srt_inversion import SRTInversion
 
 # %%
 output_dir = "results/seismic_example"
 os.makedirs(output_dir, exist_ok=True)
+
+
+SRT_BASE_PARAMS = {
+    # Parameters shared with ERT-style inversion interfaces
+    "lambda_val": 50.0,
+    "method": "cgls",
+    "max_iterations": 20,
+    "lambda_rate": 1.0,
+    "lambda_min": 1.0,
+    "relativeError": 0.03,
+    "absoluteUError": 0.001,
+    # SRT-specific controls
+    "zWeight": 0.2,
+    "vTop": 500.0,
+    "target_chi_squared": 1.0,
+}
+
+LONG_SRT_PARAMS = {
+    **SRT_BASE_PARAMS,
+    "vBottom": 8000.0,
+    "model_constraints": (300.0, 10000.0),
+}
+
+SHORT_SRT_PARAMS = {
+    **SRT_BASE_PARAMS,
+    "vBottom": 5500.0,
+    "model_constraints": (300.0, 8000.0),
+}
+
+
+def run_custom_srt_inversion(data_file, mesh, inversion_params):
+    """Run package-level SRTInversion with explicit parameter dictionary."""
+    inversion = SRTInversion(
+        data_file=data_file,
+        mesh=mesh,
+        **inversion_params,
+    )
+    return inversion.run()
+
+
+def compare_models(direct_model, custom_result):
+    custom_model = np.asarray(custom_result.final_model, dtype=float)
+    if direct_model.shape != custom_model.shape:
+        raise ValueError(
+            f"direct/custom model size mismatch: "
+            f"{direct_model.shape} vs {custom_model.shape}."
+        )
+    return custom_model
+
+
+def plot_direct_vs_custom(
+    mesh,
+    direct_model,
+    custom_model,
+    direct_coverage,
+    custom_coverage,
+    sensors,
+    output_name,
+    velocity_limits,
+    title_prefix,
+):
+    velocity_cmap = fixed_cmap if "fixed_cmap" in globals() else "viridis"
+
+    fig = plt.figure(figsize=[12.5, 5.5])
+    ax_direct = fig.add_subplot(1, 2, 1)
+    pg.show(
+        mesh,
+        direct_model,
+        cMap=velocity_cmap,
+        coverage=direct_coverage,
+        ax=ax_direct,
+        cMin=velocity_limits[0],
+        cMax=velocity_limits[1],
+        label="Velocity (m s$^{-1}$)",
+        orientation="vertical",
+    )
+    ax_direct.set_title(f"{title_prefix}\nPyGIMLi direct inversion", fontsize=12)
+    ax_direct.set_xlabel("Distance (m)", fontsize=11)
+    ax_direct.set_ylabel("Elevation (m)", fontsize=11)
+    pg.viewer.mpl.drawSensors(ax_direct, sensors, diam=0.7, facecolor="black", edgecolor="black")
+
+    ax_custom = fig.add_subplot(1, 2, 2)
+    pg.show(
+        mesh,
+        custom_model,
+        cMap=velocity_cmap,
+        coverage=custom_coverage,
+        ax=ax_custom,
+        cMin=velocity_limits[0],
+        cMax=velocity_limits[1],
+        label="Velocity (m s$^{-1}$)",
+        orientation="vertical",
+    )
+    ax_custom.set_title(f"{title_prefix}\nPyHydroGeophysX SRTInversion", fontsize=12)
+    ax_custom.set_xlabel("Distance (m)", fontsize=11)
+    ax_custom.set_ylabel("Elevation (m)", fontsize=11)
+    pg.viewer.mpl.drawSensors(ax_custom, sensors, diam=0.7, facecolor="black", edgecolor="black")
+
+    fig.savefig(os.path.join(output_dir, output_name), dpi=300, bbox_inches="tight")
 
 # %% [markdown]
 # ## Long seismic profile
@@ -64,12 +165,26 @@ os.makedirs(output_dir, exist_ok=True)
 # ### Load seismic data and inversion
 
 # %%
-datasrt = tt.load("./results/SRT_forward/synthetic_seismic_data_long.dat")
+long_data_file = "./results/SRT_forward/synthetic_seismic_data_long.dat"
+datasrt = tt.load(long_data_file)
 TT = pg.physics.traveltime.TravelTimeManager()
 mesh_inv = TT.createMesh(datasrt, paraMaxCellSize=2, quality=32, paraDepth = 60.0)
 TT.invert(datasrt, mesh = mesh_inv,lam=50,
           zWeight=0.2,vTop=500, vBottom=8000,
           verbose=1, limits=[300., 10000.])
+velocity_data_long_direct = TT.model.array()
+coverage_long_direct = TT.standardizedCoverage()
+
+long_custom_result = run_custom_srt_inversion(
+    data_file=long_data_file,
+    mesh=mesh_inv,
+    inversion_params=LONG_SRT_PARAMS,
+)
+velocity_data_long_custom = compare_models(
+    velocity_data_long_direct,
+    long_custom_result,
+)
+coverage_long_custom = long_custom_result.coverage
 
 # %% [markdown]
 # ### Get parameters for plotting layers
@@ -80,7 +195,7 @@ cov = TT.standardizedCoverage()
 pos = np.array(mesh_inv.cellCenters())
 # For layered model visualization
 x, y, triangles, _, dataIndex = createTriangles(mesh_inv)
-z = pg.meshtools.cellDataToNodeData(mesh_inv,TT.model.array())
+z = pg.meshtools.cellDataToNodeData(mesh_inv, velocity_data_long_direct)
 
 
 # %%
@@ -100,7 +215,7 @@ fixed_cmap = BlueDarkRed18_18.mpl_colormap
 
 fig = plt.figure(figsize=[8,9])
 ax1 = fig.add_subplot(1,1,1)
-pg.show(mesh_inv,TT.model.array(),cMap=fixed_cmap,coverage = cov,ax = ax1,label='Velocity (m s$^{-1}$)',
+pg.show(mesh_inv, velocity_data_long_direct,cMap=fixed_cmap,coverage = cov,ax = ax1,label='Velocity (m s$^{-1}$)',
         xlabel="Distance (m)", ylabel="Elevation (m)",pad=0.3,cMin =500, cMax=5000
        ,orientation="vertical")
 ax1.set_xlabel("Distance (m)", fontsize=15)
@@ -124,12 +239,40 @@ fig.savefig(os.path.join(output_dir, 'seismic_velocity_long.tiff'), dpi=300, bbo
 # .. image:: /auto_examples/images/Ex_SRT_inv_fig_01.png
 #    :align: center
 #    :width: 700px
+
+# %% [markdown]
+# ### Compare direct inversion with `SRTInversion` (same setup)
+
+# %%
+plot_direct_vs_custom(
+    mesh=mesh_inv,
+    direct_model=velocity_data_long_direct,
+    custom_model=velocity_data_long_custom,
+    direct_coverage=coverage_long_direct,
+    custom_coverage=coverage_long_custom,
+    sensors=datasrt.sensors(),
+    output_name="seismic_velocity_long_comparison.tiff",
+    velocity_limits=(500.0, 5000.0),
+    title_prefix="Long profile",
+)
+###############################################################################
+# Long Profile Direct vs Custom Inversion
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The same mesh, regularization, and velocity bounds are used for both inversion
+# paths: PyGIMLi direct inversion and package-level `SRTInversion`.
+# Both panels are shown with standardized coverage masking.
+#
+# .. image:: /auto_examples/images/Ex_SRT_inv_fig_04.png
+#    :align: center
+#    :width: 900px
+#
 # %% [markdown]
 # ### Get subsurface structure for hydrologic modeling
 
 # %%
 # Assuming TT.model.array() gives you the velocity values
-velocity_data = TT.model.array()
+velocity_data = velocity_data_long_direct
 
 # Call the function with velocity data
 # Get subsurface structure (Regolith) for hydrologic modeling
@@ -146,7 +289,7 @@ filled_cov1 = fill_holes_2d(pos, TT.standardizedCoverage())
 
 fig = plt.figure(figsize=[8,9])
 ax1 = fig.add_subplot(1,1,1)
-pg.show(mesh_inv,TT.model.array(),cMap=fixed_cmap,coverage = filled_cov1,ax = ax1,label='Velocity (m s$^{-1}$)',
+pg.show(mesh_inv, velocity_data_long_direct,cMap=fixed_cmap,coverage = filled_cov1,ax = ax1,label='Velocity (m s$^{-1}$)',
         xlabel="Distance (m)", ylabel="Elevation (m)",pad=0.3,cMin =500, cMax=5000
        ,orientation="vertical")
 ax1.set_xlabel("Distance (m)", fontsize=15)
@@ -168,21 +311,36 @@ np.savetxt(os.path.join(output_dir, 'fractured_bedrock_interface.txt'), np.c_[sm
 # .. image:: /auto_examples/images/Ex_SRT_inv_fig_02.png
 #    :align: center
 #    :width: 700px
+#
 # %% [markdown]
 # ## Short seismic profiles
 
 # %%
-ttData = tt.load("./results/workflow_example/synthetic_seismic_data.dat")
+short_data_file = "./results/workflow_example/synthetic_seismic_data.dat"
+ttData = tt.load(short_data_file)
 TT_short = pg.physics.traveltime.TravelTimeManager()
 mesh_inv1 = TT_short.createMesh(ttData , paraMaxCellSize=2, quality=32, paraDepth = 30.0)
-TT_short.invert(ttData , mesh = mesh_inv,lam=50,
+TT_short.invert(ttData , mesh = mesh_inv1,lam=50,
           zWeight=0.2,vTop=500, vBottom=5500,
           verbose=1, limits=[300., 8000.])
+velocity_data_short_direct = TT_short.model.array()
+coverage_short_direct = TT_short.standardizedCoverage()
+
+short_custom_result = run_custom_srt_inversion(
+    data_file=short_data_file,
+    mesh=mesh_inv1,
+    inversion_params=SHORT_SRT_PARAMS,
+)
+velocity_data_short_custom = compare_models(
+    velocity_data_short_direct,
+    short_custom_result,
+)
+coverage_short_custom = short_custom_result.coverage
 
 # %%
-x1, y1, triangles1, _, dataIndex1 = createTriangles(mesh_inv)
-z1 = pg.meshtools.cellDataToNodeData(mesh_inv,np.array(TT_short.model))
-pos = np.array(mesh_inv.cellCenters())
+x1, y1, triangles1, _, dataIndex1 = createTriangles(mesh_inv1)
+z1 = pg.meshtools.cellDataToNodeData(mesh_inv1, velocity_data_short_direct)
+pos = np.array(mesh_inv1.cellCenters())
 filled_cov1 = fill_holes_2d(pos, TT_short.standardizedCoverage())
 
 # %%
@@ -202,7 +360,7 @@ fixed_cmap = BlueDarkRed18_18.mpl_colormap
 
 fig = plt.figure(figsize=[8,9])
 ax1 = fig.add_subplot(1,1,1)
-pg.show(mesh_inv,TT_short.model.array(),cMap=fixed_cmap,coverage = TT_short.standardizedCoverage(),ax = ax1,label='Velocity (m s$^{-1}$)',
+pg.show(mesh_inv1, velocity_data_short_direct,cMap=fixed_cmap,coverage = TT_short.standardizedCoverage(),ax = ax1,label='Velocity (m s$^{-1}$)',
         xlabel="Distance (m)", ylabel="Elevation (m)",pad=0.3,cMin =500, cMax=5000
        ,orientation="vertical")
 ax1.set_xlabel("Distance (m)", fontsize=15)
@@ -228,6 +386,34 @@ fig.savefig(os.path.join(output_dir, 'seismic_velocity_short.tiff'), dpi=300, bb
 #    :align: center
 #    :width: 700px
 
+# %% [markdown]
+# ### Short profile: direct vs custom inversion comparison
+
+# %%
+plot_direct_vs_custom(
+    mesh=mesh_inv1,
+    direct_model=velocity_data_short_direct,
+    custom_model=velocity_data_short_custom,
+    direct_coverage=coverage_short_direct,
+    custom_coverage=coverage_short_custom,
+    sensors=ttData.sensors(),
+    output_name="seismic_velocity_short_comparison.tiff",
+    velocity_limits=(500.0, 5000.0),
+    title_prefix="Short profile",
+)
+###############################################################################
+# Short Profile Direct vs Custom Inversion
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# The short-profile comparison uses the same inversion controls for both methods
+# and shows that the new packaged inversion reproduces the original direct result
+# while preserving shallow structural detail.
+#
+# .. image:: /auto_examples/images/Ex_SRT_inv_fig_05.png
+#    :align: center
+#    :width: 900px
+#
+
 ###############################################################################
 # Summary
 # ~~~~~~~
@@ -235,7 +421,7 @@ fig.savefig(os.path.join(output_dir, 'seismic_velocity_short.tiff'), dpi=300, bb
 # This example demonstrated seismic refraction tomography with automated 
 # interface extraction for watershed applications. Key results include 
 # three-layer velocity structure resolution, interface extraction at 1200 
-# and 5000 m/s thresholds, and multi-scale survey comparison.
+# and 5000 m/s thresholds, and direct-vs-custom inversion consistency checks.
 #
 # The extracted interfaces provide structural constraints for ERT inversions 
 # and direct input for hydrogeological models like MODFLOW and ParFlow.

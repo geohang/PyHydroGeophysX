@@ -14,7 +14,7 @@ __all__ = [
     "LocalRef",
 ]
 
-from .io import (  # noqa: F401
+from .field_formats import (  # noqa: F401
     read_seg2_seismic,
     read_tem_fast,
     export_to_vtk,

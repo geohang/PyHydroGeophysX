@@ -1,29 +1,28 @@
-forward package
-===============
+Forward Module
+==============
 
-Submodules
-----------
+ERT and SRT Forward Modeling
+----------------------------
 
-forward.ert\_forward module
----------------------------
-
-.. automodule:: forward.ert_forward
+.. automodule:: PyHydroGeophysX.forward.ert_forward
    :members:
    :undoc-members:
    :show-inheritance:
 
-forward.srt\_forward module
----------------------------
-
-.. automodule:: forward.srt_forward
+.. automodule:: PyHydroGeophysX.forward.srt_forward
    :members:
    :undoc-members:
    :show-inheritance:
 
-Module contents
----------------
+EM Forward Modeling
+-------------------
 
-.. automodule:: forward
+.. automodule:: PyHydroGeophysX.forward.tdem_forward
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.forward.fdem_forward
    :members:
    :undoc-members:
    :show-inheritance:

@@ -1,100 +1,45 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../">
-<head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API Reference &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  
+    <title>API Reference &#8212; PyHydroGeophysX Documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/api/index.html" />
-      <script src="../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Data Processing Module" href="data_processing.html" />
-    <link rel="prev" title="Quickstart" href="../quickstart.html" /> 
-</head>
+    <link rel="prev" title="&lt;no title&gt;" href="../auto_examples/app_geophysics_workflow.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+  
+  
 
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
           
-          
-          <a href="../index.html" class="icon icon-home">
-            PyHydroGeophysX
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="data_processing.html">Data Processing Module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="model_output.html">model_output package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="petrophysics.html">petrophysics package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="forward.html">forward package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inversion.html">inversion package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="core.html">core package</a></li>
-</ul>
-</li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../auto_examples/index.html">Examples Gallery</a></li>
-</ul>
 
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../index.html">PyHydroGeophysX</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">API Reference</li>
-      <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/api/index.rst.txt" rel="nofollow"> View page source</a>
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
+          <div class="body" role="main">
+            
   <section id="api-reference">
-<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
 <p>This section contains the complete API reference for PyHydroGeophysX.</p>
 <div class="toctree-wrapper compound">
 <ul>
@@ -127,6 +72,8 @@
 <li class="toctree-l3"><a class="reference internal" href="model_output.html#model_output.parflow_output.ParflowOutput"><code class="docutils literal notranslate"><span class="pre">ParflowOutput</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="model_output.html#model_output.parflow_output.ParflowPorosity"><code class="docutils literal notranslate"><span class="pre">ParflowPorosity</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="model_output.html#model_output.parflow_output.ParflowSaturation"><code class="docutils literal notranslate"><span class="pre">ParflowSaturation</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="model_output.html#model_output.parflow_output.read_pfb"><code class="docutils literal notranslate"><span class="pre">read_pfb()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="model_output.html#model_output.parflow_output.read_pfb_standalone"><code class="docutils literal notranslate"><span class="pre">read_pfb_standalone()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="model_output.html#module-model_output.water_content">model_output.water_content module</a><ul>
@@ -166,91 +113,109 @@
 <li class="toctree-l3"><a class="reference internal" href="petrophysics.html#petrophysics.velocity_models.satK"><code class="docutils literal notranslate"><span class="pre">satK()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="petrophysics.html#petrophysics.velocity_models.velDEM"><code class="docutils literal notranslate"><span class="pre">velDEM()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="petrophysics.html#petrophysics.velocity_models.vel_porous"><code class="docutils literal notranslate"><span class="pre">vel_porous()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="petrophysics.html#petrophysics.velocity_models.water_content_to_velocity"><code class="docutils literal notranslate"><span class="pre">water_content_to_velocity()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="petrophysics.html#module-petrophysics">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="forward.html">forward package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="forward.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="forward.html#module-forward.ert_forward">forward.ert_forward module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.ert_forward.ERTForwardModeling"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.ert_forward.ertforandjac"><code class="docutils literal notranslate"><span class="pre">ertforandjac()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.ert_forward.ertforandjac2"><code class="docutils literal notranslate"><span class="pre">ertforandjac2()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.ert_forward.ertforward"><code class="docutils literal notranslate"><span class="pre">ertforward()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.ert_forward.ertforward2"><code class="docutils literal notranslate"><span class="pre">ertforward2()</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="forward.html">Forward Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="forward.html#module-PyHydroGeophysX.forward.ert_forward">ERT and SRT Forward Modeling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.ert_forward.ERTForwardModeling"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.ert_forward.ertforandjac"><code class="docutils literal notranslate"><span class="pre">ertforandjac()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.ert_forward.ertforandjac2"><code class="docutils literal notranslate"><span class="pre">ertforandjac2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.ert_forward.ertforward"><code class="docutils literal notranslate"><span class="pre">ertforward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.ert_forward.ertforward2"><code class="docutils literal notranslate"><span class="pre">ertforward2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.srt_forward.SeismicForwardModeling"><code class="docutils literal notranslate"><span class="pre">SeismicForwardModeling</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="forward.html#module-forward.srt_forward">forward.srt_forward module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.srt_forward.SeismicForwardModeling"><code class="docutils literal notranslate"><span class="pre">SeismicForwardModeling</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="forward.html#module-forward">Module contents</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.ERTForwardModeling"><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.SeismicForwardModeling"><code class="docutils literal notranslate"><span class="pre">SeismicForwardModeling</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.ertforandjac"><code class="docutils literal notranslate"><span class="pre">ertforandjac()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.ertforandjac2"><code class="docutils literal notranslate"><span class="pre">ertforandjac2()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.ertforward"><code class="docutils literal notranslate"><span class="pre">ertforward()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="forward.html#forward.ertforward2"><code class="docutils literal notranslate"><span class="pre">ertforward2()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="forward.html#module-PyHydroGeophysX.forward.tdem_forward">EM Forward Modeling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.tdem_forward.TDEMForwardModeling"><code class="docutils literal notranslate"><span class="pre">TDEMForwardModeling</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.tdem_forward.TDEMSurveyConfig"><code class="docutils literal notranslate"><span class="pre">TDEMSurveyConfig</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.tdem_forward.create_tdem_survey"><code class="docutils literal notranslate"><span class="pre">create_tdem_survey()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.tdem_forward.hydro_to_tdem"><code class="docutils literal notranslate"><span class="pre">hydro_to_tdem()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.fdem_forward.FDEMForwardModeling"><code class="docutils literal notranslate"><span class="pre">FDEMForwardModeling</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="forward.html#PyHydroGeophysX.forward.fdem_forward.FDEMSurveyConfig"><code class="docutils literal notranslate"><span class="pre">FDEMSurveyConfig</span></code></a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="inversion.html">inversion package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="inversion.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inversion.html#module-inversion.base">inversion.base module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="inversion.html#inversion.base.InversionBase"><code class="docutils literal notranslate"><span class="pre">InversionBase</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="inversion.html#inversion.base.InversionResult"><code class="docutils literal notranslate"><span class="pre">InversionResult</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="inversion.html#inversion.base.TimeLapseInversionResult"><code class="docutils literal notranslate"><span class="pre">TimeLapseInversionResult</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="inversion.html">Inversion Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="inversion.html#module-PyHydroGeophysX.inversion.ert_inversion">Core Inversion Classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.ert_inversion.ERTInversion"><code class="docutils literal notranslate"><span class="pre">ERTInversion</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.srt_inversion.SRTInversion"><code class="docutils literal notranslate"><span class="pre">SRTInversion</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion"><code class="docutils literal notranslate"><span class="pre">TimeLapseERTInversion</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.srt_time_lapse.TimeLapseSRTInversion"><code class="docutils literal notranslate"><span class="pre">TimeLapseSRTInversion</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.windowed.WindowedTimeLapseERTInversion"><code class="docutils literal notranslate"><span class="pre">WindowedTimeLapseERTInversion</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="inversion.html#inversion-ert-inversion-module">inversion.ert_inversion module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inversion.html#inversion-time-lapse-module">inversion.time_lapse module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inversion.html#inversion-windowed-module">inversion.windowed module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inversion.html#module-inversion">Module contents</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="inversion.html#inversion.ERTInversion"><code class="docutils literal notranslate"><span class="pre">ERTInversion</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="inversion.html#inversion.InversionBase"><code class="docutils literal notranslate"><span class="pre">InversionBase</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="inversion.html#inversion.InversionResult"><code class="docutils literal notranslate"><span class="pre">InversionResult</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="inversion.html#inversion.TimeLapseERTInversion"><code class="docutils literal notranslate"><span class="pre">TimeLapseERTInversion</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="inversion.html#inversion.TimeLapseInversionResult"><code class="docutils literal notranslate"><span class="pre">TimeLapseInversionResult</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="inversion.html#inversion.WindowedTimeLapseERTInversion"><code class="docutils literal notranslate"><span class="pre">WindowedTimeLapseERTInversion</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="inversion.html#module-PyHydroGeophysX.inversion.tdem_inversion">EM Inversion</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.tdem_inversion.TDEMInversion"><code class="docutils literal notranslate"><span class="pre">TDEMInversion</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.tdem_inversion.TDEMInversionResult"><code class="docutils literal notranslate"><span class="pre">TDEMInversionResult</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.tdem_inversion.run_tdem_inversion"><code class="docutils literal notranslate"><span class="pre">run_tdem_inversion()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.fdem_inversion.FDEMInversion"><code class="docutils literal notranslate"><span class="pre">FDEMInversion</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.fdem_inversion.FDEMInversionResult"><code class="docutils literal notranslate"><span class="pre">FDEMInversionResult</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="inversion.html#module-PyHydroGeophysX.inversion.joint_ert_srt">Joint and Multi-Method Inversion</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.joint_ert_srt.JointERTSRTInversion"><code class="docutils literal notranslate"><span class="pre">JointERTSRTInversion</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.joint_ert_srt.JointERTSRTResult"><code class="docutils literal notranslate"><span class="pre">JointERTSRTResult</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.multi_method.GeophysicalInversion"><code class="docutils literal notranslate"><span class="pre">GeophysicalInversion</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="inversion.html#module-PyHydroGeophysX.inversion.cross_constraints">Cross-Constraint Utilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.cross_constraints.PetrophysicalCoupling"><code class="docutils literal notranslate"><span class="pre">PetrophysicalCoupling</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.cross_constraints.StructuralConstraint"><code class="docutils literal notranslate"><span class="pre">StructuralConstraint</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="inversion.html#module-PyHydroGeophysX.inversion.base">Base Classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionBase"><code class="docutils literal notranslate"><span class="pre">InversionBase</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.InversionResult"><code class="docutils literal notranslate"><span class="pre">InversionResult</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="inversion.html#PyHydroGeophysX.inversion.base.TimeLapseInversionResult"><code class="docutils literal notranslate"><span class="pre">TimeLapseInversionResult</span></code></a></li>
 </ul>
 </li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="core.html">core package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="core.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="core.html#module-core.interpolation">core.interpolation module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.ProfileInterpolator"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.create_surface_lines"><code class="docutils literal notranslate"><span class="pre">create_surface_lines()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.interpolate_structure_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_structure_to_profile()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.interpolate_to_mesh"><code class="docutils literal notranslate"><span class="pre">interpolate_to_mesh()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.interpolate_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_to_profile()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.prepare_2D_profile_data"><code class="docutils literal notranslate"><span class="pre">prepare_2D_profile_data()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolation.setup_profile_coordinates"><code class="docutils literal notranslate"><span class="pre">setup_profile_coordinates()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="core.html#core-interpolation-module">core.interpolation module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core.html#core-mesh-utils-module">core.mesh_utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core.html#module-contents">Module contents</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="core.html#module-core.mesh_utils">core.mesh_utils module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.MeshCreator"><code class="docutils literal notranslate"><span class="pre">MeshCreator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.add_velocity_interface"><code class="docutils literal notranslate"><span class="pre">add_velocity_interface()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.createTriangles"><code class="docutils literal notranslate"><span class="pre">createTriangles()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.create_mesh_from_layers"><code class="docutils literal notranslate"><span class="pre">create_mesh_from_layers()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.extract_velocity_interface"><code class="docutils literal notranslate"><span class="pre">extract_velocity_interface()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.mesh_utils.fill_holes_2d"><code class="docutils literal notranslate"><span class="pre">fill_holes_2d()</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="agents.html">Agents Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="agents.html#module-PyHydroGeophysX.agents.base_agent">Base Classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#PyHydroGeophysX.agents.base_agent.BaseAgent"><code class="docutils literal notranslate"><span class="pre">BaseAgent</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="core.html#module-core">Module contents</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.MeshCreator"><code class="docutils literal notranslate"><span class="pre">MeshCreator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.ProfileInterpolator"><code class="docutils literal notranslate"><span class="pre">ProfileInterpolator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.add_velocity_interface"><code class="docutils literal notranslate"><span class="pre">add_velocity_interface()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.create_mesh_from_layers"><code class="docutils literal notranslate"><span class="pre">create_mesh_from_layers()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.create_surface_lines"><code class="docutils literal notranslate"><span class="pre">create_surface_lines()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.extract_velocity_interface"><code class="docutils literal notranslate"><span class="pre">extract_velocity_interface()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolate_structure_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_structure_to_profile()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolate_to_mesh"><code class="docutils literal notranslate"><span class="pre">interpolate_to_mesh()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.interpolate_to_profile"><code class="docutils literal notranslate"><span class="pre">interpolate_to_profile()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.prepare_2D_profile_data"><code class="docutils literal notranslate"><span class="pre">prepare_2D_profile_data()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="core.html#core.setup_profile_coordinates"><code class="docutils literal notranslate"><span class="pre">setup_profile_coordinates()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="agents.html#module-PyHydroGeophysX.agents.agent_coordinator">Coordinator</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#PyHydroGeophysX.agents.agent_coordinator.AgentCoordinator"><code class="docutils literal notranslate"><span class="pre">AgentCoordinator</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="agents.html#input-agents">Input Agents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#module-PyHydroGeophysX.agents.context_input_agent">ContextInputAgent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#module-PyHydroGeophysX.agents.ert_loader_agent">ERTLoaderAgent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#seismicagent">SeismicAgent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#climatedataagent">ClimateDataAgent</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="agents.html#processing-agents">Processing Agents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#module-PyHydroGeophysX.agents.ert_inversion_agent">ERTInversionAgent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#module-PyHydroGeophysX.agents.inversion_evaluation_agent">InversionEvaluationAgent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#tdemagent">TDEMAgent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#geophysicalinversionagent">GeophysicalInversionAgent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#datafusionagent">DataFusionAgent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#structureconstraintagent">StructureConstraintAgent</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="agents.html#conversion-agents">Conversion Agents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#petrophysicsagent">PetrophysicsAgent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#module-PyHydroGeophysX.agents.water_content_agent">WaterContentAgent</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="agents.html#output-agents">Output Agents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#reportagent">ReportAgent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="agents.html#codegenerationagent">CodeGenerationAgent</a></li>
 </ul>
 </li>
 </ul>
@@ -260,34 +225,78 @@
 </section>
 
 
-           </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../quickstart.html" class="btn btn-neutral float-left" title="Quickstart" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="data_processing.html" class="btn btn-neutral float-right" title="Data Processing Module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2025, Hang Chen.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
+          
         </div>
       </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.png" alt="Logo of PyHydroGeophysX"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">PyHydroGeophysX</a></h1>
 
-</body>
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/index.html">Tutorials/Workflows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../auto_examples/index.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agents/index.html">Agents + Web App</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../auto_examples/app_geophysics_workflow.html" title="previous chapter">&lt;no title&gt;</a></li>
+      <li>Next: <a href="data_processing.html" title="next chapter">Data Processing Module</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Hang Chen.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
 </html>

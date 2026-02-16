@@ -1,115 +1,50 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../">
-<head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ex. Structure-Constrained Resistivity Inversion &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  
+    <title>Ex. Structure-Constrained Resistivity Inversion &#8212; PyHydroGeophysX Documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex_Structure_resinv.html" />
-      <script src="../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation" href="Ex_SRT_inv.html" />
-    <link rel="prev" title="Ex. Loading and Processing Hydrological Model Outputs" href="Ex_model_output.html" /> 
-</head>
+    <link rel="next" title="Ex. Loading and Processing Hydrological Model Outputs" href="Ex_model_output.html" />
+    <link rel="prev" title="Cross-Method Structural Constraints" href="Ex_cross_constraints.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+  
+  
 
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
           
-          
-          <a href="../index.html" class="icon icon-home">
-            PyHydroGeophysX
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Structure-Constrained Resistivity Inversion</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#seismic-velocity-inversion-results">Seismic Velocity Inversion Results</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#velocity-interface-extraction">Velocity Interface Extraction</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#mesh-with-structural-constraints">Mesh with Structural Constraints</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#structure-constrained-ert-inversion-results">Structure-Constrained ERT Inversion Results</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation</a></li>
-</ul>
-</li>
-</ul>
 
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../index.html">PyHydroGeophysX</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
-      <li class="breadcrumb-item active">Ex. Structure-Constrained Resistivity Inversion</li>
-      <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/auto_examples/Ex_Structure_resinv.rst.txt" rel="nofollow"> View page source</a>
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
+          <div class="body" role="main">
+            
   <div class="sphx-glr-download-link-note admonition note">
 <p class="admonition-title">Note</p>
 <p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex-structure-resinv-py"><span class="std std-ref">Go to the end</span></a>
 to download the full example code.</p>
 </div>
 <section class="sphx-glr-example-title" id="ex-structure-constrained-resistivity-inversion">
-<span id="sphx-glr-auto-examples-ex-structure-resinv-py"></span><h1>Ex. Structure-Constrained Resistivity Inversion<a class="headerlink" href="#ex-structure-constrained-resistivity-inversion" title="Link to this heading"></a></h1>
+<span id="sphx-glr-auto-examples-ex-structure-resinv-py"></span><h1>Ex. Structure-Constrained Resistivity Inversion<a class="headerlink" href="#ex-structure-constrained-resistivity-inversion" title="Link to this heading">¶</a></h1>
 <p>This example demonstrates how to incorporate structural information from
 seismic velocity models into ERT inversion for improved subsurface imaging.</p>
 <p>The workflow includes:
@@ -121,6 +56,9 @@ seismic velocity models into ERT inversion for improved subsurface imaging.</p>
 <p>Structure-constrained inversion significantly improves the accuracy of
 resistivity models by incorporating a priori geological information,
 leading to more reliable hydrological interpretations.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
@@ -187,7 +125,7 @@ leading to more reliable hydrological interpretations.</p>
 </pre></div>
 </div>
 <section id="seismic-velocity-inversion-results">
-<h2>Seismic Velocity Inversion Results<a class="headerlink" href="#seismic-velocity-inversion-results" title="Link to this heading"></a></h2>
+<h2>Seismic Velocity Inversion Results<a class="headerlink" href="#seismic-velocity-inversion-results" title="Link to this heading">¶</a></h2>
 <a class="reference internal image-reference" href="../_images/Ex_Structure_resinv_fig_01.png"><img alt="../_images/Ex_Structure_resinv_fig_01.png" class="align-center" src="../_images/Ex_Structure_resinv_fig_01.png" style="width: 700px;" />
 </a>
 <p>%% [markdown]
@@ -206,7 +144,7 @@ leading to more reliable hydrological interpretations.</p>
 </div>
 </section>
 <section id="velocity-interface-extraction">
-<h2>Velocity Interface Extraction<a class="headerlink" href="#velocity-interface-extraction" title="Link to this heading"></a></h2>
+<h2>Velocity Interface Extraction<a class="headerlink" href="#velocity-interface-extraction" title="Link to this heading">¶</a></h2>
 <p>This interface will be incorporated into the ERT mesh to constrain the
 inversion and preserve sharp geological boundaries.</p>
 <a class="reference internal image-reference" href="../_images/Ex_Structure_resinv_fig_02.png"><img alt="../_images/Ex_Structure_resinv_fig_02.png" class="align-center" src="../_images/Ex_Structure_resinv_fig_02.png" style="width: 600px;" />
@@ -227,7 +165,7 @@ inversion and preserve sharp geological boundaries.</p>
 </div>
 </section>
 <section id="mesh-with-structural-constraints">
-<h2>Mesh with Structural Constraints<a class="headerlink" href="#mesh-with-structural-constraints" title="Link to this heading"></a></h2>
+<h2>Mesh with Structural Constraints<a class="headerlink" href="#mesh-with-structural-constraints" title="Link to this heading">¶</a></h2>
 <p>The mesh refinement along the structural boundary ensures accurate
 representation of the geological interface while maintaining appropriate
 resolution for ERT measurements. This structured mesh allows the inversion
@@ -251,7 +189,7 @@ while applying smoothing constraints within each geological unit.</p>
 </div>
 </section>
 <section id="structure-constrained-ert-inversion-results">
-<h2>Structure-Constrained ERT Inversion Results<a class="headerlink" href="#structure-constrained-ert-inversion-results" title="Link to this heading"></a></h2>
+<h2>Structure-Constrained ERT Inversion Results<a class="headerlink" href="#structure-constrained-ert-inversion-results" title="Link to this heading">¶</a></h2>
 <p>The structure-constrained ERT inversion produces a resistivity model that
 honors both the electrical measurements and the geological structure derived
 from seismic data</p>
@@ -276,34 +214,80 @@ from seismic data</p>
 </section>
 
 
-           </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex_model_output.html" class="btn btn-neutral float-left" title="Ex. Loading and Processing Hydrological Model Outputs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex_SRT_inv.html" class="btn btn-neutral float-right" title="Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2025, Hang Chen.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
+          
         </div>
       </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.png" alt="Logo of PyHydroGeophysX"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">PyHydroGeophysX</a></h1>
 
-</body>
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/index.html">Tutorials/Workflows</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agents/index.html">Agents + Web App</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Examples Gallery</a><ul>
+      <li>Previous: <a href="Ex_cross_constraints.html" title="previous chapter">Cross-Method Structural Constraints</a></li>
+      <li>Next: <a href="Ex_model_output.html" title="next chapter">Ex. Loading and Processing Hydrological Model Outputs</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Hang Chen.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/auto_examples/Ex_Structure_resinv.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
 </html>

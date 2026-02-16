@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**00:00.000** total execution time for 10 files **from auto_examples**:
+**00:00.000** total execution time for 16 files **from auto_examples**:
 
 .. container::
 
@@ -35,7 +35,16 @@ Computation times
    * - :ref:`sphx_glr_auto_examples_EX_SRT_forward.py` (``EX_SRT_forward.py``)
      - 00:00.000
      - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_3D_ERT_forward.py` (``Ex_3D_ERT_forward.py``)
+     - 00:00.000
+     - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_ERT_data_process.py` (``Ex_ERT_data_process.py``)
+     - 00:00.000
+     - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_ERT_workflow.py` (``Ex_ERT_workflow.py``)
+     - 00:00.000
+     - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_FDEM_workflow.py` (``Ex_FDEM_workflow.py``)
      - 00:00.000
      - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_MC_Hydro.py` (``Ex_MC_Hydro.py``)
@@ -47,10 +56,19 @@ Computation times
    * - :ref:`sphx_glr_auto_examples_Ex_Structure_resinv.py` (``Ex_Structure_resinv.py``)
      - 00:00.000
      - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_TDEM_workflow.py` (``Ex_TDEM_workflow.py``)
+     - 00:00.000
+     - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_TL_inversion.py` (``Ex_TL_inversion.py``)
      - 00:00.000
      - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_Time_lapse_measurement.py` (``Ex_Time_lapse_measurement.py``)
+     - 00:00.000
+     - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_cross_constraints.py` (``Ex_cross_constraints.py``)
+     - 00:00.000
+     - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_hydro_to_multigeophys.py` (``Ex_hydro_to_multigeophys.py``)
      - 00:00.000
      - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_model_output.py` (``Ex_model_output.py``)
@@ -59,6 +77,6 @@ Computation times
    * - :ref:`sphx_glr_auto_examples_Ex_structure_TLresinv.py` (``Ex_structure_TLresinv.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex_workflow.py` (``Ex_workflow.py``)
+   * - :ref:`sphx_glr_auto_examples_app_geophysics_workflow.py` (``app_geophysics_workflow.py``)
      - 00:00.000
      - 0.0

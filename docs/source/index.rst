@@ -112,6 +112,14 @@ Web App
 
 Open the hosted app: `pyhydrogeophysx.streamlit.app <https://pyhydrogeophysx.streamlit.app/>`_
 
+Citation
+--------
+
+If you use PyHydroGeophysX in your work, please cite:
+
+- Chen, Hang and Niu, Qifei and Wu, Yuxin, *PyHydroGeophysX: An Extensible Open-Source Platform for Integrating Hydrological Models with Geophysical Measurements*. SSRN. https://ssrn.com/abstract=6238293 and https://doi.org/10.2139/ssrn.6238293
+- Chen, H. (2026). *A Generalizable Automated Geophysical Agent Workflow for Accessible Subsurface Hydrology Analysis*. Big Data and Earth System, 100042.
+
 .. toctree::
    :maxdepth: 1
    :hidden:

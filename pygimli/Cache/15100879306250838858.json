@@ -1,0 +1,11 @@
+{
+    "type": "RVector",
+    "file": "C:\\Users\\hchen117\\OneDrive - University of Iowa\\Documents\\GitHub\\PyHydroGeophysX\\pygimli\\Cache\\15100879306250838858",
+    "date": 1771189301.8899803,
+    "dur": 2.4963918,
+    "restored": 10,
+    "codeinfo": "C:\\Users\\hchen117\\.conda\\envs\\pg\\Lib\\site-packages\\pygimli\\physics\\ert\\ert.py:createGeometricFactors",
+    "version": "libgimli-v1.5.0-1-g5991b6ac",
+    "args": "(Data: Sensors: 72 data: 936, nonzero entries: ['a', 'b', 'err', 'i', 'm', 'n', 'rhoa', 'u', 'valid'],)",
+    "kwargs": "{'numerical': True}"
+}

@@ -182,7 +182,7 @@ The examples folder provides paired Jupyter notebooks (.ipynb) and Python script
 - Ex_structure_TLresinv: Structure‑constrained time‑lapse resistivity inversion (notebook: Ex_structure_TLresinv.ipynb, script: Ex_structure_TLresinv.py).
 - EX_SRT_forward: Seismic refraction tomography forward modeling and synthetic travel times (notebook: EX_SRT_forward.ipynb, script: EX_SRT_forward.py).
 - Ex_SRT_inv: Seismic refraction tomography inversion workflow (notebook: Ex_SRT_inv.ipynb, script: Ex_SRT_inv.py).
-- **Ex_SRT_custom_inversion**: SRT inversion using the packaged `SRTInversion` class (script: Ex_SRT_custom_inversion.py). **NEW**
+- Ex_SRT_inv now includes both PyGIMLi direct inversion and packaged `SRTInversion` side-by-side comparison (notebook: Ex_SRT_inv.ipynb, script: Ex_SRT_inv.py).
 - Ex_MC_Hydro: Monte Carlo uncertainty quantification for hydro‑to‑resistivity conversion (notebook: Ex_MC_Hydro.ipynb, script: Ex_MC_Hydro.py).
 - **Ex_3D_ERT_forward**: 3D ERT forward modeling with MODFLOW integration using Mesh3DCreator and PyVista visualization (notebook: Ex_3D_ERT_forward.ipynb). **NEW**
 - **Ex_TDEM_workflow**: Time-Domain Electromagnetic (TDEM) forward modeling and inversion from hydrological models using SimPEG (notebook: Ex_TDEM_workflow.ipynb). **NEW**
@@ -614,12 +614,23 @@ We welcome contributions! Please see our Contributing Guidelines for details.
 If you use PyHydroGeophysX in your research, please cite:
 
 ```bibtex
-@software{chen2025pyhydrogeophysx,
+@misc{chen2026pyhydrogeophysx,
   author = {Chen, Hang and Niu, Qifei and Wu, Yuxin},
-  title = {PyHydroGeophysX: An Extensible Open-Source Platform for Bridging Hydrological Models and Geophysical Measurements},
-  year = {2025},
-  publisher = {Water Resources Research (under review)},
-  url = {https://github.com/geohang/PyHydroGeophysX}
+  title = {PyHydroGeophysX: An Extensible Open-Source Platform for Integrating Hydrological Models with Geophysical Measurements},
+  year = {2026},
+  howpublished = {SSRN},
+  doi = {10.2139/ssrn.6238293},
+  url = {https://ssrn.com/abstract=6238293}
+}
+```
+
+```bibtex
+@article{chen2026agentworkflow,
+  author = {Chen, Hang},
+  title = {A Generalizable Automated Geophysical Agent Workflow for Accessible Subsurface Hydrology Analysis},
+  journal = {Big Data and Earth System},
+  pages = {100042},
+  year = {2026}
 }
 ```
 

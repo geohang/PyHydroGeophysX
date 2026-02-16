@@ -12,3 +12,4 @@ This section contains the complete API reference for PyHydroGeophysX.
    forward
    inversion
    core
+   agents

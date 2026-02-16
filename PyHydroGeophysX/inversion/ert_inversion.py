@@ -108,7 +108,7 @@ class ERTInversion(InversionBase):
         has_valid_err = False
         if 'err' in self.data.dataMap():
             err_array = self.data['err'].array()
-            has_valid_err = np.any(err_array > 0) and np.all(np.isfinite(err_array))
+            has_valid_err = np.all(err_array > 0) and np.all(np.isfinite(err_array))
 
         if has_valid_err:
             # If data has valid error values, use them

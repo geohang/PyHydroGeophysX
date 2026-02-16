@@ -6,11 +6,12 @@ computation. Provides custom Gauss-Newton inversion with the same
 architecture as ERTInversion but for travel-time data.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import numpy as np
 import pygimli as pg
 from pygimli.physics import TravelTimeManager
+import pygimli.physics.traveltime as tt
 from scipy.sparse import diags, issparse
 
 from .base import InversionBase, InversionResult
@@ -26,9 +27,54 @@ class SRTInversion(InversionBase):
     """
 
     def __init__(self, data_file: str, mesh: Optional[pg.Mesh] = None, **kwargs: Any):
-        data = pg.load(data_file)
+        """
+        Initialize SRT inversion.
+
+        Args:
+            data_file: Path to travel-time data file (e.g. .dat/.sgt).
+            mesh: Mesh for inversion (created if None).
+            **kwargs: Additional inversion parameters, aligned with ERT naming where possible:
+                - lambda_val: Regularization parameter.
+                - method: Linear solver ('cgls', 'lsqr', etc.).
+                - model_constraints: (min_velocity, max_velocity) bounds.
+                - max_iterations: Maximum GN iterations.
+                - target_chi_squared: Stop criterion for chi2 (default 1.0).
+                - lambda_rate: Lambda reduction rate per iteration.
+                - lambda_min: Minimum lambda value.
+                - relativeError: Relative data error.
+                - absoluteUError: Absolute data error (ERT-style name).
+                - zWeight: Vertical smoothness weighting.
+                - vTop: Starting-model velocity near surface.
+                - vBottom: Starting-model velocity at depth.
+                - paraMaxCellSize: Inversion mesh max cell size.
+                - paraDepth: Inversion mesh depth.
+                - quality: Mesh quality parameter.
+                - line_search_maxiter: Max line-search halvings.
+                - line_search_c: Armijo coefficient.
+                - solver_maxiter: Linear solver max iterations.
+                - solver_tol: Linear solver tolerance.
+        """
+        # Keep ERT-style name for user-facing consistency.
+        if "absoluteUError" in kwargs and "absoluteError" not in kwargs:
+            kwargs["absoluteError"] = kwargs["absoluteUError"]
+        if "absoluteError" in kwargs and "absoluteUError" not in kwargs:
+            kwargs["absoluteUError"] = kwargs["absoluteError"]
+
+        data = tt.load(str(data_file))
         if not isinstance(data, pg.DataContainer):
             raise TypeError("Loaded SRT data must be a PyGIMLi DataContainer.")
+        required_fields = ("s", "g", "t")
+        missing = [field for field in required_fields if field not in data.dataMap()]
+        if missing:
+            raise ValueError(
+                f"SRT data is missing required fields: {missing}. "
+                "Expected travel-time data with 's', 'g', and 't'."
+            )
+        if data.size() == 0:
+            raise ValueError(
+                "Loaded SRT data has zero valid measurements. "
+                "Check file format and sensor indexing."
+            )
 
         super().__init__(data, mesh, **kwargs)
 
@@ -41,6 +87,7 @@ class SRTInversion(InversionBase):
             "model_constraints": (100.0, 10000.0),
             "max_iterations": 20,
             "relativeError": 0.03,
+            "absoluteUError": 0.001,
             "absoluteError": 0.001,
             "paraMaxCellSize": 2.0,
             "paraDepth": 40.0,
@@ -71,6 +118,23 @@ class SRTInversion(InversionBase):
         return arr.reshape(-1, 1) if arr.ndim == 1 else arr
 
     @staticmethod
+    def _jacobian_to_numpy(jacobian: Any) -> np.ndarray:
+        """Convert PyGIMLi Jacobian matrix to a dense NumPy array across versions."""
+        try:
+            return pg.utils.sparseMatrix2coo(jacobian).toarray().astype(float, copy=False)
+        except Exception:
+            pass
+        try:
+            return np.asarray(pg.utils.gmat2numpy(jacobian), dtype=float)
+        except Exception:
+            pass
+
+        arr = np.asarray(jacobian, dtype=float)
+        if arr.ndim == 0:
+            raise TypeError(f"Unsupported Jacobian type: {type(jacobian)}")
+        return arr
+
+    @staticmethod
     def _cell_centers_xy(mesh: pg.Mesh) -> np.ndarray:
         centers_raw = np.asarray(mesh.cellCenters())
         if centers_raw.ndim == 2 and centers_raw.shape[1] >= 2:
@@ -94,41 +158,8 @@ class SRTInversion(InversionBase):
                 return np.clip(err, 1e-12, None)
 
         rel = float(self.parameters["relativeError"])
-        abs_err = float(self.parameters["absoluteError"])
+        abs_err = float(self.parameters.get("absoluteUError", self.parameters.get("absoluteError", 0.001)))
         return np.sqrt((rel * np.abs(t_obs)) ** 2 + abs_err**2)
-
-    def _apply_vertical_weighting(self, Wm):
-        """Scale vertical smoothness rows by zWeight using cell-center geometry."""
-        if self.mesh is None:
-            return Wm
-
-        z_weight = float(self.parameters["zWeight"])
-        if z_weight <= 0:
-            return Wm
-
-        Wm_coo = Wm.tocoo()
-        n_rows = Wm_coo.shape[0]
-        row_to_cols: Dict[int, list] = {}
-        for row, col in zip(Wm_coo.row, Wm_coo.col):
-            row_to_cols.setdefault(int(row), []).append(int(col))
-
-        centers = self._cell_centers_xy(self.mesh)
-        n_cells = centers.shape[0]
-        row_scale = np.ones(n_rows, dtype=float)
-
-        for row, cols in row_to_cols.items():
-            unique_cols = list(dict.fromkeys(cols))
-            if len(unique_cols) != 2:
-                continue
-            c0, c1 = unique_cols
-            if c0 >= n_cells or c1 >= n_cells:
-                continue
-            dx = abs(centers[c0, 0] - centers[c1, 0])
-            dz = abs(centers[c0, 1] - centers[c1, 1])
-            if dz > dx:
-                row_scale[row] = z_weight
-
-        return diags(row_scale).dot(Wm).tocsr()
 
     def _build_initial_velocity(self, n_model: int) -> np.ndarray:
         min_v, max_v = self.parameters["model_constraints"]
@@ -174,14 +205,14 @@ class SRTInversion(InversionBase):
         self.Wd_sq = diags(self.Wd_diag**2)
 
         rm = self.fop.regionManager()
+        rm.setZWeight(float(self.parameters["zWeight"]))
         Ctmp = pg.matrix.RSparseMapMatrix()
         rm.setConstraintType(1)
         rm.fillConstraints(Ctmp)
 
-        Wm = pg.utils.sparseMatrix2coo(Ctmp)
-        cw = np.asarray(rm.constraintWeights().array(), dtype=float)
-        Wm = diags(cw).dot(Wm).tocsr()
-        self.Wm = self._apply_vertical_weighting(Wm)
+        # `fillConstraints` already applies region-dependent weighting
+        # (including zWeight). Do not multiply constraintWeights again.
+        self.Wm = pg.utils.sparseMatrix2coo(Ctmp).tocsr()
 
         self._setup_complete = True
 
@@ -211,21 +242,24 @@ class SRTInversion(InversionBase):
         min_m = np.log(1.0 / max_v)
         max_m = np.log(1.0 / min_v)
         m = np.clip(m, min_m, max_m)
-        m_ref = m.copy()
 
         lam = float(self.parameters["lambda_val"])
         lam_rate = float(self.parameters.get("lambda_rate", 1.0))
         lam_min = float(self.parameters.get("lambda_min", lam))
+        target_chi2 = float(self.parameters.get("target_chi_squared", 1.0))
 
         result = InversionResult()
         prev_chi2: Optional[float] = None
 
+        print("SRTInversion note: reported chi2 below is evaluated at the start of each iteration (pre-update).")
+        print("PyGIMLi inv.iter chi2 is reported after oneStep update.")
         for iteration in range(int(self.parameters["max_iterations"])):
+            print(f"-------------------Iteration: {iteration} ---------------------------")
             slowness = np.exp(m)
             t_pred = self._to_col(np.asarray(self.fop.response(pg.Vector(slowness)), dtype=float))
 
             self.fop.createJacobian(pg.Vector(slowness))
-            J = np.asarray(pg.utils.gmat2numpy(self.fop.jacobian()), dtype=float)
+            J = self._jacobian_to_numpy(self.fop.jacobian())
             if J.ndim == 1:
                 J = J.reshape(-1, 1)
 
@@ -236,19 +270,28 @@ class SRTInversion(InversionBase):
             wd2 = wd**2
             phi_d = float((wd * residual).T.dot(wd * residual).item())
 
-            delta_m = self._to_col(m - m_ref)
-            reg_vec = self.Wm.dot(delta_m)
+            m_col = self._to_col(m)
+            reg_vec = self.Wm.dot(m_col)
             phi_m = float(reg_vec.T.dot(reg_vec).item())
 
             chi2 = phi_d / max(self.t_obs.size, 1)
             d_phi = 1.0 if prev_chi2 is None else abs(chi2 - prev_chi2) / max(abs(prev_chi2), 1e-12)
             prev_chi2 = chi2
+            obj = phi_d + lam * phi_m
 
             result.iteration_models.append(np.exp(-m).copy())
             result.iteration_chi2.append(float(chi2))
             result.iteration_data_errors.append(residual.ravel().copy())
 
-            if chi2 < 1.5 or d_phi < 0.01:
+            print(f"chi2 (pre-update): {chi2:.6f}")
+            print(f"dPhi (pre-update): {d_phi:.6f}")
+            print(f"phi_d (pre-update): {phi_d:.6f}")
+            print(f"phi_m (pre-update): {phi_m:.6f}")
+            print(f"obj (pre-update): {obj:.6f}")
+            print(f"lambda: {lam:.6f}")
+
+            if chi2 <= target_chi2 or d_phi < 0.01:
+                print("Converged: stopping criterion reached.")
                 break
 
             H_data = J_log.T.dot(wd2 * J_log)
@@ -268,10 +311,11 @@ class SRTInversion(InversionBase):
             )
             dm = self._to_col(dm)
 
-            current_obj = phi_d + lam * phi_m
+            current_obj = obj
             directional = float(dm.T.dot(g).item())
             step = 1.0
             accepted = False
+            accepted_step = step
 
             for _ in range(int(self.parameters.get("line_search_maxiter", 12))):
                 m_trial = np.clip(self._to_col(m) + step * dm, min_m, max_m).ravel()
@@ -280,7 +324,7 @@ class SRTInversion(InversionBase):
                 res_trial = self.t_obs - t_trial
 
                 phi_d_trial = float((wd * res_trial).T.dot(wd * res_trial).item())
-                reg_trial = self.Wm.dot(self._to_col(m_trial - m_ref))
+                reg_trial = self.Wm.dot(self._to_col(m_trial))
                 phi_m_trial = float(reg_trial.T.dot(reg_trial).item())
 
                 obj_trial = phi_d_trial + lam * phi_m_trial
@@ -289,11 +333,17 @@ class SRTInversion(InversionBase):
                 if obj_trial < armijo:
                     m = m_trial
                     accepted = True
+                    accepted_step = step
                     break
                 step *= 0.5
 
             if not accepted:
-                m = np.clip((self._to_col(m) + 0.1 * dm).ravel(), min_m, max_m)
+                accepted_step = 0.1
+                print("Line search FAIL EXIT")
+                m = np.clip((self._to_col(m) + accepted_step * dm).ravel(), min_m, max_m)
+
+            print(f"accepted_step: {accepted_step:.6f}")
+            print(f"update_norm: {float(np.linalg.norm(dm)):.6e}")
 
             if lam_rate > 0:
                 lam = max(lam_min, lam * lam_rate)
@@ -303,10 +353,23 @@ class SRTInversion(InversionBase):
         final_pred = np.asarray(self.fop.response(pg.Vector(final_slowness)), dtype=float).ravel()
 
         self.fop.createJacobian(pg.Vector(final_slowness))
-        J_final = np.asarray(pg.utils.gmat2numpy(self.fop.jacobian()), dtype=float)
-        if J_final.ndim == 1:
-            J_final = J_final.reshape(-1, 1)
-        coverage = np.sum(np.abs(J_final), axis=0)
+        # Use the same coverage definition as PyGIMLi TravelTimeManager:
+        # standardizedCoverage = sign(|C^T * C * rayCoverage|).
+        if self.mgr is not None:
+            try:
+                if hasattr(self.fop, "createConstraints"):
+                    self.fop.createConstraints()
+                coverage = np.asarray(self.mgr.standardizedCoverage(), dtype=float).ravel()
+            except Exception:
+                # Fallback with the same standardized-coverage formula.
+                J = self.fop.jacobian()
+                ray_coverage = np.asarray(J.transMult(np.ones(J.rows())), dtype=float).ravel()
+                Ctmp = pg.matrix.RSparseMapMatrix()
+                self.fop.regionManager().fillConstraints(Ctmp)
+                C = pg.utils.sparseMatrix2coo(Ctmp).tocsr()
+                coverage = np.sign(np.abs(C.T.dot(C.dot(ray_coverage))))
+        else:
+            coverage = None
 
         result.final_model = final_velocity
         result.predicted_data = final_pred
@@ -315,4 +378,5 @@ class SRTInversion(InversionBase):
         result.meta["inversion_parameters"] = dict(self.parameters)
         result.meta["final_lambda"] = lam
 
+        print("End of inversion")
         return result

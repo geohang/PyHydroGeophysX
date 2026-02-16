@@ -1,0 +1,83 @@
+{
+ "StructuralConstraint.apply_structural_weights_to_Wm": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.inversion.cross_constraints.StructuralConstraint",
+   "module_short": "PyHydroGeophysX.inversion.cross_constraints.StructuralConstraint",
+   "name": "apply_structural_weights_to_Wm"
+  }
+ ],
+ "StructuralConstraint.build_cross_gradient_operator": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.inversion.cross_constraints.StructuralConstraint",
+   "module_short": "PyHydroGeophysX.inversion.cross_constraints.StructuralConstraint",
+   "name": "build_cross_gradient_operator"
+  }
+ ],
+ "StructuralConstraint.from_velocity_model": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.inversion.cross_constraints.StructuralConstraint",
+   "module_short": "PyHydroGeophysX.inversion.cross_constraints.StructuralConstraint",
+   "name": "from_velocity_model"
+  }
+ ],
+ "__name__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "diags": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "scipy.sparse",
+   "module_short": "scipy.sparse",
+   "name": "diags"
+  }
+ ],
+ "np.column_stack": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "column_stack"
+  }
+ ],
+ "np.linspace": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "linspace"
+  }
+ ],
+ "np.log10": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "log10"
+  }
+ ],
+ "np.ones": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ones"
+  }
+ ]
+}

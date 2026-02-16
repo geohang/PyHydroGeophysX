@@ -30,11 +30,55 @@ def _scalar_dot(xp, a, b):
     return float(xp.vdot(a.ravel(), b.ravel()))
 
 
+def _scipy_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
+    """
+    Solve min ||Ax - b|| using SciPy's LSMR algorithm.
+
+    LSMR is mathematically equivalent to applying MINRES to the normal
+    equations and converges faster than LSQR for ill-conditioned systems.
+    """
+    if not scipy.sparse.isspmatrix(A):
+        A = scipy.sparse.csr_matrix(A)
+    b_flat = np.asarray(b, dtype=float).ravel()
+    result = splinalg.lsmr(A, b_flat, atol=tol, btol=tol, maxiter=maxiter, damp=damp)
+    x = result[0]
+    return np.asarray(x, dtype=float).reshape(-1, 1)
+
+
+def _precond_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
+    """
+    Solve min ||Ax - b|| using LSMR with column-scaling (Jacobi) preconditioning.
+
+    Computes column norms d_j = ||A[:,j]|| and solves the preconditioned
+    system (A D^{-1})(D x) = b, then recovers x = D^{-1} y.  This
+    balances parameter sensitivities across the different block rows
+    (data, regularization, cross-gradient) of the stacked system.
+    """
+    if not scipy.sparse.isspmatrix(A):
+        A = scipy.sparse.csr_matrix(A)
+    b_flat = np.asarray(b, dtype=float).ravel()
+
+    # Column-norm scaling
+    col_norms = scipy.sparse.linalg.norm(A, axis=0)
+    col_norms = np.asarray(col_norms, dtype=float).ravel()
+    col_norms[col_norms < 1e-12] = 1.0  # avoid division by zero
+
+    D_inv = scipy.sparse.diags(1.0 / col_norms, format="csr")
+    A_scaled = A.dot(D_inv)
+
+    result = splinalg.lsmr(A_scaled, b_flat, atol=tol, btol=tol, maxiter=maxiter, damp=damp)
+    y = result[0]
+
+    # Recover original variables: x = D^{-1} y
+    x = y / col_norms
+    return np.asarray(x, dtype=float).reshape(-1, 1)
+
+
 def generalized_solver(A, b, method="cgls", x=None, maxiter=200, tol=1e-8,
                       verbose=False, damp=0.0, use_gpu=False, parallel=False, n_jobs=-1):
     """
     Generalized solver for Ax = b with optional GPU acceleration and parallelism.
-    
+
     Parameters:
     -----------
     A : array_like or sparse matrix
@@ -42,7 +86,9 @@ def generalized_solver(A, b, method="cgls", x=None, maxiter=200, tol=1e-8,
     b : array_like
         Right-hand side vector.
     method : str, optional
-        Solver method: 'lsqr', 'rrlsqr', 'cgls', or 'rrls'. Default is 'cgls'.
+        Solver method. Default is 'cgls'.
+        Iterative: 'lsqr', 'rrlsqr', 'cgls', 'rrls'
+        SciPy:     'scipy_lsqr', 'scipy_lsmr', 'precond_lsmr'
     x : array_like, optional
         Initial guess for the solution. If None, zeros are used.
     maxiter : int, optional
@@ -59,19 +105,33 @@ def generalized_solver(A, b, method="cgls", x=None, maxiter=200, tol=1e-8,
         Use parallel CPU computations.
     n_jobs : int, optional
         Number of parallel jobs (if parallel is True).
-        
+
     Returns:
     --------
     x : array_like
         The computed solution vector.
     """
+    m = method.lower().strip()
+
+    # SciPy-backed solvers (no custom state needed)
+    if m == "scipy_lsmr":
+        return _scipy_lsmr_solve(A, b, maxiter=maxiter, tol=tol, damp=damp)
+    if m == "precond_lsmr":
+        return _precond_lsmr_solve(A, b, maxiter=maxiter, tol=tol, damp=damp)
+    if m == "scipy_lsqr":
+        if not scipy.sparse.isspmatrix(A):
+            A = scipy.sparse.csr_matrix(A)
+        b_flat = np.asarray(b, dtype=float).ravel()
+        result = splinalg.lsqr(A, b_flat, atol=tol, btol=tol, iter_lim=maxiter, damp=damp)
+        return np.asarray(result[0], dtype=float).reshape(-1, 1)
+
     # Choose the backend (NumPy or CuPy)
     if use_gpu and GPU_AVAILABLE:
         xp = cp
     else:
         xp = np
         use_gpu = False  # Ensure it's turned off if not available
-    
+
     # Convert A and b to appropriate arrays
     if use_gpu:
         if scipy.sparse.isspmatrix(A):
@@ -85,7 +145,7 @@ def generalized_solver(A, b, method="cgls", x=None, maxiter=200, tol=1e-8,
         else:
             A = np.asarray(A)
         b = np.asarray(b)
-    
+
     # Initialize solution and residual
     if x is None:
         x = xp.zeros(A.shape[1])
@@ -93,25 +153,25 @@ def generalized_solver(A, b, method="cgls", x=None, maxiter=200, tol=1e-8,
     else:
         x = xp.asarray(x)
         r = b - A.dot(x)
-    
+
     # Precompute initial quantities
     s = A.T.dot(r)
     p = s.copy()
     gamma = _scalar_dot(xp, s, s)
     rr = _scalar_dot(xp, r, r)
     rr0 = rr
-    
+
     # Choose the solver routine based on method
-    if method.lower() == "lsqr":
+    if m == "lsqr":
         return _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp, use_gpu, parallel, n_jobs, xp)
-    elif method.lower() == "rrlsqr":
+    elif m == "rrlsqr":
         return _rrlsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp, use_gpu, parallel, n_jobs, xp)
-    elif method.lower() == "cgls":
+    elif m == "cgls":
         return _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp, use_gpu, parallel, n_jobs, xp)
-    elif method.lower() == "rrls":
+    elif m == "rrls":
         return _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp, use_gpu, parallel, n_jobs, xp)
     else:
-        raise ValueError(f"Unknown method: {method}. Supported methods: 'lsqr', 'rrlsqr', 'cgls', 'rrls'")
+        raise ValueError(f"Unknown method: {method}. Supported: 'lsqr', 'rrlsqr', 'cgls', 'rrls', 'scipy_lsqr', 'scipy_lsmr', 'precond_lsmr'")
 
 
 def _matrix_multiply(A, v, use_gpu, parallel, n_jobs, xp):

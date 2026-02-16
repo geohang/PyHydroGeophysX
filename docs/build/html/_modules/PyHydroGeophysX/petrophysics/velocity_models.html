@@ -1,108 +1,130 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PyHydroGeophysX.petrophysics.velocity_models &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../../_static/copybutton.css" type="text/css" />
-      <link rel="stylesheet" href="../../../_static/sg_gallery.css" type="text/css" />
-      <link rel="stylesheet" href="../../../_static/sg_gallery-binder.css" type="text/css" />
-      <link rel="stylesheet" href="../../../_static/sg_gallery-dataframe.css" type="text/css" />
-      <link rel="stylesheet" href="../../../_static/sg_gallery-rendered-html.css" type="text/css" />
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.petrophysics.velocity_models &#8212; PyHydroGeophysX Documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/petrophysics/velocity_models.html" />
-  <!--[if lt IE 9]>
-    <script src="../../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=2389946f"></script>
-        <script src="../../../_static/doctools.js?v=888ff710"></script>
-        <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
-        <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
-        <script src="../../../_static/copybutton.js?v=f281be69"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
-    <link rel="search" title="Search" href="../../../search.html" /> 
-</head>
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+  
+  
 
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
           
-          
-          <a href="../../../index.html" class="icon icon-home">
-            PyHydroGeophysX
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">Examples Gallery</a></li>
-</ul>
 
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../../index.html">PyHydroGeophysX</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
-      <li class="breadcrumb-item active">PyHydroGeophysX.petrophysics.velocity_models</li>
-      <li class="wy-breadcrumbs-aside">
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
+          <div class="body" role="main">
+            
   <h1>Source code for PyHydroGeophysX.petrophysics.velocity_models</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Seismic velocity models for relating rock properties to elastic wave velocities.</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">fsolve</span><span class="p">,</span> <span class="n">root</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">fsolve</span><span class="p">,</span> <span class="n">root</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
 
 
-<div class="viewcode-block" id="BaseVelocityModel"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BaseVelocityModel">[docs]</a><span class="k">class</span> <span class="nc">BaseVelocityModel</span><span class="p">:</span>
+<div class="viewcode-block" id="water_content_to_velocity">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.water_content_to_velocity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">water_content_to_velocity</span><span class="p">(</span><span class="n">water_content</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
+                               <span class="n">v_dry</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3500.0</span><span class="p">,</span>
+                               <span class="n">v_sat</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">4500.0</span><span class="p">,</span>
+                               <span class="n">porosity</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
+                               <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert water content to seismic P-wave velocity using empirical relationships.</span>
+<span class="sd">    </span>
+<span class="sd">    This provides a simplified empirical relationship between water content </span>
+<span class="sd">    and seismic velocity, suitable for shallow subsurface applications.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        water_content: Volumetric water content (θ), typically 0-porosity</span>
+<span class="sd">        v_dry: P-wave velocity when fully dry (m/s), default 3500</span>
+<span class="sd">        v_sat: P-wave velocity when fully saturated (m/s), default 4500</span>
+<span class="sd">        porosity: Porosity values (φ), can be scalar or array</span>
+<span class="sd">        model: Velocity model type:</span>
+<span class="sd">            - &#39;linear&#39;: Linear interpolation between dry and saturated velocities</span>
+<span class="sd">            - &#39;wyllie&#39;: Wyllie time-average equation</span>
+<span class="sd">            - &#39;raymer&#39;: Raymer-Hunt-Gardner equation</span>
+<span class="sd">            </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        P-wave velocity array (m/s)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Calculate saturation from water content and porosity</span>
+    <span class="c1"># S = θ / φ</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">water_content</span> <span class="o">/</span> <span class="n">porosity</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;linear&#39;</span><span class="p">:</span>
+        <span class="c1"># Linear interpolation between dry and saturated velocities</span>
+        <span class="c1"># Vp = V_dry + S * (V_sat - V_dry)</span>
+        <span class="n">velocity</span> <span class="o">=</span> <span class="n">v_dry</span> <span class="o">+</span> <span class="n">saturation</span> <span class="o">*</span> <span class="p">(</span><span class="n">v_sat</span> <span class="o">-</span> <span class="n">v_dry</span><span class="p">)</span>
+        
+    <span class="k">elif</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;wyllie&#39;</span><span class="p">:</span>
+        <span class="c1"># Wyllie time-average equation</span>
+        <span class="c1"># 1/Vp = φ*S/V_water + φ*(1-S)/V_air + (1-φ)/V_mineral</span>
+        <span class="n">v_water</span> <span class="o">=</span> <span class="mf">1500.0</span>  <span class="c1"># P-wave velocity in water (m/s)</span>
+        <span class="n">v_air</span> <span class="o">=</span> <span class="mf">340.0</span>     <span class="c1"># P-wave velocity in air (m/s)</span>
+        <span class="n">v_mineral</span> <span class="o">=</span> <span class="mf">6000.0</span>  <span class="c1"># P-wave velocity in mineral (m/s)</span>
+        
+        <span class="c1"># Fluid velocity (weighted by saturation)</span>
+        <span class="n">v_fluid</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">saturation</span> <span class="o">/</span> <span class="n">v_water</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">saturation</span><span class="p">)</span> <span class="o">/</span> <span class="n">v_air</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span>
+        
+        <span class="c1"># Time-average</span>
+        <span class="n">slowness</span> <span class="o">=</span> <span class="n">porosity</span> <span class="o">/</span> <span class="n">v_fluid</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">)</span> <span class="o">/</span> <span class="n">v_mineral</span>
+        <span class="n">velocity</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">slowness</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span>
+        
+    <span class="k">elif</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;raymer&#39;</span><span class="p">:</span>
+        <span class="c1"># Raymer-Hunt-Gardner equation (simplified)</span>
+        <span class="c1"># Vp = (1 - φ)^2 * V_mineral + φ * V_fluid</span>
+        <span class="n">v_water</span> <span class="o">=</span> <span class="mf">1500.0</span>
+        <span class="n">v_air</span> <span class="o">=</span> <span class="mf">340.0</span>
+        <span class="n">v_mineral</span> <span class="o">=</span> <span class="mf">6000.0</span>
+        
+        <span class="n">v_fluid</span> <span class="o">=</span> <span class="n">saturation</span> <span class="o">*</span> <span class="n">v_water</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">saturation</span><span class="p">)</span> <span class="o">*</span> <span class="n">v_air</span>
+        <span class="n">velocity</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">v_mineral</span> <span class="o">+</span> <span class="n">porosity</span> <span class="o">*</span> <span class="n">v_fluid</span>
+        
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown velocity model: </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">. Use &#39;linear&#39;, &#39;wyllie&#39;, or &#39;raymer&#39;.&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Clip to physically reasonable range</span>
+    <span class="n">velocity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">velocity</span><span class="p">,</span> <span class="mf">200.0</span><span class="p">,</span> <span class="mf">8000.0</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">velocity</span></div>
+
+
+
+<div class="viewcode-block" id="BaseVelocityModel">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BaseVelocityModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BaseVelocityModel</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for seismic velocity models.&quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="BaseVelocityModel.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BaseVelocityModel.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize base velocity model.&quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
+        <span class="k">pass</span>
     
-<div class="viewcode-block" id="BaseVelocityModel.calculate_velocity"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BaseVelocityModel.calculate_velocity">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="BaseVelocityModel.calculate_velocity">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BaseVelocityModel.calculate_velocity">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Calculate seismic velocity from rock properties.</span>
 <span class="sd">        </span>
@@ -112,19 +134,25 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Seismic velocity values (Vp, Vs, or both)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Velocity calculation must be implemented in derived classes&quot;</span><span class="p">)</span></div></div>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Velocity calculation must be implemented in derived classes&quot;</span><span class="p">)</span></div>
+</div>
 
 
-<div class="viewcode-block" id="VRHModel"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel">[docs]</a><span class="k">class</span> <span class="nc">VRHModel</span><span class="p">(</span><span class="n">BaseVelocityModel</span><span class="p">):</span>
+
+<div class="viewcode-block" id="VRHModel">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">VRHModel</span><span class="p">(</span><span class="n">BaseVelocityModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Voigt-Reuss-Hill (VRH) mixing model for effective elastic properties of composites.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="VRHModel.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize VRH model.&quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     
-<div class="viewcode-block" id="VRHModel.calculate_properties"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel.calculate_properties">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+<div class="viewcode-block" id="VRHModel.calculate_properties">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel.calculate_properties">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
                            <span class="n">fractions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
                            <span class="n">bulk_moduli</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
                            <span class="n">shear_moduli</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
@@ -167,8 +195,11 @@
         <span class="n">rho_eff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span> <span class="o">*</span> <span class="n">rho</span><span class="p">)</span>
         
         <span class="k">return</span> <span class="n">K_vrh</span><span class="p">,</span> <span class="n">G_vrh</span><span class="p">,</span> <span class="n">rho_eff</span></div>
+
     
-<div class="viewcode-block" id="VRHModel.calculate_velocity"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel.calculate_velocity">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+<div class="viewcode-block" id="VRHModel.calculate_velocity">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRHModel.calculate_velocity">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
                          <span class="n">fractions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
                          <span class="n">bulk_moduli</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
                          <span class="n">shear_moduli</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
@@ -200,24 +231,30 @@
         <span class="c1"># Calculate S-wave velocity</span>
         <span class="n">Vs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">G_eff_pa</span> <span class="o">/</span> <span class="n">rho_eff</span><span class="p">)</span>
         
-        <span class="k">return</span> <span class="n">Vp</span><span class="p">,</span> <span class="n">Vs</span></div></div>
+        <span class="k">return</span> <span class="n">Vp</span><span class="p">,</span> <span class="n">Vs</span></div>
+</div>
 
 
-<div class="viewcode-block" id="BrieModel"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel">[docs]</a><span class="k">class</span> <span class="nc">BrieModel</span><span class="p">:</span>
+
+<div class="viewcode-block" id="BrieModel">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BrieModel</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Brie&#39;s model for calculating the effective bulk modulus of a partially saturated medium.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="BrieModel.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exponent</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exponent</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize Brie&#39;s model.</span>
 <span class="sd">        </span>
 <span class="sd">        Args:</span>
 <span class="sd">            exponent: Brie&#39;s exponent (default: 3.0)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="o">=</span> <span class="n">exponent</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="o">=</span> <span class="n">exponent</span>
     
-<div class="viewcode-block" id="BrieModel.calculate_fluid_modulus"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel.calculate_fluid_modulus">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_fluid_modulus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+<div class="viewcode-block" id="BrieModel.calculate_fluid_modulus">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel.calculate_fluid_modulus">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_fluid_modulus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
                               <span class="n">saturation</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
                               <span class="n">water_modulus</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
                               <span class="n">gas_modulus</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
@@ -233,8 +270,11 @@
 <span class="sd">            Effective fluid bulk modulus (GPa)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">water_modulus</span> <span class="o">-</span> <span class="n">gas_modulus</span><span class="p">)</span> <span class="o">*</span> <span class="n">saturation</span> <span class="o">**</span> <span class="bp">self</span><span class="o">.</span><span class="n">exponent</span> <span class="o">+</span> <span class="n">gas_modulus</span></div>
+
     
-<div class="viewcode-block" id="BrieModel.calculate_saturated_modulus"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel.calculate_saturated_modulus">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_saturated_modulus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+<div class="viewcode-block" id="BrieModel.calculate_saturated_modulus">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.BrieModel.calculate_saturated_modulus">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_saturated_modulus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
                                   <span class="n">dry_modulus</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
                                   <span class="n">mineral_modulus</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
                                   <span class="n">porosity</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
@@ -264,20 +304,26 @@
         <span class="n">numerator</span> <span class="o">=</span> <span class="n">dry_modulus</span> <span class="o">/</span> <span class="p">(</span><span class="n">mineral_modulus</span> <span class="o">-</span> <span class="n">dry_modulus</span><span class="p">)</span> <span class="o">+</span> <span class="n">fluid_modulus</span> <span class="o">/</span> <span class="p">(</span><span class="n">porosity</span> <span class="o">*</span> <span class="p">(</span><span class="n">mineral_modulus</span> <span class="o">-</span> <span class="n">fluid_modulus</span><span class="p">))</span>
         <span class="n">denominator</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="n">dry_modulus</span> <span class="o">/</span> <span class="p">(</span><span class="n">mineral_modulus</span> <span class="o">-</span> <span class="n">dry_modulus</span><span class="p">)</span> <span class="o">+</span> <span class="n">fluid_modulus</span> <span class="o">/</span> <span class="p">(</span><span class="n">porosity</span> <span class="o">*</span> <span class="p">(</span><span class="n">mineral_modulus</span> <span class="o">-</span> <span class="n">fluid_modulus</span><span class="p">)))</span>
         
-        <span class="k">return</span> <span class="p">(</span><span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span><span class="p">)</span> <span class="o">*</span> <span class="n">mineral_modulus</span></div></div>
+        <span class="k">return</span> <span class="p">(</span><span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span><span class="p">)</span> <span class="o">*</span> <span class="n">mineral_modulus</span></div>
+</div>
 
 
-<div class="viewcode-block" id="DEMModel"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.DEMModel">[docs]</a><span class="k">class</span> <span class="nc">DEMModel</span><span class="p">(</span><span class="n">BaseVelocityModel</span><span class="p">):</span>
+
+<div class="viewcode-block" id="DEMModel">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.DEMModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DEMModel</span><span class="p">(</span><span class="n">BaseVelocityModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Differential Effective Medium (DEM) model for calculating elastic properties</span>
 <span class="sd">    and seismic velocities of porous rocks.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="DEMModel.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.DEMModel.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize DEM model.&quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     
-<div class="viewcode-block" id="DEMModel.calculate_velocity"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.DEMModel.calculate_velocity">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+<div class="viewcode-block" id="DEMModel.calculate_velocity">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.DEMModel.calculate_velocity">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
                          <span class="n">porosity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                          <span class="n">saturation</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                          <span class="n">bulk_modulus</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
@@ -324,7 +370,7 @@
             <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">aspect_ratio</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">))</span>
             
             <span class="c1"># Define equation for effective bulk modulus</span>
-            <span class="k">def</span> <span class="nf">equation_Keff</span><span class="p">(</span><span class="n">Keff_val</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">equation_Keff</span><span class="p">(</span><span class="n">Keff_val</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">Keff_val</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="k">return</span> <span class="mf">1e6</span>  <span class="c1"># Return large value for invalid K_eff</span>
                 <span class="k">return</span> <span class="p">(</span><span class="n">Keff_val</span> <span class="o">-</span> <span class="n">Kf</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">bulk_modulus</span> <span class="o">-</span> <span class="n">Kf</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">bulk_modulus</span> <span class="o">/</span> <span class="n">Keff_val</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">b</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">b</span><span class="p">))</span>
@@ -339,7 +385,7 @@
 
             
             <span class="c1"># Define equation for effective shear modulus</span>
-            <span class="k">def</span> <span class="nf">equation_Geff</span><span class="p">(</span><span class="n">Geff_val</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">equation_Geff</span><span class="p">(</span><span class="n">Geff_val</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">Geff_val</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="k">return</span> <span class="mf">1e6</span>
                 <span class="k">return</span> <span class="n">Geff_val</span> <span class="o">/</span> <span class="n">shear_modulus</span> <span class="o">*</span> <span class="p">((</span><span class="mi">1</span> <span class="o">/</span> <span class="n">Geff_val</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">g</span> <span class="o">/</span> <span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">Kf</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">shear_modulus</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">g</span> <span class="o">/</span> <span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">Kf</span><span class="p">)))</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">c</span> <span class="o">/</span> <span class="n">d</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">porosity</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">d</span><span class="p">)</span>
@@ -361,15 +407,19 @@
             <span class="c1"># Calculate P-wave velocity</span>
             <span class="n">Vp</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">Keff</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">Geff</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">rhototal</span><span class="p">)</span>
         
-        <span class="k">return</span> <span class="n">Keff</span><span class="p">,</span> <span class="n">Geff</span><span class="p">,</span> <span class="n">Vp</span></div></div>
+        <span class="k">return</span> <span class="n">Keff</span><span class="p">,</span> <span class="n">Geff</span><span class="p">,</span> <span class="n">Vp</span></div>
+</div>
 
 
-<div class="viewcode-block" id="HertzMindlinModel"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.HertzMindlinModel">[docs]</a><span class="k">class</span> <span class="nc">HertzMindlinModel</span><span class="p">(</span><span class="n">BaseVelocityModel</span><span class="p">):</span>
+
+<div class="viewcode-block" id="HertzMindlinModel">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.HertzMindlinModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">HertzMindlinModel</span><span class="p">(</span><span class="n">BaseVelocityModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Hertz-Mindlin model and Hashin-Shtrikman bounds for seismic velocity in porous rocks.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="HertzMindlinModel.__init__"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.HertzMindlinModel.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
                <span class="n">critical_porosity</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span> 
                <span class="n">coordination_number</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">4.0</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -381,9 +431,11 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">critical_porosity</span> <span class="o">=</span> <span class="n">critical_porosity</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">coordination_number</span> <span class="o">=</span> <span class="n">coordination_number</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coordination_number</span> <span class="o">=</span> <span class="n">coordination_number</span>
     
-<div class="viewcode-block" id="HertzMindlinModel.calculate_velocity"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.HertzMindlinModel.calculate_velocity">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+<div class="viewcode-block" id="HertzMindlinModel.calculate_velocity">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.HertzMindlinModel.calculate_velocity">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_velocity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
                          <span class="n">porosity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                          <span class="n">saturation</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
                          <span class="n">bulk_modulus</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
@@ -484,10 +536,14 @@
             <span class="n">Vp_high</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">K_sat_H</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_eff_H</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">rho_total</span><span class="p">)</span>
             <span class="n">Vp_low</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">K_sat_L</span> <span class="o">+</span> <span class="mi">4</span><span class="o">/</span><span class="mi">3</span> <span class="o">*</span> <span class="n">G_eff_L</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">rho_total</span><span class="p">)</span>
         
-        <span class="k">return</span> <span class="n">Vp_high</span><span class="p">,</span> <span class="n">Vp_low</span></div></div>
+        <span class="k">return</span> <span class="n">Vp_high</span><span class="p">,</span> <span class="n">Vp_low</span></div>
+</div>
 
 
-<div class="viewcode-block" id="VRH_model"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRH_model">[docs]</a><span class="k">def</span> <span class="nf">VRH_model</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="p">[</span><span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">,</span> <span class="mf">0.075</span><span class="p">],</span>
+
+<div class="viewcode-block" id="VRH_model">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.VRH_model">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">VRH_model</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="p">[</span><span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">,</span> <span class="mf">0.075</span><span class="p">],</span>
              <span class="n">K</span><span class="o">=</span><span class="p">[</span><span class="mf">55.4</span><span class="p">,</span> <span class="mf">36.6</span><span class="p">,</span> <span class="mf">75.6</span><span class="p">,</span> <span class="mf">46.7</span><span class="p">,</span> <span class="mf">50.4</span><span class="p">],</span>
              <span class="n">G</span><span class="o">=</span><span class="p">[</span><span class="mf">28.1</span><span class="p">,</span> <span class="mi">45</span><span class="p">,</span> <span class="mf">25.6</span><span class="p">,</span> <span class="mf">23.65</span><span class="p">,</span> <span class="mf">27.4</span><span class="p">],</span>
              <span class="n">rho</span><span class="o">=</span><span class="p">[</span><span class="mi">2560</span><span class="p">,</span> <span class="mi">2650</span><span class="p">,</span> <span class="mi">2630</span><span class="p">,</span> <span class="mi">2540</span><span class="p">,</span> <span class="mi">3050</span><span class="p">]):</span>
@@ -528,7 +584,10 @@
     <span class="k">return</span> <span class="n">Km</span><span class="p">,</span> <span class="n">Gm</span><span class="p">,</span> <span class="n">rho_b</span></div>
 
 
-<div class="viewcode-block" id="satK"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.satK">[docs]</a><span class="k">def</span> <span class="nf">satK</span><span class="p">(</span><span class="n">Keff</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">Sat</span><span class="p">):</span>
+
+<div class="viewcode-block" id="satK">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.satK">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">satK</span><span class="p">(</span><span class="n">Keff</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">Sat</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculate the saturated bulk modulus (K_sat) based on Brie&#39;s equation.</span>
 
@@ -548,7 +607,10 @@
     <span class="k">return</span> <span class="n">K_sat</span></div>
 
 
-<div class="viewcode-block" id="velDEM"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.velDEM">[docs]</a><span class="k">def</span> <span class="nf">velDEM</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">Gm</span><span class="p">,</span> <span class="n">rho_b</span><span class="p">,</span> <span class="n">Sat</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+
+<div class="viewcode-block" id="velDEM">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.velDEM">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">velDEM</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">Gm</span><span class="p">,</span> <span class="n">rho_b</span><span class="p">,</span> <span class="n">Sat</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculate effective bulk modulus (Keff), shear modulus (Geff), and P-wave velocity (Vp)</span>
 <span class="sd">    for a rock with varying porosity (phi) based on the DEM model, taking into account</span>
@@ -591,7 +653,7 @@
         <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">alpha</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">v</span><span class="p">))</span>
         
         <span class="c1"># Solve for effective bulk modulus Keff using fsolve</span>
-        <span class="k">def</span> <span class="nf">equation_Keff</span><span class="p">(</span><span class="n">Keff</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">equation_Keff</span><span class="p">(</span><span class="n">Keff</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">Keff</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">return</span> <span class="mf">1e6</span>  <span class="c1"># Return a large value to force root away from invalid values</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">Keff</span> <span class="o">-</span> <span class="n">Kf</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">Km</span> <span class="o">-</span> <span class="n">Kf</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">Km</span> <span class="o">/</span> <span class="n">Keff</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">b</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">b</span><span class="p">))</span>
@@ -604,7 +666,7 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Root finding for Keff failed at index </span><span class="si">{</span><span class="n">ii</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result_Keff</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             
         <span class="c1"># Solve for effective shear modulus Geff using fsolve</span>
-        <span class="k">def</span> <span class="nf">equation_Geff</span><span class="p">(</span><span class="n">Geff</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">equation_Geff</span><span class="p">(</span><span class="n">Geff</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">Geff</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">return</span> <span class="mf">1e6</span>
             <span class="k">return</span> <span class="n">Geff</span> <span class="o">/</span> <span class="n">Gm</span> <span class="o">*</span> <span class="p">((</span><span class="mi">1</span> <span class="o">/</span> <span class="n">Geff</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">g</span> <span class="o">/</span> <span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">Kf</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">Gm</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">g</span> <span class="o">/</span> <span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">Kf</span><span class="p">)))</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">c</span> <span class="o">/</span> <span class="n">d</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">phi</span><span class="p">[</span><span class="n">ii</span><span class="p">])</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">d</span><span class="p">)</span>
@@ -627,7 +689,10 @@
     <span class="k">return</span> <span class="n">Keff1</span><span class="p">,</span> <span class="n">Geff1</span><span class="p">,</span> <span class="n">Vp</span></div>
 
 
-<div class="viewcode-block" id="vel_porous"><a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.vel_porous">[docs]</a><span class="k">def</span> <span class="nf">vel_porous</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">Gm</span><span class="p">,</span> <span class="n">rho_b</span><span class="p">,</span> <span class="n">Sat</span><span class="p">,</span> <span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+
+<div class="viewcode-block" id="vel_porous">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.petrophysics.html#PyHydroGeophysX.vel_porous">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">vel_porous</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">Km</span><span class="p">,</span> <span class="n">Gm</span><span class="p">,</span> <span class="n">rho_b</span><span class="p">,</span> <span class="n">Sat</span><span class="p">,</span> <span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculate P-wave velocity (Vp) for a rock with varying porosity (phi) based on the </span>
 <span class="sd">    Hertz-Mindlin model and Hashin-Shtrikman bounds, taking into account the saturation (Sat).</span>
@@ -684,33 +749,78 @@
         <span class="n">Vp_l</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">Sl</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">Geff_L</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="n">rhototal</span><span class="p">))</span>
 
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Vp_h</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Vp_l</span><span class="p">)</span></div>
+
 </pre></div>
 
-           </div>
           </div>
-          <footer>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2025, Hang Chen.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
+          
         </div>
       </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.png" alt="Logo of PyHydroGeophysX"/>
+            </a></p>
+<h1 class="logo"><a href="../../../index.html">PyHydroGeophysX</a></h1>
 
-</body>
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials/index.html">Tutorials/Workflows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../auto_examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../agents/index.html">Agents + Web App</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Hang Chen.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
 </html>

@@ -63,6 +63,13 @@ try:
 except Exception as e:
     print(f"[PyHydroGeophysX] PyGIMLi import failed: {e}")
 
+# Check SimPEG availability
+try:
+    import SimPEG
+    print(f"[PyHydroGeophysX] SimPEG loaded successfully (version {SimPEG.__version__})")
+except Exception as e:
+    print(f"[PyHydroGeophysX] SimPEG not available: {e}")
+
 
 # =============================================================================
 # EMBEDDED PARSERS - Modified from ResIPy (GPL-3.0)

@@ -1,0 +1,10 @@
+Joint ERT-SRT inversion with cross-gradient + geostatistics
+-----------------------------------------------------------
+ERT data: c:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\ERT\Bert\fielddataline2.dat
+SRT data: c:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\Seismic\srtfieldline2.dat
+Regularization mode: geostat
+Cross-gradient mode: spatial
+Cross-gradient source: covariance
+Final ERT chi2: 5.3025
+Final SRT chi2: 61.3178
+Iterations: 2

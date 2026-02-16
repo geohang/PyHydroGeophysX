@@ -14,7 +14,7 @@ The example covers:
 This is typically the first step in any workflow where you want to
 convert hydrological model outputs to geophysical data.
 """
-# sphinx_gallery_thumbnail_path = '_static/Ex_model_output_fig_01.png'
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_model_output_fig_01.png'
 
 import os
 import sys

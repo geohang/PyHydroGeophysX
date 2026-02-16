@@ -1,117 +1,171 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>model_output.parflow_output &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/copybutton.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/sg_gallery.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/sg_gallery-binder.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/sg_gallery-dataframe.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/sg_gallery-rendered-html.css" type="text/css" />
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>model_output.parflow_output &#8212; PyHydroGeophysX Documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/model_output/parflow_output.html" />
-  <!--[if lt IE 9]>
-    <script src="../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="../../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=2389946f"></script>
-        <script src="../../_static/doctools.js?v=888ff710"></script>
-        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
-        <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
-        <script src="../../_static/copybutton.js?v=f281be69"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" /> 
-</head>
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+  
+  
 
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
           
-          
-          <a href="../../index.html" class="icon icon-home">
-            PyHydroGeophysX
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Examples Gallery</a></li>
-</ul>
 
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">PyHydroGeophysX</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
-      <li class="breadcrumb-item active">model_output.parflow_output</li>
-      <li class="wy-breadcrumbs-aside">
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
+          <div class="body" role="main">
+            
   <h1>Source code for model_output.parflow_output</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Module for processing ParFlow model outputs.</span>
 
 <span class="sd">This module provides classes to handle specific types of ParFlow outputs,</span>
 <span class="sd">such as saturation and porosity, by reading ParFlow Binary Files (PFB).</span>
-<span class="sd">It relies on the `parflow` Python package for PFB reading capabilities.</span>
+<span class="sd">It includes a standalone PFB reader that works without the `parflow` package,</span>
+<span class="sd">falling back to the `parflow` package if available for maximum compatibility.</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span> <span class="c1"># Dict and Union not directly used here, but Any is.</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">struct</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
 
-<span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="n">HydroModelOutput</span> <span class="c1"># Assuming base.py is in the same directory or package</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">HydroModelOutput</span>
 
 
-<div class="viewcode-block" id="ParflowOutput"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowOutput">[docs]</a><span class="k">class</span> <span class="nc">ParflowOutput</span><span class="p">(</span><span class="n">HydroModelOutput</span><span class="p">):</span>
+<div class="viewcode-block" id="read_pfb_standalone">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.read_pfb_standalone">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">read_pfb_standalone</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read a ParFlow Binary (PFB) file without requiring the parflow package.</span>
+<span class="sd">    </span>
+<span class="sd">    This is a pure Python/NumPy implementation that parses the PFB file format</span>
+<span class="sd">    directly. PFB files store 3D data in a hierarchical subgrid structure.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        filename: Path to the .pfb file</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: 3D array of shape (nz, ny, nx) containing the data</span>
+<span class="sd">        </span>
+<span class="sd">    Raises:</span>
+<span class="sd">        FileNotFoundError: If the file does not exist</span>
+<span class="sd">        ValueError: If the file format is invalid</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PFB file not found: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="c1"># Read header (all values are big-endian doubles and integers)</span>
+        <span class="c1"># Header format: x, y, z (origin), nx, ny, nz (grid dimensions), </span>
+        <span class="c1">#                dx, dy, dz (grid spacing), num_subgrids</span>
+        
+        <span class="c1"># Origin (x, y, z) - 3 doubles</span>
+        <span class="n">x_origin</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;d&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">y_origin</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;d&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">z_origin</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;d&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="c1"># Grid dimensions (nx, ny, nz) - 3 integers</span>
+        <span class="n">nx</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">ny</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">nz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="c1"># Grid spacing (dx, dy, dz) - 3 doubles</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;d&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;d&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;d&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">8</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="c1"># Number of subgrids - 1 integer</span>
+        <span class="n">num_subgrids</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="c1"># Initialize output array</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nz</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        
+        <span class="c1"># Read each subgrid</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_subgrids</span><span class="p">):</span>
+            <span class="c1"># Subgrid header: ix, iy, iz (start indices), subgrid_nx, ny, nz, rx, ry, rz</span>
+            <span class="n">ix</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">iy</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">iz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            
+            <span class="n">sub_nx</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">sub_ny</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">sub_nz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            
+            <span class="c1"># r values (refinement ratios, typically 1)</span>
+            <span class="n">rx</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">ry</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">rz</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;&gt;i&#39;</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            
+            <span class="c1"># Read subgrid data (big-endian doubles)</span>
+            <span class="n">num_values</span> <span class="o">=</span> <span class="n">sub_nx</span> <span class="o">*</span> <span class="n">sub_ny</span> <span class="o">*</span> <span class="n">sub_nz</span>
+            <span class="n">subgrid_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">num_values</span> <span class="o">*</span> <span class="mi">8</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;&gt;f8&#39;</span><span class="p">)</span>
+            
+            <span class="c1"># Reshape and place in output array</span>
+            <span class="c1"># PFB stores data in Fortran order (column-major): x varies fastest</span>
+            <span class="n">subgrid_3d</span> <span class="o">=</span> <span class="n">subgrid_data</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">sub_nz</span><span class="p">,</span> <span class="n">sub_ny</span><span class="p">,</span> <span class="n">sub_nx</span><span class="p">))</span>
+            
+            <span class="c1"># Place subgrid data into the full array</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">iz</span><span class="p">:</span><span class="n">iz</span><span class="o">+</span><span class="n">sub_nz</span><span class="p">,</span> <span class="n">iy</span><span class="p">:</span><span class="n">iy</span><span class="o">+</span><span class="n">sub_ny</span><span class="p">,</span> <span class="n">ix</span><span class="p">:</span><span class="n">ix</span><span class="o">+</span><span class="n">sub_nx</span><span class="p">]</span> <span class="o">=</span> <span class="n">subgrid_3d</span>
+        
+        <span class="k">return</span> <span class="n">data</span></div>
+
+
+
+<div class="viewcode-block" id="read_pfb">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.read_pfb">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">read_pfb</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read a ParFlow Binary (PFB) file.</span>
+<span class="sd">    </span>
+<span class="sd">    Attempts to use the parflow package if available, otherwise falls back</span>
+<span class="sd">    to the standalone pure-Python reader.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        filename: Path to the .pfb file</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: 3D array of shape (nz, ny, nx) containing the data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">parflow.tools.io</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pftools</span>
+        <span class="k">return</span> <span class="n">pftools</span><span class="o">.</span><span class="n">read_pfb</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">read_pfb_standalone</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ParflowOutput">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowOutput">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ParflowOutput</span><span class="p">(</span><span class="n">HydroModelOutput</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Base class for processing ParFlow model outputs.</span>
 
 <span class="sd">    This class handles common ParFlow output functionalities, such as</span>
-<span class="sd">    identifying available timesteps and interfacing with the `parflow`</span>
-<span class="sd">    Python package for reading PFB files. Specific data types (like</span>
-<span class="sd">    saturation, porosity) should be handled by subclasses.</span>
+<span class="sd">    identifying available timesteps and reading PFB files. It uses the</span>
+<span class="sd">    standalone PFB reader that works without the parflow package installed.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="ParflowOutput.__init__"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowOutput.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize ParFlow output processor.</span>
 
@@ -121,7 +175,6 @@
 <span class="sd">                            output files are like &#39;my_run.out.satur.00001.pfb&#39;).</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ImportError: If the `parflow` Python package is not installed.</span>
 <span class="sd">            FileNotFoundError: If `model_directory` does not exist.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model_directory</span><span class="p">)</span>
@@ -130,27 +183,17 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">run_name</span> <span class="o">=</span> <span class="n">run_name</span>
         
-        <span class="k">try</span><span class="p">:</span>
-            <span class="c1"># Dynamically import parflow and its PFB reading tool.</span>
-            <span class="c1"># This makes `parflow` an optional dependency if ParflowOutput classes are not used.</span>
-            <span class="kn">import</span> <span class="nn">parflow.tools.io</span> <span class="k">as</span> <span class="nn">pftools</span> <span class="c1"># Changed from `import parflow`</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">parflow_available</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">read_pfb</span> <span class="o">=</span> <span class="n">pftools</span><span class="o">.</span><span class="n">read_pfb</span> <span class="c1"># Assign the function directly</span>
-        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">parflow_available</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="c1"># Critical dependency for this class to function.</span>
-            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;The &#39;parflow&#39; Python package is required to process ParFlow outputs. &quot;</span>
-                              <span class="s2">&quot;Please install it (e.g., &#39;pip install parflow&#39;).&quot;</span><span class="p">)</span>
+        <span class="c1"># Use the module-level read_pfb function which works with or without parflow package</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_pfb</span> <span class="o">=</span> <span class="n">read_pfb</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parflow_available</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># We can read PFB files with standalone reader</span>
         
         <span class="c1"># Discover available timesteps upon initialization.</span>
-        <span class="c1"># Potential Issue: If new output files are written after initialization,</span>
-        <span class="c1"># this list won&#39;t update unless refreshed.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_available_timesteps</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: No ParFlow output timesteps found for run &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">run_name</span><span class="si">}</span><span class="s2">&#39; in &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_directory</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
-                  <span class="s2">&quot;Check run_name and file patterns (e.g., *.out.satur.*.pfb).&quot;</span><span class="p">)</span></div>
+                  <span class="s2">&quot;Check run_name and file patterns (e.g., *.out.satur.*.pfb).&quot;</span><span class="p">)</span>
     
-    <span class="k">def</span> <span class="nf">_get_available_timesteps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_available_timesteps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Scans the model directory to find available ParFlow output timesteps.</span>
 
@@ -204,7 +247,9 @@
 
         <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">timesteps_set</span><span class="p">))</span> <span class="c1"># Return sorted list of unique timesteps</span>
     
-<div class="viewcode-block" id="ParflowOutput.get_pfb_dimensions"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowOutput.get_pfb_dimensions">[docs]</a>    <span class="k">def</span> <span class="nf">get_pfb_dimensions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pfb_file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<div class="viewcode-block" id="ParflowOutput.get_pfb_dimensions">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowOutput.get_pfb_dimensions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_pfb_dimensions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pfb_file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Reads a PFB file and returns its data dimensions (nz, ny, nx).</span>
 
@@ -240,15 +285,19 @@
             <span class="c1"># If &gt; 3D, this is unexpected for standard ParFlow scalar outputs.</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PFB file &#39;</span><span class="si">{</span><span class="n">pfb_file_path</span><span class="si">}</span><span class="s2">&#39; has unsupported data dimensionality: </span><span class="si">{</span><span class="n">data_array</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">data_array</span><span class="o">.</span><span class="n">shape</span> <span class="c1"># Returns (nz, ny, nx)</span></div></div>
+        <span class="k">return</span> <span class="n">data_array</span><span class="o">.</span><span class="n">shape</span> <span class="c1"># Returns (nz, ny, nx)</span></div>
+</div>
 
 
-<div class="viewcode-block" id="ParflowSaturation"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowSaturation">[docs]</a><span class="k">class</span> <span class="nc">ParflowSaturation</span><span class="p">(</span><span class="n">ParflowOutput</span><span class="p">):</span>
+
+<div class="viewcode-block" id="ParflowSaturation">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowSaturation">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ParflowSaturation</span><span class="p">(</span><span class="n">ParflowOutput</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Processes saturation data from ParFlow simulations (.out.satur.*.pfb files).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="ParflowSaturation.__init__"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowSaturation.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize ParFlow saturation processor.</span>
 
@@ -256,11 +305,13 @@
 <span class="sd">            model_directory (str): Path to the ParFlow simulation output directory.</span>
 <span class="sd">            run_name (str): The base name of the ParFlow run.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model_directory</span><span class="p">,</span> <span class="n">run_name</span><span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model_directory</span><span class="p">,</span> <span class="n">run_name</span><span class="p">)</span>
         <span class="c1"># Additional check: Ensure saturation files were indeed the source of timesteps if specific.</span>
         <span class="c1"># For now, _get_available_timesteps is generic.</span>
     
-<div class="viewcode-block" id="ParflowSaturation.load_timestep"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowSaturation.load_timestep">[docs]</a>    <span class="k">def</span> <span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ParflowSaturation.load_timestep">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowSaturation.load_timestep">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load saturation data for a specific, zero-based timestep index.</span>
 
@@ -284,8 +335,9 @@
         
         <span class="n">actual_timestep_number</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">[</span><span class="n">timestep_idx</span><span class="p">]</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_saturation_for_timestep_num</span><span class="p">(</span><span class="n">actual_timestep_number</span><span class="p">)</span></div>
+
     
-    <span class="k">def</span> <span class="nf">_load_saturation_for_timestep_num</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_number</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_saturation_for_timestep_num</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_number</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Internal helper to load saturation data for a given ParFlow timestep number.</span>
 
@@ -335,7 +387,9 @@
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> <span class="c1"># Catch errors from read_pfb or subsequent numpy operations</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading or processing saturation data from &#39;</span><span class="si">{</span><span class="n">chosen_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     
-<div class="viewcode-block" id="ParflowSaturation.load_time_range"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowSaturation.load_time_range">[docs]</a>    <span class="k">def</span> <span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ParflowSaturation.load_time_range">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowSaturation.load_time_range">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load saturation data for a specified range of zero-based timestep indices.</span>
 
@@ -409,8 +463,11 @@
             <span class="n">all_saturation_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_saturation_for_timestep_num</span><span class="p">(</span><span class="n">timestep_num</span><span class="p">)</span>
         
         <span class="k">return</span> <span class="n">all_saturation_data</span></div>
+
     
-<div class="viewcode-block" id="ParflowSaturation.get_timestep_info"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowSaturation.get_timestep_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<div class="viewcode-block" id="ParflowSaturation.get_timestep_info">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowSaturation.get_timestep_info">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Provides information about available ParFlow timesteps.</span>
 
@@ -429,17 +486,21 @@
         <span class="c1"># would need to be parsed, which is beyond the scope of simple PFB reading.</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[]</span>
-        <span class="k">return</span> <span class="p">[(</span><span class="n">ts_num</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">ts_num</span><span class="p">))</span> <span class="k">for</span> <span class="n">ts_num</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">]</span></div></div>
+        <span class="k">return</span> <span class="p">[(</span><span class="n">ts_num</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">ts_num</span><span class="p">))</span> <span class="k">for</span> <span class="n">ts_num</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">]</span></div>
+</div>
 
 
-<div class="viewcode-block" id="ParflowPorosity"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity">[docs]</a><span class="k">class</span> <span class="nc">ParflowPorosity</span><span class="p">(</span><span class="n">ParflowOutput</span><span class="p">):</span>
+
+<div class="viewcode-block" id="ParflowPorosity">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ParflowPorosity</span><span class="p">(</span><span class="n">ParflowOutput</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Processes porosity data from ParFlow simulations.</span>
 <span class="sd">    Porosity in ParFlow is typically static (time-invariant) and stored in a</span>
 <span class="sd">    single PFB file (e.g., &lt;run_name&gt;.out.porosity.pfb or similar).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="ParflowPorosity.__init__"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize ParFlow porosity processor.</span>
 
@@ -450,11 +511,13 @@
         <span class="c1"># Call super().__init__ but note that _get_available_timesteps might not be</span>
         <span class="c1"># relevant if porosity is truly static and doesn&#39;t have timed output files.</span>
         <span class="c1"># However, the base class structure expects it.</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model_directory</span><span class="p">,</span> <span class="n">run_name</span><span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model_directory</span><span class="p">,</span> <span class="n">run_name</span><span class="p">)</span>
         <span class="c1"># Porosity doesn&#39;t usually have multiple timesteps, so self.available_timesteps</span>
         <span class="c1"># from base class (derived from saturation/pressure files) might be misleading if used here.</span>
     
-<div class="viewcode-block" id="ParflowPorosity.load_porosity"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.load_porosity">[docs]</a>    <span class="k">def</span> <span class="nf">load_porosity</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ParflowPorosity.load_porosity">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.load_porosity">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_porosity</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load the static porosity data from the ParFlow model.</span>
 
@@ -502,8 +565,11 @@
             <span class="k">return</span> <span class="n">porosity_data</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading or processing porosity data from &#39;</span><span class="si">{</span><span class="n">found_file_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
     
-<div class="viewcode-block" id="ParflowPorosity.load_mask"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.load_mask">[docs]</a>    <span class="k">def</span> <span class="nf">load_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span> <span class="c1"># Original name was load_porosity, but seems to load mask</span>
+<div class="viewcode-block" id="ParflowPorosity.load_mask">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.load_mask">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span> <span class="c1"># Original name was load_porosity, but seems to load mask</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load the domain mask data from a ParFlow model.</span>
 <span class="sd">        The mask file (.out.mask.pfb) indicates active (1) and inactive (0) cells.</span>
@@ -547,7 +613,10 @@
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading or processing mask data from &#39;</span><span class="si">{</span><span class="n">found_file_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ParflowPorosity.load_timestep"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.load_timestep">[docs]</a>    <span class="k">def</span> <span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+
+<div class="viewcode-block" id="ParflowPorosity.load_timestep">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.load_timestep">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_timestep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep_idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load porosity data. For ParFlow, porosity is typically time-invariant.</span>
 <span class="sd">        This method returns the static porosity array, ignoring `timestep_idx`.</span>
@@ -561,8 +630,11 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Porosity is static, so any timestep_idx request returns the same data.</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_porosity</span><span class="p">()</span></div>
+
     
-<div class="viewcode-block" id="ParflowPorosity.load_time_range"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.load_time_range">[docs]</a>    <span class="k">def</span> <span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="ParflowPorosity.load_time_range">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.load_time_range">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_time_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_idx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load porosity data for a conceptual range of timesteps.</span>
 <span class="sd">        Since porosity is time-invariant, this method returns a 4D array where</span>
@@ -615,8 +687,11 @@
         <span class="n">porosity_4d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">porosity_3d</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="p">(</span><span class="n">num_timesteps_in_output</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
         
         <span class="k">return</span> <span class="n">porosity_4d</span></div>
+
     
-<div class="viewcode-block" id="ParflowPorosity.get_timestep_info"><a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.get_timestep_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<div class="viewcode-block" id="ParflowPorosity.get_timestep_info">
+<a class="viewcode-back" href="../../api/model_output.html#model_output.parflow_output.ParflowPorosity.get_timestep_info">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_timestep_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns timestep information, typically based on other ParFlow outputs</span>
 <span class="sd">        (like saturation) as porosity itself is static.</span>
@@ -631,34 +706,80 @@
             <span class="c1"># If no other timed outputs were found to define timesteps,</span>
             <span class="c1"># provide a single dummy entry for the static porosity data.</span>
             <span class="k">return</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)]</span> <span class="c1"># (timestep_number, conceptual_time)</span>
-        <span class="k">return</span> <span class="p">[(</span><span class="n">ts_num</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">ts_num</span><span class="p">))</span> <span class="k">for</span> <span class="n">ts_num</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">]</span></div></div>
+        <span class="k">return</span> <span class="p">[(</span><span class="n">ts_num</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">ts_num</span><span class="p">))</span> <span class="k">for</span> <span class="n">ts_num</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_timesteps</span><span class="p">]</span></div>
+</div>
+
 </pre></div>
 
-           </div>
           </div>
-          <footer>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2025, Hang Chen.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
+          
         </div>
       </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.png" alt="Logo of PyHydroGeophysX"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">PyHydroGeophysX</a></h1>
 
-</body>
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/index.html">Tutorials/Workflows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../auto_examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../agents/index.html">Agents + Web App</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Hang Chen.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
 </html>

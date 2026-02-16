@@ -5,7 +5,8 @@
       "Bash(conda info:*)",
       "Bash(conda activate:*)",
       "Bash(/c/ProgramData/anaconda3/envs/pg/python.exe:*)",
-      "Bash(/c/Users/hchen117/.conda/envs/pg/python.exe:*)"
+      "Bash(/c/Users/hchen117/.conda/envs/pg/python.exe:*)",
+      "Bash(wc -l:*)"
     ]
   }
 }

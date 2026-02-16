@@ -20,6 +20,22 @@ PyHydroGeophysX.forward.srt\_forward module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.forward.tdem\_forward module
+--------------------------------------------
+
+.. automodule:: PyHydroGeophysX.forward.tdem_forward
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.forward.fdem\_forward module
+--------------------------------------------
+
+.. automodule:: PyHydroGeophysX.forward.fdem_forward
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 Module contents
 ---------------
 

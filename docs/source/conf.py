@@ -2,6 +2,7 @@
 
 import os
 import sys
+import importlib.util
 
 # Add project to path
 sys.path.insert(0, os.path.abspath('../../'))
@@ -19,9 +20,12 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'sphinx_gallery.gen_gallery',
-    'sphinx_copybutton',
-    'sphinx_design',
 ]
+
+# Optional extensions (build should still work if unavailable)
+for _ext in ['sphinx_copybutton', 'sphinx_design']:
+    if importlib.util.find_spec(_ext):
+        extensions.append(_ext)
 
 # Sphinx Gallery configuration - FINAL WORKING VERSION
 sphinx_gallery_conf = {
@@ -41,7 +45,10 @@ sphinx_gallery_conf = {
 }
 
 # HTML theme
-html_theme = 'pydata_sphinx_theme'
+if importlib.util.find_spec('pydata_sphinx_theme'):
+    html_theme = 'pydata_sphinx_theme'
+else:
+    html_theme = 'alabaster'
 html_title = 'PyHydroGeophysX Documentation'
 html_logo = '_static/logo.png'
 

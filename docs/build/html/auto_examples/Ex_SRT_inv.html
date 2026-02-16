@@ -1,126 +1,65 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../">
-<head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  
+    <title>Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation &#8212; PyHydroGeophysX Documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex_SRT_inv.html" />
-      <script src="../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex. Structure-Constrained Time-Lapse Resistivity Inversion" href="Ex_structure_TLresinv.html" />
-    <link rel="prev" title="Ex. Structure-Constrained Resistivity Inversion" href="Ex_Structure_resinv.html" /> 
-</head>
+    <link rel="next" title="Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion" href="Ex_TDEM_workflow.html" />
+    <link rel="prev" title="Ex. Time-Lapse ERT Inversion Techniques" href="Ex_TL_inversion.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+  
+  
 
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
           
-          
-          <a href="../index.html" class="icon icon-home">
-            PyHydroGeophysX
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#long-profile-seismic-velocity-model">Long Profile Seismic Velocity Model</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#automated-interface-extraction">Automated Interface Extraction</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#short-profile-multi-scale-comparison">Short Profile Multi-Scale Comparison</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#summary">Summary</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
-</ul>
-</li>
-</ul>
 
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../index.html">PyHydroGeophysX</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
-      <li class="breadcrumb-item active">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</li>
-      <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/auto_examples/Ex_SRT_inv.rst.txt" rel="nofollow"> View page source</a>
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
+          <div class="body" role="main">
+            
   <div class="sphx-glr-download-link-note admonition note">
 <p class="admonition-title">Note</p>
 <p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex-srt-inv-py"><span class="std std-ref">Go to the end</span></a>
 to download the full example code.</p>
 </div>
 <section class="sphx-glr-example-title" id="ex-seismic-refraction-tomography-srt-inversion-and-interface-delineation">
-<span id="sphx-glr-auto-examples-ex-srt-inv-py"></span><h1>Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation<a class="headerlink" href="#ex-seismic-refraction-tomography-srt-inversion-and-interface-delineation" title="Link to this heading"></a></h1>
+<span id="sphx-glr-auto-examples-ex-srt-inv-py"></span><h1>Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation<a class="headerlink" href="#ex-seismic-refraction-tomography-srt-inversion-and-interface-delineation" title="Link to this heading">¶</a></h1>
 <p>This example demonstrates how to perform a 2D seismic refraction tomography (SRT)
 inversion and interpret the results to define subsurface structures.</p>
 <p>The script focuses on the inversion and post-processing stages of a geophysical workflow.
 It begins by loading pre-existing synthetic travel time data and then uses tomographic inversion
 to reconstruct the subsurface P-wave velocity distribution. A key feature demonstrated is the extraction of geological interfaces based on velocity thresholds.</p>
 <p>The workflow includes:
-Loading Synthetic Data: The script loads pre-generated synthetic seismic travel time data for both a long and a short survey profile.
-Tomographic Inversion: It creates an unstructured mesh and performs a travel time inversion to estimate the subsurface P-wave velocity model for each dataset.
+Loading Synthetic Data: The script loads pre-generated synthetic travel time data for both a long and a short survey profile.
+Tomographic Inversion: It runs both the original PyGIMLi <cite>TravelTimeManager.invert()</cite> workflow and the package-level <cite>SRTInversion</cite> class using matching settings.
+Comparison: The velocity models from both inversion paths are compared quantitatively and visually.
 Visualization: The resulting velocity tomograms are plotted, showing the recovered subsurface structure.
 Interface Extraction: For the long profile, the script uses the extract_velocity_interface function to automatically delineate boundaries between different geological layers (e.g., regolith, fractured bedrock, and fresh bedrock) based on velocity thresholds.
 Exporting Results: The coordinates of the extracted interfaces are saved to text files, making them available for constraining other models, such as hydrogeological simulations.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -150,20 +89,134 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
 <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.interpolation</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProfileInterpolator</span><span class="p">,</span> <span class="n">create_surface_lines</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshCreator</span><span class="p">,</span><span class="n">fill_holes_2d</span><span class="p">,</span><span class="n">createTriangles</span><span class="p">,</span><span class="n">extract_velocity_interface</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.velocity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">HertzMindlinModel</span><span class="p">,</span> <span class="n">DEMModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.srt_inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">SRTInversion</span>
 </pre></div>
 </div>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;results/seismic_example&quot;</span>
 <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="n">SRT_BASE_PARAMS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># Parameters shared with ERT-style inversion interfaces</span>
+    <span class="s2">&quot;lambda_val&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>
+    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;cgls&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;max_iterations&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+    <span class="s2">&quot;lambda_rate&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="s2">&quot;lambda_min&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="s2">&quot;relativeError&quot;</span><span class="p">:</span> <span class="mf">0.03</span><span class="p">,</span>
+    <span class="s2">&quot;absoluteUError&quot;</span><span class="p">:</span> <span class="mf">0.001</span><span class="p">,</span>
+    <span class="c1"># SRT-specific controls</span>
+    <span class="s2">&quot;zWeight&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="s2">&quot;vTop&quot;</span><span class="p">:</span> <span class="mf">500.0</span><span class="p">,</span>
+    <span class="s2">&quot;target_chi_squared&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">LONG_SRT_PARAMS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="o">**</span><span class="n">SRT_BASE_PARAMS</span><span class="p">,</span>
+    <span class="s2">&quot;vBottom&quot;</span><span class="p">:</span> <span class="mf">8000.0</span><span class="p">,</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">300.0</span><span class="p">,</span> <span class="mf">10000.0</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="n">SHORT_SRT_PARAMS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="o">**</span><span class="n">SRT_BASE_PARAMS</span><span class="p">,</span>
+    <span class="s2">&quot;vBottom&quot;</span><span class="p">:</span> <span class="mf">5500.0</span><span class="p">,</span>
+    <span class="s2">&quot;model_constraints&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">300.0</span><span class="p">,</span> <span class="mf">8000.0</span><span class="p">),</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">run_custom_srt_inversion</span><span class="p">(</span><span class="n">data_file</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">inversion_params</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run package-level SRTInversion with explicit parameter dictionary.&quot;&quot;&quot;</span>
+    <span class="n">inversion</span> <span class="o">=</span> <span class="n">SRTInversion</span><span class="p">(</span>
+        <span class="n">data_file</span><span class="o">=</span><span class="n">data_file</span><span class="p">,</span>
+        <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">inversion_params</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">compare_models</span><span class="p">(</span><span class="n">direct_model</span><span class="p">,</span> <span class="n">custom_result</span><span class="p">):</span>
+    <span class="n">custom_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">custom_result</span><span class="o">.</span><span class="n">final_model</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">direct_model</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">custom_model</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;direct/custom model size mismatch: &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">direct_model</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">custom_model</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">custom_model</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_direct_vs_custom</span><span class="p">(</span>
+    <span class="n">mesh</span><span class="p">,</span>
+    <span class="n">direct_model</span><span class="p">,</span>
+    <span class="n">custom_model</span><span class="p">,</span>
+    <span class="n">direct_coverage</span><span class="p">,</span>
+    <span class="n">custom_coverage</span><span class="p">,</span>
+    <span class="n">sensors</span><span class="p">,</span>
+    <span class="n">output_name</span><span class="p">,</span>
+    <span class="n">velocity_limits</span><span class="p">,</span>
+    <span class="n">title_prefix</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">velocity_cmap</span> <span class="o">=</span> <span class="n">fixed_cmap</span> <span class="k">if</span> <span class="s2">&quot;fixed_cmap&quot;</span> <span class="ow">in</span> <span class="nb">globals</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;viridis&quot;</span>
+
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mf">12.5</span><span class="p">,</span> <span class="mf">5.5</span><span class="p">])</span>
+    <span class="n">ax_direct</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+        <span class="n">mesh</span><span class="p">,</span>
+        <span class="n">direct_model</span><span class="p">,</span>
+        <span class="n">cMap</span><span class="o">=</span><span class="n">velocity_cmap</span><span class="p">,</span>
+        <span class="n">coverage</span><span class="o">=</span><span class="n">direct_coverage</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">ax_direct</span><span class="p">,</span>
+        <span class="n">cMin</span><span class="o">=</span><span class="n">velocity_limits</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">cMax</span><span class="o">=</span><span class="n">velocity_limits</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Velocity (m s$^{-1}$)&quot;</span><span class="p">,</span>
+        <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">ax_direct</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">title_prefix</span><span class="si">}</span><span class="se">\n</span><span class="s2">PyGIMLi direct inversion&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+    <span class="n">ax_direct</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+    <span class="n">ax_direct</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+    <span class="n">pg</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">mpl</span><span class="o">.</span><span class="n">drawSensors</span><span class="p">(</span><span class="n">ax_direct</span><span class="p">,</span> <span class="n">sensors</span><span class="p">,</span> <span class="n">diam</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">)</span>
+
+    <span class="n">ax_custom</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span>
+        <span class="n">mesh</span><span class="p">,</span>
+        <span class="n">custom_model</span><span class="p">,</span>
+        <span class="n">cMap</span><span class="o">=</span><span class="n">velocity_cmap</span><span class="p">,</span>
+        <span class="n">coverage</span><span class="o">=</span><span class="n">custom_coverage</span><span class="p">,</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">ax_custom</span><span class="p">,</span>
+        <span class="n">cMin</span><span class="o">=</span><span class="n">velocity_limits</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">cMax</span><span class="o">=</span><span class="n">velocity_limits</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Velocity (m s$^{-1}$)&quot;</span><span class="p">,</span>
+        <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">ax_custom</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">title_prefix</span><span class="si">}</span><span class="se">\n</span><span class="s2">PyHydroGeophysX SRTInversion&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+    <span class="n">ax_custom</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+    <span class="n">ax_custom</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+    <span class="n">pg</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">mpl</span><span class="o">.</span><span class="n">drawSensors</span><span class="p">(</span><span class="n">ax_custom</span><span class="p">,</span> <span class="n">sensors</span><span class="p">,</span> <span class="n">diam</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">output_name</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">&quot;tight&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>## Long seismic profile</p>
 <p>### Load seismic data and inversion</p>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">datasrt</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;./results/SRT_forward/synthetic_seismic_data_long.dat&quot;</span><span class="p">)</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">long_data_file</span> <span class="o">=</span> <span class="s2">&quot;./results/SRT_forward/synthetic_seismic_data_long.dat&quot;</span>
+<span class="n">datasrt</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">long_data_file</span><span class="p">)</span>
 <span class="n">TT</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">traveltime</span><span class="o">.</span><span class="n">TravelTimeManager</span><span class="p">()</span>
 <span class="n">mesh_inv</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">datasrt</span><span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">paraDepth</span> <span class="o">=</span> <span class="mf">60.0</span><span class="p">)</span>
 <span class="n">TT</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">datasrt</span><span class="p">,</span> <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh_inv</span><span class="p">,</span><span class="n">lam</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
           <span class="n">zWeight</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span><span class="n">vTop</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">vBottom</span><span class="o">=</span><span class="mi">8000</span><span class="p">,</span>
           <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">limits</span><span class="o">=</span><span class="p">[</span><span class="mf">300.</span><span class="p">,</span> <span class="mf">10000.</span><span class="p">])</span>
+<span class="n">velocity_data_long_direct</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+<span class="n">coverage_long_direct</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">()</span>
+
+<span class="n">long_custom_result</span> <span class="o">=</span> <span class="n">run_custom_srt_inversion</span><span class="p">(</span>
+    <span class="n">data_file</span><span class="o">=</span><span class="n">long_data_file</span><span class="p">,</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh_inv</span><span class="p">,</span>
+    <span class="n">inversion_params</span><span class="o">=</span><span class="n">LONG_SRT_PARAMS</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">velocity_data_long_custom</span> <span class="o">=</span> <span class="n">compare_models</span><span class="p">(</span>
+    <span class="n">velocity_data_long_direct</span><span class="p">,</span>
+    <span class="n">long_custom_result</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">coverage_long_custom</span> <span class="o">=</span> <span class="n">long_custom_result</span><span class="o">.</span><span class="n">coverage</span>
 </pre></div>
 </div>
 <p>### Get parameters for plotting layers</p>
@@ -172,7 +225,7 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
 <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_inv</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
 <span class="c1"># For layered model visualization</span>
 <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">dataIndex</span> <span class="o">=</span> <span class="n">createTriangles</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">)</span>
-<span class="n">z</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">cellDataToNodeData</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span><span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">())</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">cellDataToNodeData</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span> <span class="n">velocity_data_long_direct</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;legend.fontsize&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
@@ -191,7 +244,7 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
 
 <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">])</span>
 <span class="n">ax1</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span><span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">(),</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">cov</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">ax1</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m s$^{-1}$)&#39;</span><span class="p">,</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span> <span class="n">velocity_data_long_direct</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">cov</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">ax1</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m s$^{-1}$)&#39;</span><span class="p">,</span>
         <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">cMin</span> <span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span>
        <span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">)</span>
 <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
@@ -206,17 +259,39 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
 </pre></div>
 </div>
 <section id="long-profile-seismic-velocity-model">
-<h2>Long Profile Seismic Velocity Model<a class="headerlink" href="#long-profile-seismic-velocity-model" title="Link to this heading"></a></h2>
+<h2>Long Profile Seismic Velocity Model<a class="headerlink" href="#long-profile-seismic-velocity-model" title="Link to this heading">¶</a></h2>
 <p>The seismic tomography reveals three-layer velocity structure: weathered
 regolith (blue, &lt;1200 m/s), fractured bedrock (green-yellow, 1200-5000 m/s),
 and fresh bedrock (red, &gt;5000 m/s). Dashed and solid lines show extracted
 geological interfaces at 1200 and 5000 m/s respectively.</p>
 <a class="reference internal image-reference" href="../_images/Ex_SRT_inv_fig_01.png"><img alt="../_images/Ex_SRT_inv_fig_01.png" class="align-center" src="../_images/Ex_SRT_inv_fig_01.png" style="width: 700px;" />
 </a>
+<p>### Compare direct inversion with <cite>SRTInversion</cite> (same setup)</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">plot_direct_vs_custom</span><span class="p">(</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh_inv</span><span class="p">,</span>
+    <span class="n">direct_model</span><span class="o">=</span><span class="n">velocity_data_long_direct</span><span class="p">,</span>
+    <span class="n">custom_model</span><span class="o">=</span><span class="n">velocity_data_long_custom</span><span class="p">,</span>
+    <span class="n">direct_coverage</span><span class="o">=</span><span class="n">coverage_long_direct</span><span class="p">,</span>
+    <span class="n">custom_coverage</span><span class="o">=</span><span class="n">coverage_long_custom</span><span class="p">,</span>
+    <span class="n">sensors</span><span class="o">=</span><span class="n">datasrt</span><span class="o">.</span><span class="n">sensors</span><span class="p">(),</span>
+    <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;seismic_velocity_long_comparison.tiff&quot;</span><span class="p">,</span>
+    <span class="n">velocity_limits</span><span class="o">=</span><span class="p">(</span><span class="mf">500.0</span><span class="p">,</span> <span class="mf">5000.0</span><span class="p">),</span>
+    <span class="n">title_prefix</span><span class="o">=</span><span class="s2">&quot;Long profile&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="long-profile-direct-vs-custom-inversion">
+<h2>Long Profile Direct vs Custom Inversion<a class="headerlink" href="#long-profile-direct-vs-custom-inversion" title="Link to this heading">¶</a></h2>
+<p>The same mesh, regularization, and velocity bounds are used for both inversion
+paths: PyGIMLi direct inversion and package-level <cite>SRTInversion</cite>.
+Both panels are shown with standardized coverage masking.</p>
+<a class="reference internal image-reference" href="../_images/Ex_SRT_inv_fig_04.png"><img alt="../_images/Ex_SRT_inv_fig_04.png" class="align-center" src="../_images/Ex_SRT_inv_fig_04.png" style="width: 900px;" />
+</a>
 <p>%% [markdown]
 ### Get subsurface structure for hydrologic modeling</p>
 <p>Assuming TT.model.array() gives you the velocity values</p>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">velocity_data</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">velocity_data</span> <span class="o">=</span> <span class="n">velocity_data_long_direct</span>
 
 <span class="c1"># Call the function with velocity data</span>
 <span class="c1"># Get subsurface structure (Regolith) for hydrologic modeling</span>
@@ -232,7 +307,7 @@ geological interfaces at 1200 and 5000 m/s respectively.</p>
 
 <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">])</span>
 <span class="n">ax1</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span><span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">(),</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">filled_cov1</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">ax1</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m s$^{-1}$)&#39;</span><span class="p">,</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span> <span class="n">velocity_data_long_direct</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">filled_cov1</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">ax1</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m s$^{-1}$)&#39;</span><span class="p">,</span>
         <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">cMin</span> <span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span>
        <span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">)</span>
 <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
@@ -246,7 +321,7 @@ geological interfaces at 1200 and 5000 m/s respectively.</p>
 </div>
 </section>
 <section id="automated-interface-extraction">
-<h2>Automated Interface Extraction<a class="headerlink" href="#automated-interface-extraction" title="Link to this heading"></a></h2>
+<h2>Automated Interface Extraction<a class="headerlink" href="#automated-interface-extraction" title="Link to this heading">¶</a></h2>
 <p>Two critical geological boundaries extracted from velocity thresholds:
 regolith-bedrock interface (dashed line, 1200 m/s) and fractured-fresh
 bedrock interface (solid line, 5000 m/s). Interfaces are smoothed and
@@ -255,17 +330,31 @@ exported as text files for integration with hydrogeological models.</p>
 </a>
 <p>%% [markdown]
 ## Short seismic profiles</p>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">ttData</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;./results/workflow_example/synthetic_seismic_data.dat&quot;</span><span class="p">)</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">short_data_file</span> <span class="o">=</span> <span class="s2">&quot;./results/workflow_example/synthetic_seismic_data.dat&quot;</span>
+<span class="n">ttData</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">short_data_file</span><span class="p">)</span>
 <span class="n">TT_short</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">traveltime</span><span class="o">.</span><span class="n">TravelTimeManager</span><span class="p">()</span>
 <span class="n">mesh_inv1</span> <span class="o">=</span> <span class="n">TT_short</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">ttData</span> <span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">paraDepth</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">)</span>
-<span class="n">TT_short</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">ttData</span> <span class="p">,</span> <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh_inv</span><span class="p">,</span><span class="n">lam</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+<span class="n">TT_short</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">ttData</span> <span class="p">,</span> <span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh_inv1</span><span class="p">,</span><span class="n">lam</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
           <span class="n">zWeight</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span><span class="n">vTop</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">vBottom</span><span class="o">=</span><span class="mi">5500</span><span class="p">,</span>
           <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">limits</span><span class="o">=</span><span class="p">[</span><span class="mf">300.</span><span class="p">,</span> <span class="mf">8000.</span><span class="p">])</span>
+<span class="n">velocity_data_short_direct</span> <span class="o">=</span> <span class="n">TT_short</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+<span class="n">coverage_short_direct</span> <span class="o">=</span> <span class="n">TT_short</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">()</span>
+
+<span class="n">short_custom_result</span> <span class="o">=</span> <span class="n">run_custom_srt_inversion</span><span class="p">(</span>
+    <span class="n">data_file</span><span class="o">=</span><span class="n">short_data_file</span><span class="p">,</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh_inv1</span><span class="p">,</span>
+    <span class="n">inversion_params</span><span class="o">=</span><span class="n">SHORT_SRT_PARAMS</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">velocity_data_short_custom</span> <span class="o">=</span> <span class="n">compare_models</span><span class="p">(</span>
+    <span class="n">velocity_data_short_direct</span><span class="p">,</span>
+    <span class="n">short_custom_result</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">coverage_short_custom</span> <span class="o">=</span> <span class="n">short_custom_result</span><span class="o">.</span><span class="n">coverage</span>
 </pre></div>
 </div>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">triangles1</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">dataIndex1</span> <span class="o">=</span> <span class="n">createTriangles</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">)</span>
-<span class="n">z1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">cellDataToNodeData</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">TT_short</span><span class="o">.</span><span class="n">model</span><span class="p">))</span>
-<span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_inv</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">triangles1</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">dataIndex1</span> <span class="o">=</span> <span class="n">createTriangles</span><span class="p">(</span><span class="n">mesh_inv1</span><span class="p">)</span>
+<span class="n">z1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">cellDataToNodeData</span><span class="p">(</span><span class="n">mesh_inv1</span><span class="p">,</span> <span class="n">velocity_data_short_direct</span><span class="p">)</span>
+<span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_inv1</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
 <span class="n">filled_cov1</span> <span class="o">=</span> <span class="n">fill_holes_2d</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">TT_short</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">())</span>
 </pre></div>
 </div>
@@ -285,7 +374,7 @@ exported as text files for integration with hydrogeological models.</p>
 
 <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">])</span>
 <span class="n">ax1</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span><span class="n">TT_short</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">(),</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">TT_short</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">(),</span><span class="n">ax</span> <span class="o">=</span> <span class="n">ax1</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m s$^{-1}$)&#39;</span><span class="p">,</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_inv1</span><span class="p">,</span> <span class="n">velocity_data_short_direct</span><span class="p">,</span><span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span><span class="n">coverage</span> <span class="o">=</span> <span class="n">TT_short</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">(),</span><span class="n">ax</span> <span class="o">=</span> <span class="n">ax1</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Velocity (m s$^{-1}$)&#39;</span><span class="p">,</span>
         <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Elevation (m)&quot;</span><span class="p">,</span><span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span><span class="n">cMin</span> <span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span>
        <span class="p">,</span><span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;vertical&quot;</span><span class="p">)</span>
 <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Distance (m)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
@@ -302,20 +391,42 @@ exported as text files for integration with hydrogeological models.</p>
 </div>
 </section>
 <section id="short-profile-multi-scale-comparison">
-<h2>Short Profile Multi-Scale Comparison<a class="headerlink" href="#short-profile-multi-scale-comparison" title="Link to this heading"></a></h2>
+<h2>Short Profile Multi-Scale Comparison<a class="headerlink" href="#short-profile-multi-scale-comparison" title="Link to this heading">¶</a></h2>
 <p>Short profile provides enhanced shallow resolution (0-30m depth) with
 detailed regolith characterization. Higher ray density improves near-surface
 velocity mapping while sacrificing deeper penetration. The 1200 m/s interface
 shows excellent agreement with the long profile.</p>
 <a class="reference internal image-reference" href="../_images/Ex_SRT_inv_fig_03.png"><img alt="../_images/Ex_SRT_inv_fig_03.png" class="align-center" src="../_images/Ex_SRT_inv_fig_03.png" style="width: 700px;" />
 </a>
+<p>### Short profile: direct vs custom inversion comparison</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">plot_direct_vs_custom</span><span class="p">(</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh_inv1</span><span class="p">,</span>
+    <span class="n">direct_model</span><span class="o">=</span><span class="n">velocity_data_short_direct</span><span class="p">,</span>
+    <span class="n">custom_model</span><span class="o">=</span><span class="n">velocity_data_short_custom</span><span class="p">,</span>
+    <span class="n">direct_coverage</span><span class="o">=</span><span class="n">coverage_short_direct</span><span class="p">,</span>
+    <span class="n">custom_coverage</span><span class="o">=</span><span class="n">coverage_short_custom</span><span class="p">,</span>
+    <span class="n">sensors</span><span class="o">=</span><span class="n">ttData</span><span class="o">.</span><span class="n">sensors</span><span class="p">(),</span>
+    <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;seismic_velocity_short_comparison.tiff&quot;</span><span class="p">,</span>
+    <span class="n">velocity_limits</span><span class="o">=</span><span class="p">(</span><span class="mf">500.0</span><span class="p">,</span> <span class="mf">5000.0</span><span class="p">),</span>
+    <span class="n">title_prefix</span><span class="o">=</span><span class="s2">&quot;Short profile&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="short-profile-direct-vs-custom-inversion">
+<h2>Short Profile Direct vs Custom Inversion<a class="headerlink" href="#short-profile-direct-vs-custom-inversion" title="Link to this heading">¶</a></h2>
+<p>The short-profile comparison uses the same inversion controls for both methods
+and shows that the new packaged inversion reproduces the original direct result
+while preserving shallow structural detail.</p>
+<a class="reference internal image-reference" href="../_images/Ex_SRT_inv_fig_05.png"><img alt="../_images/Ex_SRT_inv_fig_05.png" class="align-center" src="../_images/Ex_SRT_inv_fig_05.png" style="width: 900px;" />
+</a>
 </section>
 <section id="summary">
-<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading"></a></h2>
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">¶</a></h2>
 <p>This example demonstrated seismic refraction tomography with automated
 interface extraction for watershed applications. Key results include
 three-layer velocity structure resolution, interface extraction at 1200
-and 5000 m/s thresholds, and multi-scale survey comparison.</p>
+and 5000 m/s thresholds, and direct-vs-custom inversion consistency checks.</p>
 <p>The extracted interfaces provide structural constraints for ERT inversions
 and direct input for hydrogeological models like MODFLOW and ParFlow.</p>
 <div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-srt-inv-py">
@@ -333,34 +444,80 @@ and direct input for hydrogeological models like MODFLOW and ParFlow.</p>
 </section>
 
 
-           </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex_Structure_resinv.html" class="btn btn-neutral float-left" title="Ex. Structure-Constrained Resistivity Inversion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Ex_structure_TLresinv.html" class="btn btn-neutral float-right" title="Ex. Structure-Constrained Time-Lapse Resistivity Inversion" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2025, Hang Chen.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
+          
         </div>
       </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.png" alt="Logo of PyHydroGeophysX"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">PyHydroGeophysX</a></h1>
 
-</body>
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/index.html">Tutorials/Workflows</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agents/index.html">Agents + Web App</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Examples Gallery</a><ul>
+      <li>Previous: <a href="Ex_TL_inversion.html" title="previous chapter">Ex. Time-Lapse ERT Inversion Techniques</a></li>
+      <li>Next: <a href="Ex_TDEM_workflow.html" title="next chapter">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Hang Chen.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/auto_examples/Ex_SRT_inv.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
 </html>

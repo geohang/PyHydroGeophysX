@@ -35,7 +35,14 @@ Structure-constrained inversion significantly improves the accuracy of
 resistivity models by incorporating a priori geological information,
 leading to more reliable hydrological interpretations.
 
-.. GENERATED FROM PYTHON SOURCE LINES 22-56
+.. GENERATED FROM PYTHON SOURCE LINES 20-21
+
+.. code-block:: Python
+   :dedent: 1
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 23-57
 
 .. code-block:: Python
 
@@ -74,15 +81,15 @@ leading to more reliable hydrological interpretations.
     plt.rcParams["font.family"] = "Arial"
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 57-58
+.. GENERATED FROM PYTHON SOURCE LINES 58-59
 
 ### 1. load ERT and SRT data
 
-.. GENERATED FROM PYTHON SOURCE LINES 60-61
+.. GENERATED FROM PYTHON SOURCE LINES 61-62
 
 load seismic data
 
-.. GENERATED FROM PYTHON SOURCE LINES 61-65
+.. GENERATED FROM PYTHON SOURCE LINES 62-66
 
 .. code-block:: Python
 
@@ -91,15 +98,15 @@ load seismic data
     ertData = ert.load("../examples/results/TL_measurements/appres/synthetic_data30.dat")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 66-67
+.. GENERATED FROM PYTHON SOURCE LINES 67-68
 
 ### 2. Set up inversion domain
 
-.. GENERATED FROM PYTHON SOURCE LINES 69-70
+.. GENERATED FROM PYTHON SOURCE LINES 70-71
 
 using ERT data to create a mesh to take care of the boundary
 
-.. GENERATED FROM PYTHON SOURCE LINES 70-79
+.. GENERATED FROM PYTHON SOURCE LINES 71-80
 
 .. code-block:: Python
 
@@ -113,15 +120,15 @@ using ERT data to create a mesh to take care of the boundary
     mesh.setCellMarkers(np.ones((mesh.cellCount()))*2)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 80-81
+.. GENERATED FROM PYTHON SOURCE LINES 81-82
 
 ### 3. Invert the seismic travel time data first
 
-.. GENERATED FROM PYTHON SOURCE LINES 83-84
+.. GENERATED FROM PYTHON SOURCE LINES 84-85
 
 # travel time inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 84-93
+.. GENERATED FROM PYTHON SOURCE LINES 85-94
 
 .. code-block:: Python
 
@@ -135,7 +142,7 @@ using ERT data to create a mesh to take care of the boundary
     ax, cbar = TT.showResult(cMap='jet',coverage=TT.standardizedCoverage(),cMin=500,cMax=5000)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 94-101
+.. GENERATED FROM PYTHON SOURCE LINES 95-102
 
 Seismic Velocity Inversion Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,7 +152,7 @@ Seismic Velocity Inversion Results
 %% [markdown]
 ### 4. Get the structure interface
 
-.. GENERATED FROM PYTHON SOURCE LINES 103-113
+.. GENERATED FROM PYTHON SOURCE LINES 104-114
 
 .. code-block:: Python
 
@@ -160,7 +167,7 @@ Seismic Velocity Inversion Results
     ax1.set_title('Original Velocity Data')
     ax1.plot(smooth_x, smooth_z)
 
-.. GENERATED FROM PYTHON SOURCE LINES 114-124
+.. GENERATED FROM PYTHON SOURCE LINES 115-125
 
 Velocity Interface Extraction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -173,7 +180,7 @@ inversion and preserve sharp geological boundaries.
 %% [markdown]
 ### 4. Put structure interface into mesh for inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 126-129
+.. GENERATED FROM PYTHON SOURCE LINES 127-130
 
 .. code-block:: Python
 
@@ -181,11 +188,11 @@ inversion and preserve sharp geological boundaries.
     mesh_with_interface
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 130-131
+.. GENERATED FROM PYTHON SOURCE LINES 131-132
 
 # chceck the mesh with interface
 
-.. GENERATED FROM PYTHON SOURCE LINES 131-136
+.. GENERATED FROM PYTHON SOURCE LINES 132-137
 
 .. code-block:: Python
 
@@ -195,7 +202,7 @@ inversion and preserve sharp geological boundaries.
     plt.show()
     mesh_with_interface
 
-.. GENERATED FROM PYTHON SOURCE LINES 137-150
+.. GENERATED FROM PYTHON SOURCE LINES 138-151
 
 Mesh with Structural Constraints
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -211,7 +218,7 @@ while applying smoothing constraints within each geological unit.
 %% [markdown]
 ### 5. Inversion with the updated mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 152-155
+.. GENERATED FROM PYTHON SOURCE LINES 153-156
 
 .. code-block:: Python
 
@@ -219,7 +226,7 @@ while applying smoothing constraints within each geological unit.
     mgrConstrained.invert(data=ertData, verbose=True, lam=10, mesh=mesh_with_interface,limits=[1., 10000.])
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 156-163
+.. GENERATED FROM PYTHON SOURCE LINES 157-164
 
 .. code-block:: Python
 
@@ -231,7 +238,7 @@ while applying smoothing constraints within each geological unit.
     mgrConstrained.showResult(xlabel="Distance (m)", ylabel="Elevation (m)",coverage = res_cov,cMap=fixed_cmap)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 164-173
+.. GENERATED FROM PYTHON SOURCE LINES 165-174
 
 Structure-Constrained ERT Inversion Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -243,11 +250,11 @@ from seismic data
    :align: center
    :width: 800px
 
-.. GENERATED FROM PYTHON SOURCE LINES 176-177
+.. GENERATED FROM PYTHON SOURCE LINES 177-178
 
 ### 6. Save the mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 179-182
+.. GENERATED FROM PYTHON SOURCE LINES 180-183
 
 .. code-block:: Python
 

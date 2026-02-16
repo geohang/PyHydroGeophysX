@@ -36,9 +36,10 @@ content changes and understanding hydrological processes in watersheds.
 The temporal regularization helps maintain consistency between consecutive
 time steps while allowing for realistic changes.
 
-.. GENERATED FROM PYTHON SOURCE LINES 20-45
+.. GENERATED FROM PYTHON SOURCE LINES 20-46
 
 .. code-block:: Python
+
 
     import os
     import sys
@@ -66,7 +67,7 @@ time steps while allowing for realistic changes.
     from PyHydroGeophysX.inversion.windowed import WindowedTimeLapseERTInversion
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 46-68
+.. GENERATED FROM PYTHON SOURCE LINES 48-70
 
 .. code-block:: Python
 
@@ -93,15 +94,15 @@ time steps while allowing for realistic changes.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 69-70
+.. GENERATED FROM PYTHON SOURCE LINES 71-72
 
 ## 1.Full L2 Time-Lapse Inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 72-73
+.. GENERATED FROM PYTHON SOURCE LINES 74-75
 
 #################### FUll Time-Lapse Inversion #####################
 
-.. GENERATED FROM PYTHON SOURCE LINES 73-113
+.. GENERATED FROM PYTHON SOURCE LINES 75-115
 
 .. code-block:: Python
 
@@ -146,7 +147,7 @@ time steps while allowing for realistic changes.
     print("Inversion complete!")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 114-126
+.. GENERATED FROM PYTHON SOURCE LINES 116-128
 
 .. code-block:: Python
 
@@ -163,7 +164,7 @@ time steps while allowing for realistic changes.
         cbar.remove()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 127-140
+.. GENERATED FROM PYTHON SOURCE LINES 129-142
 
 Full Time-Lapse ERT Inversion Results  
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -179,15 +180,15 @@ time steps while capturing realistic subsurface changes.
    :align: center
    :width: 900px
 
-.. GENERATED FROM PYTHON SOURCE LINES 143-144
+.. GENERATED FROM PYTHON SOURCE LINES 145-146
 
 ## 2. Window L2 time-lapse inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 146-147
+.. GENERATED FROM PYTHON SOURCE LINES 148-149
 
 Measurement times (can be timestamps or any sequential numbers representing time)
 
-.. GENERATED FROM PYTHON SOURCE LINES 147-188
+.. GENERATED FROM PYTHON SOURCE LINES 149-190
 
 .. code-block:: Python
 
@@ -233,7 +234,7 @@ Measurement times (can be timestamps or any sequential numbers representing time
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 189-192
+.. GENERATED FROM PYTHON SOURCE LINES 191-194
 
 .. code-block:: Python
 
@@ -241,7 +242,7 @@ Measurement times (can be timestamps or any sequential numbers representing time
     result.final_models.shape
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 193-254
+.. GENERATED FROM PYTHON SOURCE LINES 195-256
 
 .. code-block:: Python
 
@@ -307,7 +308,7 @@ Measurement times (can be timestamps or any sequential numbers representing time
 
     plt.tight_layout()
 
-.. GENERATED FROM PYTHON SOURCE LINES 255-268
+.. GENERATED FROM PYTHON SOURCE LINES 257-270
 
 Windowed Time-Lapse Inversion Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -323,11 +324,11 @@ or when computational resources are limited.
    :align: center
    :width: 900px
 
-.. GENERATED FROM PYTHON SOURCE LINES 270-271
+.. GENERATED FROM PYTHON SOURCE LINES 272-273
 
 ## 3. Full L1 Time-lapse Inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 276-279
+.. GENERATED FROM PYTHON SOURCE LINES 278-281
 
 .. code-block:: Python
 
@@ -335,11 +336,11 @@ or when computational resources are limited.
                         , ylabel="Elevation (m)",label=' Resistivity ($\Omega$ m)',logScale=False,coverage=result.all_coverage[i]>-1)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 283-284
+.. GENERATED FROM PYTHON SOURCE LINES 285-286
 
 Full paths to data files
 
-.. GENERATED FROM PYTHON SOURCE LINES 284-322
+.. GENERATED FROM PYTHON SOURCE LINES 286-324
 
 .. code-block:: Python
 
@@ -382,7 +383,7 @@ Full paths to data files
     print("Inversion complete!")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 323-335
+.. GENERATED FROM PYTHON SOURCE LINES 325-337
 
 .. code-block:: Python
 
@@ -399,7 +400,7 @@ Full paths to data files
         cbar.remove()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 336-349
+.. GENERATED FROM PYTHON SOURCE LINES 338-351
 
 L1-Norm Regularized Inversion Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -415,7 +416,7 @@ expected to have layered structures rather than gradual transitions.
    :align: center  
    :width: 900px
 
-.. GENERATED FROM PYTHON SOURCE LINES 352-376
+.. GENERATED FROM PYTHON SOURCE LINES 354-378
 
 Summary and Recommendations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

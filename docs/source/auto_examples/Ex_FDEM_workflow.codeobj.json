@@ -1,0 +1,47 @@
+{
+ "FDEMForwardModeling.hydro_to_fdem": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.forward.fdem_forward.FDEMForwardModeling",
+   "module_short": "PyHydroGeophysX.forward.fdem_forward.FDEMForwardModeling",
+   "name": "hydro_to_fdem"
+  }
+ ],
+ "FDEMInversion": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.inversion.fdem_inversion",
+   "module_short": "PyHydroGeophysX.inversion.fdem_inversion",
+   "name": "FDEMInversion"
+  }
+ ],
+ "__name__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "np.array": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "array"
+  }
+ ],
+ "np.logspace": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "logspace"
+  }
+ ]
+}

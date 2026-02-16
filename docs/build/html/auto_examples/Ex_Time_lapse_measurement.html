@@ -1,116 +1,50 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../">
-<head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ex. Creating Synthetic Time-Lapse ERT Measurements &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  
+    <title>Ex. Creating Synthetic Time-Lapse ERT Measurements &#8212; PyHydroGeophysX Documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex_Time_lapse_measurement.html" />
-      <script src="../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Ex. Seismic Refraction Tomography (SRT) Forward Modeling" href="EX_SRT_forward.html" />
-    <link rel="prev" title="Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation" href="Ex_MC_Hydro.html" /> 
-</head>
+    <link rel="next" title="Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion" href="Ex_ERT_workflow.html" />
+    <link rel="prev" title="Ex. Seismic Refraction Tomography (SRT) Forward Modeling" href="EX_SRT_forward.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+  
+  
 
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
           
-          
-          <a href="../index.html" class="icon icon-home">
-            PyHydroGeophysX
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples Gallery</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Ex. Creating Synthetic Time-Lapse ERT Measurements</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#time-lapse-apparent-resistivity-response">Time-Lapse Apparent Resistivity Response</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#water-content-evolution-over-time">Water Content Evolution Over Time</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#resistivity-model-evolution">Resistivity Model Evolution</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#animation-and-advanced-visualization">Animation and Advanced Visualization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#summary-and-applications">Summary and Applications</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
-</ul>
-</li>
-</ul>
 
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../index.html">PyHydroGeophysX</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Examples Gallery</a></li>
-      <li class="breadcrumb-item active">Ex. Creating Synthetic Time-Lapse ERT Measurements</li>
-      <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/auto_examples/Ex_Time_lapse_measurement.rst.txt" rel="nofollow"> View page source</a>
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
+          <div class="body" role="main">
+            
   <div class="sphx-glr-download-link-note admonition note">
 <p class="admonition-title">Note</p>
 <p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex-time-lapse-measurement-py"><span class="std std-ref">Go to the end</span></a>
 to download the full example code.</p>
 </div>
 <section class="sphx-glr-example-title" id="ex-creating-synthetic-time-lapse-ert-measurements">
-<span id="sphx-glr-auto-examples-ex-time-lapse-measurement-py"></span><h1>Ex. Creating Synthetic Time-Lapse ERT Measurements<a class="headerlink" href="#ex-creating-synthetic-time-lapse-ert-measurements" title="Link to this heading"></a></h1>
+<span id="sphx-glr-auto-examples-ex-time-lapse-measurement-py"></span><h1>Ex. Creating Synthetic Time-Lapse ERT Measurements<a class="headerlink" href="#ex-creating-synthetic-time-lapse-ert-measurements" title="Link to this heading">¶</a></h1>
 <p>This example demonstrates how to create synthetic time-lapse electrical
 resistivity tomography (ERT) measurements for watershed monitoring applications.</p>
 <p>The example covers:
@@ -122,6 +56,9 @@ resistivity tomography (ERT) measurements for watershed monitoring applications.
 6. Creating animations showing temporal water content variations</p>
 <p>This workflow is essential for testing time-lapse inversion algorithms
 and understanding the sensitivity of ERT measurements to hydrological changes.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -482,7 +419,7 @@ distribution at this particular time.</p>
 </pre></div>
 </div>
 <section id="time-lapse-apparent-resistivity-response">
-<h2>Time-Lapse Apparent Resistivity Response<a class="headerlink" href="#time-lapse-apparent-resistivity-response" title="Link to this heading"></a></h2>
+<h2>Time-Lapse Apparent Resistivity Response<a class="headerlink" href="#time-lapse-apparent-resistivity-response" title="Link to this heading">¶</a></h2>
 <p>The time-series analysis reveals the relationship between precipitation events
 and subsurface electrical response. The top panel shows daily precipitation
 over one year, while the bottom panel displays the corresponding apparent
@@ -539,7 +476,7 @@ events, indicating increased water content in the subsurface.</p>
 </div>
 </section>
 <section id="water-content-evolution-over-time">
-<h2>Water Content Evolution Over Time<a class="headerlink" href="#water-content-evolution-over-time" title="Link to this heading"></a></h2>
+<h2>Water Content Evolution Over Time<a class="headerlink" href="#water-content-evolution-over-time" title="Link to this heading">¶</a></h2>
 <p>These cross-sections show how water content changes throughout the year at
 four representative time points. Day 30 shows relatively dry conditions,
 Day 150 captures the wet season response, Day 210 represents peak saturation
@@ -591,7 +528,7 @@ and gradually saturates deeper layers (fractured and fresh bedrock).</p>
 </div>
 </section>
 <section id="resistivity-model-evolution">
-<h2>Resistivity Model Evolution<a class="headerlink" href="#resistivity-model-evolution" title="Link to this heading"></a></h2>
+<h2>Resistivity Model Evolution<a class="headerlink" href="#resistivity-model-evolution" title="Link to this heading">¶</a></h2>
 <p>The corresponding resistivity models show the inverse relationship with water
 content - high resistivity zones (red/yellow) indicate dry conditions while
 low resistivity areas (blue) represent saturated regions. The petrophysical
@@ -695,7 +632,7 @@ modeling synthetic ERT measurements.</p>
 </div>
 </section>
 <section id="animation-and-advanced-visualization">
-<h2>Animation and Advanced Visualization<a class="headerlink" href="#animation-and-advanced-visualization" title="Link to this heading"></a></h2>
+<h2>Animation and Advanced Visualization<a class="headerlink" href="#animation-and-advanced-visualization" title="Link to this heading">¶</a></h2>
 <p>The code also generates an animated GIF showing the complete temporal evolution
 of water content throughout the year. This animation provides insights into:</p>
 <ul class="simple">
@@ -707,7 +644,7 @@ of water content throughout the year. This animation provides insights into:</p>
 <p>The animation is saved as ‘WCanimation.gif’ in the results directory.</p>
 </section>
 <section id="summary-and-applications">
-<h2>Summary and Applications<a class="headerlink" href="#summary-and-applications" title="Link to this heading"></a></h2>
+<h2>Summary and Applications<a class="headerlink" href="#summary-and-applications" title="Link to this heading">¶</a></h2>
 <p>This example demonstrated the complete workflow for creating synthetic
 time-lapse ERT measurements from hydrological model outputs:</p>
 <p><strong>Key Workflow Steps:</strong></p>
@@ -750,34 +687,80 @@ validating time-lapse ERT monitoring approaches in watershed applications.</p>
 </section>
 
 
-           </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Ex_MC_Hydro.html" class="btn btn-neutral float-left" title="Ex. Monte Carlo Uncertainty Quantification for Water Content Estimation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="EX_SRT_forward.html" class="btn btn-neutral float-right" title="Ex. Seismic Refraction Tomography (SRT) Forward Modeling" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2025, Hang Chen.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
+          
         </div>
       </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.png" alt="Logo of PyHydroGeophysX"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">PyHydroGeophysX</a></h1>
 
-</body>
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/index.html">Tutorials/Workflows</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agents/index.html">Agents + Web App</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Examples Gallery</a><ul>
+      <li>Previous: <a href="EX_SRT_forward.html" title="previous chapter">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+      <li>Next: <a href="Ex_ERT_workflow.html" title="next chapter">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Hang Chen.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/auto_examples/Ex_Time_lapse_measurement.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
 </html>

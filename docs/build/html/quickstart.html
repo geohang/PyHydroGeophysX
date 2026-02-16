@@ -1,270 +1,224 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
-<head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quickstart &mdash; PyHydroGeophysX Documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=d2d258e8" />
-      <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
-      <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
-      <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  
+    <title>Quickstart &#8212; PyHydroGeophysX Documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/quickstart.html" />
-      <script src="_static/jquery.js?v=5d32c60e"></script>
-      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=01f34227"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="API Reference" href="api/index.html" />
-    <link rel="prev" title="Installation" href="installation.html" /> 
-</head>
+    <link rel="next" title="Tutorials and Workflows" href="tutorials/index.html" />
+    <link rel="prev" title="Installation" href="installation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+  
+  
 
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
           
-          
-          <a href="index.html" class="icon icon-home">
-            PyHydroGeophysX
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
+
+          <div class="body" role="main">
+            
+  <section id="quickstart">
+<h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading">¶</a></h1>
+<p>This page gives a fast path to the most important workflows added in the current package architecture:
+single-method inversion, joint inversion, EM workflows, and agent usage.</p>
+<section id="install">
+<h2>Install<a class="headerlink" href="#install" title="Link to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>pyhydrogeophysx
+pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;pyhydrogeophysx[geophysics]&quot;</span><span class="w">   </span><span class="c1"># PyGIMLi + SimPEG + RESIPY stack</span>
+</pre></div>
 </div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+</section>
+<section id="quick-petrophysics-check">
+<h2>Quick Petrophysics Check<a class="headerlink" href="#quick-petrophysics-check" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics</span><span class="w"> </span><span class="kn">import</span> <span class="n">water_content_to_resistivity</span>
+
+<span class="n">wc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.30</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">])</span>
+<span class="n">phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">])</span>
+<span class="n">rho</span> <span class="o">=</span> <span class="n">water_content_to_resistivity</span><span class="p">(</span><span class="n">water_content</span><span class="o">=</span><span class="n">wc</span><span class="p">,</span> <span class="n">rhos</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">porosity</span><span class="o">=</span><span class="n">phi</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">rho</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="srt-inversion-single-time">
+<h2>SRT Inversion (Single Time)<a class="headerlink" href="#srt-inversion-single-time" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">SRTInversion</span>
+
+<span class="n">inv</span> <span class="o">=</span> <span class="n">SRTInversion</span><span class="p">(</span>
+    <span class="n">data_file</span><span class="o">=</span><span class="s2">&quot;examples/data/srt/survey.sgt&quot;</span><span class="p">,</span>
+    <span class="n">lambda_val</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span>
+    <span class="n">max_iterations</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">inv</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Velocity model cells:&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">final_model</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="fdem-forward-and-inversion">
+<h2>FDEM Forward and Inversion<a class="headerlink" href="#fdem-forward-and-inversion" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.forward</span><span class="w"> </span><span class="kn">import</span> <span class="n">FDEMForwardModeling</span><span class="p">,</span> <span class="n">FDEMSurveyConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">FDEMInversion</span>
+
+<span class="n">thicknesses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">])</span>     <span class="c1"># 4-layer model -&gt; 3 thicknesses</span>
+<span class="n">sigma_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.08</span><span class="p">])</span>
+<span class="n">cfg</span> <span class="o">=</span> <span class="n">FDEMSurveyConfig</span><span class="p">(</span><span class="n">frequencies</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">12</span><span class="p">))</span>
+
+<span class="n">fwd</span> <span class="o">=</span> <span class="n">FDEMForwardModeling</span><span class="p">(</span><span class="n">thicknesses</span><span class="o">=</span><span class="n">thicknesses</span><span class="p">,</span> <span class="n">survey_config</span><span class="o">=</span><span class="n">cfg</span><span class="p">)</span>
+<span class="n">dobs</span> <span class="o">=</span> <span class="n">fwd</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">sigma_true</span><span class="p">)</span>
+<span class="n">uncert</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dobs</span><span class="p">),</span> <span class="mf">1e-12</span><span class="p">)</span>
+
+<span class="n">inv</span> <span class="o">=</span> <span class="n">FDEMInversion</span><span class="p">(</span>
+    <span class="n">frequencies</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">frequencies</span><span class="p">,</span>
+    <span class="n">dobs</span><span class="o">=</span><span class="n">dobs</span><span class="p">,</span>
+    <span class="n">uncertainties</span><span class="o">=</span><span class="n">uncert</span><span class="p">,</span>
+    <span class="n">thicknesses</span><span class="o">=</span><span class="n">thicknesses</span><span class="p">,</span>
+    <span class="n">receiver_component</span><span class="o">=</span><span class="s2">&quot;secondary&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">inv</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FDEM chi2:&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">chi2</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="unified-method-dispatch">
+<h2>Unified Method Dispatch<a class="headerlink" href="#unified-method-dispatch" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">GeophysicalInversion</span>
+
+<span class="n">srt</span> <span class="o">=</span> <span class="n">GeophysicalInversion</span><span class="p">(</span><span class="s2">&quot;srt&quot;</span><span class="p">,</span> <span class="n">data_file</span><span class="o">=</span><span class="s2">&quot;examples/data/srt/survey.sgt&quot;</span><span class="p">)</span>
+<span class="n">srt_result</span> <span class="o">=</span> <span class="n">srt</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="c1"># Other options: &quot;ert&quot;, &quot;tdem&quot;, &quot;fdem&quot;, &quot;joint_ert_srt&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="joint-ert-srt-inversion">
+<h2>Joint ERT + SRT Inversion<a class="headerlink" href="#joint-ert-srt-inversion" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">JointERTSRTInversion</span>
+
+<span class="n">joint</span> <span class="o">=</span> <span class="n">JointERTSRTInversion</span><span class="p">(</span>
+    <span class="n">ert_data</span><span class="o">=</span><span class="s2">&quot;examples/data/ert/survey.dat&quot;</span><span class="p">,</span>
+    <span class="n">srt_data</span><span class="o">=</span><span class="s2">&quot;examples/data/srt/survey.sgt&quot;</span><span class="p">,</span>
+    <span class="n">regularization_mode</span><span class="o">=</span><span class="s2">&quot;geostat&quot;</span><span class="p">,</span>      <span class="c1"># or &quot;smoothness&quot;</span>
+    <span class="n">cross_gradient_mode</span><span class="o">=</span><span class="s2">&quot;direct&quot;</span><span class="p">,</span>       <span class="c1"># or &quot;spatial&quot;</span>
+    <span class="n">lambda_cg_ert</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span>
+    <span class="n">lambda_cg_srt</span><span class="o">=</span><span class="mf">80.0</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">joint</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">chi2_ert</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">chi2_srt</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="agent-web-app">
+<h2>Agent Web App<a class="headerlink" href="#agent-web-app" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Open the hosted app: <a class="reference external" href="https://pyhydrogeophysx.streamlit.app/">https://pyhydrogeophysx.streamlit.app/</a></p></li>
+<li><p>Web app usage and limitations: <a class="reference internal" href="agents/webapp.html"><span class="doc">Agent Web App</span></a></p></li>
+</ul>
+</section>
+<section id="where-to-go-next">
+<h2>Where To Go Next<a class="headerlink" href="#where-to-go-next" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Tutorials: <a class="reference internal" href="tutorials/index.html"><span class="doc">Tutorials and Workflows</span></a></p></li>
+<li><p>Examples gallery: <a class="reference internal" href="auto_examples/index.html"><span class="doc">Examples Gallery</span></a></p></li>
+<li><p>API reference: <a class="reference internal" href="api/index.html"><span class="doc">API Reference</span></a></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.png" alt="Logo of PyHydroGeophysX"/>
+            </a></p>
+<h1 class="logo"><a href="index.html">PyHydroGeophysX</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#ert-field-data-processing">ERT Field Data Processing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#basic-example-hydrological-model-integration">Basic Example: Hydrological Model Integration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#petrophysical-modeling">Petrophysical Modeling</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#forward-modeling-ert-srt">Forward Modeling (ERT/SRT)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#time-lapse-inversion-ert">Time-Lapse Inversion (ERT)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#more-examples-and-documentation">More Examples and Documentation</a></li>
-</ul>
-</li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials/Workflows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="auto_examples/index.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agents/index.html">Agents + Web App</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+
+<div class="relations">
+<h3>Related Topics</h3>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="auto_examples/index.html">Examples Gallery</a></li>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="installation.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="tutorials/index.html" title="next chapter">Tutorials and Workflows</a></li>
+  </ul></li>
 </ul>
+</div>
+
+
+
+
+
+
+
 
         </div>
       </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">PyHydroGeophysX</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Quickstart</li>
-      <li class="wy-breadcrumbs-aside">
-            <a href="_sources/quickstart.rst.txt" rel="nofollow"> View page source</a>
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
-  <section id="quickstart">
-<h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading"></a></h1>
-<p>Welcome to <strong>PyHydroGeophysX</strong>—a Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, specializing in ERT and SRT for watershed monitoring.</p>
-<section id="key-features">
-<h2>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
-<ul class="simple">
-<li><p><strong>ERT data processing</strong>: Load, QC, and export field ERT data with RESIPY integration</p></li>
-<li><p>Hydrological model integration (MODFLOW, ParFlow)</p></li>
-<li><p>Advanced petrophysical relationships (Archie, Waxman-Smits, DEM, Hertz-Mindlin)</p></li>
-<li><p>Forward modeling and time-lapse inversion for ERT &amp; SRT</p></li>
-<li><p>Structure-constrained inversion and uncertainty quantification</p></li>
-<li><p>Optional GPU acceleration and parallel processing</p></li>
-</ul>
-</section>
-<section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
-<p>PyHydroGeophysX requires <strong>Python 3.8 or higher</strong>.</p>
-<p><strong>From PyPI</strong> (available now!):
-.. code-block:: bash</p>
-<blockquote>
-<div><p>pip install PyHydroGeophysX</p>
-</div></blockquote>
-<p><strong>From source</strong> (recommended for latest features):
-.. code-block:: bash</p>
-<blockquote>
-<div><p>git clone <a class="reference external" href="https://github.com/geohang/PyHydroGeophysX.git">https://github.com/geohang/PyHydroGeophysX.git</a>
-cd PyHydroGeophysX
-pip install -e .</p>
-</div></blockquote>
-<p>Install core dependencies if needed:
-.. code-block:: bash</p>
-<blockquote>
-<div><p>pip install numpy scipy matplotlib pygimli tqdm</p>
-</div></blockquote>
-<p>For optional GPU and parallel processing:
-.. code-block:: bash</p>
-<blockquote>
-<div><p>pip install cupy-cuda11x  # Replace ‘11x’ with your CUDA version
-pip install joblib</p>
-</div></blockquote>
-<p>For ERT data processing (field data):
-.. code-block:: bash</p>
-<blockquote>
-<div><p>pip install resipy</p>
-</div></blockquote>
-</section>
-<section id="ert-field-data-processing">
-<h2>ERT Field Data Processing<a class="headerlink" href="#ert-field-data-processing" title="Link to this heading"></a></h2>
-<p>Load, quality control, and export field ERT data from commercial instruments:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.data_processing.ert_data_agent</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">load_ert_resipy</span><span class="p">,</span> <span class="n">qc_and_visualize</span><span class="p">,</span> <span class="n">export_for_inversion</span><span class="p">,</span> <span class="n">LocalRef</span>
-<span class="p">)</span>
-
-<span class="c1"># Load ERT field data (supports E4D, Syscal, ABEM, Sting, ARES, and more)</span>
-<span class="n">ert</span> <span class="o">=</span> <span class="n">load_ert_resipy</span><span class="p">(</span>
-    <span class="n">project_dir</span><span class="o">=</span><span class="s2">&quot;data/ERT/E4D&quot;</span><span class="p">,</span>
-    <span class="n">data_file</span><span class="o">=</span><span class="s2">&quot;data/ERT/E4D/2021-10-08_1400.ohm&quot;</span><span class="p">,</span>
-    <span class="n">instrument</span><span class="o">=</span><span class="s2">&quot;E4D&quot;</span><span class="p">,</span>
-    <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">,</span>
-    <span class="n">local_ref</span><span class="o">=</span><span class="n">LocalRef</span><span class="p">(</span><span class="n">origin_x</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">origin_y</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">azimuth_deg</span><span class="o">=</span><span class="mf">90.0</span><span class="p">)</span>
-<span class="p">)</span>
-
-<span class="c1"># Generate QC plots (histogram, pseudosection, summary stats)</span>
-<span class="n">artifacts</span> <span class="o">=</span> <span class="n">qc_and_visualize</span><span class="p">(</span><span class="n">ert</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="s2">&quot;results/qc&quot;</span><span class="p">)</span>
-
-<span class="c1"># Export to pyGIMLi/BERT format for inversion</span>
-<span class="n">bert_path</span> <span class="o">=</span> <span class="n">export_for_inversion</span><span class="p">(</span><span class="n">ert</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="s2">&quot;results/inversion&quot;</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;pgimli&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="basic-example-hydrological-model-integration">
-<h2>Basic Example: Hydrological Model Integration<a class="headerlink" href="#basic-example-hydrological-model-integration" title="Link to this heading"></a></h2>
-<p>Load and process MODFLOW or ParFlow outputs:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.model_output</span><span class="w"> </span><span class="kn">import</span> <span class="n">MODFLOWWaterContent</span><span class="p">,</span> <span class="n">ParflowSaturation</span>
-
-<span class="c1"># For MODFLOW</span>
-<span class="n">processor</span> <span class="o">=</span> <span class="n">MODFLOWWaterContent</span><span class="p">(</span><span class="s2">&quot;path/to/modflow_workspace&quot;</span><span class="p">,</span> <span class="n">idomain</span><span class="p">)</span>  <span class="c1"># idomain: array for active model domain</span>
-<span class="n">water_content</span> <span class="o">=</span> <span class="n">processor</span><span class="o">.</span><span class="n">load_time_range</span><span class="p">(</span><span class="n">start_idx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">end_idx</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-
-<span class="c1"># For ParFlow</span>
-<span class="n">saturation_proc</span> <span class="o">=</span> <span class="n">ParflowSaturation</span><span class="p">(</span><span class="s2">&quot;path/to/parflow_model_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;parflow_run_name&quot;</span><span class="p">)</span>
-<span class="n">saturation</span> <span class="o">=</span> <span class="n">saturation_proc</span><span class="o">.</span><span class="n">load_timestep</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="petrophysical-modeling">
-<h2>Petrophysical Modeling<a class="headerlink" href="#petrophysical-modeling" title="Link to this heading"></a></h2>
-<p>Convert water content to resistivity, or water content to seismic velocity:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics</span><span class="w"> </span><span class="kn">import</span> <span class="n">water_content_to_resistivity</span><span class="p">,</span> <span class="n">HertzMindlinModel</span>
-
-<span class="n">resistivity</span> <span class="o">=</span> <span class="n">water_content_to_resistivity</span><span class="p">(</span>
-    <span class="n">water_content</span><span class="o">=</span><span class="n">wc</span><span class="p">,</span> <span class="n">rho_saturated</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">saturation_exponent_n</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
-    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity</span><span class="p">,</span> <span class="n">sigma_surface</span><span class="o">=</span><span class="mf">0.002</span>
-<span class="p">)</span>
-
-<span class="n">hm_model</span> <span class="o">=</span> <span class="n">HertzMindlinModel</span><span class="p">()</span>
-<span class="n">vp_high</span><span class="p">,</span> <span class="n">vp_low</span> <span class="o">=</span> <span class="n">hm_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
-    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity</span><span class="p">,</span> <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">,</span>
-    <span class="n">matrix_bulk_modulus</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span> <span class="n">matrix_shear_modulus</span><span class="o">=</span><span class="mf">20.0</span><span class="p">,</span> <span class="n">matrix_density</span><span class="o">=</span><span class="mf">2650.0</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="forward-modeling-ert-srt">
-<h2>Forward Modeling (ERT/SRT)<a class="headerlink" href="#forward-modeling-ert-srt" title="Link to this heading"></a></h2>
-<p>Generate synthetic geophysical data (requires mesh/data creation as in examples):</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.forward</span><span class="w"> </span><span class="kn">import</span> <span class="n">ERTForwardModeling</span>
-
-<span class="n">ert_fwd</span> <span class="o">=</span> <span class="n">ERTForwardModeling</span><span class="p">(</span><span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">data_scheme</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
-<span class="n">synthetic_data_ert</span> <span class="o">=</span> <span class="n">ert_fwd</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">resistivity_model</span><span class="o">=</span><span class="n">resistivity_model</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="time-lapse-inversion-ert">
-<h2>Time-Lapse Inversion (ERT)<a class="headerlink" href="#time-lapse-inversion-ert" title="Link to this heading"></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeLapseERTInversion</span>
-
-<span class="c1"># inversion = TimeLapseERTInversion(</span>
-<span class="c1">#     data_files=ert_files,</span>
-<span class="c1">#     measurement_times=times,</span>
-<span class="c1">#     lambda_val=50.0,</span>
-<span class="c1">#     alpha=10.0,</span>
-<span class="c1">#     inversion_type=&quot;L2&quot;</span>
-<span class="c1"># )</span>
-<span class="c1"># result = inversion.run()</span>
-</pre></div>
-</div>
-</section>
-<section id="more-examples-and-documentation">
-<h2>More Examples and Documentation<a class="headerlink" href="#more-examples-and-documentation" title="Link to this heading"></a></h2>
-<ul class="simple">
-<li><p>See the <span class="xref std std-ref">api</span> for detailed API documentation.</p></li>
-<li><p>Explore the <span class="xref std std-ref">auto_examples</span> for more workflows.</p></li>
-<li><p>Example scripts are in the <cite>examples/</cite> directory on [GitHub](<a class="reference external" href="https://github.com/geohang/PyHydroGeophysX">https://github.com/geohang/PyHydroGeophysX</a>).</p></li>
-</ul>
-<p>For troubleshooting, updates, and community support, please visit our [GitHub Issues](<a class="reference external" href="https://github.com/geohang/PyHydroGeophysX/issues">https://github.com/geohang/PyHydroGeophysX/issues</a>).</p>
-<hr class="docutils" />
-<p><em>PyHydroGeophysX — Bridging the gap between hydrological models and geophysical monitoring.</em></p>
-</section>
-</section>
-
-
-           </div>
-          </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="api/index.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Hang Chen.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/quickstart.rst.txt"
+          rel="nofollow">Page source</a>
     </div>
 
-  <hr/>
+    
 
-  <div role="contentinfo">
-    <p>&#169; Copyright 2025, Hang Chen.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
-        </div>
-      </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
-
-</body>
+    
+  </body>
 </html>

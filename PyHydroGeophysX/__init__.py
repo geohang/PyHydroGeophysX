@@ -11,6 +11,12 @@ __version__ = '0.3.0'
 PYGIMLI_AVAILABLE = False
 SIMPEG_AVAILABLE = False
 
+try:
+    import SimPEG as _simpeg
+    SIMPEG_AVAILABLE = True
+except ImportError:
+    pass
+
 # Core utilities - interpolation (no pygimli dependency)
 try:
     from PyHydroGeophysX.core.interpolation import (
@@ -337,6 +343,54 @@ try:
 except ImportError:
     JointERTSRTInversion = None
     JointERTSRTResult = None
+
+# Visualization utilities
+try:
+    from .visualization import (
+        # 2-D plotting
+        plot_model_section,
+        plot_timelapse_snapshots,
+        plot_difference_map,
+        plot_convergence,
+        plot_pseudosection_matrix,
+        plot_electrode_layout,
+        plot_topography,
+        plot_monitoring_timeseries,
+        plot_coverage,
+        # Animations
+        create_timelapse_gif,
+        create_timelapse_mp4,
+        create_difference_gif,
+        # VTK export
+        export_mesh_to_vtk,
+        export_structured_vtk,
+        export_structured_vtk_multi,
+        export_timelapse_vtk,
+        export_timelapse_structured_vtk,
+        export_points_to_vtk,
+    )
+    __all__ += [
+        "plot_model_section",
+        "plot_timelapse_snapshots",
+        "plot_difference_map",
+        "plot_convergence",
+        "plot_pseudosection_matrix",
+        "plot_electrode_layout",
+        "plot_topography",
+        "plot_monitoring_timeseries",
+        "plot_coverage",
+        "create_timelapse_gif",
+        "create_timelapse_mp4",
+        "create_difference_gif",
+        "export_mesh_to_vtk",
+        "export_structured_vtk",
+        "export_structured_vtk_multi",
+        "export_timelapse_vtk",
+        "export_timelapse_structured_vtk",
+        "export_points_to_vtk",
+    ]
+except ImportError:
+    pass
 
 # Data processing IO utilities
 try:
