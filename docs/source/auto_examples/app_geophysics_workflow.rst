@@ -19,6 +19,7 @@
 
 
 PyHydroGeophysX Streamlit Web Application
+=========================================
 
 Natural-language interface for geophysical workflows.
 Usage: streamlit run app_geophysics_workflow.py

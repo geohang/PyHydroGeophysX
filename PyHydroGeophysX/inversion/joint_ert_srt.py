@@ -31,6 +31,8 @@ class JointERTSRTResult:
     srt_velocity: Optional[np.ndarray] = None
     ert_predicted: Optional[np.ndarray] = None
     srt_predicted: Optional[np.ndarray] = None
+    ert_coverage: Optional[np.ndarray] = None
+    srt_coverage: Optional[np.ndarray] = None
     chi2_ert: Optional[float] = None
     chi2_srt: Optional[float] = None
     iteration_history: list = field(default_factory=list)
@@ -788,12 +790,51 @@ class JointERTSRTInversion(InversionBase):
         dr_final, _ = self._ert_forward_and_jac(mr)
         dt_final, _ = self._srt_forward_and_jac(mv)
 
+        # --- ERT coverage (same as ERTInversion) ---
+        try:
+            ert_model_lin = np.exp(mr)
+            dr_lin = np.asarray(self.ert_fop.response(pg.Vector(ert_model_lin)), dtype=float).ravel()
+            dr_lin = np.clip(dr_lin, 1e-12, None)
+            self.ert_fop.createJacobian(pg.Vector(ert_model_lin))
+            covTrans = pg.core.coverageDCtrans(
+                self.ert_fop.jacobian(),
+                1.0 / pg.Vector(dr_lin),
+                1.0 / pg.Vector(ert_model_lin),
+            )
+            paramSizes = np.zeros(len(ert_model_lin))
+            ert_para = self.ert_fop.paraDomain
+            for c in ert_para.cells():
+                paramSizes[c.marker()] += c.size()
+            ert_coverage = np.log10(np.asarray(covTrans, dtype=float) / paramSizes)
+        except Exception:
+            ert_coverage = None
+
+        # --- SRT coverage (same as SRTInversion / TravelTimeManager) ---
+        try:
+            srt_slowness = np.exp(mv)
+            self.srt_fop.createJacobian(pg.Vector(srt_slowness))
+            if self.srt_manager is not None and hasattr(self.srt_manager, "standardizedCoverage"):
+                if hasattr(self.srt_fop, "createConstraints"):
+                    self.srt_fop.createConstraints()
+                srt_coverage = np.asarray(self.srt_manager.standardizedCoverage(), dtype=float).ravel()
+            else:
+                J = self.srt_fop.jacobian()
+                ray_cov = np.asarray(J.transMult(np.ones(J.rows())), dtype=float).ravel()
+                Ctmp2 = pg.matrix.RSparseMapMatrix()
+                self.srt_fop.regionManager().fillConstraints(Ctmp2)
+                C2 = pg.utils.sparseMatrix2coo(Ctmp2).tocsr()
+                srt_coverage = np.sign(np.abs(C2.T.dot(C2.dot(ray_cov))))
+        except Exception:
+            srt_coverage = None
+
         result.ert_log_resistivity = mr.copy()
         result.srt_log_slowness = mv.copy()
         result.ert_resistivity = np.exp(mr)
         result.srt_velocity = 1.0 / np.clip(np.exp(mv), 1e-12, None)
         result.ert_predicted = dr_final.ravel()
         result.srt_predicted = dt_final.ravel()
+        result.ert_coverage = ert_coverage
+        result.srt_coverage = srt_coverage
         result.chi2_ert = self._compute_chi2(self.Wd_ert, self.dobs_ert, dr_final)
         result.chi2_srt = self._compute_chi2(self.Wd_srt, self.dobs_srt, dt_final)
         result.meta["parameters"] = dict(self.parameters)

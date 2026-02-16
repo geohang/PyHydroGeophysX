@@ -295,24 +295,6 @@ Each example includes detailed comments and demonstrates best practices for wate
       <div class="sphx-glr-thumbnail-title">3D ERT Forward Modeling with MODFLOW Integration</div>
     </div>
 
-
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="Natural-language interface for geophysical workflows. Usage: streamlit run app_geophysics_workflow.py">
-
-.. only:: html
-
-  .. image:: /auto_examples/images/thumb/sphx_glr_app_geophysics_workflow_thumb.png
-    :alt:
-
-  :ref:`sphx_glr_auto_examples_app_geophysics_workflow.py`
-
-.. raw:: html
-
-      <div class="sphx-glr-thumbnail-title">PyHydroGeophysX Streamlit Web Application</div>
-    </div>
-
-
 .. thumbnail-parent-div-close
 
 .. raw:: html
@@ -338,7 +320,6 @@ Each example includes detailed comments and demonstrates best practices for wate
    /auto_examples/Ex_ERT_workflow
    /auto_examples/Ex_MC_Hydro
    /auto_examples/Ex_3D_ERT_forward
-   /auto_examples/app_geophysics_workflow
 
 
 .. only:: html

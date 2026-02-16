@@ -266,9 +266,9 @@ using petrophysical relationships.
 Download and Links
 ------------------
 
-* :download:`Download this example <Ex1_model_output.py>`
-* See :ref:`example_02` for the complete workflow
-* Visit the :ref:`api_reference` for detailed function documentation
+* :download:`Download this example <Ex_model_output.py>`
+* Continue with :doc:`/auto_examples/Ex_ERT_workflow` for a full hydrology-to-ERT workflow
+* Visit :doc:`/api/index` for detailed API documentation
 
 
 .. _sphx_glr_download_auto_examples_Ex_model_output.py:

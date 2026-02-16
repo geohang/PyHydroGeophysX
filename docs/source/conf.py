@@ -90,3 +90,10 @@ autodoc_mock_imports = [
 
 # GitHub Pages
 html_baseurl = 'https://geohang.github.io/PyHydroGeophysX/'
+
+# External links known to return 403 to automated linkcheck clients
+linkcheck_ignore = [
+    r'https://ssrn\.com/abstract=6238293',
+    r'https://doi\.org/10\.2139/ssrn\.6238293',
+    r'https://papers\.ssrn\.com/sol3/papers\.cfm\?abstract_id=6238293',
+]

@@ -102,17 +102,16 @@ cases = {
         "cross_gradient_threshold": 0.01,
     },
     "geostat_joint": {
-        "regularization_mode": "geostat",
-        "geostat_I": (4.0, 4.0),
-        "geostat_var": 0.01,
-        "geostat_sparse_threshold": 0.005,
+        # Geostatistical joint inversion: smoothness Wm + geostatistical
+        # covariance for cross-gradient neighborhood (RCM).
+        "regularization_mode": "smoothness",
         "lambda_ert": 10.0,
         "lambda_srt": 10.0,
-        # Geostat-focused run: disable cross-gradient terms for comparison.
-        "lambda_cg_ert": 0.0,
-        "lambda_cg_srt": 0.0,
+        "lambda_cg_ert": 80.0,
+        "lambda_cg_srt": 80.0,
         "cross_gradient_mode": "direct",
-        "cross_gradient_source": "smoothness",
+        "cross_gradient_source": "geostat",
+        "cross_gradient_corr_lengths": (4.0, 4.0),
         "cross_gradient_threshold": 0.01,
     },
 }
@@ -185,6 +184,27 @@ run_outputs = {name: run_case(name, cfg) for name, cfg in cases.items()}
 cross = run_outputs["cross_gradient_joint"]
 geo = run_outputs["geostat_joint"]
 
+# ---- Helper: build coverage mask for pg.show ----
+def ert_cov_mask(result):
+    """ERT coverage mask: log10(covTrans/paramSizes) > -1."""
+    cov = result.ert_coverage
+    if cov is None:
+        return None
+    return cov > -1
+
+def srt_cov_mask(result):
+    """SRT coverage mask: standardizedCoverage (already 0/1)."""
+    cov = result.srt_coverage
+    if cov is None:
+        return None
+    return cov
+
+
+# ---- Publication-quality comparison figure ----
+from palettable.lightbartlein.diverging import BlueDarkRed18_18
+ert_cmap = "Spectral_r"
+srt_cmap = BlueDarkRed18_18.mpl_colormap
+
 ert_vmin = float(min(np.min(cross["ert_model"]), np.min(geo["ert_model"])))
 ert_vmax = float(max(np.max(cross["ert_model"]), np.max(geo["ert_model"])))
 srt_vmin = float(min(np.min(cross["srt_model"]), np.min(geo["srt_model"])))
@@ -192,19 +212,21 @@ srt_vmax = float(max(np.max(cross["srt_model"]), np.max(geo["srt_model"])))
 
 fig, axes = plt.subplots(2, 3, figsize=(17, 8.5))
 
+# --- Row 0: ERT resistivity ---
 pg.show(
     cross["result"].mesh,
     cross["ert_model"],
     ax=axes[0, 0],
-    cMap="Spectral_r",
+    cMap=ert_cmap,
     cMin=ert_vmin,
     cMax=ert_vmax,
-    colorBar=False,
+    coverage=ert_cov_mask(cross["result"]),
+    logScale=True,
+    label="Resistivity (Ohm-m)",
+    orientation="vertical",
 )
 pg.viewer.mpl.drawSensors(axes[0, 0], ert_data.sensors(), diam=0.4, facecolor="k", edgecolor="k")
-axes[0, 0].set_title(
-    f"Cross-gradient ERT\nchi2={cross['result'].chi2_ert:.2f}"
-)
+axes[0, 0].set_title(f"Cross-gradient ERT\nchi2={cross['result'].chi2_ert:.2f}")
 axes[0, 0].set_xlabel("x (m)")
 axes[0, 0].set_ylabel("z (m)")
 
@@ -212,15 +234,16 @@ pg.show(
     geo["result"].mesh,
     geo["ert_model"],
     ax=axes[0, 1],
-    cMap="Spectral_r",
+    cMap=ert_cmap,
     cMin=ert_vmin,
     cMax=ert_vmax,
-    colorBar=False,
+    coverage=ert_cov_mask(geo["result"]),
+    logScale=True,
+    label="Resistivity (Ohm-m)",
+    orientation="vertical",
 )
 pg.viewer.mpl.drawSensors(axes[0, 1], ert_data.sensors(), diam=0.4, facecolor="k", edgecolor="k")
-axes[0, 1].set_title(
-    f"Geostat ERT\nchi2={geo['result'].chi2_ert:.2f}"
-)
+axes[0, 1].set_title(f"Geostat ERT\nchi2={geo['result'].chi2_ert:.2f}")
 axes[0, 1].set_xlabel("x (m)")
 axes[0, 1].set_ylabel("z (m)")
 
@@ -233,19 +256,20 @@ axes[0, 2].set_ylabel("chi2")
 axes[0, 2].grid(True, alpha=0.3)
 axes[0, 2].legend(loc="best", fontsize=8)
 
+# --- Row 1: SRT velocity ---
 pg.show(
     cross["result"].mesh,
     cross["srt_model"],
     ax=axes[1, 0],
-    cMap="turbo",
+    cMap=srt_cmap,
     cMin=srt_vmin,
     cMax=srt_vmax,
-    colorBar=False,
+    coverage=srt_cov_mask(cross["result"]),
+    label="Velocity (m/s)",
+    orientation="vertical",
 )
 pg.viewer.mpl.drawSensors(axes[1, 0], srt_data.sensors(), diam=0.4, facecolor="k", edgecolor="k")
-axes[1, 0].set_title(
-    f"Cross-gradient SRT\nchi2={cross['result'].chi2_srt:.2f}"
-)
+axes[1, 0].set_title(f"Cross-gradient SRT\nchi2={cross['result'].chi2_srt:.2f}")
 axes[1, 0].set_xlabel("x (m)")
 axes[1, 0].set_ylabel("z (m)")
 
@@ -253,15 +277,15 @@ pg.show(
     geo["result"].mesh,
     geo["srt_model"],
     ax=axes[1, 1],
-    cMap="turbo",
+    cMap=srt_cmap,
     cMin=srt_vmin,
     cMax=srt_vmax,
-    colorBar=False,
+    coverage=srt_cov_mask(geo["result"]),
+    label="Velocity (m/s)",
+    orientation="vertical",
 )
 pg.viewer.mpl.drawSensors(axes[1, 1], srt_data.sensors(), diam=0.4, facecolor="k", edgecolor="k")
-axes[1, 1].set_title(
-    f"Geostat SRT\nchi2={geo['result'].chi2_srt:.2f}"
-)
+axes[1, 1].set_title(f"Geostat SRT\nchi2={geo['result'].chi2_srt:.2f}")
 axes[1, 1].set_xlabel("x (m)")
 axes[1, 1].set_ylabel("z (m)")
 

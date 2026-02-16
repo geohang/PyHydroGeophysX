@@ -123,12 +123,12 @@ class StructuralConstraint:
                 raise ValueError("Wm is required for source='smoothness'.")
             Wm_arr = Wm.toarray() if issparse(Wm) else np.asarray(Wm, dtype=float)
             RCM = np.asarray(Wm_arr.T.dot(Wm_arr), dtype=float)
-        elif src == "covariance":
+        elif src in ("covariance", "geostat"):
             corr = tuple(float(v) for v in correlation_lengths)
             cov = np.asarray(pg.utils.covarianceMatrix(mesh, I=list(corr)), dtype=float)
             RCM = cov.copy()
         else:
-            raise ValueError("source must be 'smoothness' or 'covariance'.")
+            raise ValueError("source must be 'smoothness', 'covariance', or 'geostat'.")
 
         if threshold > 0:
             RCM[np.abs(RCM) < float(threshold)] = 0.0

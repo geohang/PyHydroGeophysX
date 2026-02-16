@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**00:00.000** total execution time for 16 files **from auto_examples**:
+**00:00.000** total execution time for 15 files **from auto_examples**:
 
 .. container::
 
@@ -75,8 +75,5 @@ Computation times
      - 00:00.000
      - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_structure_TLresinv.py` (``Ex_structure_TLresinv.py``)
-     - 00:00.000
-     - 0.0
-   * - :ref:`sphx_glr_auto_examples_app_geophysics_workflow.py` (``app_geophysics_workflow.py``)
      - 00:00.000
      - 0.0

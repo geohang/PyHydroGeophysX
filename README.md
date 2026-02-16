@@ -679,6 +679,21 @@ Additionally, please cite the underlying libraries you use:
 }
 ```
 
+**For MODFLOW scripting (FloPy):**
+```bibtex
+@article{bakker2016flopy,
+  author={Bakker, Mark and Post, Vincent and Langevin, Christian D and Hughes, Joseph D and White, Jeremy T and Starn, Jeffrey J and Fienen, Michael N},
+  title={Scripting MODFLOW model development using Python and FloPy},
+  journal={Groundwater},
+  volume={54},
+  number={5},
+  pages={733--739},
+  year={2016},
+  doi={10.1111/gwat.12413},
+  url={https://ngwa.onlinelibrary.wiley.com/doi/full/10.1111/gwat.12413}
+}
+```
+
 **For electromagnetic modeling (SimPEG):**
 ```bibtex
 @article{cockett2015simpeg,
