@@ -12,9 +12,6 @@ A comprehensive Python package for integrating hydrological model outputs with g
 
 *HydroGeophysX bridges the strengths and limitations of hydrologic modeling and geophysical monitoring, enabling process-based survey design, inversion constraints, and model calibration. This integrative approach supports advanced watershed studies and critical zone science.*
 
-For a detailed conceptual framework and application, see:
-Chen, H., Niu, Q., Mendieta, A., Bradford, J., & McNamara, J. (2023). Geophysics‐informed hydrologic modeling of a mountain headwater catchment for studying hydrological partitioning in the critical zone. Water Resources Research, 59(12), e2023WR035280. https://doi.org/10.1029/2023WR035280
-
 ## Quick Links
 
 - Documentation: https://geohang.github.io/PyHydroGeophysX/
@@ -634,6 +631,10 @@ If you use PyHydroGeophysX in your research, please cite:
 }
 ```
 
+### References
+
+- Chen, H., Niu, Q., Mendieta, A., Bradford, J., & McNamara, J. (2023). Geophysics-informed hydrologic modeling of a mountain headwater catchment for studying hydrological partitioning in the critical zone. *Water Resources Research, 59*(12), e2023WR035280. https://doi.org/10.1029/2023WR035280
+
 Additionally, please cite the underlying libraries you use:
 
 **For ERT data processing (RESIPY):**
@@ -732,3 +733,4 @@ Issues: GitHub Issues
 PyHydroGeophysX - Bridging the gap between hydrological models and geophysical monitoring
 
 Note: This package is under active development. Please report issues and feature requests through the GitHub issue tracker.
+

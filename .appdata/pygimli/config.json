@@ -1,8 +1,0 @@
-{
-    "globalCache": true,
-    "lang": "eng",
-    "pyvista.backend": "client",
-    "unitStyle": 2,
-    "view3D": "auto",
-    "waitOnExit": true
-}
