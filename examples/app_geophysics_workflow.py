@@ -907,8 +907,14 @@ def render_tutorial_tab() -> None:
     st.subheader("Tutorial")
 
     # Video Tutorial
-    st.markdown("### Video Tutorial")
-    st.video("https://www.youtube.com/watch?v=d4lgs_hQqDo")
+    st.markdown("### Video Tutorials")
+    vid_col1, vid_col2 = st.columns(2)
+    with vid_col1:
+        st.markdown("**Getting Started**")
+        st.video("https://www.youtube.com/watch?v=d4lgs_hQqDo")
+    with vid_col2:
+        st.markdown("**Hydro-to-Geophysics Workflow**")
+        st.video("https://www.youtube.com/watch?v=1SuqL_JhiwI")
 
     st.markdown("---")
     st.markdown(
