@@ -20,6 +20,7 @@ google-generativeai>=0.3
 # Web app
 streamlit>=1.28
 plotly>=5.0
+streamlit-plotly-events>=0.0.6
 
 # PDF generation (optional, for report export)
 # Note: weasyprint requires system dependencies (cairo, pango)

@@ -603,19 +603,19 @@ STANDARD_ERT_TUTORIAL_IMAGES = [
 
 HYDRO_RESPONSE_METHODS = ["Profile", "ERT", "SRT", "TDEM", "FDEM", "Gravity"]
 QUICK_RUN_MODES = ["Auto (LLM)", "ERT Only", "Time-Lapse ERT", "Seismic SRT"]
-HYDRO_DEFAULTS_VERSION = 20260220
+HYDRO_DEFAULTS_VERSION = 20260221
 HYDRO_NOTEBOOK_DEFAULTS: Dict[str, Any] = {
     # Keep these aligned with examples/Ex_hydro_to_multigeophys.ipynb
     "hydro_data_dir": "data",
     "hydro_output_dir": "results/hydro_to_multigeophys",
-    "hydro_methods": ["Profile", "ERT", "SRT", "TDEM", "FDEM", "Gravity"],
+    "hydro_methods": [],
     "hydro_run_style": "Batch methods",
     "hydro_single_method": "ERT",
     "hydro_snapshot_index": 5,
-    "hydro_point1_x": None,
-    "hydro_point1_y": None,
-    "hydro_point2_x": None,
-    "hydro_point2_y": None,
+    "hydro_point1_x": 115.0,
+    "hydro_point1_y": 70.0,
+    "hydro_point2_x": 95.0,
+    "hydro_point2_y": 180.0,
     "hydro_num_points": 220,
     "hydro_station_count": 24,
     "hydro_ert_scheme": "wa",
@@ -784,14 +784,15 @@ def init_session_state() -> None:
         "workflow_config": None,
         "hydro_data_dir": "data",
         "hydro_output_dir": "results/hydro_to_multigeophys",
-        "hydro_methods": ["Profile", "ERT", "SRT", "TDEM", "FDEM", "Gravity"],
+        "hydro_methods": [],
+        "hydro_methods_persisted": [],
         "hydro_run_style": "Batch methods",
         "hydro_single_method": "ERT",
         "hydro_snapshot_index": 5,
-        "hydro_point1_x": None,
-        "hydro_point1_y": None,
-        "hydro_point2_x": None,
-        "hydro_point2_y": None,
+        "hydro_point1_x": 115.0,
+        "hydro_point1_y": 70.0,
+        "hydro_point2_x": 95.0,
+        "hydro_point2_y": 180.0,
         "hydro_num_points": 220,
         "hydro_station_count": 24,
         "hydro_ert_scheme": "wa",
@@ -2957,7 +2958,11 @@ def _discover_hydro_data_dirs(current_value: str) -> List[Path]:
     return candidates
 
 
-def _extract_plotly_selected_points(event_data: Any) -> List[List[float]]:
+def _extract_plotly_selected_points(
+    event_data: Any,
+    x_lookup: Optional[List[float]] = None,
+    y_lookup: Optional[List[float]] = None,
+) -> List[List[float]]:
     if event_data is None:
         return []
 
@@ -2979,7 +2984,33 @@ def _extract_plotly_selected_points(event_data: Any) -> List[List[float]]:
         except Exception:  # noqa: BLE001
             points_raw = None
 
+    def _resolve_from_index(idx_val: Any) -> Optional[List[float]]:
+        if idx_val is None or x_lookup is None or y_lookup is None:
+            return None
+        try:
+            idx = int(idx_val)
+        except Exception:  # noqa: BLE001
+            return None
+        if idx < 0 or idx >= len(x_lookup) or idx >= len(y_lookup):
+            return None
+        try:
+            return [float(x_lookup[idx]), float(y_lookup[idx])]
+        except Exception:  # noqa: BLE001
+            return None
+
     if not isinstance(points_raw, list):
+        # Some payloads may only provide point indices
+        if isinstance(payload, dict):
+            idxs = payload.get("point_indices")
+            if not isinstance(idxs, list) and isinstance(payload.get("selection"), dict):
+                idxs = payload.get("selection", {}).get("point_indices")
+            if isinstance(idxs, list):
+                out: List[List[float]] = []
+                for idx_val in idxs:
+                    mapped = _resolve_from_index(idx_val)
+                    if mapped is not None:
+                        out.append(mapped)
+                return out
         return []
 
     selected: List[List[float]] = []
@@ -2989,11 +3020,32 @@ def _extract_plotly_selected_points(event_data: Any) -> List[List[float]]:
         if isinstance(point, dict):
             x_val = point.get("x")
             y_val = point.get("y")
+            if x_val is None or y_val is None:
+                idx_val = point.get("point_index", point.get("pointNumber"))
+                mapped = _resolve_from_index(idx_val)
+                if mapped is not None:
+                    selected.append(mapped)
+                    continue
+            # Some payload variants include a list of point indices per selection
+            if (x_val is None or y_val is None) and isinstance(point.get("point_indices"), list):
+                for idx_val in point.get("point_indices", []):
+                    mapped = _resolve_from_index(idx_val)
+                    if mapped is not None:
+                        selected.append(mapped)
+                continue
         else:
             if hasattr(point, "x"):
                 x_val = getattr(point, "x")
             if hasattr(point, "y"):
                 y_val = getattr(point, "y")
+            if x_val is None or y_val is None:
+                idx_val = getattr(point, "point_index", None)
+                if idx_val is None:
+                    idx_val = getattr(point, "pointNumber", None)
+                mapped = _resolve_from_index(idx_val)
+                if mapped is not None:
+                    selected.append(mapped)
+                    continue
         if x_val is None or y_val is None:
             continue
         try:
@@ -3030,11 +3082,12 @@ def _mask_anomalous_zero_elevation_for_plot(top_array):
     delta = abs(median_nonzero)
     threshold = max(6.0 * robust_sigma, 50.0)
     if delta > threshold:
+        converted_count = int(np.count_nonzero(zero_mask))
         top[zero_mask] = np.nan
         note = (
             f"Detected anomalous zero elevations for plotting "
             f"(median={median_nonzero:.2f}, threshold={threshold:.2f}). "
-            "Converted 0 values to NaN in surface map."
+            f"Converted {converted_count} values to NaN in surface map."
         )
         return top, True, note
 
@@ -3063,61 +3116,95 @@ def _render_surface_picker(data_dir: Path) -> None:
     if "hydro_pick_next" not in st.session_state:
         st.session_state.hydro_pick_next = 0
 
-    # Read current points (may be None if not yet picked)
+    # Track whether the user has explicitly picked each point (via map or manual input).
+    # Default values are NOT shown on the map until the user confirms them.
+    if "hydro_user_picked_p1" not in st.session_state:
+        st.session_state.hydro_user_picked_p1 = False
+    if "hydro_user_picked_p2" not in st.session_state:
+        st.session_state.hydro_user_picked_p2 = False
+
     import numpy as np
     max_x = max(0, top.shape[1] - 1)
     max_y = max(0, top.shape[0] - 1)
-    raw_p1x = st.session_state.get("hydro_point1_x")
-    raw_p1y = st.session_state.get("hydro_point1_y")
-    raw_p2x = st.session_state.get("hydro_point2_x")
-    raw_p2y = st.session_state.get("hydro_point2_y")
-    has_p1 = raw_p1x is not None and raw_p1y is not None
-    has_p2 = raw_p2x is not None and raw_p2y is not None
 
-    if has_p1:
-        p1x = float(np.clip(raw_p1x, 0, max_x))
-        p1y = float(np.clip(raw_p1y, 0, max_y))
-    if has_p2:
-        p2x = float(np.clip(raw_p2x, 0, max_x))
-        p2y = float(np.clip(raw_p2y, 0, max_y))
+    # Read current points — only treat as set if user explicitly picked them
+    has_p1 = st.session_state.hydro_user_picked_p1
+    has_p2 = st.session_state.hydro_user_picked_p2
 
-    # Status message
+    p1x = float(np.clip(st.session_state.get("hydro_point1_x", 0), 0, max_x))
+    p1y = float(np.clip(st.session_state.get("hydro_point1_y", 0), 0, max_y))
+    p2x = float(np.clip(st.session_state.get("hydro_point2_x", 0), 0, max_x))
+    p2y = float(np.clip(st.session_state.get("hydro_point2_y", 0), 0, max_y))
+
+    # Status message — guide the user step by step
+    next_pick = st.session_state.hydro_pick_next
     if not has_p1 and not has_p2:
-        st.caption("Drag a small box on the map to pick **P1**, then **P2**. The profile line will appear once both are set.")
+        st.info("🖱️ **Step 1/2:** Use *box select* or *lasso* on the map to pick **P1** (start of profile).")
     elif has_p1 and not has_p2:
-        st.caption(f"P1 set at ({p1x:.0f}, {p1y:.0f}). Now pick **P2**.")
+        st.info(f"✅ P1 = ({p1x:.0f}, {p1y:.0f}).  🖱️ **Step 2/2:** Now pick **P2** (end of profile).")
     else:
-        st.caption(f"P1 = ({p1x:.0f}, {p1y:.0f})  →  P2 = ({p2x:.0f}, {p2y:.0f})")
+        st.success(f"✅ Profile set:  **P1** ({p1x:.0f}, {p1y:.0f})  →  **P2** ({p2x:.0f}, {p2y:.0f})")
 
     # --- Build plotly figure ---
     picked_points: List[List[float]] = []
+    render_backend = "unknown"
     try:
         import inspect
         import plotly.graph_objects as go
+        try:
+            from streamlit_plotly_events import plotly_events
+            plotly_events_available = True
+        except Exception:
+            plotly_events_available = False
 
         y_idx = list(range(top.shape[0]))
         x_idx = list(range(top.shape[1]))
+        finite_vals = top_plot[np.isfinite(top_plot)]
+        zmin = None
+        zmax = None
+        if finite_vals.size > 0:
+            nonzero_vals = finite_vals[~np.isclose(finite_vals, 0.0)]
+            ref_vals = nonzero_vals if nonzero_vals.size >= 20 else finite_vals
+            try:
+                zmin = float(np.nanpercentile(ref_vals, 2.0))
+                zmax = float(np.nanpercentile(ref_vals, 98.0))
+                if (not np.isfinite(zmin)) or (not np.isfinite(zmax)) or (zmax <= zmin):
+                    zmin = None
+                    zmax = None
+            except Exception:  # noqa: BLE001
+                zmin = None
+                zmax = None
+
         fig = go.Figure(
             data=[
                 go.Heatmap(
                     z=top_plot, x=x_idx, y=y_idx,
                     colorscale="Viridis",
+                    zmin=zmin,
+                    zmax=zmax,
                     colorbar={"title": "Surface elev."},
                 )
             ]
         )
 
-        # Invisible scatter grid for box-select
-        yy, xx = np.indices(top_plot.shape)
-        fig.add_trace(
-            go.Scattergl(
-                x=xx.ravel(), y=yy.ravel(),
-                mode="markers",
-                marker={"size": 6, "color": "rgba(0,0,0,0)"},
-                hovertemplate="x=%{x}<br>y=%{y}<extra></extra>",
-                showlegend=False, name="grid",
+        x_lookup: Optional[List[float]] = None
+        y_lookup: Optional[List[float]] = None
+        # Add invisible selection grid for native Streamlit on_select backend
+        # (needs discrete points) and as fallback when plotly_events is absent.
+        _use_native_on_select = "on_select" in inspect.signature(st.plotly_chart).parameters
+        if _use_native_on_select or not plotly_events_available:
+            yy, xx = np.indices(top_plot.shape)
+            x_lookup = xx.ravel().astype(float).tolist()
+            y_lookup = yy.ravel().astype(float).tolist()
+            fig.add_trace(
+                go.Scatter(
+                    x=x_lookup, y=y_lookup,
+                    mode="markers",
+                    marker={"size": 4, "color": "rgba(0,0,0,0)"},
+                    hovertemplate="x=%{x}<br>y=%{y}<extra></extra>",
+                    showlegend=False, name="grid",
+                )
             )
-        )
 
         # Only draw line + markers for points that have been picked
         if has_p1 and has_p2:
@@ -3151,16 +3238,27 @@ def _render_surface_picker(data_dir: Path) -> None:
             margin={"l": 40, "r": 20, "t": 50, "b": 40},
             height=460,
         )
-        fig.update_yaxes(autorange="reversed")
+        # Keep full-map extent stable across reruns; prevents zoom-lock on picked points.
+        fig.update_xaxes(range=[-0.5, max_x + 0.5])
+        fig.update_yaxes(range=[max_y + 0.5, -0.5], autorange=False)
 
         # Render chart + capture selection
-        try:
-            from streamlit_plotly_events import plotly_events
-            plotly_events_available = True
-        except Exception:
-            plotly_events_available = False
-
-        if plotly_events_available:
+        # Prefer native Streamlit on_select (Streamlit ≥ 1.35) over the
+        # third-party streamlit-plotly-events which is broken with
+        # Streamlit ≥ 1.37 / Plotly ≥ 6.x (renders a blank iframe).
+        if "on_select" in inspect.signature(st.plotly_chart).parameters:
+            render_backend = "streamlit_plotly_on_select"
+            event = st.plotly_chart(
+                fig, use_container_width=True,
+                key="hydro_surface_picker_plotly",
+                on_select="rerun",
+                # Box/lasso/points selection works reliably in native Streamlit Plotly.
+                selection_mode=("box", "lasso", "points"),
+            )
+            st.caption("Tip: use box/lasso (or points mode) on the map to pick P1/P2.")
+            picked_points = _extract_plotly_selected_points(event, x_lookup=x_lookup, y_lookup=y_lookup)
+        elif plotly_events_available:
+            render_backend = "streamlit_plotly_events"
             events = plotly_events(
                 fig, click_event=True, select_event=True,
                 hover_event=False, override_height=460,
@@ -3170,20 +3268,14 @@ def _render_surface_picker(data_dir: Path) -> None:
                 for pt in events:
                     if isinstance(pt, dict) and pt.get("x") is not None and pt.get("y") is not None:
                         picked_points.append([float(pt["x"]), float(pt["y"])])
-        elif "on_select" in inspect.signature(st.plotly_chart).parameters:
-            event = st.plotly_chart(
-                fig, use_container_width=True,
-                key="hydro_surface_picker_plotly",
-                on_select="rerun",
-                # In Streamlit fallback mode, box/lasso selection is the reliable path.
-                selection_mode=("box", "lasso", "points"),
-            )
-            picked_points = _extract_plotly_selected_points(event)
+            st.caption("Tip: click on map to pick points (P1 then P2).")
         else:
+            render_backend = "streamlit_plotly_static"
             st.plotly_chart(fig, use_container_width=True, key="hydro_surface_picker_plotly_static")
             st.info("Interactive point selection requires Streamlit >= 1.35 or `streamlit-plotly-events`.")
 
     except Exception:
+        render_backend = "matplotlib_fallback"
         import matplotlib.pyplot as plt
 
         mpl_fig, ax = plt.subplots(figsize=(8.5, 4.6))
@@ -3213,21 +3305,24 @@ def _render_surface_picker(data_dir: Path) -> None:
         if st.session_state.hydro_pick_next == 0:
             st.session_state.hydro_point1_x = new_x
             st.session_state.hydro_point1_y = new_y
+            st.session_state.hydro_user_picked_p1 = True
             st.session_state.hydro_pick_next = 1
         else:
             st.session_state.hydro_point2_x = new_x
             st.session_state.hydro_point2_y = new_y
+            st.session_state.hydro_user_picked_p2 = True
             st.session_state.hydro_pick_next = 0
         st.rerun()
 
-    # Clear button
+    # Clear button — only shown after user has picked at least one point
     if has_p1 or has_p2:
-        if st.button("Clear picks", key="hydro_clear_picked_points"):
+        if st.button("🗑️ Clear picks & restart", key="hydro_clear_picked_points"):
             st.session_state.hydro_pick_next = 0
-            st.session_state.hydro_point1_x = None
-            st.session_state.hydro_point1_y = None
-            st.session_state.hydro_point2_x = None
-            st.session_state.hydro_point2_y = None
+            st.session_state.hydro_user_picked_p1 = False
+            st.session_state.hydro_user_picked_p2 = False
+            # Reset coordinates to defaults but keep them hidden until re-picked
+            for key in ("hydro_point1_x", "hydro_point1_y", "hydro_point2_x", "hydro_point2_y"):
+                st.session_state.pop(key, None)
             st.rerun()
 
 def _fill_profile_nans(values):
@@ -3735,6 +3830,9 @@ User message:
 def _apply_hydro_updates(updates: Dict[str, Any]) -> None:
     for key, value in updates.items():
         st.session_state[key] = value
+        # Keep persisted copy in sync for keys subject to widget cleanup.
+        if key == "hydro_methods":
+            st.session_state["hydro_methods_persisted"] = list(value)
 
 
 def _build_hydro_profile(
@@ -4353,8 +4451,13 @@ def _detect_hydro_structure(root_path: str) -> Dict[str, Any]:
 
 
 def _get_planned_methods() -> List[str]:
-    """Return the list of methods the user has selected."""
-    return list(st.session_state.hydro_methods)
+    """Return the list of methods the user has selected.
+
+    Reads from the persisted key which survives widget cleanup when
+    the multiselect on Step 2 is not rendered (user on another step).
+    """
+    return list(st.session_state.get("hydro_methods_persisted",
+                                     st.session_state.get("hydro_methods", [])))
 
 
 def _hydro_step_status() -> Dict[str, Any]:
@@ -4365,7 +4468,9 @@ def _hydro_step_status() -> Dict[str, Any]:
     methods_ok = len(methods) > 0
     root = st.session_state.get("hydro_root")
     has_both_points = (
-        st.session_state.get("hydro_point1_x") is not None
+        st.session_state.get("hydro_user_picked_p1", False)
+        and st.session_state.get("hydro_user_picked_p2", False)
+        and st.session_state.get("hydro_point1_x") is not None
         and st.session_state.get("hydro_point1_y") is not None
         and st.session_state.get("hydro_point2_x") is not None
         and st.session_state.get("hydro_point2_y") is not None
@@ -4786,29 +4891,34 @@ def _render_method_step() -> None:
     """Step 2 - Select methods, then show per-method setup + rock physics."""
     st.markdown("##### Select Geophysical Methods")
 
-    st.multiselect(
-        "Methods",
-        options=HYDRO_RESPONSE_METHODS,
-        key="hydro_methods",
-        help="Choose one or more geophysical response types to compute.",
-    )
-
-    # Quick-preset buttons
+    # Quick-preset buttons — write to persisted key so selection survives step navigation
     p1, p2, p3, p4 = st.columns(4)
     if p1.button("Select All", key="hydro_btn_all3", use_container_width=True):
-        st.session_state.hydro_methods = HYDRO_RESPONSE_METHODS.copy()
+        st.session_state.hydro_methods_persisted = HYDRO_RESPONSE_METHODS.copy()
         st.rerun()
     if p2.button("ERT + SRT", key="hydro_btn_ertsrt3", use_container_width=True):
-        st.session_state.hydro_methods = ["Profile", "ERT", "SRT"]
+        st.session_state.hydro_methods_persisted = ["Profile", "ERT", "SRT"]
         st.rerun()
     if p3.button("EM + Gravity", key="hydro_btn_emg3", use_container_width=True):
-        st.session_state.hydro_methods = ["Profile", "TDEM", "FDEM", "Gravity"]
+        st.session_state.hydro_methods_persisted = ["Profile", "TDEM", "FDEM", "Gravity"]
         st.rerun()
     if p4.button("Clear All", key="hydro_btn_clear3", use_container_width=True):
-        st.session_state.hydro_methods = []
+        st.session_state.hydro_methods_persisted = []
         st.rerun()
 
-    methods = list(st.session_state.hydro_methods)
+    # Use default= from persisted key; capture return value and sync back.
+    # Do NOT rely on key= alone — Streamlit cleans up widget keys when the
+    # widget is not rendered (e.g. user navigates to another step).
+    _current_default = list(st.session_state.get("hydro_methods_persisted", HYDRO_RESPONSE_METHODS))
+    selected_methods = st.multiselect(
+        "Methods",
+        options=HYDRO_RESPONSE_METHODS,
+        default=_current_default,
+        help="Choose one or more geophysical response types to compute.",
+    )
+    st.session_state.hydro_methods_persisted = list(selected_methods)
+
+    methods = list(selected_methods)
     if not methods:
         st.warning("Select at least one method to proceed.")
         return
@@ -5105,6 +5215,14 @@ def _render_profile_step() -> None:
     """Step 3 - Map-first profile point selection."""
     st.markdown("##### Pick profile endpoints")
 
+    def _as_float_or(value: Any, fallback: float) -> float:
+        try:
+            if value is None:
+                raise TypeError
+            return float(value)
+        except Exception:  # noqa: BLE001
+            return float(fallback)
+
     # Surface map (interactive picking)
     root = st.session_state.get("hydro_root")
     if root and Path(root).exists():
@@ -5122,15 +5240,15 @@ def _render_profile_step() -> None:
     st.markdown("---")
     st.caption("Or enter coordinates manually:")
 
-    # Manual coordinate inputs — use 0.0 as placeholder when not yet picked
-    default_p1x = float(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point1_x", 115.0))
-    default_p1y = float(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point1_y", 70.0))
-    default_p2x = float(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point2_x", 95.0))
-    default_p2y = float(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point2_y", 180.0))
-    cur_p1x = st.session_state.get("hydro_point1_x", default_p1x)
-    cur_p1y = st.session_state.get("hydro_point1_y", default_p1y)
-    cur_p2x = st.session_state.get("hydro_point2_x", default_p2x)
-    cur_p2y = st.session_state.get("hydro_point2_y", default_p2y)
+    # Manual coordinate inputs — use notebook defaults when points are missing
+    default_p1x = _as_float_or(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point1_x"), 115.0)
+    default_p1y = _as_float_or(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point1_y"), 70.0)
+    default_p2x = _as_float_or(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point2_x"), 95.0)
+    default_p2y = _as_float_or(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point2_y"), 180.0)
+    cur_p1x = _as_float_or(st.session_state.get("hydro_point1_x"), default_p1x)
+    cur_p1y = _as_float_or(st.session_state.get("hydro_point1_y"), default_p1y)
+    cur_p2x = _as_float_or(st.session_state.get("hydro_point2_x"), default_p2x)
+    cur_p2y = _as_float_or(st.session_state.get("hydro_point2_y"), default_p2y)
 
     coord_col, snap_col, reset_col = st.columns([4, 2, 1])
     with coord_col:
@@ -5166,19 +5284,32 @@ def _render_profile_step() -> None:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("Clear", key="hydro_reset_points", use_container_width=True):
             st.session_state.hydro_pick_next = 0
-            st.session_state.hydro_point1_x = default_p1x
-            st.session_state.hydro_point1_y = default_p1y
-            st.session_state.hydro_point2_x = default_p2x
-            st.session_state.hydro_point2_y = default_p2y
+            st.session_state.hydro_user_picked_p1 = False
+            st.session_state.hydro_user_picked_p2 = False
+            for key in ("hydro_point1_x", "hydro_point1_y", "hydro_point2_x", "hydro_point2_y"):
+                st.session_state.pop(key, None)
             st.session_state.hydro_snapshot_index = int(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_snapshot_index", 5))
             st.rerun()
 
-    # Persist manual inputs → session_state (marks points as set)
+    # Persist manual inputs → session_state.
+    # Only mark as user-picked if the number_input value was actually changed
+    # from the default (to avoid auto-marking on every rerun).
+    _prev_p1x = st.session_state.get("hydro_point1_x")
+    _prev_p1y = st.session_state.get("hydro_point1_y")
+    _prev_p2x = st.session_state.get("hydro_point2_x")
+    _prev_p2y = st.session_state.get("hydro_point2_y")
+
     st.session_state.hydro_point1_x = float(p1x)
     st.session_state.hydro_point1_y = float(p1y)
     st.session_state.hydro_point2_x = float(p2x)
     st.session_state.hydro_point2_y = float(p2y)
     st.session_state.hydro_snapshot_index = int(snapshot_idx)
+
+    # Detect if the user explicitly changed any manual coordinate input
+    if _prev_p1x is not None and (float(p1x) != float(_prev_p1x) or float(p1y) != float(_prev_p1y)):
+        st.session_state.hydro_user_picked_p1 = True
+    if _prev_p2x is not None and (float(p2x) != float(_prev_p2x) or float(p2y) != float(_prev_p2y)):
+        st.session_state.hydro_user_picked_p2 = True
 
 
 # ---------------------------------------------------------------------------
