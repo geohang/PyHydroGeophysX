@@ -1,9 +1,9 @@
 Case: cross_gradient_joint
 ERT file: c:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\ERT\Bert\fielddataline2.dat
 SRT file: c:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\Seismic\srtfieldline2.dat
-Iterations: 20
-Final ERT chi2: 1.221031
-Final SRT chi2: 4.499937
+Iterations: 11
+Final ERT chi2: 1.322663
+Final SRT chi2: 3.508667
 Parameters:
   auto_disable_cross_gradient_first_iteration: True
   balanceDepth: True
@@ -16,8 +16,8 @@ Parameters:
   ert_bounds: (10.0, 5000.0)
   ert_relative_error: 0.05
   ert_use_derived_rhoa: True
-  lambda_cg_ert: 10.0
-  lambda_cg_srt: 10.0
+  lambda_cg_ert: 80.0
+  lambda_cg_srt: 80.0
   lambda_ert: 10.0
   lambda_srt: 10.0
   line_search_c: 0.0001

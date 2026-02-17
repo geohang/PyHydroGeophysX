@@ -40,6 +40,58 @@ try:
 except ImportError:
     PYGIMLI_AVAILABLE = False
 
+# Data access abstraction — import directly from the module file to avoid
+# triggering the heavy PyHydroGeophysX.__init__ (SimPEG, pygimli, etc.)
+DATA_ACCESS_AVAILABLE = False
+_DATA_ACCESS_ERROR = ""
+try:
+    import importlib.util as _ilu
+    _acc_path = str(PARENT_DIR / "PyHydroGeophysX" / "data_access" / "accessors.py")
+    _spec = _ilu.spec_from_file_location("_phgx_accessors", _acc_path)
+    if _spec and _spec.loader:
+        _acc_mod = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_acc_mod)
+        LocalHydroAccessor = _acc_mod.LocalHydroAccessor
+        HttpHydroAccessor = _acc_mod.HttpHydroAccessor
+        load_manifest = _acc_mod.load_manifest
+        get_manifest_entry = _acc_mod.get_manifest_entry
+        REQUIRED_FILES = _acc_mod.REQUIRED_FILES
+        DATA_ACCESS_AVAILABLE = True
+    else:
+        _DATA_ACCESS_ERROR = f"spec_from_file_location returned None for {_acc_path}"
+except Exception as _exc:  # noqa: BLE001
+    _DATA_ACCESS_ERROR = f"File-based import: {type(_exc).__name__}: {_exc}"
+
+# Fallback: try a normal package import if file-based loading failed
+if not DATA_ACCESS_AVAILABLE:
+    try:
+        from PyHydroGeophysX.data_access.accessors import (
+            LocalHydroAccessor, HttpHydroAccessor, load_manifest, get_manifest_entry,
+            REQUIRED_FILES,
+        )
+        DATA_ACCESS_AVAILABLE = True
+        _DATA_ACCESS_ERROR = ""
+    except Exception as _exc2:  # noqa: BLE001
+        _DATA_ACCESS_ERROR += f" | Package import: {type(_exc2).__name__}: {_exc2}"
+
+# Ensure REQUIRED_FILES is always defined even if data_access import failed
+if "REQUIRED_FILES" not in dir():
+    REQUIRED_FILES = ["Watercontent.npy", "Porosity.npy", "top.txt", "bot.npy"]
+
+
+def _is_streamlit_cloud() -> bool:
+    """Heuristic: detect if running on Streamlit Community Cloud."""
+    cloud_indicators = [
+        os.environ.get("STREAMLIT_SHARING_MODE"),
+        os.environ.get("IS_STREAMLIT_CLOUD"),
+        os.environ.get("HOSTNAME", "").startswith("streamlit"),
+    ]
+    # Streamlit Cloud typically sets HOME to /home/appuser
+    home = os.environ.get("HOME", "")
+    if "/home/appuser" in home:
+        return True
+    return any(cloud_indicators)
+
 st.set_page_config(
     page_title="PyHydroGeophysX - Geophysical Workflows",
     page_icon="PHGX",
@@ -248,6 +300,216 @@ section.main > div {
 .stTabs [data-baseweb="tab-panel"] {
     padding-top: 1.5rem;
 }
+
+/* Keep metric cards readable with long values (e.g., grid summary strings). */
+div[data-testid="stMetricLabel"] {
+    font-size: 0.86rem !important;
+    line-height: 1.2 !important;
+}
+
+div[data-testid="stMetricValue"] {
+    font-size: 1.02rem !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+div[data-testid="stMetricValue"] > div {
+    font-size: 1.02rem !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+div[data-testid="stMetricDelta"] {
+    font-size: 0.8rem !important;
+}
+
+/* ===== Hydro workflow stepper & status strip ===== */
+
+.hydro-status-strip {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.2rem;
+    border-radius: 0.7rem;
+    overflow: hidden;
+    border: 1px solid #e1e5ec;
+    background: #f8fafc;
+}
+
+.hydro-step-indicator {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #94a3b8;
+    border-right: 1px solid #e1e5ec;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #f8fafc;
+}
+
+.hydro-step-indicator:last-child { border-right: none; }
+
+.hydro-step-indicator:hover {
+    background: #f0f4f8;
+    color: #475569;
+}
+
+.hydro-step-indicator.active {
+    background: linear-gradient(135deg, var(--phgx-blue) 0%, var(--phgx-accent) 100%);
+    color: white;
+}
+
+.hydro-step-indicator.done {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.hydro-step-indicator.error {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.hydro-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: #e2e8f0;
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.hydro-step-indicator.active .hydro-step-num {
+    background: rgba(255,255,255,0.25);
+    color: white;
+}
+
+.hydro-step-indicator.done .hydro-step-num {
+    background: #059669;
+    color: white;
+}
+
+/* ===== Data source cards ===== */
+
+.hydro-source-cards {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.hydro-source-card {
+    flex: 1;
+    padding: 1.2rem;
+    border-radius: 0.7rem;
+    border: 2px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.hydro-source-card:hover {
+    border-color: var(--phgx-accent);
+    box-shadow: 0 2px 8px rgba(61, 108, 185, 0.1);
+    transform: translateY(-1px);
+}
+
+.hydro-source-card.selected {
+    border-color: var(--phgx-blue);
+    background: linear-gradient(135deg, #f0f7ff 0%, #e8f4f8 100%);
+    box-shadow: 0 2px 12px rgba(15, 76, 117, 0.15);
+}
+
+.hydro-source-icon {
+    font-size: 2rem;
+    margin-bottom: 0.4rem;
+}
+
+.hydro-source-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--phgx-dark);
+    margin-bottom: 0.25rem;
+}
+
+.hydro-source-desc {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+/* ===== Method pills / chips ===== */
+
+.hydro-method-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.8rem 0;
+}
+
+.hydro-method-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 1rem;
+    border-radius: 2rem;
+    border: 2px solid #e2e8f0;
+    background: white;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.hydro-method-chip:hover {
+    border-color: var(--phgx-accent);
+    background: #f0f4ff;
+}
+
+.hydro-method-chip.selected {
+    border-color: var(--phgx-blue);
+    background: linear-gradient(135deg, var(--phgx-blue) 0%, var(--phgx-accent) 100%);
+    color: white;
+}
+
+.hydro-method-chip .chip-icon {
+    font-size: 1rem;
+}
+
+/* ===== Results gallery ===== */
+
+.hydro-result-card {
+    border-radius: 0.7rem;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    background: white;
+    margin-bottom: 1rem;
+}
+
+.hydro-result-card-header {
+    padding: 0.6rem 1rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--phgx-dark);
+}
+
+.hydro-result-card-body {
+    padding: 0.8rem;
+}
 """
 
 st.markdown(f"<style>{CUSTOM_CSS}</style>", unsafe_allow_html=True)
@@ -341,6 +603,60 @@ STANDARD_ERT_TUTORIAL_IMAGES = [
 
 HYDRO_RESPONSE_METHODS = ["Profile", "ERT", "SRT", "TDEM", "FDEM", "Gravity"]
 QUICK_RUN_MODES = ["Auto (LLM)", "ERT Only", "Time-Lapse ERT", "Seismic SRT"]
+HYDRO_DEFAULTS_VERSION = 20260220
+HYDRO_NOTEBOOK_DEFAULTS: Dict[str, Any] = {
+    # Keep these aligned with examples/Ex_hydro_to_multigeophys.ipynb
+    "hydro_data_dir": "data",
+    "hydro_output_dir": "results/hydro_to_multigeophys",
+    "hydro_methods": ["Profile", "ERT", "SRT", "TDEM", "FDEM", "Gravity"],
+    "hydro_run_style": "Batch methods",
+    "hydro_single_method": "ERT",
+    "hydro_snapshot_index": 5,
+    "hydro_point1_x": None,
+    "hydro_point1_y": None,
+    "hydro_point2_x": None,
+    "hydro_point2_y": None,
+    "hydro_num_points": 220,
+    "hydro_station_count": 24,
+    "hydro_ert_scheme": "wa",
+    "hydro_ert_electrode_spacing": 1.0,
+    "hydro_ert_electrode_start": 15.0,
+    "hydro_ert_num_electrodes": 72,
+    "hydro_srt_sensor_spacing": 1.0,
+    "hydro_srt_sensor_start": 15.0,
+    "hydro_srt_num_sensors": 72,
+    "hydro_srt_shot_distance": 5,
+    "hydro_rho_sat_top": 100.0,
+    "hydro_rho_sat_mid": 500.0,
+    "hydro_rho_sat_bot": 2400.0,
+    "hydro_archie_n_top": 2.2,
+    "hydro_archie_n_mid": 1.8,
+    "hydro_archie_n_bot": 2.5,
+    "hydro_sigma_s_top": 1.0 / 500.0,
+    "hydro_sigma_s_mid": 0.0,
+    "hydro_sigma_s_bot": 0.0,
+    "hydro_top_bulk_modulus": 30.0,
+    "hydro_top_shear_modulus": 20.0,
+    "hydro_top_mineral_density": 2650.0,
+    "hydro_top_depth": 1.0,
+    "hydro_mid_bulk_modulus": 50.0,
+    "hydro_mid_shear_modulus": 35.0,
+    "hydro_mid_mineral_density": 2670.0,
+    "hydro_mid_aspect_ratio": 0.05,
+    "hydro_bot_bulk_modulus": 55.0,
+    "hydro_bot_shear_modulus": 50.0,
+    "hydro_bot_mineral_density": 2680.0,
+    "hydro_bot_aspect_ratio": 0.03,
+    "hydro_seed": 7,
+    "hydro_srt_noise_level": 0.01,
+    "hydro_srt_noise_abs": 1e-5,
+    "hydro_ert_noise_level": 0.03,
+    "hydro_ert_abs_error": 0.0,
+    "hydro_ert_rel_error": 0.03,
+    "hydro_tdem_noise_level": 0.03,
+    "hydro_fdem_noise_level": 0.03,
+    "hydro_gravity_noise_level": 0.02,
+}
 
 README_REFERENCE_ENTRIES: List[Dict[str, str]] = [
     {
@@ -441,6 +757,20 @@ README_REFERENCE_ENTRIES: List[Dict[str, str]] = [
 ]
 
 
+def _clone_default_value(value: Any) -> Any:
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, dict):
+        return dict(value)
+    return value
+
+
+def _apply_hydro_notebook_defaults(force: bool = False) -> None:
+    for key, value in HYDRO_NOTEBOOK_DEFAULTS.items():
+        if force or key not in st.session_state:
+            st.session_state[key] = _clone_default_value(value)
+
+
 def init_session_state() -> None:
     defaults = {
         "context_agent": None,
@@ -453,15 +783,15 @@ def init_session_state() -> None:
         "upload_dir": None,
         "workflow_config": None,
         "hydro_data_dir": "data",
-        "hydro_output_dir": "results/streamlit_hydro_to_geophysics",
-        "hydro_methods": ["Profile", "ERT", "SRT"],
-        "hydro_run_style": "Single method",
+        "hydro_output_dir": "results/hydro_to_multigeophys",
+        "hydro_methods": ["Profile", "ERT", "SRT", "TDEM", "FDEM", "Gravity"],
+        "hydro_run_style": "Batch methods",
         "hydro_single_method": "ERT",
         "hydro_snapshot_index": 5,
-        "hydro_point1_x": 115,
-        "hydro_point1_y": 70,
-        "hydro_point2_x": 95,
-        "hydro_point2_y": 180,
+        "hydro_point1_x": None,
+        "hydro_point1_y": None,
+        "hydro_point2_x": None,
+        "hydro_point2_y": None,
         "hydro_num_points": 220,
         "hydro_station_count": 24,
         "hydro_ert_scheme": "wa",
@@ -493,15 +823,42 @@ def init_session_state() -> None:
         "hydro_bot_shear_modulus": 50.0,
         "hydro_bot_mineral_density": 2680.0,
         "hydro_bot_aspect_ratio": 0.03,
+        "hydro_seed": 7,
+        "hydro_srt_noise_level": 0.01,
+        "hydro_srt_noise_abs": 1e-5,
+        "hydro_ert_noise_level": 0.03,
+        "hydro_ert_abs_error": 0.0,
+        "hydro_ert_rel_error": 0.03,
+        "hydro_tdem_noise_level": 0.03,
+        "hydro_fdem_noise_level": 0.03,
+        "hydro_gravity_noise_level": 0.02,
         "hydro_dialog_text": "",
         "hydro_chat_history": [],
         "hydro_last_run": None,
         "hydro_surface_selected_points": [],
         "quick_run_mode": "Auto (LLM)",
+        # --- Step-based workflow keys ---
+        "hydro_root": None,
+        "hydro_data_summary": None,
+        "hydro_data_source": None,  # "example", "http", "local"
+        "hydro_data_source_label": "",
+        "hydro_data_format_choice": "Auto-detect",  # "Auto-detect", "Pre-processed (.npy)", "MODFLOW", "ParFlow"
+        "hydro_accessor": None,
+        "hydro_http_dataset_id": None,
+        "hydro_run_clicked": False,
+        "hydro_results_paths": {},
+        "hydro_defaults_version": 0,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+    # Migrate persisted sessions to current notebook-aligned defaults once.
+    if int(st.session_state.get("hydro_defaults_version", 0)) != HYDRO_DEFAULTS_VERSION:
+        _apply_hydro_notebook_defaults(force=True)
+        st.session_state.hydro_defaults_version = HYDRO_DEFAULTS_VERSION
+    else:
+        _apply_hydro_notebook_defaults(force=False)
 
 
 def render_header() -> None:
@@ -2340,11 +2697,221 @@ def _inspect_hydro_input_dir(data_dir: Path) -> Dict[str, Any]:
 
 
 def _has_hydro_required_files(path: Path) -> bool:
+    """Check if *path* contains the standard pre-processed .npy files."""
     required = ["Watercontent.npy", "Porosity.npy", "top.txt", "bot.npy"]
     return path.exists() and path.is_dir() and all((path / name).exists() for name in required)
 
 
+def _detect_hydro_data_format(path: Path) -> str:
+    """Auto-detect the hydro data format inside *path*.
+
+    Returns one of ``"npy"``, ``"modflow"``, ``"parflow"``, or ``"unknown"``.
+    """
+    if not path.exists() or not path.is_dir():
+        return "unknown"
+
+    # Pre-processed .npy check (highest priority – explicit standard format)
+    if _has_hydro_required_files(path):
+        return "npy"
+
+    entries = {e.name for e in path.iterdir()}
+
+    # MODFLOW indicators
+    if "WaterContent" in entries or "mfsim.nam" in entries:
+        return "modflow"
+
+    # ParFlow indicators – look for *.pfb files
+    pfb_files = list(path.glob("*.pfb"))
+    if pfb_files:
+        return "parflow"
+
+    # Check immediate sub-directories (e.g. data/modflow/, data/parflow/test2/)
+    for child in path.iterdir():
+        if child.is_dir():
+            sub_entries = {e.name for e in child.iterdir()}
+            if "WaterContent" in sub_entries or "mfsim.nam" in sub_entries:
+                return "modflow"
+            if list(child.glob("*.pfb")):
+                return "parflow"
+
+    return "unknown"
+
+
+def _detect_modflow_info(path: Path) -> Dict[str, Any]:
+    """Scan a MODFLOW directory and return auto-detected settings."""
+    info: Dict[str, Any] = {
+        "has_watercontent": (path / "WaterContent").exists(),
+        "has_mfsim": (path / "mfsim.nam").exists(),
+        "idomain_file": "",
+        "model_name": "",
+    }
+    # Auto-detect idomain / id file
+    for candidate in ["id.txt", "idomain.txt", "idomain.npy"]:
+        if (path / candidate).exists():
+            info["idomain_file"] = candidate
+            break
+    # Auto-detect model name from .nam files (exclude mfsim.nam)
+    for f in path.iterdir():
+        if f.suffix == ".nam" and f.name != "mfsim.nam":
+            info["model_name"] = f.stem
+            break
+    # Fallback: look for .dis or other common extensions
+    if not info["model_name"]:
+        for f in path.iterdir():
+            if f.suffix in (".dis", ".dis6"):
+                info["model_name"] = f.stem
+                break
+    return info
+
+
+def _detect_parflow_info(path: Path) -> Dict[str, Any]:
+    """Scan a ParFlow directory and return auto-detected settings."""
+    info: Dict[str, Any] = {
+        "run_name": "",
+        "has_porosity": False,
+        "has_mask": False,
+        "num_satur_files": 0,
+    }
+    pfb_files = sorted(path.glob("*.pfb"))
+    # Infer run_name from saturation files
+    for f in pfb_files:
+        if ".out.satur." in f.name:
+            info["run_name"] = f.name.split(".out.satur.")[0]
+            break
+    if not info["run_name"]:
+        # Try any pfb
+        for f in pfb_files:
+            info["run_name"] = f.stem.split(".")[0]
+            break
+    rn = info["run_name"]
+    info["has_porosity"] = any(
+        (path / f"{rn}{suf}").exists()
+        for suf in [".out.porosity.pfb", ".porosity.pfb", ".pf.porosity.pfb"]
+    )
+    info["has_mask"] = any(
+        (path / f"{rn}{suf}").exists()
+        for suf in [".out.mask.pfb", ".mask.pfb", ".pf.mask.pfb"]
+    )
+    info["num_satur_files"] = len(list(path.glob(f"{rn}.out.satur.*.pfb")))
+    return info
+
+
+def _convert_modflow_to_npy(
+    modflow_dir: str,
+    idomain_file: str,
+    model_name: str,
+    nlay: int = 3,
+    out_dir: Optional[str] = None,
+) -> str:
+    """Load MODFLOW outputs and write standard .npy/.txt files.
+
+    Returns the directory containing the converted files.
+    """
+    import numpy as np
+    from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
+
+    modflow_path = Path(modflow_dir)
+    if out_dir is None:
+        out_dir = tempfile.mkdtemp(prefix="phgx_mf_")
+    out_path = Path(out_dir)
+    out_path.mkdir(parents=True, exist_ok=True)
+
+    # Load idomain
+    id_path = modflow_path / idomain_file
+    if id_path.suffix == ".npy":
+        idomain = np.load(str(id_path))
+    else:
+        idomain = np.loadtxt(str(id_path))
+
+    # Water content → 4D (nt, nlay, nrows, ncols)
+    wc_proc = MODFLOWWaterContent(model_directory=str(modflow_path), idomain=idomain)
+    water_content = wc_proc.load_time_range(start_idx=0, end_idx=None, nlay=nlay)
+
+    # Porosity → 3D (nlay, nrows, ncols)
+    # flopy may not be installed; handle gracefully
+    porosity = None
+    try:
+        from PyHydroGeophysX.model_output.modflow_output import MODFLOWPorosity
+        por_proc = MODFLOWPorosity(model_directory=str(modflow_path), model_name=model_name)
+        porosity = por_proc.load_porosity()
+    except ImportError:
+        pass  # flopy not available
+
+    if porosity is None:
+        # Fallback: use a uniform default porosity of 0.3
+        _, n_lay, n_rows, n_cols = water_content.shape
+        porosity = np.full((n_lay, n_rows, n_cols), 0.3)
+
+    # Generate simple top / bot from layer indices (metres from 0)
+    _, n_lay, n_rows, n_cols = water_content.shape
+    top = np.zeros((n_rows, n_cols))  # surface at 0
+    bot = np.zeros((n_lay, n_rows, n_cols))
+    for k in range(n_lay):
+        bot[k, :, :] = -(k + 1)  # each layer 1 m thick going downward
+
+    np.save(str(out_path / "Watercontent.npy"), water_content)
+    np.save(str(out_path / "Porosity.npy"), porosity)
+    np.savetxt(str(out_path / "top.txt"), top)
+    np.save(str(out_path / "bot.npy"), bot)
+
+    return str(out_path)
+
+
+def _convert_parflow_to_npy(
+    parflow_dir: str,
+    run_name: str,
+    out_dir: Optional[str] = None,
+) -> str:
+    """Load ParFlow outputs and write standard .npy/.txt files.
+
+    Returns the directory containing the converted files.
+    """
+    import numpy as np
+    from PyHydroGeophysX.model_output.parflow_output import ParflowSaturation, ParflowPorosity
+
+    pf_path = Path(parflow_dir)
+    if out_dir is None:
+        out_dir = tempfile.mkdtemp(prefix="phgx_pf_")
+    out_path = Path(out_dir)
+    out_path.mkdir(parents=True, exist_ok=True)
+
+    # Saturation → 4D (nt, nz, ny, nx)  — treated as water content proxy
+    sat_proc = ParflowSaturation(model_directory=str(pf_path), run_name=run_name)
+    saturation = sat_proc.load_time_range(start_idx=0, end_idx=None)
+
+    # Porosity → 3D (nz, ny, nx)
+    por_proc = ParflowPorosity(model_directory=str(pf_path), run_name=run_name)
+    porosity = por_proc.load_porosity()
+
+    # Mask for inactive cells
+    try:
+        mask = por_proc.load_mask()
+        porosity[mask == 0] = np.nan
+        for t in range(saturation.shape[0]):
+            saturation[t][mask == 0] = np.nan
+    except FileNotFoundError:
+        pass  # no mask file, proceed without
+
+    # Water content = saturation × porosity
+    water_content = saturation * porosity[np.newaxis, :, :, :]
+
+    # Top/bot: uniform layers based on grid shape
+    _, n_lay, n_rows, n_cols = water_content.shape
+    top = np.zeros((n_rows, n_cols))
+    bot = np.zeros((n_lay, n_rows, n_cols))
+    for k in range(n_lay):
+        bot[k, :, :] = -(k + 1)
+
+    np.save(str(out_path / "Watercontent.npy"), water_content)
+    np.save(str(out_path / "Porosity.npy"), porosity)
+    np.savetxt(str(out_path / "top.txt"), top)
+    np.save(str(out_path / "bot.npy"), bot)
+
+    return str(out_path)
+
+
 def _discover_hydro_data_dirs(current_value: str) -> List[Path]:
+    """Discover directories that contain *any* supported hydro data format."""
     seeds: List[Path] = [
         _resolve_user_path(current_value),
         CURRENT_DIR / "data",
@@ -2357,6 +2924,13 @@ def _discover_hydro_data_dirs(current_value: str) -> List[Path]:
     candidates: List[Path] = []
     seen = set()
 
+    def _is_hydro_dir(p: Path) -> bool:
+        """Return True if *p* contains any recognised hydro data format."""
+        if _has_hydro_required_files(p):
+            return True
+        fmt = _detect_hydro_data_format(p)
+        return fmt in ("modflow", "parflow")
+
     def _add_candidate(path_obj: Path) -> None:
         try:
             resolved = path_obj.resolve()
@@ -2366,7 +2940,7 @@ def _discover_hydro_data_dirs(current_value: str) -> List[Path]:
         if key in seen:
             return
         seen.add(key)
-        if _has_hydro_required_files(resolved):
+        if _is_hydro_dir(resolved):
             candidates.append(resolved)
 
     for seed in seeds:
@@ -2469,15 +3043,9 @@ def _mask_anomalous_zero_elevation_for_plot(top_array):
 
 def _render_surface_picker(data_dir: Path) -> None:
     st.markdown("### Surface Map and Profile Point Picking")
-    st.caption(
-        "Click on the map to pick Point1 and Point2 for profile forward modeling "
-        "(if click does not trigger on your setup, drag a tiny box to select one point). "
-        "The last two picked points are used."
-    )
 
     try:
         import numpy as np
-
         top = np.loadtxt(data_dir / "top.txt")
     except Exception as exc:  # noqa: BLE001
         st.warning(f"Could not load `top.txt` for surface map: {exc}")
@@ -2491,77 +3059,111 @@ def _render_surface_picker(data_dir: Path) -> None:
     if zero_masked and zero_note:
         st.info(zero_note)
 
-    # Map panel with graceful fallback when plotly or chart selection is unavailable.
+    # Pick counter: 0 → next pick = P1, 1 → next pick = P2
+    if "hydro_pick_next" not in st.session_state:
+        st.session_state.hydro_pick_next = 0
+
+    # Read current points (may be None if not yet picked)
+    import numpy as np
+    max_x = max(0, top.shape[1] - 1)
+    max_y = max(0, top.shape[0] - 1)
+    raw_p1x = st.session_state.get("hydro_point1_x")
+    raw_p1y = st.session_state.get("hydro_point1_y")
+    raw_p2x = st.session_state.get("hydro_point2_x")
+    raw_p2y = st.session_state.get("hydro_point2_y")
+    has_p1 = raw_p1x is not None and raw_p1y is not None
+    has_p2 = raw_p2x is not None and raw_p2y is not None
+
+    if has_p1:
+        p1x = float(np.clip(raw_p1x, 0, max_x))
+        p1y = float(np.clip(raw_p1y, 0, max_y))
+    if has_p2:
+        p2x = float(np.clip(raw_p2x, 0, max_x))
+        p2y = float(np.clip(raw_p2y, 0, max_y))
+
+    # Status message
+    if not has_p1 and not has_p2:
+        st.caption("Drag a small box on the map to pick **P1**, then **P2**. The profile line will appear once both are set.")
+    elif has_p1 and not has_p2:
+        st.caption(f"P1 set at ({p1x:.0f}, {p1y:.0f}). Now pick **P2**.")
+    else:
+        st.caption(f"P1 = ({p1x:.0f}, {p1y:.0f})  →  P2 = ({p2x:.0f}, {p2y:.0f})")
+
+    # --- Build plotly figure ---
     picked_points: List[List[float]] = []
     try:
         import inspect
         import plotly.graph_objects as go
-        try:
-            from streamlit_plotly_events import plotly_events
-            plotly_events_available = True
-        except Exception:
-            plotly_events_available = False
 
         y_idx = list(range(top.shape[0]))
         x_idx = list(range(top.shape[1]))
         fig = go.Figure(
             data=[
                 go.Heatmap(
-                    z=top_plot,
-                    x=x_idx,
-                    y=y_idx,
+                    z=top_plot, x=x_idx, y=y_idx,
                     colorscale="Viridis",
                     colorbar={"title": "Surface elev."},
                 )
             ]
         )
 
-        # Add a nearly transparent scatter grid so point-click selection works reliably.
+        # Invisible scatter grid for box-select
         yy, xx = np.indices(top_plot.shape)
         fig.add_trace(
             go.Scattergl(
-                x=xx.ravel(),
-                y=yy.ravel(),
+                x=xx.ravel(), y=yy.ravel(),
                 mode="markers",
-                marker={"size": 9, "color": "rgba(255,255,255,0.12)"},
+                marker={"size": 6, "color": "rgba(0,0,0,0)"},
                 hovertemplate="x=%{x}<br>y=%{y}<extra></extra>",
-                showlegend=False,
-                name="picker",
+                showlegend=False, name="grid",
             )
         )
 
-        p1 = [float(st.session_state.hydro_point1_x), float(st.session_state.hydro_point1_y)]
-        p2 = [float(st.session_state.hydro_point2_x), float(st.session_state.hydro_point2_y)]
-        fig.add_trace(
-            go.Scatter(
-                x=[p1[0], p2[0]],
-                y=[p1[1], p2[1]],
-                mode="markers+text",
-                text=["P1", "P2"],
+        # Only draw line + markers for points that have been picked
+        if has_p1 and has_p2:
+            fig.add_trace(go.Scatter(
+                x=[p1x, p2x], y=[p1y, p2y], mode="lines",
+                line={"color": "#ffffff", "width": 2, "dash": "dash"},
+                showlegend=False, hoverinfo="skip", name="Profile line",
+            ))
+            fig.add_trace(go.Scatter(
+                x=[p1x, p2x], y=[p1y, p2y],
+                mode="markers+text", text=["P1", "P2"],
                 textposition="top center",
-                marker={"size": 11, "color": ["#ef4444", "#0ea5e9"], "symbol": "x"},
+                textfont={"color": "white", "size": 13},
+                marker={"size": 12, "color": ["#ef4444", "#0ea5e9"], "symbol": "x"},
                 name="Profile points",
-            )
-        )
+            ))
+        elif has_p1:
+            fig.add_trace(go.Scatter(
+                x=[p1x], y=[p1y],
+                mode="markers+text", text=["P1"],
+                textposition="top center",
+                textfont={"color": "white", "size": 13},
+                marker={"size": 12, "color": "#ef4444", "symbol": "x"},
+                name="P1",
+            ))
 
         fig.update_layout(
             title="Surface map (top.txt)",
-            xaxis_title="X index",
-            yaxis_title="Y index",
-            dragmode="zoom",
-            clickmode="event+select",
+            xaxis_title="X index", yaxis_title="Y index",
+            dragmode="select", clickmode="event+select",
             margin={"l": 40, "r": 20, "t": 50, "b": 40},
             height=460,
         )
         fig.update_yaxes(autorange="reversed")
 
+        # Render chart + capture selection
+        try:
+            from streamlit_plotly_events import plotly_events
+            plotly_events_available = True
+        except Exception:
+            plotly_events_available = False
+
         if plotly_events_available:
             events = plotly_events(
-                fig,
-                click_event=True,
-                select_event=True,
-                hover_event=False,
-                override_height=460,
+                fig, click_event=True, select_event=True,
+                hover_event=False, override_height=460,
                 key="hydro_surface_picker_events",
             )
             if isinstance(events, list):
@@ -2570,71 +3172,63 @@ def _render_surface_picker(data_dir: Path) -> None:
                         picked_points.append([float(pt["x"]), float(pt["y"])])
         elif "on_select" in inspect.signature(st.plotly_chart).parameters:
             event = st.plotly_chart(
-                fig,
-                use_container_width=True,
+                fig, use_container_width=True,
                 key="hydro_surface_picker_plotly",
                 on_select="rerun",
-                selection_mode=("points",),
+                # In Streamlit fallback mode, box/lasso selection is the reliable path.
+                selection_mode=("box", "lasso", "points"),
             )
             picked_points = _extract_plotly_selected_points(event)
         else:
             st.plotly_chart(fig, use_container_width=True, key="hydro_surface_picker_plotly_static")
-            st.info(
-                "Interactive point selection is not available in this Streamlit setup. "
-                "Please update Streamlit or install `streamlit-plotly-events`."
-            )
+            st.info("Interactive point selection requires Streamlit >= 1.35 or `streamlit-plotly-events`.")
+
     except Exception:
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(figsize=(8.5, 4.6))
+        mpl_fig, ax = plt.subplots(figsize=(8.5, 4.6))
         im = ax.imshow(np.ma.masked_invalid(top_plot), cmap="viridis", origin="upper", aspect="auto")
-        ax.scatter(
-            [st.session_state.hydro_point1_x, st.session_state.hydro_point2_x],
-            [st.session_state.hydro_point1_y, st.session_state.hydro_point2_y],
-            c=["#ef4444", "#0ea5e9"],
-            marker="x",
-            s=80,
-        )
+        if has_p1 and has_p2:
+            ax.plot([p1x, p2x], [p1y, p2y], color="white", linewidth=1.5, linestyle="--")
+            ax.scatter([p1x, p2x], [p1y, p2y], c=["#ef4444", "#0ea5e9"], marker="x", s=80, zorder=5)
+            ax.annotate("P1", (p1x, p1y), textcoords="offset points", xytext=(0, -12), ha="center", color="white", fontweight="bold")
+            ax.annotate("P2", (p2x, p2y), textcoords="offset points", xytext=(0, -12), ha="center", color="white", fontweight="bold")
+        elif has_p1:
+            ax.scatter([p1x], [p1y], c=["#ef4444"], marker="x", s=80, zorder=5)
+            ax.annotate("P1", (p1x, p1y), textcoords="offset points", xytext=(0, -12), ha="center", color="white", fontweight="bold")
         ax.set_title("Surface map (top.txt)")
-        ax.set_xlabel("X index")
-        ax.set_ylabel("Y index")
+        ax.set_xlabel("X index"); ax.set_ylabel("Y index")
         plt.colorbar(im, ax=ax, label="Surface elev.")
-        st.pyplot(fig, use_container_width=True)
-        plt.close(fig)
-        st.info("Install `plotly` for click-based point picking. Manual coordinates remain available.")
+        st.pyplot(mpl_fig, use_container_width=True)
+        plt.close(mpl_fig)
+        st.info("Install `plotly` for interactive point picking.")
 
+    # --- Process picked points: P1 then P2 ---
     if picked_points:
-        history_raw = st.session_state.get("hydro_surface_selected_points", [])
-        history: List[List[float]] = []
-        for item in history_raw:
-            if isinstance(item, (list, tuple)) and len(item) == 2:
-                history.append([float(item[0]), float(item[1])])
+        xs = [p[0] for p in picked_points]
+        ys = [p[1] for p in picked_points]
+        new_x = float(round(np.median(xs)))
+        new_y = float(round(np.median(ys)))
 
-        for x_val, y_val in picked_points:
-            pt = [float(round(x_val)), float(round(y_val))]
-            if not history or (abs(history[-1][0] - pt[0]) > 0.1 or abs(history[-1][1] - pt[1]) > 0.1):
-                history.append(pt)
-        history = history[-2:]
+        if st.session_state.hydro_pick_next == 0:
+            st.session_state.hydro_point1_x = new_x
+            st.session_state.hydro_point1_y = new_y
+            st.session_state.hydro_pick_next = 1
+        else:
+            st.session_state.hydro_point2_x = new_x
+            st.session_state.hydro_point2_y = new_y
+            st.session_state.hydro_pick_next = 0
+        st.rerun()
 
-        st.session_state.hydro_surface_selected_points = history
-        if len(history) >= 1:
-            st.session_state.hydro_point1_x = history[0][0]
-            st.session_state.hydro_point1_y = history[0][1]
-        if len(history) >= 2:
-            st.session_state.hydro_point2_x = history[1][0]
-            st.session_state.hydro_point2_y = history[1][1]
-
-    selected = st.session_state.get("hydro_surface_selected_points", [])
-    if selected:
-        st.caption(f"Selected points from map: {selected}")
-
-    c1, c2 = st.columns([1, 3])
-    if c1.button("Clear picked points", key="hydro_clear_picked_points"):
-        st.session_state.hydro_surface_selected_points = []
-        st.session_state.hydro_point1_x = 115.0
-        st.session_state.hydro_point1_y = 70.0
-        st.session_state.hydro_point2_x = 95.0
-        st.session_state.hydro_point2_y = 180.0
+    # Clear button
+    if has_p1 or has_p2:
+        if st.button("Clear picks", key="hydro_clear_picked_points"):
+            st.session_state.hydro_pick_next = 0
+            st.session_state.hydro_point1_x = None
+            st.session_state.hydro_point1_y = None
+            st.session_state.hydro_point2_x = None
+            st.session_state.hydro_point2_y = None
+            st.rerun()
 
 def _fill_profile_nans(values):
     import numpy as np
@@ -2644,6 +3238,8 @@ def _fill_profile_nans(values):
         raise ValueError(f"Expected 2D array, got shape {arr.shape}.")
 
     x = np.arange(arr.shape[1], dtype=float)
+    valid_row_idx = []
+
     for i in range(arr.shape[0]):
         row = arr[i, :]
         valid = np.isfinite(row)
@@ -2652,9 +3248,32 @@ def _fill_profile_nans(values):
                 row[~valid] = row[valid][0]
             else:
                 row[~valid] = np.interp(x[~valid], x[valid], row[valid])
+            valid_row_idx.append(i)
         else:
-            raise RuntimeError("Profile interpolation failed: one layer is all NaN.")
+            # Defer fully empty rows and fill them after we process valid rows.
+            continue
         arr[i, :] = row
+
+    if not valid_row_idx:
+        raise RuntimeError("Profile interpolation failed: all layers are NaN along this profile.")
+
+    valid_row_idx = np.asarray(valid_row_idx, dtype=int)
+    for i in range(arr.shape[0]):
+        if np.any(np.isfinite(arr[i, :])):
+            continue
+
+        lower = valid_row_idx[valid_row_idx < i]
+        upper = valid_row_idx[valid_row_idx > i]
+
+        if lower.size and upper.size:
+            lo = int(lower[-1])
+            hi = int(upper[0])
+            weight = (i - lo) / float(hi - lo)
+            arr[i, :] = (1.0 - weight) * arr[lo, :] + weight * arr[hi, :]
+        elif lower.size:
+            arr[i, :] = arr[int(lower[-1]), :]
+        else:
+            arr[i, :] = arr[int(upper[0]), :]
 
     return arr
 
@@ -3162,20 +3781,52 @@ def _build_hydro_profile(
 
     water_content_3d = np.asarray(water_content_4d[snapshot_index], dtype=float)
 
-    interpolator = ProfileInterpolator(
-        point1=[p1_col, p1_row],
-        point2=[p2_col, p2_row],
-        surface_data=top,
-        origin_x=0.0,
-        origin_y=0.0,
-        pixel_width=1.0,
-        pixel_height=-1.0,
-        num_points=int(num_points),
+    def _sample_profile(p1c: int, p1r: int, p2c: int, p2r: int):
+        interp = ProfileInterpolator(
+            point1=[p1c, p1r],
+            point2=[p2c, p2r],
+            surface_data=top,
+            origin_x=0.0,
+            origin_y=0.0,
+            pixel_width=1.0,
+            pixel_height=-1.0,
+            num_points=int(num_points),
+        )
+        sampled_structure = interp.interpolate_layer_data([top] + [bot[i] for i in range(bot.shape[0])])
+        sampled_wc = interp.interpolate_3d_data(water_content_3d)
+        sampled_por = interp.interpolate_3d_data(porosity_3d)
+        return interp, sampled_structure, sampled_wc, sampled_por
+
+    interpolator, structure, water_content_profile, porosity_profile = _sample_profile(
+        p1_col, p1_row, p2_col, p2_row
     )
 
-    structure = interpolator.interpolate_layer_data([top] + [bot[i] for i in range(bot.shape[0])])
-    water_content_profile = interpolator.interpolate_3d_data(water_content_3d)
-    porosity_profile = interpolator.interpolate_3d_data(porosity_3d)
+    if not np.isfinite(water_content_profile).any() or not np.isfinite(porosity_profile).any():
+        # Auto-fallback for datasets where default endpoints miss the active domain.
+        active_mask = np.any(np.isfinite(water_content_3d) & np.isfinite(porosity_3d), axis=0)
+        if np.any(active_mask):
+            rows, cols = np.where(active_mask)
+            min_col, max_col = int(np.min(cols)), int(np.max(cols))
+            min_row, max_row = int(np.min(rows)), int(np.max(rows))
+            med_col, med_row = int(np.median(cols)), int(np.median(rows))
+
+            fallback_lines = [
+                (min_col, med_row, max_col, med_row),
+                (med_col, min_row, med_col, max_row),
+                (min_col, min_row, max_col, max_row),
+                (min_col, max_row, max_col, min_row),
+            ]
+            for fp1_col, fp1_row, fp2_col, fp2_row in fallback_lines:
+                interp_try, struct_try, wc_try, por_try = _sample_profile(
+                    fp1_col, fp1_row, fp2_col, fp2_row
+                )
+                if np.isfinite(wc_try).any() and np.isfinite(por_try).any():
+                    interpolator = interp_try
+                    structure = struct_try
+                    water_content_profile = wc_try
+                    porosity_profile = por_try
+                    p1_col, p1_row, p2_col, p2_row = fp1_col, fp1_row, fp2_col, fp2_row
+                    break
 
     structure = _fill_profile_nans(structure)
     water_content_profile = np.clip(_fill_profile_nans(water_content_profile), 0.0, 0.8)
@@ -3195,6 +3846,7 @@ def _build_hydro_profile(
         "snapshot_index": int(snapshot_index),
         "water_shape": tuple(int(v) for v in water_content_3d.shape),
         "porosity_shape": tuple(int(v) for v in porosity_3d.shape),
+        "profile_points_used": [(int(p1_col), int(p1_row)), (int(p2_col), int(p2_row))],
     }
 
 
@@ -3202,8 +3854,8 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
     import numpy as np
     import matplotlib.pyplot as plt
 
-    methods = _ordered_unique_methods(config.get("hydro_methods", []))
-    output_dir = _resolve_user_path(config.get("hydro_output_dir", "results/streamlit_hydro_to_geophysics"))
+    methods = _ordered_unique_methods(config.get("hydro_methods", HYDRO_RESPONSE_METHODS))
+    output_dir = _resolve_user_path(config.get("hydro_output_dir", "results/hydro_to_multigeophys"))
     output_dir.mkdir(parents=True, exist_ok=True)
 
     result: Dict[str, Any] = {
@@ -3348,7 +4000,7 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
                 result["stats"]["srt_source_start"] = srt_sensor_start
                 result["stats"]["srt_shot_distance"] = srt_shot_distance
                 layer_markers = [0, 3, 2]
-                seed = None
+                seed = int(config.get("hydro_seed", 7))
 
                 ert_data = None
                 srt_data = None
@@ -3369,8 +4021,8 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
                         sensor_start=srt_sensor_start,
                         num_sensors=srt_num_sensors,
                         shot_distance=srt_shot_distance,
-                        noise_level=0.0,
-                        noise_abs=0.0,
+                        noise_level=float(config.get("hydro_srt_noise_level", 0.01)),
+                        noise_abs=float(config.get("hydro_srt_noise_abs", 1e-5)),
                         mesh_markers=mesh_markers,
                         verbose=False,
                         seed=seed,
@@ -3392,9 +4044,9 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
                         electrode_start=ert_electrode_start,
                         num_electrodes=ert_num_electrodes,
                         scheme_name=ert_scheme,
-                        noise_level=0.0,
-                        abs_error=0.0,
-                        rel_error=0.0,
+                        noise_level=float(config.get("hydro_ert_noise_level", 0.03)),
+                        abs_error=float(config.get("hydro_ert_abs_error", 0.0)),
+                        rel_error=float(config.get("hydro_ert_rel_error", 0.03)),
                         mesh_markers=mesh_markers,
                         verbose=False,
                         seed=seed,
@@ -3449,9 +4101,13 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
     em_methods = [m for m in ["TDEM", "FDEM", "Gravity"] if m in methods]
     if em_methods:
         n_profile = int(profile["n_profile"])
-        target_stations = max(4, min(int(config.get("hydro_station_count", 24)), n_profile))
-        station_idx = np.linspace(0, n_profile - 1, target_stations, dtype=int)
+        # Match Ex_hydro_to_multigeophys notebook station sampling.
+        station_divisor = max(1, int(config.get("hydro_station_count", 24)))
+        step = max(1, n_profile // station_divisor)
+        station_idx = np.r_[np.arange(0, n_profile, step, dtype=int), n_profile - 1]
         station_idx = np.unique(station_idx)
+        if station_idx.size < 4:
+            station_idx = np.unique(np.linspace(0, n_profile - 1, 4, dtype=int))
 
         x_station = profile["L_profile"][station_idx]
         wc_station = profile["water_content_profile"][:, station_idx]
@@ -3459,7 +4115,7 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
         structure_station = profile["structure"][:, station_idx]
 
         plot_payloads: List[Dict[str, Any]] = []
-        seed = None
+        seed = int(config.get("hydro_seed", 7))
 
         if "TDEM" in em_methods:
             try:
@@ -3476,7 +4132,7 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
                     n=2.0,
                     sigma_s=0.0,
                     source_radius=10.0,
-                    noise_level=0.0,
+                    noise_level=float(config.get("hydro_tdem_noise_level", 0.03)),
                     seed=seed,
                     verbose=False,
                 )
@@ -3511,7 +4167,7 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
                     receiver_location=np.array([12.0, 0.0, 0.0]),
                     receiver_component="secondary",
                     waveform_type="dipole",
-                    noise_level=0.0,
+                    noise_level=float(config.get("hydro_fdem_noise_level", 0.03)),
                     seed=seed,
                     verbose=False,
                 )
@@ -3541,7 +4197,7 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
                     rho_water=1000.0,
                     rho_air=1.225,
                     sensor_height=1.0,
-                    noise_level=0.0,
+                    noise_level=float(config.get("hydro_gravity_noise_level", 0.02)),
                     seed=seed,
                     verbose=False,
                 )
@@ -3598,84 +4254,568 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def render_hydro_multigeophys_tab() -> None:
-    st.subheader("Hydro to Geophysics")
-    st.caption("Generalized from examples/Ex_hydro_to_multigeophys.ipynb")
+# ---------------------------------------------------------------------------
+# Step-based workflow helpers
+# ---------------------------------------------------------------------------
+
+def _load_zip_to_tempdir(uploaded_zip) -> str:
+    """Extract an uploaded .zip file into a temporary directory. Return the extracted root path."""
+    import zipfile
+    tmp_dir = tempfile.mkdtemp(prefix="phgx_hydro_")
+    with zipfile.ZipFile(uploaded_zip, "r") as zf:
+        zf.extractall(tmp_dir)
+    # If the zip contains a single top-level directory, return that instead
+    entries = [e for e in Path(tmp_dir).iterdir()]
+    if len(entries) == 1 and entries[0].is_dir():
+        return str(entries[0])
+    return tmp_dir
+
+
+def _detect_hydro_structure(root_path: str) -> Dict[str, Any]:
+    """Inspect a hydro model directory and return a summary dict with validity flags.
+
+    The function auto-detects the data format (npy / modflow / parflow) and stores
+    it under the ``data_format`` key so that downstream code can branch accordingly.
+    """
+    data_dir = Path(root_path)
+    summary: Dict[str, Any] = {
+        "valid": False,
+        "path": str(data_dir),
+        "data_format": "unknown",
+        "missing_files": [],
+        "snapshot_count": None,
+        "water_shape": None,
+        "porosity_shape": None,
+        "bot_shape": None,
+        "grid_info": "",
+        "error": "",
+    }
+
+    fmt = _detect_hydro_data_format(data_dir)
+    summary["data_format"] = fmt
+
+    if fmt == "npy":
+        # Standard pre-processed check
+        required = ["Watercontent.npy", "Porosity.npy", "top.txt", "bot.npy"]
+        missing = [name for name in required if not (data_dir / name).exists()]
+        summary["missing_files"] = missing
+        if missing:
+            return summary
+        try:
+            import numpy as np
+            water = np.load(data_dir / "Watercontent.npy", mmap_mode="r")
+            porosity = np.load(data_dir / "Porosity.npy", mmap_mode="r")
+            bot = np.load(data_dir / "bot.npy", mmap_mode="r")
+            summary["water_shape"] = tuple(int(v) for v in water.shape)
+            summary["porosity_shape"] = tuple(int(v) for v in porosity.shape)
+            summary["bot_shape"] = tuple(int(v) for v in bot.shape)
+            summary["snapshot_count"] = int(water.shape[0]) if water.ndim >= 1 else 0
+            summary["valid"] = bool(water.ndim >= 3 and porosity.ndim >= 3 and bot.ndim >= 2)
+            if water.ndim >= 3:
+                summary["grid_info"] = f"{water.shape[1]} x {water.shape[2]} cells, {water.shape[0]} timesteps"
+        except Exception as exc:  # noqa: BLE001
+            summary["error"] = str(exc)
+
+    elif fmt == "modflow":
+        mf_info = _detect_modflow_info(data_dir)
+        summary["modflow_info"] = mf_info
+        summary["valid"] = mf_info["has_watercontent"]
+        if mf_info["has_watercontent"]:
+            summary["grid_info"] = "MODFLOW binary WaterContent detected"
+        else:
+            summary["error"] = "WaterContent binary file not found in MODFLOW directory."
+
+    elif fmt == "parflow":
+        pf_info = _detect_parflow_info(data_dir)
+        summary["parflow_info"] = pf_info
+        summary["valid"] = pf_info["num_satur_files"] > 0 and pf_info["has_porosity"]
+        if summary["valid"]:
+            summary["grid_info"] = (
+                f"ParFlow run '{pf_info['run_name']}' – "
+                f"{pf_info['num_satur_files']} saturation files"
+            )
+        else:
+            missing_items = []
+            if pf_info["num_satur_files"] == 0:
+                missing_items.append("saturation .pfb files")
+            if not pf_info["has_porosity"]:
+                missing_items.append("porosity .pfb file")
+            summary["error"] = "Missing: " + ", ".join(missing_items)
+    else:
+        summary["error"] = (
+            "Could not detect data format. Expected one of:\n"
+            "• Pre-processed: Watercontent.npy, Porosity.npy, top.txt, bot.npy\n"
+            "• MODFLOW: WaterContent binary + mfsim.nam / .nam files\n"
+            "• ParFlow: *.out.satur.*.pfb + porosity.pfb files"
+        )
+
+    return summary
+
+
+def _get_planned_methods() -> List[str]:
+    """Return the list of methods the user has selected."""
+    return list(st.session_state.hydro_methods)
+
+
+def _hydro_step_status() -> Dict[str, Any]:
+    """Compute validation status for each workflow step."""
+    summary = st.session_state.get("hydro_data_summary")
+    data_ok = summary is not None and summary.get("valid", False)
+    methods = _get_planned_methods()
+    methods_ok = len(methods) > 0
+    root = st.session_state.get("hydro_root")
+    has_both_points = (
+        st.session_state.get("hydro_point1_x") is not None
+        and st.session_state.get("hydro_point1_y") is not None
+        and st.session_state.get("hydro_point2_x") is not None
+        and st.session_state.get("hydro_point2_y") is not None
+    )
+    profile_ok = root is not None and Path(root).exists() and has_both_points
+    has_results = st.session_state.hydro_last_run is not None
+    return {
+        "data_ok": data_ok,
+        "methods_ok": methods_ok,
+        "profile_ok": profile_ok,
+        "all_valid": data_ok and methods_ok and profile_ok,
+        "has_results": has_results,
+        "methods": methods,
+    }
+
+
+def _render_status_strip() -> None:
+    """Render the persistent status strip at the top of the workflow."""
+    status = _hydro_step_status()
+    current = st.session_state.get("hydro_active_step", 1)
+
+    step_defs = [
+        (1, "Data", status["data_ok"]),
+        (2, "Method", status["methods_ok"]),
+        (3, "Profile", status["profile_ok"]),
+        (4, "Run", status["all_valid"]),
+        (5, "Results", status["has_results"]),
+    ]
+
+    html_parts = []
+    for num, label, ok in step_defs:
+        if num == current:
+            cls = "active"
+        elif ok:
+            cls = "done"
+        else:
+            cls = ""
+        check = "&#10003;" if ok and num != current else ""
+        html_parts.append(
+            f'<div class="hydro-step-indicator {cls}">'
+            f'<span class="hydro-step-num">{check if check else num}</span>'
+            f'{label}</div>'
+        )
 
     st.markdown(
-        """
-Use your own hydro-model folder, choose one method (or batch), pick two profile points from the surface map,
-and run forward geophysical responses.
-"""
+        f'<div class="hydro-status-strip">{"".join(html_parts)}</div>',
+        unsafe_allow_html=True,
     )
 
-    st.markdown("### 1) Data Folder and Output")
-    col_path, col_detect, col_out = st.columns([2, 2, 2])
-    with col_path:
-        st.text_input(
-            "Hydro data directory",
-            key="hydro_data_dir",
-            help="Folder containing Watercontent.npy, Porosity.npy, top.txt, bot.npy",
-        )
-
-    candidates = _discover_hydro_data_dirs(st.session_state.hydro_data_dir)
-    candidate_labels = ["(keep manual path)"] + [str(p) for p in candidates]
-    with col_detect:
-        detected_pick = st.selectbox("Detected data folders", options=candidate_labels, index=0)
-        if detected_pick != "(keep manual path)" and detected_pick != st.session_state.hydro_data_dir:
-            st.session_state.hydro_data_dir = detected_pick
+    # Step navigation buttons (real Streamlit buttons for interactivity)
+    cols = st.columns(5)
+    step_labels = ["1. Data", "2. Method", "3. Profile", "4. Run", "5. Results"]
+    for i, (col, label) in enumerate(zip(cols, step_labels), 1):
+        if col.button(
+            label,
+            key=f"hydro_nav_step_{i}",
+            use_container_width=True,
+            type="primary" if i == current else "secondary",
+        ):
+            st.session_state.hydro_active_step = i
             st.rerun()
 
-    with col_out:
-        st.text_input("Output directory", key="hydro_output_dir")
 
-    resolved_data_dir = _resolve_user_path(st.session_state.hydro_data_dir)
-    inspect = _inspect_hydro_input_dir(resolved_data_dir)
-    if inspect["ok"]:
-        st.success(f"Input ready: `{resolved_data_dir}`")
-    else:
-        if inspect["missing"]:
-            missing = ", ".join(inspect["missing"])
-            st.warning(f"Missing required input files in `{resolved_data_dir}`: {missing}")
-        elif inspect["error"]:
-            st.warning(f"Could not inspect hydro inputs: {inspect['error']}")
+# ---------------------------------------------------------------------------
+# Step 1: Data (card-based source picker)
+# ---------------------------------------------------------------------------
 
-    if inspect["ok"]:
-        _render_surface_picker(resolved_data_dir)
+def _set_data_from_accessor(acc, resolved: str, source: str, label: str) -> None:
+    """Shared helper: validate via accessor and store results in session_state."""
+    ok, summary, errors = acc.validate()
+    st.session_state.hydro_accessor = acc
+    st.session_state.hydro_data_summary = {
+        "valid": ok, "path": resolved, **summary,
+        "missing_files": [], "error": "; ".join(errors) if errors else "",
+    }
+    st.session_state.hydro_root = resolved
+    st.session_state.hydro_data_source = source
+    st.session_state.hydro_data_source_label = label
+    st.session_state.hydro_data_dir = resolved
 
-    st.markdown("### 2) Method Setup")
-    st.radio(
-        "Execution style",
-        options=["Single method", "Batch methods"],
-        key="hydro_run_style",
+
+def _render_data_step() -> None:
+    """Step 1 - Data: card-based source picker with multi-format support."""
+    st.markdown("##### Choose your data source")
+
+    # --- Data format selector ---
+    fmt_options = ["Auto-detect", "Pre-processed (.npy)", "MODFLOW", "ParFlow"]
+    fmt_idx = fmt_options.index(st.session_state.get("hydro_data_format_choice", "Auto-detect"))
+    chosen_fmt = st.radio(
+        "Data format",
+        fmt_options,
+        index=fmt_idx,
+        key="hydro_fmt_radio",
         horizontal=True,
+        help=(
+            "**Auto-detect** inspects the directory automatically.  \n"
+            "**Pre-processed** expects Watercontent.npy, Porosity.npy, top.txt, bot.npy.  \n"
+            "**MODFLOW** reads binary WaterContent + flopy-based porosity.  \n"
+            "**ParFlow** reads .pfb saturation/porosity files."
+        ),
+    )
+    st.session_state.hydro_data_format_choice = chosen_fmt
+
+    on_cloud = _is_streamlit_cloud()
+    current_source = st.session_state.get("hydro_data_source", None)
+
+    # Selection via columns of buttons
+    btn_cols = st.columns(3 if not on_cloud else 2)
+
+    with btn_cols[0]:
+        st.markdown(
+            '<div style="text-align:center;font-size:2rem;">&#128230;</div>'
+            '<div style="text-align:center;font-size:0.8rem;color:#64748b;margin-bottom:0.3rem;">'
+            'Treeline catchment demo dataset included in the repository</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("Example (bundled)", key="hydro_src_example",
+                      use_container_width=True,
+                      type="primary" if current_source == "example" else "secondary"):
+            example_path = CURRENT_DIR / "data"
+            resolved = str(example_path.resolve())
+            if _has_hydro_required_files(example_path):
+                if DATA_ACCESS_AVAILABLE:
+                    _set_data_from_accessor(LocalHydroAccessor(resolved), resolved, "example", "Example (bundled)")
+                else:
+                    st.session_state.hydro_data_summary = _detect_hydro_structure(resolved)
+                    st.session_state.hydro_root = resolved
+                    st.session_state.hydro_data_source = "example"
+                    st.session_state.hydro_data_source_label = "Example (bundled)"
+                    st.session_state.hydro_data_dir = resolved
+                st.rerun()
+            else:
+                st.warning("Example data not found. Try GitHub/HTTP instead.")
+
+    with btn_cols[1]:
+        st.markdown(
+            '<div style="text-align:center;font-size:2rem;">&#127760;</div>'
+            '<div style="text-align:center;font-size:0.8rem;color:#64748b;margin-bottom:0.3rem;">'
+            'Download from a remote URL on demand; cached locally</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("GitHub / HTTP", key="hydro_src_http",
+                      use_container_width=True,
+                      type="primary" if current_source == "http" else "secondary"):
+            st.session_state.hydro_data_source = "http"
+            st.rerun()
+
+    if not on_cloud and len(btn_cols) > 2:
+        with btn_cols[2]:
+            st.markdown(
+                '<div style="text-align:center;font-size:2rem;">&#128193;</div>'
+                '<div style="text-align:center;font-size:0.8rem;color:#64748b;margin-bottom:0.3rem;">'
+                'Read directly from a folder on your machine</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button("Local path", key="hydro_src_local",
+                          use_container_width=True,
+                          type="primary" if current_source == "local" else "secondary"):
+                st.session_state.hydro_data_source = "local"
+                st.rerun()
+
+    # --- Source-specific controls ---
+    if current_source == "http":
+        st.markdown("---")
+        if not DATA_ACCESS_AVAILABLE:
+            st.error(f"The `data_access` module could not be imported.  \n**Reason:** {_DATA_ACCESS_ERROR}")
+        else:
+            custom_url = st.text_input(
+                "Base URL (folder containing the required .npy / .txt files)",
+                value=st.session_state.get("hydro_custom_url", ""),
+                key="hydro_custom_url_input",
+                placeholder="https://raw.githubusercontent.com/user/repo/branch/data",
+                help=(
+                    "Enter the URL of a directory that contains "
+                    "Watercontent.npy, Porosity.npy, top.txt, and bot.npy. "
+                    "Each file will be downloaded as `<base_url>/<filename>`."
+                ),
+            )
+            col_dl, col_clr = st.columns([3, 1])
+            if col_dl.button("Download & validate", key="hydro_http_custom_load",
+                             use_container_width=True, type="primary"):
+                url = custom_url.strip().rstrip("/")
+                if not url:
+                    st.error("Please enter a URL.")
+                else:
+                    custom_entry = {
+                        "id": "_custom_url",
+                        "name": "Custom URL",
+                        "base_url": url,
+                        "files": list(REQUIRED_FILES),
+                    }
+                    acc = HttpHydroAccessor(custom_entry)
+                    with st.spinner("Downloading files (cached after first fetch)..."):
+                        ok, summary, errors = acc.validate()
+                    if ok:
+                        work_dir = tempfile.mkdtemp(prefix="phgx_http_")
+                        local_dir = acc.materialize(list(REQUIRED_FILES), work_dir)
+                        _set_data_from_accessor(acc, local_dir, "http", f"Custom ({url})")
+                    else:
+                        st.session_state.hydro_accessor = acc
+                        st.session_state.hydro_data_summary = {
+                            "valid": False, "path": url, **summary,
+                            "missing_files": [], "error": "; ".join(errors),
+                        }
+                    st.session_state.hydro_custom_url = url
+                    st.rerun()
+            if col_clr.button("Clear cache", key="hydro_http_custom_clear", use_container_width=True):
+                url = custom_url.strip().rstrip("/")
+                if url:
+                    custom_entry = {
+                        "id": "_custom_url", "name": "Custom URL",
+                        "base_url": url, "files": list(REQUIRED_FILES),
+                    }
+                    n = HttpHydroAccessor(custom_entry).clear_cache()
+                    st.success(f"Cleared {n} cached file(s).")
+
+    elif current_source == "local":
+        st.markdown("---")
+        if on_cloud:
+            st.error("Local paths are not available on Streamlit Cloud.")
+        else:
+            manual_path = st.text_input(
+                "Hydro data directory", value=st.session_state.get("hydro_data_dir", "data"),
+                key="hydro_manual_path_input",
+                help="Folder with model data (auto-detected or specify format above)",
+            )
+            resolved_path = _resolve_user_path(manual_path)
+
+            # Determine effective format
+            if chosen_fmt == "Auto-detect":
+                eff_fmt = _detect_hydro_data_format(resolved_path)
+                if eff_fmt != "unknown":
+                    st.info(f"Auto-detected format: **{eff_fmt.upper()}**")
+            else:
+                eff_fmt = {"Pre-processed (.npy)": "npy", "MODFLOW": "modflow", "ParFlow": "parflow"}[chosen_fmt]
+
+            # --- Format-specific configuration ---
+            if eff_fmt == "modflow":
+                _render_modflow_config(resolved_path)
+            elif eff_fmt == "parflow":
+                _render_parflow_config(resolved_path)
+            else:
+                # npy or unknown — original discovery flow
+                candidates = _discover_hydro_data_dirs(manual_path)
+                if candidates:
+                    detected_pick = st.selectbox(
+                        "Detected folders", [str(p) for p in candidates], index=0,
+                        key="hydro_detected_folders",
+                    )
+                else:
+                    detected_pick = manual_path
+
+                if st.button("Use this path", key="hydro_use_local_path",
+                             use_container_width=True, type="primary"):
+                    resolved = str(_resolve_user_path(detected_pick))
+                    if DATA_ACCESS_AVAILABLE:
+                        _set_data_from_accessor(LocalHydroAccessor(resolved), resolved, "local", "Local path")
+                    else:
+                        st.session_state.hydro_data_summary = _detect_hydro_structure(resolved)
+                        st.session_state.hydro_root = resolved
+                        st.session_state.hydro_data_source = "local"
+                        st.session_state.hydro_data_source_label = "Local path"
+                        st.session_state.hydro_data_dir = resolved
+                    st.rerun()
+
+    # --- Data summary ---
+    _render_data_summary()
+
+
+def _render_modflow_config(data_dir: Path) -> None:
+    """Render MODFLOW-specific configuration controls and Load button."""
+    mf_info = _detect_modflow_info(data_dir)
+    st.markdown("**MODFLOW configuration**")
+
+    if not mf_info["has_watercontent"]:
+        st.warning("No `WaterContent` binary file found in the selected directory.")
+
+    c1, c2, c3 = st.columns(3)
+    idomain_file = c1.text_input(
+        "Idomain file",
+        value=st.session_state.get("hydro_mf_idomain", mf_info.get("idomain_file", "id.txt")),
+        key="hydro_mf_idomain_input",
+        help="Text or .npy file defining active cells (e.g. id.txt)",
+    )
+    model_name = c2.text_input(
+        "Model name",
+        value=st.session_state.get("hydro_mf_model_name", mf_info.get("model_name", "")),
+        key="hydro_mf_model_name_input",
+        help="MODFLOW model name used by flopy (e.g. TLnewtest2sfb2)",
+    )
+    nlay = c3.number_input(
+        "Number of layers",
+        min_value=1, max_value=100,
+        value=int(st.session_state.get("hydro_mf_nlay", 3)),
+        key="hydro_mf_nlay_input",
+        help="Number of vertical layers in the UZF water-content output",
     )
 
-    methods_for_run: List[str] = []
-    if st.session_state.hydro_run_style == "Single method":
-        st.selectbox("Select one method", options=HYDRO_RESPONSE_METHODS, key="hydro_single_method")
-        methods_for_run = [st.session_state.hydro_single_method]
-    else:
-        c1, c2, c3, c4 = st.columns(4)
-        if c1.button("All methods", key="hydro_btn_all", width="stretch"):
-            st.session_state.hydro_methods = HYDRO_RESPONSE_METHODS.copy()
-        if c2.button("ERT + SRT", key="hydro_btn_ertsrt", width="stretch"):
-            st.session_state.hydro_methods = ["Profile", "ERT", "SRT"]
-        if c3.button("EM + Gravity", key="hydro_btn_emg", width="stretch"):
-            st.session_state.hydro_methods = ["Profile", "TDEM", "FDEM", "Gravity"]
-        if c4.button("Clear", key="hydro_btn_clear", width="stretch"):
-            st.session_state.hydro_methods = []
+    if st.button("Load & convert MODFLOW data", key="hydro_load_modflow",
+                  use_container_width=True, type="primary"):
+        st.session_state.hydro_mf_idomain = idomain_file
+        st.session_state.hydro_mf_model_name = model_name
+        st.session_state.hydro_mf_nlay = nlay
+        with st.spinner("Reading MODFLOW binary files and converting to .npy …"):
+            try:
+                out_dir = _convert_modflow_to_npy(
+                    modflow_dir=str(data_dir),
+                    idomain_file=idomain_file,
+                    model_name=model_name,
+                    nlay=int(nlay),
+                )
+                # Store as if it were a standard .npy directory
+                summary = _detect_hydro_structure(out_dir)
+                summary["data_format"] = "modflow"
+                summary["original_path"] = str(data_dir)
+                st.session_state.hydro_data_summary = summary
+                st.session_state.hydro_root = out_dir
+                st.session_state.hydro_data_source = "local"
+                st.session_state.hydro_data_source_label = "MODFLOW (converted)"
+                st.session_state.hydro_data_dir = out_dir
+                st.rerun()
+            except Exception as exc:
+                st.error(f"MODFLOW conversion failed: {exc}")
 
-        st.multiselect(
-            "Choose methods",
-            options=HYDRO_RESPONSE_METHODS,
-            key="hydro_methods",
-            help="Pick one or more methods to run in one batch.",
+
+def _render_parflow_config(data_dir: Path) -> None:
+    """Render ParFlow-specific configuration controls and Load button."""
+    pf_info = _detect_parflow_info(data_dir)
+    st.markdown("**ParFlow configuration**")
+
+    if pf_info["num_satur_files"] == 0:
+        st.warning("No saturation `.pfb` files found in the selected directory.")
+
+    run_name = st.text_input(
+        "Run name",
+        value=st.session_state.get("hydro_pf_run_name", pf_info.get("run_name", "")),
+        key="hydro_pf_run_name_input",
+        help="The ParFlow run name prefix (e.g. test2)",
+    )
+    mc = st.columns(3)
+    mc[0].metric("Saturation files", pf_info["num_satur_files"])
+    mc[1].metric("Porosity", "found" if pf_info["has_porosity"] else "missing")
+    mc[2].metric("Mask", "found" if pf_info["has_mask"] else "not found")
+
+    if st.button("Load & convert ParFlow data", key="hydro_load_parflow",
+                  use_container_width=True, type="primary"):
+        st.session_state.hydro_pf_run_name = run_name
+        with st.spinner("Reading ParFlow .pfb files and converting to .npy …"):
+            try:
+                out_dir = _convert_parflow_to_npy(
+                    parflow_dir=str(data_dir),
+                    run_name=run_name,
+                )
+                summary = _detect_hydro_structure(out_dir)
+                summary["data_format"] = "parflow"
+                summary["original_path"] = str(data_dir)
+                st.session_state.hydro_data_summary = summary
+                st.session_state.hydro_root = out_dir
+                st.session_state.hydro_data_source = "local"
+                st.session_state.hydro_data_source_label = "ParFlow (converted)"
+                st.session_state.hydro_data_dir = out_dir
+                st.rerun()
+            except Exception as exc:
+                st.error(f"ParFlow conversion failed: {exc}")
+
+
+def _render_data_summary() -> None:
+    """Show validated data summary."""
+    summary = st.session_state.get("hydro_data_summary")
+    if not summary:
+        if st.session_state.get("hydro_root") is None:
+            st.info("No data loaded yet. Select a source above and load it.")
+        return
+
+    if summary.get("valid"):
+        st.markdown("---")
+        data_fmt = summary.get("data_format", "npy")
+        fmt_label = {"npy": "Pre-processed .npy", "modflow": "MODFLOW", "parflow": "ParFlow"}.get(data_fmt, data_fmt)
+        st.markdown(
+            '<div class="phgx-card">'
+            '<strong>Detected data summary</strong></div>',
+            unsafe_allow_html=True,
         )
-        methods_for_run = list(st.session_state.hydro_methods)
+        mc = st.columns(5)
+        mc[0].metric("Format", fmt_label)
+        mc[1].metric("Snapshots", summary.get("snapshot_count", "?"))
+        mc[2].metric("Grid", summary.get("grid_info", "?"))
+        mc[3].metric("Water shape", str(summary.get("water_shape", "?")))
+        mc[4].metric("Source", st.session_state.get("hydro_data_source_label", "?"))
+        if summary.get("original_path"):
+            st.caption(f"Original model directory: `{summary['original_path']}`")
+    else:
+        err = summary.get("error", "")
+        missing = summary.get("missing_files", [])
+        if missing:
+            st.error(f"Missing required files: {', '.join(missing)}")
+        elif err:
+            st.error(f"Error: {err}")
+        else:
+            st.error("Data not valid. Expected water/porosity >=3D arrays and bot >=2D.")
 
-    st.caption(f"Planned methods: {methods_for_run}")
 
+# ---------------------------------------------------------------------------
+# Step 2: Method (pill toggles)
+# ---------------------------------------------------------------------------
+
+_METHOD_ICONS: Dict[str, str] = {
+    "Profile": "&#9776;",
+    "ERT": "&#9889;",
+    "SRT": "&#127925;",
+    "TDEM": "&#128225;",
+    "FDEM": "&#128246;",
+    "Gravity": "&#127758;",
+}
+
+
+def _render_method_step() -> None:
+    """Step 2 - Select methods, then show per-method setup + rock physics."""
+    st.markdown("##### Select Geophysical Methods")
+
+    st.multiselect(
+        "Methods",
+        options=HYDRO_RESPONSE_METHODS,
+        key="hydro_methods",
+        help="Choose one or more geophysical response types to compute.",
+    )
+
+    # Quick-preset buttons
+    p1, p2, p3, p4 = st.columns(4)
+    if p1.button("Select All", key="hydro_btn_all3", use_container_width=True):
+        st.session_state.hydro_methods = HYDRO_RESPONSE_METHODS.copy()
+        st.rerun()
+    if p2.button("ERT + SRT", key="hydro_btn_ertsrt3", use_container_width=True):
+        st.session_state.hydro_methods = ["Profile", "ERT", "SRT"]
+        st.rerun()
+    if p3.button("EM + Gravity", key="hydro_btn_emg3", use_container_width=True):
+        st.session_state.hydro_methods = ["Profile", "TDEM", "FDEM", "Gravity"]
+        st.rerun()
+    if p4.button("Clear All", key="hydro_btn_clear3", use_container_width=True):
+        st.session_state.hydro_methods = []
+        st.rerun()
+
+    methods = list(st.session_state.hydro_methods)
+    if not methods:
+        st.warning("Select at least one method to proceed.")
+        return
+
+    method_set = set(methods)
+
+    # Sanitise stored session values
     scheme_value = str(st.session_state.get("hydro_ert_scheme", "wa")).strip().lower()
     st.session_state.hydro_ert_scheme = scheme_value if scheme_value in {"wa", "dd"} else "wa"
     for key_name, min_value in [
@@ -3688,157 +4828,235 @@ and run forward geophysical responses.
         except Exception:
             st.session_state[key_name] = min_value
 
-    st.markdown("### 3) Snapshot and Profile Points")
-    core1, core2, core3, core4, core5 = st.columns(5)
-    with core1:
-        st.number_input("Snapshot index", min_value=0, step=1, key="hydro_snapshot_index")
-    with core2:
-        st.number_input("Point 1 X", step=1.0, key="hydro_point1_x")
-    with core3:
-        st.number_input("Point 1 Y", step=1.0, key="hydro_point1_y")
-    with core4:
-        st.number_input("Point 2 X", step=1.0, key="hydro_point2_x")
-    with core5:
-        st.number_input("Point 2 Y", step=1.0, key="hydro_point2_y")
-    st.caption("Pick P1/P2 from the surface map or enter exact coordinates here.")
+    st.markdown("---")
 
-    st.markdown("### 4) Settings")
-    st.caption("Using defaults. Expand only if you want to change configuration.")
-    st.caption(
-        "Default summary: "
-        f"Profile points={int(st.session_state.hydro_num_points)}, "
-        f"Station count={int(st.session_state.hydro_station_count)}, "
-        f"ERT array={str(st.session_state.hydro_ert_scheme).upper()}."
-    )
-
-    with st.expander("Customize settings (optional)", expanded=False):
-        st.markdown("#### Profile and Sampling")
+    # Build one tab per selected method (skip Profile – it's just sampling)
+    tab_methods = [m for m in methods if m != "Profile"]
+    if not tab_methods:
+        # Only Profile selected – show sampling settings inline
         st.number_input("Profile points", min_value=50, max_value=2000, step=10, key="hydro_num_points")
+        st.number_input("Random seed", min_value=0, step=1, key="hydro_seed")
+        return
+
+    method_tabs = st.tabs(tab_methods)
+
+    # Track which rock-physics group has already been rendered (avoid duplicate keys)
+    resistivity_rendered = False
+
+    for tab, method in zip(method_tabs, tab_methods):
+        with tab:
+            if method == "ERT":
+                _render_ert_tab()
+                resistivity_rendered = True
+            elif method == "SRT":
+                _render_srt_tab()
+            elif method == "TDEM":
+                _render_tdem_tab(show_rock_physics=not resistivity_rendered)
+                resistivity_rendered = True
+            elif method == "FDEM":
+                _render_fdem_tab(show_rock_physics=not resistivity_rendered)
+                resistivity_rendered = True
+            elif method == "Gravity":
+                _render_gravity_tab()
+
+    # Shared settings
+    st.markdown("---")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.number_input("Profile points", min_value=50, max_value=2000, step=10, key="hydro_num_points")
+    with c2:
+        st.number_input("Random seed", min_value=0, step=1, key="hydro_seed")
+    if method_set & {"TDEM", "FDEM", "Gravity"}:
         st.number_input("Station count (TDEM/FDEM/Gravity)", min_value=4, step=1, key="hydro_station_count")
 
-        st.markdown("#### Experiment Setup")
-        ex_ert, ex_srt = st.columns(2)
-        with ex_ert:
-            st.markdown("**ERT acquisition**")
-            st.selectbox(
-                "Array type",
-                options=["wa", "dd"],
-                key="hydro_ert_scheme",
-                format_func=lambda v: "WA (Wenner-Alpha)" if v == "wa" else "DD (Dipole-Dipole)",
-                help="Choose acquisition geometry for synthetic ERT data.",
-            )
-            ert_c1, ert_c2 = st.columns(2)
-            with ert_c1:
-                st.number_input("Electrode count", min_value=4, step=1, key="hydro_ert_num_electrodes")
-            with ert_c2:
-                st.number_input("Electrode spacing (m)", min_value=0.2, step=0.1, key="hydro_ert_electrode_spacing")
-            st.number_input("ERT line start X (m)", step=0.5, key="hydro_ert_electrode_start")
-            st.caption("WA is stable for layered settings; DD often highlights lateral contrasts.")
+    # Natural language dialog (collapsed)
+    with st.expander("Natural Language Parameter Control", expanded=False):
+        _render_dialog_control()
 
-        with ex_srt:
-            st.markdown("**SRT acquisition**")
-            srt_c1, srt_c2 = st.columns(2)
-            with srt_c1:
-                st.number_input("Sensor count", min_value=4, step=1, key="hydro_srt_num_sensors")
-            with srt_c2:
-                st.number_input("Sensor spacing (m)", min_value=0.2, step=0.1, key="hydro_srt_sensor_spacing")
-            st.number_input(
-                "SRT source line start X (m)",
-                step=0.5,
-                key="hydro_srt_sensor_start",
-                help="First source is generated near this X location.",
-            )
-            st.number_input("Shot interval (every N sensors)", min_value=1, step=1, key="hydro_srt_shot_distance")
-            st.caption("Smaller shot intervals give denser source coverage but require more compute.")
-        st.caption("Noise is disabled for Hydro -> Geophysics forward responses (deterministic outputs).")
 
-        st.markdown("#### Rock Physics Parameters")
-        rp_ert_tab, rp_srt_tab = st.tabs(["Resistivity model", "Velocity model"])
-        with rp_ert_tab:
-            st.caption("Set layer-wise electrical parameters used to convert hydro outputs to resistivity.")
-            rp1, rp2, rp3 = st.columns(3)
-            with rp1:
-                st.markdown("**Top layer**")
-                st.number_input("rho_sat (ohm-m)", min_value=1.0, step=10.0, key="hydro_rho_sat_top")
-                st.number_input("Archie n", min_value=0.1, step=0.1, key="hydro_archie_n_top")
-                st.number_input("sigma_s (S/m)", min_value=0.0, step=0.0005, format="%.4f", key="hydro_sigma_s_top")
-            with rp2:
-                st.markdown("**Middle layer**")
-                st.number_input("rho_sat (ohm-m)", min_value=1.0, step=10.0, key="hydro_rho_sat_mid")
-                st.number_input("Archie n", min_value=0.1, step=0.1, key="hydro_archie_n_mid")
-                st.number_input("sigma_s (S/m)", min_value=0.0, step=0.0005, format="%.4f", key="hydro_sigma_s_mid")
-            with rp3:
-                st.markdown("**Bottom layer**")
-                st.number_input("rho_sat (ohm-m)", min_value=1.0, step=10.0, key="hydro_rho_sat_bot")
-                st.number_input("Archie n", min_value=0.1, step=0.1, key="hydro_archie_n_bot")
-                st.number_input("sigma_s (S/m)", min_value=0.0, step=0.0005, format="%.4f", key="hydro_sigma_s_bot")
+# ---------------------------------------------------------------------------
+# Per-method tabs for Step 2
+# ---------------------------------------------------------------------------
 
-        with rp_srt_tab:
-            st.caption("Set layer-wise elastic parameters used in synthetic velocity modeling.")
-            sv1, sv2, sv3 = st.columns(3)
-            with sv1:
-                st.markdown("**Top layer**")
-                st.number_input("Bulk modulus", min_value=1.0, step=1.0, key="hydro_top_bulk_modulus")
-                st.number_input("Shear modulus", min_value=1.0, step=1.0, key="hydro_top_shear_modulus")
-                st.number_input("Mineral density", min_value=500.0, step=10.0, key="hydro_top_mineral_density")
-                st.number_input("Depth factor", min_value=0.1, step=0.1, key="hydro_top_depth")
-            with sv2:
-                st.markdown("**Middle layer**")
-                st.number_input("Bulk modulus", min_value=1.0, step=1.0, key="hydro_mid_bulk_modulus")
-                st.number_input("Shear modulus", min_value=1.0, step=1.0, key="hydro_mid_shear_modulus")
-                st.number_input("Mineral density", min_value=500.0, step=10.0, key="hydro_mid_mineral_density")
-                st.number_input("Aspect ratio", min_value=0.001, max_value=1.0, step=0.01, key="hydro_mid_aspect_ratio")
-            with sv3:
-                st.markdown("**Bottom layer**")
-                st.number_input("Bulk modulus", min_value=1.0, step=1.0, key="hydro_bot_bulk_modulus")
-                st.number_input("Shear modulus", min_value=1.0, step=1.0, key="hydro_bot_shear_modulus")
-                st.number_input("Mineral density", min_value=500.0, step=10.0, key="hydro_bot_mineral_density")
-                st.number_input("Aspect ratio", min_value=0.001, max_value=1.0, step=0.01, key="hydro_bot_aspect_ratio")
+def _hd(key: str, fallback: Any = 0.0) -> Any:
+    """Read a hydro default: session_state first, then HYDRO_NOTEBOOK_DEFAULTS, then fallback."""
+    if key in st.session_state:
+        return st.session_state[key]
+    return HYDRO_NOTEBOOK_DEFAULTS.get(key, fallback)
 
-    st.markdown("### 5) Optional Dialog Control")
-    if st.session_state.context_agent:
-        st.info("LLM is active. You can describe Settings in natural language and auto-fill the controls below.")
+
+def _render_resistivity_rock_physics() -> None:
+    """Shared resistivity rock-physics inputs (Archie's Law), used by ERT/TDEM/FDEM."""
+    st.markdown("**Rock Physics — Resistivity Model (Archie's Law)**")
+    st.caption("Layer-wise: rho_sat (saturated resistivity), n (cementation exponent), sigma_s (surface conductivity).")
+    rp1, rp2, rp3 = st.columns(3)
+    with rp1:
+        st.markdown("*Top layer*")
+        st.number_input("rho_sat", min_value=1.0, step=10.0, value=float(_hd("hydro_rho_sat_top", 100.0)), key="hydro_rho_sat_top")
+        st.number_input("Archie n", min_value=0.1, step=0.1, value=float(_hd("hydro_archie_n_top", 2.2)), key="hydro_archie_n_top")
+        st.number_input("sigma_s", min_value=0.0, step=0.0005, format="%.4f", value=float(_hd("hydro_sigma_s_top", 0.002)), key="hydro_sigma_s_top")
+    with rp2:
+        st.markdown("*Middle layer*")
+        st.number_input("rho_sat", min_value=1.0, step=10.0, value=float(_hd("hydro_rho_sat_mid", 500.0)), key="hydro_rho_sat_mid")
+        st.number_input("Archie n", min_value=0.1, step=0.1, value=float(_hd("hydro_archie_n_mid", 1.8)), key="hydro_archie_n_mid")
+        st.number_input("sigma_s", min_value=0.0, step=0.0005, format="%.4f", value=float(_hd("hydro_sigma_s_mid", 0.0)), key="hydro_sigma_s_mid")
+    with rp3:
+        st.markdown("*Bottom layer*")
+        st.number_input("rho_sat", min_value=1.0, step=10.0, value=float(_hd("hydro_rho_sat_bot", 2400.0)), key="hydro_rho_sat_bot")
+        st.number_input("Archie n", min_value=0.1, step=0.1, value=float(_hd("hydro_archie_n_bot", 2.5)), key="hydro_archie_n_bot")
+        st.number_input("sigma_s", min_value=0.0, step=0.0005, format="%.4f", value=float(_hd("hydro_sigma_s_bot", 0.0)), key="hydro_sigma_s_bot")
+
+
+def _render_ert_tab() -> None:
+    """ERT acquisition setup + resistivity rock physics."""
+    st.markdown("**Acquisition**")
+    st.selectbox(
+        "Array type", options=["wa", "dd"], key="hydro_ert_scheme",
+        format_func=lambda v: "Wenner-Alpha" if v == "wa" else "Dipole-Dipole",
+    )
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.number_input("Electrodes", min_value=4, step=1, value=int(_hd("hydro_ert_num_electrodes", 72)), key="hydro_ert_num_electrodes")
+    with c2:
+        st.number_input("Spacing (m)", min_value=0.1, step=0.1, value=float(_hd("hydro_ert_electrode_spacing", 1.0)), key="hydro_ert_electrode_spacing")
+    with c3:
+        st.number_input("Start X (m)", min_value=0.0, step=0.5, value=float(_hd("hydro_ert_electrode_start", 15.0)), key="hydro_ert_electrode_start")
+
+    st.markdown("**Noise**")
+    n1, n2, n3 = st.columns(3)
+    with n1:
+        st.number_input("Noise level", min_value=0.0, step=0.005, format="%.4f", value=float(_hd("hydro_ert_noise_level", 0.03)), key="hydro_ert_noise_level")
+    with n2:
+        st.number_input("Relative error", min_value=0.0, step=0.005, format="%.4f", value=float(_hd("hydro_ert_rel_error", 0.03)), key="hydro_ert_rel_error")
+    with n3:
+        st.number_input("Absolute error", min_value=0.0, step=0.0001, format="%.4f", value=float(_hd("hydro_ert_abs_error", 0.0)), key="hydro_ert_abs_error")
+
+    _render_resistivity_rock_physics()
+
+
+def _render_srt_tab() -> None:
+    """SRT acquisition setup + velocity rock physics."""
+    st.markdown("**Acquisition**")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.number_input("Sensors", min_value=4, step=1, value=int(_hd("hydro_srt_num_sensors", 72)), key="hydro_srt_num_sensors")
+    with c2:
+        st.number_input("Spacing (m)", min_value=0.1, step=0.1, value=float(_hd("hydro_srt_sensor_spacing", 1.0)), key="hydro_srt_sensor_spacing")
+    with c3:
+        st.number_input("Start X (m)", min_value=0.0, step=0.5, value=float(_hd("hydro_srt_sensor_start", 15.0)), key="hydro_srt_sensor_start")
+    st.number_input("Shot interval", min_value=1, step=1, value=int(_hd("hydro_srt_shot_distance", 5)), key="hydro_srt_shot_distance")
+
+    st.markdown("**Noise**")
+    s1, s2 = st.columns(2)
+    with s1:
+        st.number_input("Noise level", min_value=0.0, step=0.005, format="%.4f", value=float(_hd("hydro_srt_noise_level", 0.01)), key="hydro_srt_noise_level")
+    with s2:
+        st.number_input("Absolute noise", min_value=0.0, step=0.0001, format="%.6f", value=float(_hd("hydro_srt_noise_abs", 1e-5)), key="hydro_srt_noise_abs")
+
+    st.markdown("**Rock Physics — Velocity Model**")
+    st.caption("Layer-wise elastic parameters: bulk/shear modulus (GPa), mineral density (kg/m³), depth factor or aspect ratio.")
+    sv1, sv2, sv3 = st.columns(3)
+    with sv1:
+        st.markdown("*Top layer*")
+        st.number_input("Bulk mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_top_bulk_modulus", 30.0)), key="hydro_top_bulk_modulus")
+        st.number_input("Shear mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_top_shear_modulus", 20.0)), key="hydro_top_shear_modulus")
+        st.number_input("Density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_top_mineral_density", 2650.0)), key="hydro_top_mineral_density")
+        st.number_input("Depth factor", min_value=0.1, step=0.1, value=float(_hd("hydro_top_depth", 1.0)), key="hydro_top_depth")
+    with sv2:
+        st.markdown("*Middle layer*")
+        st.number_input("Bulk mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_mid_bulk_modulus", 50.0)), key="hydro_mid_bulk_modulus")
+        st.number_input("Shear mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_mid_shear_modulus", 35.0)), key="hydro_mid_shear_modulus")
+        st.number_input("Density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_mid_mineral_density", 2670.0)), key="hydro_mid_mineral_density")
+        st.number_input("Aspect ratio", min_value=0.001, max_value=1.0, step=0.01, value=float(_hd("hydro_mid_aspect_ratio", 0.05)), key="hydro_mid_aspect_ratio")
+    with sv3:
+        st.markdown("*Bottom layer*")
+        st.number_input("Bulk mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_bot_bulk_modulus", 55.0)), key="hydro_bot_bulk_modulus")
+        st.number_input("Shear mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_bot_shear_modulus", 50.0)), key="hydro_bot_shear_modulus")
+        st.number_input("Density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_bot_mineral_density", 2680.0)), key="hydro_bot_mineral_density")
+        st.number_input("Aspect ratio", min_value=0.001, max_value=1.0, step=0.01, value=float(_hd("hydro_bot_aspect_ratio", 0.03)), key="hydro_bot_aspect_ratio")
+
+
+def _render_tdem_tab(show_rock_physics: bool = True) -> None:
+    """TDEM noise + resistivity rock physics (shared with ERT)."""
+    st.markdown("**Noise**")
+    st.number_input("TDEM noise level", min_value=0.0, step=0.005, format="%.4f", value=float(_hd("hydro_tdem_noise_level", 0.03)), key="hydro_tdem_noise_level")
+
+    if show_rock_physics:
+        _render_resistivity_rock_physics()
     else:
-        st.caption("LLM is not initialized. Dialog still works with limited rule-based parsing.")
+        st.info("Resistivity model parameters are configured in the **ERT** tab (shared).")
 
-    st.caption("Examples (click to auto-fill Dialog):")
+
+def _render_fdem_tab(show_rock_physics: bool = True) -> None:
+    """FDEM noise + resistivity rock physics (shared with ERT)."""
+    st.markdown("**Noise**")
+    st.number_input("FDEM noise level", min_value=0.0, step=0.005, format="%.4f", value=float(_hd("hydro_fdem_noise_level", 0.03)), key="hydro_fdem_noise_level")
+
+    if show_rock_physics:
+        _render_resistivity_rock_physics()
+    else:
+        st.info("Resistivity model parameters are configured in the **ERT** tab (shared).")
+
+
+def _render_gravity_tab() -> None:
+    """Gravity noise + density rock physics."""
+    st.markdown("**Noise**")
+    st.number_input("Gravity noise level", min_value=0.0, step=0.005, format="%.4f", value=float(_hd("hydro_gravity_noise_level", 0.02)), key="hydro_gravity_noise_level")
+
+    st.markdown("**Rock Physics — Density Model**")
+    st.caption("Layer-wise density parameters for gravity forward modeling.")
+    gd1, gd2, gd3 = st.columns(3)
+    with gd1:
+        st.markdown("*Top layer*")
+        st.number_input("Grain density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_density_top", 2650.0)), key="hydro_grav_density_top")
+        st.number_input("Pore-fluid density", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_fluid_density_top", 1000.0)), key="hydro_grav_fluid_density_top")
+    with gd2:
+        st.markdown("*Middle layer*")
+        st.number_input("Grain density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_density_mid", 2670.0)), key="hydro_grav_density_mid")
+        st.number_input("Pore-fluid density", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_fluid_density_mid", 1000.0)), key="hydro_grav_fluid_density_mid")
+    with gd3:
+        st.markdown("*Bottom layer*")
+        st.number_input("Grain density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_density_bot", 2680.0)), key="hydro_grav_density_bot")
+        st.number_input("Pore-fluid density", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_fluid_density_bot", 1000.0)), key="hydro_grav_fluid_density_bot")
+
+
+def _render_advanced_settings(methods: Optional[List[str]] = None) -> None:
+    """Legacy wrapper — kept for any remaining callers."""
+    pass
+
+
+def _render_dialog_control() -> None:
+    """Natural-language dialog control for settings."""
+    if st.session_state.context_agent:
+        st.info("LLM is active. Describe settings in natural language.")
+    else:
+        st.caption("LLM not initialized. Rule-based parsing available.")
+
     dialog_examples = [
-        (
-            "Acquisition",
-            "Set ERT array to dd, electrode count 96, spacing 1.5, start 10. "
-            "Set SRT source start 20, shot distance 2, sensor count 80.",
-        ),
-        (
-            "Methods + Rock Physics",
-            "Use methods ERT and SRT only, snapshot index 8, profile points 320, "
-            "point1=(110,70), point2=(90,180). "
-            "Set rho_sat=[120,600,2200], archie_n=[2.1,1.9,2.4], sigma_s=[0.002,0,0].",
-        ),
-        (
-            "Velocity model",
-            "Set velocity model: top bulk 28 shear 18 density 2620 depth 1.2; "
-            "mid bulk 48 shear 33 density 2660 aspect 0.06; "
-            "bot bulk 58 shear 52 density 2690 aspect 0.025.",
-        ),
+        ("Acquisition",
+         "Set ERT array to dd, electrode count 96, spacing 1.5, start 10. "
+         "Set SRT source start 20, shot distance 2, sensor count 80."),
+        ("Methods + RP",
+         "Use methods ERT and SRT only, snapshot index 8, profile points 320, "
+         "point1=(110,70), point2=(90,180). "
+         "Set rho_sat=[120,600,2200], archie_n=[2.1,1.9,2.4]."),
+        ("Velocity",
+         "Set velocity model: top bulk 28 shear 18 density 2620 depth 1.2; "
+         "mid bulk 48 shear 33 density 2660 aspect 0.06; "
+         "bot bulk 58 shear 52 density 2690 aspect 0.025."),
     ]
     ex_cols = st.columns(len(dialog_examples))
-    for idx, (label, example_text) in enumerate(dialog_examples):
-        if ex_cols[idx].button(label, key=f"hydro_dialog_example_{idx}", width="stretch"):
-            st.session_state.hydro_dialog_text = example_text
+    for idx, (label, text) in enumerate(dialog_examples):
+        if ex_cols[idx].button(label, key=f"hydro_dialog_ex3_{idx}", use_container_width=True):
+            st.session_state.hydro_dialog_text = text
             st.rerun()
 
-    st.text_area(
-        "Dialog",
-        key="hydro_dialog_text",
-        height=90,
-        placeholder="Example: set ERT array to dd and set mid_aspect_ratio to 0.06",
-    )
+    st.text_area("Command", key="hydro_dialog_text", height=80,
+                 placeholder="e.g. set rho_sat=[150,600,2000], archie_n=[2.0,1.8,2.5], sigma_s=[0.002,0,0]")
 
     d1, d2 = st.columns([3, 1])
-    apply_dialog = d1.button("Apply dialog command", width="stretch")
-    clear_dialog_history = d2.button("Clear dialog", width="stretch")
-
-    if clear_dialog_history:
+    apply_dialog = d1.button("Apply", key="hydro_apply_dialog3", use_container_width=True, type="primary")
+    if d2.button("Clear", key="hydro_clear_dialog3", use_container_width=True):
         st.session_state.hydro_chat_history = []
         st.session_state.hydro_dialog_text = ""
         st.rerun()
@@ -3848,7 +5066,6 @@ and run forward geophysical responses.
         parser_used = "rule-based"
         updates: Dict[str, Any] = {}
         llm_raw = ""
-
         if st.session_state.context_agent:
             try:
                 llm_updates, llm_raw = _parse_hydro_command_llm(command)
@@ -3857,10 +5074,8 @@ and run forward geophysical responses.
                     parser_used = "llm"
             except Exception:  # noqa: BLE001
                 updates = {}
-
         if not updates:
             updates = _parse_hydro_command_rule_based(command)
-
         if updates:
             _apply_hydro_updates(updates)
             st.session_state.hydro_dialog_text = ""
@@ -3872,35 +5087,194 @@ and run forward geophysical responses.
             st.session_state.hydro_chat_history.append(
                 {"command": command, "parser": "none", "updates": {}, "llm_raw": llm_raw}
             )
-            st.warning("No changes detected from this command.")
+            st.warning("No changes detected.")
 
     if st.session_state.hydro_chat_history:
-        for item in reversed(st.session_state.hydro_chat_history[-6:]):
-            st.markdown(f"**Parser:** {item.get('parser', 'unknown')}")
-            st.markdown(f"- Command: `{item.get('command', '')}`")
-            if item.get("updates"):
-                st.json(item["updates"])
+        with st.expander("Dialog history", expanded=False):
+            for item in reversed(st.session_state.hydro_chat_history[-6:]):
+                st.markdown(f"**{item.get('parser', '?')}**: `{item.get('command', '')}`")
+                if item.get("updates"):
+                    st.json(item["updates"])
+
+
+# ---------------------------------------------------------------------------
+# Step 3: Profile (map-first layout)
+# ---------------------------------------------------------------------------
+
+def _render_profile_step() -> None:
+    """Step 3 - Map-first profile point selection."""
+    st.markdown("##### Pick profile endpoints")
+
+    # Surface map (interactive picking)
+    root = st.session_state.get("hydro_root")
+    if root and Path(root).exists():
+        _render_surface_picker(Path(root))
+    else:
+        st.markdown(
+            '<div class="phgx-card" style="text-align:center; padding:3rem;">'
+            '<div style="font-size:2.5rem; margin-bottom:0.5rem;">&#128506;</div>'
+            '<strong>Surface map will appear here</strong><br>'
+            '<span style="color:#64748b;">Load data in Step 1 first</span>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
+    st.caption("Or enter coordinates manually:")
+
+    # Manual coordinate inputs — use 0.0 as placeholder when not yet picked
+    default_p1x = float(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point1_x", 115.0))
+    default_p1y = float(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point1_y", 70.0))
+    default_p2x = float(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point2_x", 95.0))
+    default_p2y = float(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point2_y", 180.0))
+    cur_p1x = st.session_state.get("hydro_point1_x", default_p1x)
+    cur_p1y = st.session_state.get("hydro_point1_y", default_p1y)
+    cur_p2x = st.session_state.get("hydro_point2_x", default_p2x)
+    cur_p2y = st.session_state.get("hydro_point2_y", default_p2y)
+
+    coord_col, snap_col, reset_col = st.columns([4, 2, 1])
+    with coord_col:
+        pc1, pc2, pc3, pc4 = st.columns(4)
+        with pc1:
+            p1x = st.number_input(
+                "P1 X", value=float(cur_p1x),
+                step=1.0, format="%.1f",
+            )
+        with pc2:
+            p1y = st.number_input(
+                "P1 Y", value=float(cur_p1y),
+                step=1.0, format="%.1f",
+            )
+        with pc3:
+            p2x = st.number_input(
+                "P2 X", value=float(cur_p2x),
+                step=1.0, format="%.1f",
+            )
+        with pc4:
+            p2y = st.number_input(
+                "P2 Y", value=float(cur_p2y),
+                step=1.0, format="%.1f",
+            )
+    with snap_col:
+        snapshot_idx = st.number_input(
+            "Snapshot", min_value=0,
+            value=int(st.session_state.get("hydro_snapshot_index", 5)),
+            step=1, format="%d",
+            help="Timestep index from the hydro model",
+        )
+    with reset_col:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Clear", key="hydro_reset_points", use_container_width=True):
+            st.session_state.hydro_pick_next = 0
+            st.session_state.hydro_point1_x = default_p1x
+            st.session_state.hydro_point1_y = default_p1y
+            st.session_state.hydro_point2_x = default_p2x
+            st.session_state.hydro_point2_y = default_p2y
+            st.session_state.hydro_snapshot_index = int(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_snapshot_index", 5))
+            st.rerun()
+
+    # Persist manual inputs → session_state (marks points as set)
+    st.session_state.hydro_point1_x = float(p1x)
+    st.session_state.hydro_point1_y = float(p1y)
+    st.session_state.hydro_point2_x = float(p2x)
+    st.session_state.hydro_point2_y = float(p2y)
+    st.session_state.hydro_snapshot_index = int(snapshot_idx)
+
+
+# ---------------------------------------------------------------------------
+# Step 4: Run (styled status + validation)
+# ---------------------------------------------------------------------------
+
+def _render_run_step() -> None:
+    """Step 4 - Validate and execute."""
+    st.markdown("##### Review & Run")
+
+    status = _hydro_step_status()
+
+    # Styled checklist
+    checks = [
+        ("Data loaded", status["data_ok"],
+         st.session_state.get("hydro_data_source_label", "")),
+        ("Methods selected", status["methods_ok"],
+         ", ".join(status["methods"]) if status["methods"] else "none"),
+        ("Profile configured", status["profile_ok"],
+         (f"P1=({st.session_state.hydro_point1_x}, {st.session_state.hydro_point1_y}) "
+          f"P2=({st.session_state.hydro_point2_x}, {st.session_state.hydro_point2_y})")
+         if status["profile_ok"] else "Pick P1 and P2 on the map"),
+    ]
+
+    for label, ok, detail in checks:
+        icon = "&#9989;" if ok else "&#10060;"
+        color = "#059669" if ok else "#dc2626"
+        bg = "#ecfdf5" if ok else "#fef2f2"
+        st.markdown(
+            f'<div style="display:flex; align-items:center; gap:0.5rem; '
+            f'padding:0.5rem 0.8rem; margin-bottom:0.4rem; '
+            f'border-radius:0.5rem; background:{bg};">'
+            f'<span style="font-size:1.1rem;">{icon}</span>'
+            f'<strong style="color:{color};">{label}</strong>'
+            f'<span style="color:#64748b; font-size:0.85rem; margin-left:auto;">{detail}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    if not status["all_valid"]:
+        st.caption("Complete all steps above before running.")
+
+    st.text_input("Output directory", key="hydro_output_dir")
+
+    with st.expander("Full configuration", expanded=False):
+        st.json({
+            "data_source": st.session_state.get("hydro_data_source_label", ""),
+            "data_dir": st.session_state.get("hydro_root", ""),
+            "output_dir": st.session_state.hydro_output_dir,
+            "methods": status["methods"],
+            "snapshot_index": st.session_state.hydro_snapshot_index,
+            "profile_p1": [st.session_state.hydro_point1_x, st.session_state.hydro_point1_y],
+            "profile_p2": [st.session_state.hydro_point2_x, st.session_state.hydro_point2_y],
+            "num_points": st.session_state.hydro_num_points,
+            "ert_scheme": st.session_state.hydro_ert_scheme,
+            "noise": {
+                "seed": st.session_state.hydro_seed,
+                "ert_level": st.session_state.hydro_ert_noise_level,
+                "ert_rel_error": st.session_state.hydro_ert_rel_error,
+                "srt_level": st.session_state.hydro_srt_noise_level,
+                "tdem_level": st.session_state.hydro_tdem_noise_level,
+                "fdem_level": st.session_state.hydro_fdem_noise_level,
+                "gravity_level": st.session_state.hydro_gravity_noise_level,
+            },
+        })
+
+    methods = status["methods"]
     run_label = (
-        f"Run {methods_for_run[0]} forward modeling"
-        if len(methods_for_run) == 1
+        f"Run {methods[0]} forward modeling" if len(methods) == 1
         else "Run selected geophysical methods"
+    ) if methods else "Run (select methods first)"
+
+    run_clicked = st.button(
+        run_label, type="primary",
+        disabled=not status["all_valid"],
+        use_container_width=True,
     )
-    run_clicked = st.button(run_label, type="primary", width="stretch")
 
     if run_clicked:
-        if not methods_for_run:
-            st.error("Please choose at least one method.")
-            return
-        if not inspect["ok"]:
-            st.error("Please provide a valid hydro input directory with required files.")
-            return
+        # Materialize data via accessor if available
+        accessor = st.session_state.get("hydro_accessor")
+        if accessor is not None:
+            try:
+                from PyHydroGeophysX.data_access.accessors import REQUIRED_FILES as _REQ
+                work_dir = st.session_state.get("hydro_root") or tempfile.mkdtemp(prefix="phgx_run_")
+                local_dir = accessor.materialize(list(_REQ), work_dir)
+                st.session_state.hydro_data_dir = local_dir
+                st.session_state.hydro_root = local_dir
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Failed to materialize data: {exc}")
+                return
 
         run_config = {
             "hydro_data_dir": st.session_state.hydro_data_dir,
             "hydro_output_dir": st.session_state.hydro_output_dir,
-            "hydro_methods": methods_for_run,
+            "hydro_methods": methods,
             "hydro_snapshot_index": st.session_state.hydro_snapshot_index,
             "hydro_point1_x": st.session_state.hydro_point1_x,
             "hydro_point1_y": st.session_state.hydro_point1_y,
@@ -3937,6 +5311,15 @@ and run forward geophysical responses.
             "hydro_bot_shear_modulus": st.session_state.hydro_bot_shear_modulus,
             "hydro_bot_mineral_density": st.session_state.hydro_bot_mineral_density,
             "hydro_bot_aspect_ratio": st.session_state.hydro_bot_aspect_ratio,
+            "hydro_seed": st.session_state.hydro_seed,
+            "hydro_srt_noise_level": st.session_state.hydro_srt_noise_level,
+            "hydro_srt_noise_abs": st.session_state.hydro_srt_noise_abs,
+            "hydro_ert_noise_level": st.session_state.hydro_ert_noise_level,
+            "hydro_ert_abs_error": st.session_state.hydro_ert_abs_error,
+            "hydro_ert_rel_error": st.session_state.hydro_ert_rel_error,
+            "hydro_tdem_noise_level": st.session_state.hydro_tdem_noise_level,
+            "hydro_fdem_noise_level": st.session_state.hydro_fdem_noise_level,
+            "hydro_gravity_noise_level": st.session_state.hydro_gravity_noise_level,
         }
 
         with st.spinner("Generating geophysical responses..."):
@@ -3944,60 +5327,152 @@ and run forward geophysical responses.
                 st.session_state.hydro_last_run = _run_hydro_multigeophys_methods(run_config)
             except Exception as exc:  # noqa: BLE001
                 st.session_state.hydro_last_run = {
-                    "methods_requested": methods_for_run,
+                    "methods_requested": methods,
                     "methods_completed": [],
                     "files": {},
                     "stats": {},
                     "errors": [str(exc)],
                     "output_dir": st.session_state.hydro_output_dir,
                 }
+        st.session_state.hydro_run_clicked = True
+        st.session_state.hydro_active_step = 5  # auto-navigate to results
+        st.rerun()
+
+
+# ---------------------------------------------------------------------------
+# Step 5: Results (tabbed gallery)
+# ---------------------------------------------------------------------------
+
+def _render_results_step() -> None:
+    """Step 5 - Tabbed results gallery."""
+    st.markdown("##### Results")
 
     run_data = st.session_state.hydro_last_run
-    if run_data:
-        st.markdown("---")
-        completed = run_data.get("methods_completed", [])
-        requested = run_data.get("methods_requested", [])
-        if completed:
-            st.success(f"Completed methods: {', '.join(completed)}")
-        else:
-            st.warning(f"No method completed. Requested: {', '.join(requested)}")
+    if not run_data:
+        st.markdown(
+            '<div class="phgx-card" style="text-align:center; padding:3rem;">'
+            '<div style="font-size:2.5rem; margin-bottom:0.5rem;">&#128202;</div>'
+            '<strong>No results yet</strong><br>'
+            '<span style="color:#64748b;">Complete Steps 1-4 and run forward modeling</span>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        return
 
-        if run_data.get("errors"):
-            st.markdown("### Warnings / Errors")
-            for err in run_data["errors"]:
-                st.warning(err)
+    completed = run_data.get("methods_completed", [])
+    requested = run_data.get("methods_requested", [])
+    if completed:
+        st.success(f"Completed: {', '.join(completed)}")
+    else:
+        st.warning(f"No methods completed. Requested: {', '.join(requested)}")
 
-        stats = run_data.get("stats", {})
-        if stats:
-            with st.expander("Run statistics", expanded=False):
-                st.json(stats)
+    if run_data.get("errors"):
+        for err in run_data["errors"]:
+            st.warning(err)
 
-        files = run_data.get("files", {})
-        if files:
-            st.markdown("### Generated figures")
-            caption_map = {
-                "profile": "Hydrologic profile",
-                "ert_srt": "ERT/SRT responses",
-                "em_gravity": "TDEM/FDEM/Gravity responses",
-            }
-            for key in ["profile", "ert_srt", "em_gravity"]:
-                path_text = files.get(key)
-                if not path_text:
-                    continue
-                path_obj = Path(path_text)
-                if path_obj.exists():
-                    st.image(str(path_obj), caption=caption_map.get(key, key), width="stretch")
-                    with open(path_obj, "rb") as handle:
-                        st.download_button(
-                            label=f"Download {path_obj.name}",
-                            data=handle,
-                            file_name=path_obj.name,
-                            mime="image/png",
-                        )
+    files = run_data.get("files", {})
+    stats = run_data.get("stats", {})
+
+    # Build available result tabs
+    result_tab_names = []
+    result_tab_keys = []
+    caption_map = {
+        "profile": "Hydrologic Profile",
+        "ert_srt": "ERT / SRT Responses",
+        "em_gravity": "TDEM / FDEM / Gravity",
+    }
+    for key in ["profile", "ert_srt", "em_gravity"]:
+        if files.get(key) and Path(files[key]).exists():
+            result_tab_names.append(caption_map[key])
+            result_tab_keys.append(key)
+
+    if stats:
+        result_tab_names.append("Statistics")
+        result_tab_keys.append("_stats")
+
+    if result_tab_names:
+        result_tabs = st.tabs(result_tab_names)
+        for tab, key in zip(result_tabs, result_tab_keys):
+            with tab:
+                if key == "_stats":
+                    st.json(stats)
                 else:
-                    st.info(f"Generated file path: `{path_obj}`")
+                    path_obj = Path(files[key])
+                    st.image(str(path_obj), use_container_width=True)
+                    with open(path_obj, "rb") as fh:
+                        st.download_button(
+                            f"Download {path_obj.name}",
+                            data=fh, file_name=path_obj.name,
+                            mime="image/png", use_container_width=True,
+                        )
 
-        st.caption(f"Output directory: `{run_data.get('output_dir', st.session_state.hydro_output_dir)}`")
+    # Download all as ZIP
+    existing_files = [
+        Path(files[k]) for k in ["profile", "ert_srt", "em_gravity"]
+        if files.get(k) and Path(files[k]).exists()
+    ]
+    if len(existing_files) > 1:
+        import io
+        import zipfile as _zf
+        buf = io.BytesIO()
+        with _zf.ZipFile(buf, "w", _zf.ZIP_DEFLATED) as zf:
+            for fp in existing_files:
+                zf.write(str(fp), fp.name)
+        buf.seek(0)
+        st.download_button(
+            "Download all results (.zip)",
+            data=buf, file_name="hydro_geophys_results.zip",
+            mime="application/zip", use_container_width=True,
+        )
+
+    st.caption(f"Output directory: `{run_data.get('output_dir', st.session_state.hydro_output_dir)}`")
+
+
+# ---------------------------------------------------------------------------
+# Main tab orchestrator (stepper-based)
+# ---------------------------------------------------------------------------
+
+def render_hydro_multigeophys_tab() -> None:
+    st.subheader("Hydro to Geophysics")
+    st.caption(
+        "Convert hydro-model outputs into synthetic geophysical responses. "
+        "Navigate the steps using the bar below."
+    )
+
+    # Initialize active step
+    if "hydro_active_step" not in st.session_state:
+        st.session_state.hydro_active_step = 1
+
+    # Persistent status strip + navigation
+    _render_status_strip()
+
+    st.markdown("---")
+
+    # Render only the active step
+    step = st.session_state.hydro_active_step
+    if step == 1:
+        _render_data_step()
+    elif step == 2:
+        _render_method_step()
+    elif step == 3:
+        _render_profile_step()
+    elif step == 4:
+        _render_run_step()
+    elif step == 5:
+        _render_results_step()
+
+    # Bottom navigation
+    st.markdown("---")
+    nav_prev, nav_spacer, nav_next = st.columns([1, 3, 1])
+    if step > 1:
+        if nav_prev.button("Previous", key="hydro_nav_prev", use_container_width=True):
+            st.session_state.hydro_active_step = step - 1
+            st.rerun()
+    if step < 5:
+        if nav_next.button("Next", key="hydro_nav_next",
+                           use_container_width=True, type="primary"):
+            st.session_state.hydro_active_step = step + 1
+            st.rerun()
 
 
 def render_sidebar() -> Dict[str, str]:
@@ -4035,7 +5510,21 @@ def render_sidebar() -> Dict[str, str]:
         for key in ["context_agent", "workflow_result", "workflow_config", "upload_dir"]:
             st.session_state[key] = None
         st.session_state.user_request = ""
-        st.sidebar.info("Session cleared.")
+        for key in [
+            "hydro_last_run",
+            "hydro_data_summary",
+            "hydro_root",
+            "hydro_accessor",
+            "hydro_data_source",
+            "hydro_data_source_label",
+            "hydro_surface_selected_points",
+            "hydro_http_dataset_id",
+        ]:
+            st.session_state[key] = None if key != "hydro_surface_selected_points" else []
+        _apply_hydro_notebook_defaults(force=True)
+        st.session_state.hydro_defaults_version = HYDRO_DEFAULTS_VERSION
+        st.session_state.hydro_active_step = 1
+        st.sidebar.info("Session cleared and Hydro defaults restored from notebook.")
 
     if init_clicked:
         if not api_key.strip():

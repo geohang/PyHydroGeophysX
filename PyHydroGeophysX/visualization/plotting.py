@@ -1,5 +1,6 @@
 """2D plotting utilities for geophysical models and data."""
 
+import os
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import matplotlib.pyplot as plt
@@ -516,6 +517,362 @@ def plot_monitoring_timeseries(
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
     return fig, ax
+
+
+# ---------------------------------------------------------------------------
+# Apparent-resistivity pseudosection with topography (SimPEG)
+# ---------------------------------------------------------------------------
+
+def _convert_pygimli_to_simpeg(data_obj):
+    """Convert a PyGimli ERT DataContainer to SimPEG DC survey + apparent resistivity.
+
+    Parameters
+    ----------
+    data_obj : pygimli.DataContainer or str
+        PyGimli ERT data object, or file path to a ``.dat`` file.
+
+    Returns
+    -------
+    dc_data : SimPEG Data object
+        SimPEG DC data object containing the survey and apparent resistivity.
+    topo_xyz : np.ndarray
+        Topography array of shape (n_electrodes, 3) with (x, 0, z) columns.
+    """
+    import pygimli as pg
+    from pygimli.physics import ert as pgert
+
+    from SimPEG.electromagnetics.static import resistivity as dc
+    from SimPEG import data as simpeg_data
+
+    # Load if path
+    if isinstance(data_obj, (str, os.PathLike)):
+        data_obj = pgert.load(str(data_obj))
+
+    # Extract electrode positions
+    xx = np.asarray(pg.x(data_obj.sensorPositions()))
+    yy = np.asarray(pg.y(data_obj.sensorPositions()))
+
+    # Extract ABMN indices and data
+    a_idx = np.asarray(data_obj["a"], dtype=int)
+    b_idx = np.asarray(data_obj["b"], dtype=int)
+    m_idx = np.asarray(data_obj["m"], dtype=int)
+    n_idx = np.asarray(data_obj["n"], dtype=int)
+    rhoa = np.asarray(data_obj["rhoa"])
+
+    # Build SimPEG source list
+    # Group by unique current electrode pairs (A, B)
+    # Use 2D coordinates (x, z) for 2D pseudosection compatibility
+    source_dict = {}
+    for i in range(len(a_idx)):
+        a_loc = np.array([xx[a_idx[i]], yy[a_idx[i]]])
+        b_loc = np.array([xx[b_idx[i]], yy[b_idx[i]]])
+        m_loc = np.array([xx[m_idx[i]], yy[m_idx[i]]])
+        n_loc = np.array([xx[n_idx[i]], yy[n_idx[i]]])
+
+        key = (a_idx[i], b_idx[i])
+        if key not in source_dict:
+            source_dict[key] = {
+                "a_loc": a_loc,
+                "b_loc": b_loc,
+                "m_locs": [],
+                "n_locs": [],
+                "rhoa_vals": [],
+            }
+        source_dict[key]["m_locs"].append(m_loc)
+        source_dict[key]["n_locs"].append(n_loc)
+        source_dict[key]["rhoa_vals"].append(rhoa[i])
+
+    source_list = []
+    dobs_list = []
+    for key, info in source_dict.items():
+        m_locs = np.array(info["m_locs"])
+        n_locs = np.array(info["n_locs"])
+        rx = dc.receivers.Dipole(m_locs, n_locs)
+        src = dc.sources.Dipole([rx], info["a_loc"], info["b_loc"])
+        source_list.append(src)
+        dobs_list.extend(info["rhoa_vals"])
+
+    survey = dc.Survey(source_list)
+    dc_data_out = simpeg_data.Data(survey, dobs=np.array(dobs_list))
+
+    # Build topography: (x, z) for 2D profile
+    topo_xyz = np.column_stack([xx, yy])
+
+    return dc_data_out, topo_xyz
+
+
+def plot_apparent_resistivity_pseudosection(
+    data_obj,
+    *,
+    ax=None,
+    plot_type: str = "scatter",
+    cmap=None,
+    cmin: Optional[float] = None,
+    cmax: Optional[float] = None,
+    scale: str = "linear",
+    label: str = r"Apparent resistivity ($\Omega\cdot$m)",
+    title: str = "",
+    scatter_marker: str = "s",
+    scatter_size: float = 10,
+    mask_topography: bool = True,
+    show_colorbar: bool = True,
+    cbar_opts: Optional[Dict] = None,
+    figsize: Tuple[float, float] = (12, 5),
+    data_locations: bool = False,
+    clean_axes: bool = False,
+    xlabel: str = "x (m)",
+    ylabel: str = "Elevation (m)",
+) -> Tuple:
+    """Plot apparent resistivity pseudosection with topography using SimPEG.
+
+    Converts PyGimli ERT data to SimPEG format and uses SimPEG's
+    ``plot_pseudosection`` to render a pseudosection that honours surface
+    topography.
+
+    Parameters
+    ----------
+    data_obj : pygimli.DataContainer, str, or SimPEG Data
+        PyGimli ERT data (or file path to a ``.dat``), or a pre-converted
+        SimPEG ``Data`` object.  When a PyGimli object or path is passed the
+        conversion is done automatically.
+    ax : matplotlib.axes.Axes, optional
+        Axes to draw on.  Created if *None*.
+    plot_type : ``'scatter'`` | ``'pcolor'`` | ``'contourf'``
+        Pseudosection rendering style.
+    cmap : str or Colormap, optional
+        Colormap.  Defaults to ``BlueDarkRed18_18`` (warm-to-cool).
+    cmin, cmax : float, optional
+        Color limits.
+    scale : ``'linear'`` | ``'log'``
+        Color scale.
+    label : str
+        Colorbar label.
+    title : str
+        Axes title.
+    scatter_marker : str
+        Marker style when *plot_type='scatter'*.
+    scatter_size : float
+        Marker size when *plot_type='scatter'*.
+    mask_topography : bool
+        If *True*, mask the region above topography.
+    show_colorbar : bool
+        Show the colorbar.
+    cbar_opts : dict, optional
+        Extra keyword arguments forwarded to the colorbar.
+    figsize : tuple
+        Figure size (only used when *ax* is *None*).
+    data_locations : bool
+        Show electrode locations on the plot.
+    clean_axes : bool
+        If *True*, remove spines and ticks for a clean look.
+    xlabel, ylabel : str
+        Axis labels.
+
+    Returns
+    -------
+    fig, ax, cbar_or_mappable
+    """
+    import os as _os
+
+    from SimPEG.electromagnetics.static.utils.static_utils import (
+        plot_pseudosection,
+    )
+
+    # Determine if we need to convert from PyGimli
+    try:
+        from SimPEG import data as simpeg_data
+        if isinstance(data_obj, simpeg_data.Data):
+            dc_data = data_obj
+            topo_xyz = None
+        else:
+            dc_data, topo_xyz = _convert_pygimli_to_simpeg(data_obj)
+    except Exception:
+        dc_data, topo_xyz = _convert_pygimli_to_simpeg(data_obj)
+
+    # Default colormap: warm-to-cool resistivity map
+    if cmap is None:
+        try:
+            from palettable.lightbartlein.diverging import BlueDarkRed18_18
+            cmap = BlueDarkRed18_18.mpl_colormap
+        except ImportError:
+            cmap = plt.get_cmap("RdBu")
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
+
+    clim = None
+    if cmin is not None and cmax is not None:
+        clim = [cmin, cmax]
+
+    if cbar_opts is None:
+        cbar_opts = {"location": "right", "shrink": 0.8, "aspect": 30}
+
+    pcolor_opts = {"cmap": cmap}
+    contourf_opts = {"cmap": cmap}
+    scatter_opts = {"cmap": cmap, "marker": scatter_marker, "s": scatter_size}
+
+    ax, cc = plot_pseudosection(
+        dc_data,
+        plot_type=plot_type,
+        ax=ax,
+        scale=scale,
+        cbar_label=label,
+        mask_topography=mask_topography,
+        pcolor_opts=pcolor_opts,
+        contourf_opts=contourf_opts,
+        scatter_opts=scatter_opts,
+        data_locations=data_locations,
+        cbar_opts=cbar_opts,
+        clim=clim,
+    )
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    if title:
+        ax.set_title(title)
+
+    if clean_axes:
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+        ax.get_xaxis().set_ticks([])
+        ax.get_yaxis().set_ticks([])
+
+    fig.tight_layout()
+    return fig, ax, cc
+
+
+def plot_apparent_resistivity_timelapse(
+    data_objs,
+    *,
+    titles: Optional[Sequence[str]] = None,
+    ncols: int = 4,
+    plot_type: str = "scatter",
+    cmap=None,
+    cmin: Optional[float] = None,
+    cmax: Optional[float] = None,
+    scale: str = "linear",
+    label: str = r"Apparent resistivity ($\Omega\cdot$m)",
+    scatter_marker: str = "s",
+    scatter_size: float = 10,
+    mask_topography: bool = True,
+    figsize_per_panel: Tuple[float, float] = (4.0, 2.5),
+    clean_axes: bool = True,
+    save_path: Optional[str] = None,
+    dpi: int = 100,
+) -> Tuple:
+    """Plot a multi-panel time-lapse apparent resistivity pseudosection.
+
+    Parameters
+    ----------
+    data_objs : sequence
+        List of PyGimli DataContainers, file paths, or SimPEG Data objects.
+    titles : sequence of str, optional
+        Panel titles.
+    ncols : int
+        Number of columns.
+    plot_type : str
+        ``'scatter'``, ``'pcolor'``, or ``'contourf'``.
+    cmap, cmin, cmax, scale, label :
+        Colormap and scale parameters.
+    figsize_per_panel : tuple
+        (width, height) per subplot.
+    clean_axes : bool
+        Remove spines and ticks.
+    save_path : str, optional
+        If given, save the figure to this path.
+    dpi : int
+        Resolution for saving.
+
+    Returns
+    -------
+    fig, axes
+    """
+    from SimPEG.electromagnetics.static.utils.static_utils import (
+        plot_pseudosection,
+    )
+
+    # Default colormap
+    if cmap is None:
+        try:
+            from palettable.lightbartlein.diverging import BlueDarkRed18_18
+            cmap = BlueDarkRed18_18.mpl_colormap
+        except ImportError:
+            cmap = plt.get_cmap("RdBu")
+
+    n = len(data_objs)
+    nrows = int(np.ceil(n / ncols))
+    fig_w = figsize_per_panel[0] * ncols
+    fig_h = figsize_per_panel[1] * nrows
+    fig, axes = plt.subplots(nrows, ncols, figsize=(fig_w, fig_h), squeeze=False)
+
+    clim = None
+    if cmin is not None and cmax is not None:
+        clim = [cmin, cmax]
+
+    for idx in range(nrows * ncols):
+        row, col = divmod(idx, ncols)
+        ax = axes[row][col]
+        if idx >= n:
+            ax.axis("off")
+            continue
+
+        # Convert data
+        try:
+            from SimPEG import data as simpeg_data
+            if isinstance(data_objs[idx], simpeg_data.Data):
+                dc_data = data_objs[idx]
+            else:
+                dc_data, _ = _convert_pygimli_to_simpeg(data_objs[idx])
+        except Exception:
+            dc_data, _ = _convert_pygimli_to_simpeg(data_objs[idx])
+
+        scatter_opts = {"cmap": cmap, "marker": scatter_marker, "s": scatter_size}
+        pcolor_opts = {"cmap": cmap}
+        contourf_opts = {"cmap": cmap}
+
+        ax, cc = plot_pseudosection(
+            dc_data,
+            plot_type=plot_type,
+            ax=ax,
+            scale=scale,
+            cbar_label=label,
+            mask_topography=mask_topography,
+            pcolor_opts=pcolor_opts,
+            contourf_opts=contourf_opts,
+            scatter_opts=scatter_opts,
+            data_locations=False,
+            cbar_opts={"location": "right", "shrink": 0.8, "aspect": 30},
+            clim=clim,
+        )
+
+        t = titles[idx] if titles and idx < len(titles) else f"Timestep {idx + 1}"
+        ax.set_title(t, fontsize=10)
+        ax.set_xlabel(" ")
+        ax.set_ylabel(" ")
+
+        if clean_axes:
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+            ax.get_xaxis().set_ticks([])
+            ax.get_yaxis().set_ticks([])
+
+        # Remove individual colorbars except last
+        if idx < n - 1:
+            for child in ax.get_children():
+                if hasattr(child, "colorbar") and child.colorbar:
+                    try:
+                        child.colorbar.remove()
+                    except Exception:
+                        pass
+                    break
+
+    fig.tight_layout()
+    if save_path is not None:
+        fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+    return fig, axes
 
 
 # ---------------------------------------------------------------------------

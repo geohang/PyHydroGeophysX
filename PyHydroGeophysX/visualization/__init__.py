@@ -24,6 +24,8 @@ from .plotting import (
     plot_topography,
     plot_monitoring_timeseries,
     plot_coverage,
+    plot_apparent_resistivity_pseudosection,
+    plot_apparent_resistivity_timelapse,
 )
 
 # --- Animations ---
@@ -31,6 +33,7 @@ from .animation import (
     create_timelapse_gif,
     create_timelapse_mp4,
     create_difference_gif,
+    create_combined_timelapse_gif,
 )
 
 # --- VTK / ParaView export ---
@@ -64,10 +67,13 @@ __all__ = [
     "plot_topography",
     "plot_monitoring_timeseries",
     "plot_coverage",
+    "plot_apparent_resistivity_pseudosection",
+    "plot_apparent_resistivity_timelapse",
     # Animations
     "create_timelapse_gif",
     "create_timelapse_mp4",
     "create_difference_gif",
+    "create_combined_timelapse_gif",
     # VTK export
     "export_mesh_to_vtk",
     "export_structured_vtk",
