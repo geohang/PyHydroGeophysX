@@ -84,10 +84,19 @@ constraints, structural constraints, and convergence criteria."""
             
             # Export ERT data for inversion
             self._log_execution("Exporting data to inversion format")
+            use_source_error = input_data.get(
+                'use_source_error',
+                inversion_params.get('use_source_error', True)
+            )
+            self._log_execution(
+                "Export error model: "
+                + ("source (dataset-provided)" if bool(use_source_error) else "reciprocal (auto-estimated)")
+            )
             data_file = export_for_inversion(
                 ert_data, 
                 outdir=output_dir, 
-                fmt='pgimli'
+                fmt='pgimli',
+                use_source_error=bool(use_source_error)
             )
             self._log_execution(f"ERT data exported to: {data_file}")
             
@@ -327,13 +336,18 @@ Provide a brief interpretation (2-3 sentences) about:
             self._log_execution(f"Method: {tl_method}, Temporal regularization: {temporal_reg}")
             
             # Export all datasets to inversion format
+            use_source_error = input_data.get(
+                'use_source_error',
+                inversion_params.get('use_source_error', True)
+            )
             data_files = []
             for i, ert_data in enumerate(time_lapse_data):
                 self._log_execution(f"Exporting dataset {i+1}/{len(time_lapse_data)}")
                 data_file = export_for_inversion(
                     ert_data,
                     outdir=output_dir,
-                    fmt='pgimli'
+                    fmt='pgimli',
+                    use_source_error=bool(use_source_error)
                 )
                 # Rename to include time index
                 import shutil

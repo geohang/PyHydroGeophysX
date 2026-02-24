@@ -407,6 +407,71 @@ def _protocolParser(fname, ip=False):
     return elec, df
 
 
+def _abem_lund_parser(fname):
+    """
+    Parse ABEM/Lund Terameter LS style .dat files.
+
+    Common data row structure (12+ numeric columns) is:
+      type xA yA xB yB xM yM xN yN <meta...>
+    We extract ABMN from x-coordinates (xA, xB, xM, xN), and use the last
+    two trailing numeric columns as resistivity-like values.
+    """
+    num_str = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+'
+    rows = []
+    try:
+        with open(fname, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                vals = re.findall(num_str, line.strip())
+                if len(vals) < 11:
+                    continue
+                nums = [float(v) for v in vals]
+                kind = int(round(nums[0]))
+                # ABEM LS measurement rows are typically flagged as type=4.
+                if kind != 4:
+                    continue
+
+                a = nums[1]
+                b = nums[3]
+                m = nums[5]
+                n = nums[7]
+
+                tail = nums[9:]
+                if len(tail) >= 3:
+                    dev = tail[0]
+                    resist = tail[-2]
+                    app = tail[-1]
+                elif len(tail) == 2:
+                    dev = np.nan
+                    resist = tail[0]
+                    app = tail[1]
+                else:
+                    dev = np.nan
+                    resist = tail[0]
+                    app = np.nan
+
+                rows.append((a, b, m, n, resist, app, dev))
+    except Exception as e:
+        raise ValueError(f"Could not parse ABEM-Lund file {fname}: {e}")
+
+    if not rows:
+        raise ValueError("No ABEM-Lund measurement rows detected")
+
+    df = pd.DataFrame(rows, columns=["a", "b", "m", "n", "resist", "app", "dev"])
+    for col in ["a", "b", "m", "n"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    if df[["a", "b", "m", "n"]].isna().all().any():
+        raise ValueError("ABEM-Lund parser failed to extract ABMN coordinates.")
+
+    unique_elec = np.sort(np.unique(df[["a", "b", "m", "n"]].values.astype(float).flatten()))
+    elec = np.c_[unique_elec, np.zeros_like(unique_elec), np.zeros_like(unique_elec)]
+
+    if "ip" not in df.columns:
+        df["ip"] = np.nan
+
+    return elec, df
+
+
 def _dasParser(fname):
     """
     Parse DAS-1 format (ERTLab DACQ).
@@ -691,10 +756,73 @@ _FTYPE_MAP = {
     "Merged": "Merged",
 }
 
+_INSTRUMENT_ALIAS_MAP = {
+    "abem": "ABEM-Lund",
+    "abem lund": "ABEM-Lund",
+    "abem-lund": "ABEM-Lund",
+    "abem terameter": "ABEM-Lund",
+    "abem terameter ls": "ABEM-Lund",
+    "terameter": "ABEM-Lund",
+    "terameter ls": "ABEM-Lund",
+    "das": "DAS-1",
+    "das 1": "DAS-1",
+    "das-1": "DAS-1",
+    "syscal": "Syscal",
+    "syscal pro": "Syscal",
+    "bert": "BERT",
+    "e4d": "E4D",
+}
+
+def _normalize_instrument_name(instrument: str) -> str:
+    """
+    Normalize user- or LLM-provided instrument aliases to supported canonical names.
+    """
+    if instrument in _FTYPE_MAP:
+        return instrument
+    token = re.sub(r'[^a-z0-9]+', ' ', str(instrument).strip().lower()).strip()
+    if token in _INSTRUMENT_ALIAS_MAP:
+        return _INSTRUMENT_ALIAS_MAP[token]
+    if "abem" in token or ("terameter" in token and "ls" in token):
+        return "ABEM-Lund"
+    if token.startswith("das"):
+        return "DAS-1"
+    if "syscal" in token:
+        return "Syscal"
+    return instrument
+
+
+def _looks_like_abem_lund_file(data_file_path: Path) -> bool:
+    """
+    Heuristically detect ABEM Terameter/Lund-style exports.
+    """
+    try:
+        with open(data_file_path, "r", encoding="utf-8", errors="ignore") as f:
+            lines = [f.readline().strip() for _ in range(60)]
+    except Exception:
+        return False
+
+    lines = [ln for ln in lines if ln]
+    if not lines:
+        return False
+
+    header = "\n".join(lines[:25]).lower()
+    has_abem_tag = "type of measurement" in header
+
+    type4_rows = 0
+    for ln in lines:
+        parts = ln.split()
+        if parts and parts[0] == "4":
+            type4_rows += 1
+
+    # ABEM exports usually contain the explicit "Type of measurement" line
+    # and many data rows starting with "4".
+    return bool(has_abem_tag and type4_rows >= 3)
+
 def _to_ftype(instrument: Instrument) -> str:
-    if instrument not in _FTYPE_MAP:
+    normalized = _normalize_instrument_name(str(instrument))
+    if normalized not in _FTYPE_MAP:
         raise ValueError(f"Unsupported instrument: {instrument}")
-    return _FTYPE_MAP[instrument]
+    return _FTYPE_MAP[normalized]
 
 
 # Parser mapping for embedded parsers (modified from ResIPy)
@@ -705,7 +833,7 @@ _EMBEDDED_PARSER_MAP = {
     "BERT": _bertParser,
     "E4D": _bertParser,
     "DAS-1": _dasParser,
-    "ABEM-Lund": _bertParser,  # Use BERT parser as fallback
+    "ABEM-Lund": _abem_lund_parser,
     "Lippmann": _bertParser,   # Use BERT parser as fallback
     "ARES": _bertParser,       # Use BERT parser as fallback
 }
@@ -861,12 +989,26 @@ def _load_ert_embedded_parsers(
 
     All credit for original parsing algorithms goes to the ResIPy developers.
     """
+    requested_instrument = str(instrument)
+    instrument = _normalize_instrument_name(requested_instrument)
+    if instrument != requested_instrument:
+        print(f"[PyHydroGeophysX] Normalized instrument '{requested_instrument}' -> '{instrument}'")
+
     data_file_path = Path(data_file)
     if not data_file_path.is_absolute():
         data_file_path = Path.cwd() / data_file_path
     
     if not data_file_path.exists():
         raise FileNotFoundError(f"Data file not found: {data_file_path}")
+
+    # Guardrail: if the file clearly looks like ABEM-Lund but the instrument was
+    # specified differently (common in quick mode), override to the safer parser.
+    if instrument != "ABEM-Lund" and _looks_like_abem_lund_file(data_file_path):
+        print(
+            f"[PyHydroGeophysX] Detected ABEM-Lund style file; "
+            f"overriding instrument '{instrument}' -> 'ABEM-Lund'"
+        )
+        instrument = "ABEM-Lund"
     
     # Select appropriate parser based on instrument
     parser_func = _EMBEDDED_PARSER_MAP.get(instrument, _bertParser)
@@ -946,13 +1088,58 @@ def _load_ert_embedded_parsers(
     
     # Build observations dataframe with standardized columns
     observations = pd.DataFrame()
+    n_elec = int(len(electrodes_df))
+    elec_x = pd.to_numeric(electrodes_df['x'], errors='coerce').to_numpy(dtype=float)
+    elec_valid = np.isfinite(elec_x)
+    elec_x_valid = elec_x[elec_valid]
+    elec_idx_valid = np.arange(1, n_elec + 1, dtype=int)[elec_valid]
+
     def _coerce_indices(col_name: str, fallback_value: int) -> pd.Series:
         if col_name not in df.columns:
             return pd.Series(np.full(len(df), fallback_value, dtype=int))
         series = df[col_name]
         numeric = pd.to_numeric(series, errors='coerce')
         if numeric.notna().all():
-            return numeric.astype(int)
+            values = numeric.to_numpy(dtype=float)
+            rounded = np.rint(values)
+
+            # Case 1: already 1-based electrode indices
+            if np.all(np.abs(values - rounded) < 1e-8):
+                ints = rounded.astype(int)
+                if ints.min() >= 1 and ints.max() <= n_elec:
+                    return pd.Series(ints, index=series.index, dtype=int)
+                # Case 2: 0-based indices
+                if ints.min() >= 0 and ints.max() <= (n_elec - 1) and np.any(ints == 0):
+                    return pd.Series(ints + 1, index=series.index, dtype=int)
+
+            # Case 3: ABMN are coordinate-like values (e.g., ABEM Terameter exports)
+            if len(elec_x_valid) > 0:
+                # Derive matching tolerance from electrode spacing.
+                tol = 1e-6
+                uniq = np.unique(np.sort(elec_x_valid))
+                if len(uniq) > 1:
+                    diffs = np.diff(uniq)
+                    diffs = diffs[diffs > 1e-8]
+                    if len(diffs) > 0:
+                        tol = max(tol, float(np.min(diffs)) * 0.25)
+
+                dist = np.abs(values[:, None] - elec_x_valid[None, :])
+                nearest_pos = np.argmin(dist, axis=1)
+                nearest_dist = dist[np.arange(len(values)), nearest_pos]
+                if np.all(np.isfinite(nearest_dist)) and np.max(nearest_dist) <= tol:
+                    mapped = elec_idx_valid[nearest_pos]
+                    return pd.Series(mapped.astype(int), index=series.index, dtype=int)
+
+            # Case 4: numeric labels that are neither direct indices nor coordinates.
+            # Map sorted unique values to sequential electrode IDs.
+            uniq_vals = np.unique(values)
+            if len(uniq_vals) <= n_elec:
+                rank_map = {v: i + 1 for i, v in enumerate(np.sort(uniq_vals))}
+                mapped = np.array([rank_map[v] for v in values], dtype=int)
+                return pd.Series(mapped, index=series.index, dtype=int)
+
+            # Last fallback: preserve previous behavior.
+            return pd.Series(rounded.astype(int), index=series.index, dtype=int)
         labels = series.astype(str).str.strip()
         if label_map:
             mapped = labels.map(label_map)
@@ -996,36 +1183,75 @@ def _load_ert_embedded_parsers(
     if observations['rhoa'].isna().all():
         observations['rhoa'] = 100.0
 
-    # Compute error estimates based on reciprocal data or standard deviation
-    # Priority: 1) reciprocalErrRel from reciprocal processing, 2) dev/std column, 3) default 5%
-    if 'reciprocalErrRel' in observations.columns:
-        # Use reciprocal-based error estimates (best option)
-        # For measurements without reciprocals or with zero error, use 5% default
-        # IMPORTANT: fillna only handles NaN, need to also replace zeros and infinities
-        observations['error'] = observations['reciprocalErrRel'].fillna(0.05)
-        # Replace zeros and infinities with 5% default
-        observations['error'] = observations['error'].replace([0, np.inf, -np.inf], 0.05)
-        # Ensure all values are positive and at least 1% (avoid division by zero in inversion)
-        observations['error'] = np.maximum(np.abs(observations['error']), 0.01)
-        print(f"   Using reciprocal-based error estimates (mean: {observations['error'].mean():.4f})")
-    else:
-        # Fallback to dev/std column or default
-        err_col = next((c for c in ['error', 'err', 'dev', 'std', 'std_res'] if c in df.columns), None)
-        if err_col:
-            err_vals = pd.to_numeric(df[err_col], errors='coerce')
-            rho_vals = pd.to_numeric(observations['rhoa'], errors='coerce')
-            rel_err = np.where(
-                (np.isfinite(err_vals)) & (np.isfinite(rho_vals)) & (rho_vals != 0),
-                np.abs(err_vals) / np.abs(rho_vals),
-                np.nan
-            )
-            median_err = np.nanmedian(err_vals)
-            if np.isfinite(median_err) and median_err > 1 and np.nanmedian(rel_err) > 1:
-                rel_err = rel_err / 100.0
-            observations['error'] = np.where(np.isfinite(rel_err), rel_err, 0.05)
-            print(f"   Using standard deviation-based error estimates (mean: {observations['error'].mean():.4f})")
+    # Compute error estimates using reciprocal pairs when available and robustly
+    # fallback to source error columns (e.g., ABEM "dev") when reciprocal pairs
+    # are missing.
+    err_col = next((c for c in ['error', 'err', 'dev', 'std', 'std_res'] if c in df.columns), None)
+
+    def _normalize_source_error(err_series: pd.Series, rho_series: pd.Series) -> np.ndarray:
+        err_raw = pd.to_numeric(err_series, errors='coerce').to_numpy(dtype=float)
+        rho_raw = pd.to_numeric(rho_series, errors='coerce').to_numpy(dtype=float)
+        rel = np.full(err_raw.shape, np.nan, dtype=float)
+
+        finite_pos = err_raw[np.isfinite(err_raw) & (err_raw > 0)]
+        if finite_pos.size == 0:
+            return rel
+
+        med = float(np.nanmedian(finite_pos))
+        q95 = float(np.nanpercentile(finite_pos, 95))
+
+        # Heuristic:
+        #  - <=2   : likely already relative fraction (e.g., 0.12)
+        #  - <=200 : likely percent (e.g., 12.0 -> 0.12)
+        #  - else  : likely absolute error in data units -> convert with rho
+        if q95 <= 2.0:
+            rel = np.abs(err_raw)
+        elif q95 <= 200.0:
+            rel = np.abs(err_raw) / 100.0
         else:
-            observations['error'] = 0.05  # Default 5%
+            rel = np.where(
+                np.isfinite(rho_raw) & (np.abs(rho_raw) > 1e-12),
+                np.abs(err_raw) / np.abs(rho_raw),
+                np.nan,
+            )
+
+        rel = np.where(np.isfinite(rel) & (rel > 0), rel, np.nan)
+        return np.clip(rel, 0.01, 0.50)
+
+    source_rel = _normalize_source_error(df[err_col], observations['rhoa']) if err_col else None
+
+    if 'reciprocalErrRel' in observations.columns:
+        recip_rel = pd.to_numeric(observations['reciprocalErrRel'], errors='coerce').to_numpy(dtype=float)
+        recip_rel = np.where(np.isfinite(recip_rel) & (np.abs(recip_rel) > 0), np.abs(recip_rel), np.nan)
+        n_recip_finite = int(np.sum(np.isfinite(recip_rel)))
+
+        if n_recip_finite > 0:
+            merged_err = recip_rel
+            if source_rel is not None:
+                merged_err = np.where(np.isfinite(merged_err), merged_err, source_rel)
+            merged_err = np.where(np.isfinite(merged_err), merged_err, 0.05)
+            observations['error'] = np.clip(merged_err, 0.01, 0.50)
+            print(
+                f"   Using reciprocal-based error estimates "
+                f"(finite={n_recip_finite}/{len(recip_rel)}, mean: {observations['error'].mean():.4f})"
+            )
+        elif source_rel is not None and np.any(np.isfinite(source_rel)):
+            observations['error'] = np.where(np.isfinite(source_rel), source_rel, 0.05)
+            observations['error'] = np.clip(observations['error'], 0.01, 0.50)
+            print(
+                f"   No reciprocal pairs found; using source '{err_col}' error estimates "
+                f"(mean: {observations['error'].mean():.4f})"
+            )
+        else:
+            observations['error'] = 0.05
+            print("   No reciprocal/source error available; using default 5% error estimates")
+    else:
+        if source_rel is not None and np.any(np.isfinite(source_rel)):
+            observations['error'] = np.where(np.isfinite(source_rel), source_rel, 0.05)
+            observations['error'] = np.clip(observations['error'], 0.01, 0.50)
+            print(f"   Using source '{err_col}' error estimates (mean: {observations['error'].mean():.4f})")
+        else:
+            observations['error'] = 0.05
             print("   Using default 5% error estimates")
 
     observations['valid'] = True
@@ -1056,6 +1282,7 @@ def _load_ert_embedded_parsers(
         'loader': 'local_parsers_resipy_fallback',
         'parser_used': parser_name,
         'instrument': instrument,
+        'requested_instrument': requested_instrument,
         'app_res_source': app_res_source,
         'n_electrodes': len(electrodes_list),
         'n_measurements': len(obs_list),
@@ -1097,6 +1324,11 @@ def _load_ert_pygimli(
     Fallback ERT data loader using PyGIMLi when RESIPY is unavailable.
     Supports common formats: .ohm, .dat, .data files.
     """
+    requested_instrument = str(instrument)
+    instrument = _normalize_instrument_name(requested_instrument)
+    if instrument != requested_instrument:
+        print(f"[PyHydroGeophysX] Normalized instrument '{requested_instrument}' -> '{instrument}'")
+
     import pygimli as pg
     
     data_file_path = Path(data_file)
@@ -1253,6 +1485,7 @@ def _load_ert_pygimli(
         'source_file': str(data_file_path),
         'loader': 'pygimli_fallback',
         'instrument': instrument,
+        'requested_instrument': requested_instrument,
         'app_res_source': app_res_source,
         'n_electrodes': len(electrodes_list),
         'n_measurements': len(observations_list),
@@ -1318,6 +1551,11 @@ def load_ert_resipy(
     StandardERT
         Standardized dataset with electrodes, observations, CRS, instrument, and metadata.
     """
+    requested_instrument = str(instrument)
+    instrument = _normalize_instrument_name(requested_instrument)
+    if instrument != requested_instrument:
+        print(f"[PyHydroGeophysX] Normalized instrument '{requested_instrument}' -> '{instrument}'")
+
     # Try resipy first, then local parsers, then pygimli
     if not _HAS_RESIPY:
         # Fallback 1: Embedded parsers (modified from ResIPy, GPL-3.0)
@@ -1356,6 +1594,16 @@ def load_ert_resipy(
     
     if not data_file_path.exists():
         raise FileNotFoundError(f"Data file not found: {data_file_path}")
+
+    # Guardrail: if file content clearly indicates ABEM/Lund export, switch
+    # parser target even when user/LLM selected a different instrument.
+    if instrument != "ABEM-Lund" and _looks_like_abem_lund_file(data_file_path):
+        print(
+            f"[PyHydroGeophysX] Detected ABEM-Lund style file; "
+            f"overriding instrument '{instrument}' -> 'ABEM-Lund'"
+        )
+        instrument = "ABEM-Lund"
+        ftype = _to_ftype(instrument)
 
     # Prefer to use the requested project_dir, but RESIPY may attempt to
     # remove/recreate the directory (calling shutil.rmtree) which can fail
@@ -1971,6 +2219,9 @@ def export_for_inversion(
         reciprocal_default_err = 0.05
         reciprocal_min_err = 0.01
         reciprocal_max_err = 0.10
+        source_default_err = 0.08
+        source_min_err = 0.01
+        source_max_err = 0.50
         print(
             "   DEBUG: Error mode: "
             + ("source (dataset-provided)" if use_source_error else "reciprocal (auto-estimated)")
@@ -2049,15 +2300,26 @@ def export_for_inversion(
             valid_rows.append((a, b, m, n, R, rhoa, k, src_err_val))
 
         if len(valid_rows) == 0:
-            raise ValueError("No valid observations remained after validation; export aborted.")
+            total_obs = len(ert.observations)
+            details = ", ".join(f"{k}={v}" for k, v in skipped_counts.items())
+            hint = ""
+            if (
+                total_obs > 0
+                and skipped_counts.get("missing_resistivity", 0) >= int(0.8 * total_obs)
+            ):
+                hint = " Likely instrument/format mismatch (e.g., wrong instrument type selected)."
+            raise ValueError(
+                "No valid observations remained after validation; export aborted. "
+                f"Diagnostics: {details}.{hint}"
+            )
 
         if use_source_error:
             source_err_rows = np.array([r[7] for r in valid_rows], dtype=float)
             err_rows = _sanitize_source_error(
                 source_err_rows,
-                default_err=reciprocal_default_err,
-                min_err=reciprocal_min_err,
-                max_err=reciprocal_max_err,
+                default_err=source_default_err,
+                min_err=source_min_err,
+                max_err=source_max_err,
             )
             n_source_valid = int(np.sum(np.isfinite(source_err_rows) & (source_err_rows > 0)))
             print(
@@ -2246,9 +2508,9 @@ def export_for_inversion(
                     source_err_final = np.array([r[7] for r in row_records], dtype=float)
                     err_final = _sanitize_source_error(
                         source_err_final,
-                        default_err=reciprocal_default_err,
-                        min_err=reciprocal_min_err,
-                        max_err=reciprocal_max_err,
+                        default_err=source_default_err,
+                        min_err=source_min_err,
+                        max_err=source_max_err,
                     )
                     n_source_valid_final = int(np.sum(np.isfinite(source_err_final) & (source_err_final > 0)))
                     print(

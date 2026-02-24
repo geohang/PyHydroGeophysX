@@ -168,7 +168,7 @@ class ContextInputAgent(BaseAgent):
             electrode_file = self._extract_electrode_file_regex(user_request)
             if electrode_file:
                 workflow_config['electrode_file'] = electrode_file
-                print(f"  ⚠️  LLM did not extract electrode file. Using regex fallback: {electrode_file}")
+                print(f"  [WARN] LLM did not extract electrode file. Using regex fallback: {electrode_file}")
 
         # Fallback: Extract hydrological model config using regex if LLM missed it
         if any(kw in user_request_lower for kw in ['modflow', 'parflow', 'par flow']):
@@ -186,12 +186,18 @@ class ContextInputAgent(BaseAgent):
         if extracted_files and len(extracted_files) > 1:
             # Multiple files suggest time-lapse workflow
             if workflow_config.get('inversion_mode') != 'time-lapse':
-                print(f"  ⚠️  Detected {len(extracted_files)} data files in request - setting inversion_mode to 'time-lapse'")
+                print(
+                    f"  [WARN] Detected {len(extracted_files)} data files in request - "
+                    "setting inversion_mode to 'time-lapse'"
+                )
                 workflow_config['inversion_mode'] = 'time-lapse'
             
             if not workflow_config.get('time_lapse_files') or len(workflow_config.get('time_lapse_files', [])) == 0:
                 workflow_config['time_lapse_files'] = extracted_files
-                print(f"  ⚠️  LLM did not extract file list. Using regex fallback: found {len(extracted_files)} files")
+                print(
+                    f"  [WARN] LLM did not extract file list. "
+                    f"Using regex fallback: found {len(extracted_files)} files"
+                )
         
         # Normalize time-lapse file paths if in time-lapse mode
         if workflow_config.get('inversion_mode') == 'time-lapse':
@@ -205,7 +211,7 @@ class ContextInputAgent(BaseAgent):
         if workflow_config.get('fusion_pattern'):
             workflow_config = self._normalize_fusion_config(workflow_config)
         
-        print("✓ Multi-stage extraction complete")
+        print("[OK] Multi-stage extraction complete")
         return workflow_config
     
     def _extract_params_regex(self, text: str) -> Dict[str, float]:
@@ -813,7 +819,7 @@ Generate JSON now:"""
                     pass
         
         # If all fails, return minimal config and log warning
-        print(f"⚠️  Warning: Could not parse JSON from LLM response. Using minimal config.")
+        print("[WARN] Could not parse JSON from LLM response. Using minimal config.")
         return {}
     
     def _validate_and_complete_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
@@ -872,7 +878,7 @@ Generate JSON now:"""
         # Validate time-lapse specific fields
         if config.get('inversion_mode') == 'time-lapse':
             if 'time_lapse_files' not in config or not config['time_lapse_files']:
-                print("⚠️  Warning: time-lapse mode requested but no time_lapse_files provided")
+                print("[WARN] time-lapse mode requested but no time_lapse_files provided")
                 config['inversion_mode'] = 'standard'
             else:
                 # Set defaults for time-lapse

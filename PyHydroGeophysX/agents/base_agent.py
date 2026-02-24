@@ -222,6 +222,10 @@ class BaseAgent(ABC):
             if progress_callback:
                 progress_callback(step, progress, details)
             print(f"[Progress {progress*100:.0f}%] {step}: {details}")
+
+        # Normalize output directory so path joins work regardless of caller type.
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
         
         # 1. Infer workflow type from configuration keys
         # More specific detection: check for unique indicators of each workflow

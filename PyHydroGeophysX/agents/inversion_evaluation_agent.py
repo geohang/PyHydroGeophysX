@@ -8,6 +8,7 @@ adjusting regularization parameters to achieve optimal results.
 from typing import Dict, Any, Optional, List, Tuple
 import numpy as np
 import os
+import sys
 from .base_agent import BaseAgent
 
 
@@ -135,8 +136,10 @@ optimal regularization parameter selection."""
                     evaluation['recommendations']
                 )
                 
-                self._log_execution(f"Adjusted lambda: {current_params.get('lambda', 20)} → "
-                                  f"{adjusted_params.get('lambda', 20)}")
+                self._log_execution(
+                    f"Adjusted lambda: {current_params.get('lambda', 20)} -> "
+                    f"{adjusted_params.get('lambda', 20)}"
+                )
                 
                 # Re-run inversion with adjusted parameters
                 new_results = self._rerun_inversion(input_data, adjusted_params)
@@ -155,11 +158,11 @@ optimal regularization parameter selection."""
                 if new_evaluation['quality_score'] > best_score:
                     best_results = new_results
                     best_score = new_evaluation['quality_score']
-                    self._log_execution(f"✓ Improvement found! Score: {best_score:.1f}/100")
+                    self._log_execution(f"[OK] Improvement found! Score: {best_score:.1f}/100")
                 
                 # Check if acceptable quality achieved
                 if new_evaluation['is_acceptable']:
-                    self._log_execution(f"✓ Acceptable quality achieved after {attempt + 1} attempts")
+                    self._log_execution(f"[OK] Acceptable quality achieved after {attempt + 1} attempts")
                     break
                 
                 # Update current params for next iteration
@@ -621,4 +624,11 @@ hydrogeophysical interpretation:
     
     def _log_execution(self, message: str):
         """Log execution messages."""
-        print(f"[{self.name}] {message}")
+        prefix = f"[{self.name}] "
+        try:
+            print(f"{prefix}{message}")
+        except UnicodeEncodeError:
+            # Keep logging robust on Windows terminals with non-UTF-8 code pages.
+            encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+            safe_message = message.encode(encoding, errors="replace").decode(encoding, errors="replace")
+            print(f"{prefix}{safe_message}")

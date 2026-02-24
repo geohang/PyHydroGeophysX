@@ -3464,6 +3464,33 @@ def _quick_mode_description(mode: str) -> str:
     return mapping.get(mode, mode)
 
 
+def _infer_instrument_from_request(user_request: str) -> Optional[str]:
+    """
+    Infer likely instrument from free-text user request for No-LLM quick mode.
+    """
+    text = (user_request or "").strip().lower()
+    if not text:
+        return None
+
+    if "abem" in text or "terameter" in text:
+        return "ABEM-Lund"
+    if "syscal" in text:
+        return "Syscal"
+    if re.search(r"\be4d\b", text):
+        return "E4D"
+    if re.search(r"\bdas\b", text) or "das-1" in text or "das 1" in text:
+        return "DAS-1"
+    if "bert" in text:
+        return "BERT"
+    if "sting" in text:
+        return "Sting"
+    if "ares" in text:
+        return "ARES"
+    if "protocol dc" in text:
+        return "Protocol DC"
+    return None
+
+
 def _build_no_llm_workflow_config(
     quick_mode: str,
     upload_overrides: Dict[str, Any],
@@ -3472,6 +3499,7 @@ def _build_no_llm_workflow_config(
     cfg: Dict[str, Any] = dict(upload_overrides)
     cfg["user_request"] = user_request.strip() or f"Quick run mode: {quick_mode}"
     cfg["project_dir"] = str(Path.cwd())
+    inferred_instrument = _infer_instrument_from_request(user_request)
 
     if quick_mode == "ERT Only":
         ert_file = cfg.get("ert_file") or cfg.get("data_file")
@@ -3481,7 +3509,7 @@ def _build_no_llm_workflow_config(
             {
                 "ert_file": ert_file,
                 "data_file": ert_file,
-                "instrument": cfg.get("instrument", "DAS-1"),
+                "instrument": cfg.get("instrument") or inferred_instrument or "DAS-1",
                 "convert_to_water_content": False,
                 "inversion_params": {"lambda": 20.0, "max_iterations": 12, "method": "cgls"},
             }
@@ -3495,7 +3523,7 @@ def _build_no_llm_workflow_config(
             {
                 "time_lapse_files": list(tl_files),
                 "timelapse_files": list(tl_files),
-                "instrument": cfg.get("instrument", "E4D"),
+                "instrument": cfg.get("instrument") or inferred_instrument or "E4D",
                 "inversion_mode": "time-lapse",
                 "time_lapse_method": "difference",
                 "temporal_regularization": 10.0,

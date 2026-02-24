@@ -10694,7 +10694,7 @@
     }
   ],
   "metadata": {
-    "source_file": "C:\\Users\\hchen117\\AppData\\Local\\Temp\\phgx_uploads_is2ei56e\\E4_Jyoti.dat",
+    "source_file": "c:\\Users\\hchen117\\OneDrive - University of Iowa\\Documents\\GitHub\\PyHydroGeophysX\\examples\\E4_Jyoti.dat",
     "loader": "local_parsers_resipy_fallback",
     "parser_used": "ABEM-Lund",
     "instrument": "ABEM-Lund",

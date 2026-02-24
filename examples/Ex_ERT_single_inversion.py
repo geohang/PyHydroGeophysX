@@ -133,15 +133,28 @@ def _process_with_data_agent(
     project_dir: Optional[str | Path],
     crs: str,
     use_source_error: bool = False,
+    use_electrode_file: bool = False,
+    electrode_file: Optional[str | Path] = None,
 ) -> Dict[str, object]:
     data_file = _find_ert_data_file(input_path)
     resolved_instrument = instrument or _detect_instrument(data_file)
     project_dir_path = _resolve_path(project_dir) if project_dir else data_file.parent
+    electrode_file_path = None
+    if use_electrode_file:
+        if electrode_file is None:
+            raise ValueError(
+                "use_electrode_file=True but no electrode_file path was provided."
+            )
+        electrode_file_path = _resolve_path(electrode_file)
+        if not electrode_file_path.exists():
+            raise FileNotFoundError(f"Electrode file not found: {electrode_file_path}")
+        print(f"Using electrode file: {electrode_file_path}")
 
     ert = load_ert_resipy(
         project_dir=str(project_dir_path),
         data_file=str(data_file),
         instrument=resolved_instrument,
+        electrode_file=str(electrode_file_path) if electrode_file_path else None,
         crs=crs,
         local_ref=LocalRef(origin_x=0.0, origin_y=0.0, azimuth_deg=90.0),
     )
@@ -158,6 +171,8 @@ def _process_with_data_agent(
         "data_file": str(data_file),
         "instrument": resolved_instrument,
         "project_dir": str(project_dir_path),
+        "use_electrode_file": bool(use_electrode_file),
+        "electrode_file": str(electrode_file_path) if electrode_file_path else None,
         "artifacts": artifacts,
         "bert_path": bert_path,
     }
@@ -174,6 +189,8 @@ def run_single_ert_inversion(
     method: str = "cgls",
     use_gpu: bool = False,
     use_source_error: bool = False,
+    use_electrode_file: bool = False,
+    electrode_file: Optional[str | Path] = None,
 ) -> Dict[str, object]:
     """
     Process one ERT input (file or folder) and run a single inversion.
@@ -188,6 +205,8 @@ def run_single_ert_inversion(
         project_dir=project_dir,
         crs=crs,
         use_source_error=use_source_error,
+        use_electrode_file=use_electrode_file,
+        electrode_file=electrode_file,
     )
 
     bert_path = process_result["bert_path"]
@@ -262,6 +281,8 @@ def run_single_ert_inversion(
         "resolved_data_file": process_result["data_file"],
         "instrument_used": process_result["instrument"],
         "use_source_error": bool(use_source_error),
+        "use_electrode_file": bool(use_electrode_file),
+        "electrode_file": process_result.get("electrode_file"),
         "bert_file": str(bert_path),
         "qc_artifacts": process_result["artifacts"],
         "result_pickle": str(result_prefix) + ".pkl",
@@ -352,6 +373,22 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "Default behavior is to estimate error from reciprocal pairs."
         ),
     )
+    parser.add_argument(
+        "--use-electrode-file",
+        action="store_true",
+        help=(
+            "Enable external electrode coordinate file usage. "
+            "If set, also provide --electrode-file."
+        ),
+    )
+    parser.add_argument(
+        "--electrode-file",
+        default=None,
+        help=(
+            "Path to external electrode coordinate file. "
+            "Used only when --use-electrode-file is set."
+        ),
+    )
     return parser
 
 
@@ -368,4 +405,6 @@ if __name__ == "__main__":
         method=args.method,
         use_gpu=args.use_gpu,
         use_source_error=args.use_source_error,
+        use_electrode_file=args.use_electrode_file,
+        electrode_file=args.electrode_file,
     )

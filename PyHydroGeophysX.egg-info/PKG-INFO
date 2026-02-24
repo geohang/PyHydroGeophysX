@@ -73,9 +73,6 @@ A comprehensive Python package for integrating hydrological model outputs with g
 
 *HydroGeophysX bridges the strengths and limitations of hydrologic modeling and geophysical monitoring, enabling process-based survey design, inversion constraints, and model calibration. This integrative approach supports advanced watershed studies and critical zone science.*
 
-For a detailed conceptual framework and application, see:
-Chen, H., Niu, Q., Mendieta, A., Bradford, J., & McNamara, J. (2023). Geophysics‐informed hydrologic modeling of a mountain headwater catchment for studying hydrological partitioning in the critical zone. Water Resources Research, 59(12), e2023WR035280. https://doi.org/10.1029/2023WR035280
-
 ## Quick Links
 
 - Documentation: https://geohang.github.io/PyHydroGeophysX/
@@ -243,7 +240,7 @@ The examples folder provides paired Jupyter notebooks (.ipynb) and Python script
 - Ex_structure_TLresinv: Structure‑constrained time‑lapse resistivity inversion (notebook: Ex_structure_TLresinv.ipynb, script: Ex_structure_TLresinv.py).
 - EX_SRT_forward: Seismic refraction tomography forward modeling and synthetic travel times (notebook: EX_SRT_forward.ipynb, script: EX_SRT_forward.py).
 - Ex_SRT_inv: Seismic refraction tomography inversion workflow (notebook: Ex_SRT_inv.ipynb, script: Ex_SRT_inv.py).
-- **Ex_SRT_custom_inversion**: SRT inversion using the packaged `SRTInversion` class (script: Ex_SRT_custom_inversion.py). **NEW**
+- Ex_SRT_inv now includes both PyGIMLi direct inversion and packaged `SRTInversion` side-by-side comparison (notebook: Ex_SRT_inv.ipynb, script: Ex_SRT_inv.py).
 - Ex_MC_Hydro: Monte Carlo uncertainty quantification for hydro‑to‑resistivity conversion (notebook: Ex_MC_Hydro.ipynb, script: Ex_MC_Hydro.py).
 - **Ex_3D_ERT_forward**: 3D ERT forward modeling with MODFLOW integration using Mesh3DCreator and PyVista visualization (notebook: Ex_3D_ERT_forward.ipynb). **NEW**
 - **Ex_TDEM_workflow**: Time-Domain Electromagnetic (TDEM) forward modeling and inversion from hydrological models using SimPEG (notebook: Ex_TDEM_workflow.ipynb). **NEW**
@@ -675,14 +672,29 @@ We welcome contributions! Please see our Contributing Guidelines for details.
 If you use PyHydroGeophysX in your research, please cite:
 
 ```bibtex
-@software{chen2025pyhydrogeophysx,
+@misc{chen2026pyhydrogeophysx,
   author = {Chen, Hang and Niu, Qifei and Wu, Yuxin},
-  title = {PyHydroGeophysX: An Extensible Open-Source Platform for Bridging Hydrological Models and Geophysical Measurements},
-  year = {2025},
-  publisher = {Water Resources Research (under review)},
-  url = {https://github.com/geohang/PyHydroGeophysX}
+  title = {PyHydroGeophysX: An Extensible Open-Source Platform for Integrating Hydrological Models with Geophysical Measurements},
+  year = {2026},
+  howpublished = {SSRN},
+  doi = {10.2139/ssrn.6238293},
+  url = {https://ssrn.com/abstract=6238293}
 }
 ```
+
+```bibtex
+@article{chen2026agentworkflow,
+  author = {Chen, Hang},
+  title = {A Generalizable Automated Geophysical Agent Workflow for Accessible Subsurface Hydrology Analysis},
+  journal = {Big Data and Earth System},
+  pages = {100042},
+  year = {2026}
+}
+```
+
+### References
+
+- Chen, H., Niu, Q., Mendieta, A., Bradford, J., & McNamara, J. (2023). Geophysics-informed hydrologic modeling of a mountain headwater catchment for studying hydrological partitioning in the critical zone. *Water Resources Research, 59*(12), e2023WR035280. https://doi.org/10.1029/2023WR035280
 
 Additionally, please cite the underlying libraries you use:
 
@@ -729,6 +741,21 @@ Additionally, please cite the underlying libraries you use:
 }
 ```
 
+**For MODFLOW scripting (FloPy):**
+```bibtex
+@article{bakker2016flopy,
+  author={Bakker, Mark and Post, Vincent and Langevin, Christian D and Hughes, Joseph D and White, Jeremy T and Starn, Jeffrey J and Fienen, Michael N},
+  title={Scripting MODFLOW model development using Python and FloPy},
+  journal={Groundwater},
+  volume={54},
+  number={5},
+  pages={733--739},
+  year={2016},
+  doi={10.1111/gwat.12413},
+  url={https://ngwa.onlinelibrary.wiley.com/doi/full/10.1111/gwat.12413}
+}
+```
+
 **For electromagnetic modeling (SimPEG):**
 ```bibtex
 @article{cockett2015simpeg,
@@ -767,3 +794,4 @@ Issues: GitHub Issues
 PyHydroGeophysX - Bridging the gap between hydrological models and geophysical monitoring
 
 Note: This package is under active development. Please report issues and feature requests through the GitHub issue tracker.
+

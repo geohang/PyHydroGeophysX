@@ -6,6 +6,7 @@ Specialized agent for generating comprehensive reports from workflow results.
 
 from typing import Dict, Any, Optional
 import os
+import sys
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -585,6 +586,185 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                 cMax = cMax + spread * 0.05
             
             return (cMin, cMax)
+
+        min_profile_height_ratio = float(
+            workflow_data.get('min_profile_height_ratio', 1.0 / 3.0) or (1.0 / 3.0)
+        )
+
+        def _mesh_cell_centers(mesh):
+            """Return mesh cell-center coordinates as finite numpy arrays."""
+            if mesh is None:
+                return None, None
+            try:
+                cells = list(mesh.cells())
+                if len(cells) == 0:
+                    return None, None
+                xc = np.array([c.center().x() for c in cells], dtype=float)
+                yc = np.array([c.center().y() for c in cells], dtype=float)
+                finite = np.isfinite(xc) & np.isfinite(yc)
+                if not np.any(finite):
+                    return None, None
+                return xc[finite], yc[finite]
+            except Exception:
+                return None, None
+
+        def _infer_surface_side(yc, mask=None):
+            """
+            Infer whether the surface corresponds to max(y) or min(y).
+            Returns (surface_is_max, y_surface).
+            """
+            if yc is None or len(yc) == 0:
+                return True, 0.0
+            y_min = float(np.nanmin(yc))
+            y_max = float(np.nanmax(yc))
+            if mask is not None and len(mask) == len(yc) and np.sum(mask) >= 3:
+                y_ref = float(np.nanmedian(yc[np.asarray(mask, dtype=bool)]))
+            else:
+                y_ref = float(np.nanmedian(yc))
+            surface_is_max = abs(y_max - y_ref) <= abs(y_ref - y_min)
+            return surface_is_max, (y_max if surface_is_max else y_min)
+
+        def _apply_vertical_limits(ax, mesh, coverage_mask=None):
+            """
+            Ensure the visible vertical extent is at least profile_length * ratio.
+            Returns metadata tuple (applied, shown_span, min_required_span).
+            """
+            xc, yc = _mesh_cell_centers(mesh)
+            if xc is None or yc is None or yc.size < 2:
+                return False, None, None
+
+            x_span = float(np.nanmax(xc) - np.nanmin(xc))
+            min_required_span = max(5.0, min_profile_height_ratio * x_span)
+
+            finite_cov = None
+            if coverage_mask is not None and len(coverage_mask) == len(yc):
+                finite_cov = np.asarray(coverage_mask, dtype=bool)
+                if np.sum(finite_cov) < 3:
+                    finite_cov = None
+
+            y_min = float(np.nanmin(yc))
+            y_max = float(np.nanmax(yc))
+            surface_is_max, _ = _infer_surface_side(yc, finite_cov)
+            if surface_is_max:
+                y_surface = y_max
+                y_cov_deep = float(np.nanmin(yc[finite_cov])) if finite_cov is not None else y_min
+                shown_span = max(0.0, y_surface - y_cov_deep)
+                target_span = max(shown_span, min_required_span)
+                y_target_deep = max(y_surface - target_span, y_min)
+                y_pad = max(2.0, 0.08 * target_span)
+                y_lo = y_target_deep - y_pad
+                y_hi = y_surface + y_pad
+            else:
+                y_surface = y_min
+                y_cov_deep = float(np.nanmax(yc[finite_cov])) if finite_cov is not None else y_max
+                shown_span = max(0.0, y_cov_deep - y_surface)
+                target_span = max(shown_span, min_required_span)
+                y_target_deep = min(y_surface + target_span, y_max)
+                y_pad = max(2.0, 0.08 * target_span)
+                y_lo = y_surface - y_pad
+                y_hi = y_target_deep + y_pad
+
+            if np.isfinite(y_lo) and np.isfinite(y_hi):
+                ax.set_ylim(min(y_lo, y_hi), max(y_lo, y_hi))
+                return True, target_span, min_required_span
+            return False, None, min_required_span
+
+        def compute_coverage_mask(mesh, coverage):
+            """
+            Choose coverage threshold so the deepest covered point reaches target depth.
+            Returns (mask, threshold, keep_fraction, deepest_depth, min_required_depth).
+            """
+            if coverage is None:
+                return None, None, None, None, None
+
+            cov = np.array(coverage, dtype=float).reshape(-1)
+            finite = np.isfinite(cov)
+            if not np.any(finite):
+                return None, None, None, None, None
+
+            # Ensure mask length matches mesh cells when available
+            if mesh is not None:
+                try:
+                    if len(cov) != int(mesh.cellCount()):
+                        return None, None, None, None, None
+                except Exception:
+                    return None, None, None, None, None
+
+            xc, yc = _mesh_cell_centers(mesh)
+            if xc is not None and yc is not None and len(yc) == len(cov):
+                profile_length = float(np.nanmax(xc) - np.nanmin(xc))
+                min_required_depth = max(5.0, min_profile_height_ratio * profile_length)
+            else:
+                min_required_depth = 5.0
+
+            surface_is_max, y_surface = _infer_surface_side(yc, None)
+
+            # Start strict and relax using actual coverage values to get
+            # the strictest threshold that still reaches target depth.
+            threshold_candidates = np.unique(cov[finite])
+            threshold_candidates = threshold_candidates[np.isfinite(threshold_candidates)]
+            threshold_candidates = np.sort(threshold_candidates)[::-1]
+            if threshold_candidates.size > 600:
+                idx = np.linspace(0, threshold_candidates.size - 1, num=600, dtype=int)
+                threshold_candidates = threshold_candidates[idx]
+
+            best = None
+            for threshold in threshold_candidates:
+                threshold = float(threshold)
+                mask = finite & (cov > threshold)
+                keep_frac = float(np.mean(mask))
+                n_keep = int(np.sum(mask))
+                if n_keep < 3:
+                    continue
+
+                if yc is not None and len(yc) == len(mask):
+                    ycov = yc[mask]
+                    if surface_is_max:
+                        deepest_depth = max(0.0, y_surface - float(np.nanmin(ycov)))
+                    else:
+                        deepest_depth = max(0.0, float(np.nanmax(ycov)) - y_surface)
+                else:
+                    deepest_depth = float("nan")
+
+                candidate = (mask, threshold, keep_frac, deepest_depth)
+                if best is None:
+                    best = candidate
+                else:
+                    best_depth = best[3]
+                    choose_candidate = False
+                    if np.isnan(best_depth) and not np.isnan(deepest_depth):
+                        choose_candidate = True
+                    elif not np.isnan(deepest_depth) and deepest_depth > best_depth + 1e-9:
+                        choose_candidate = True
+                    elif (
+                        not np.isnan(deepest_depth)
+                        and not np.isnan(best_depth)
+                        and abs(deepest_depth - best_depth) <= 1e-9
+                        and keep_frac < best[2] - 1e-6
+                    ):
+                        # For equal depth, prefer smaller masked area.
+                        choose_candidate = True
+                    if choose_candidate:
+                        best = candidate
+
+                enough_depth = (not np.isnan(deepest_depth)) and (deepest_depth >= min_required_depth)
+                if enough_depth:
+                    return mask, threshold, keep_frac, deepest_depth, min_required_depth
+
+            if best is not None:
+                return best[0], best[1], best[2], best[3], min_required_depth
+
+            fallback = finite.copy()
+            keep_frac = float(np.mean(fallback))
+            if yc is not None and len(yc) == len(fallback):
+                ycov = yc[fallback]
+                if surface_is_max:
+                    deepest_depth = max(0.0, y_surface - float(np.nanmin(ycov)))
+                else:
+                    deepest_depth = max(0.0, float(np.nanmax(ycov)) - y_surface)
+            else:
+                deepest_depth = float("nan")
+            return fallback, float(np.nanmin(cov[finite])), keep_frac, deepest_depth, min_required_depth
         
         try:
             # 1. Resistivity model plot with coverage masking
@@ -598,12 +778,21 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                         
                         # Get coverage if available
                         coverage = inv.get('coverage')
-                        coverage_mask = coverage > -1.0 if coverage is not None else None
+                        coverage_mask, coverage_threshold, keep_frac, deepest_depth, min_required_depth = compute_coverage_mask(
+                            inv.get('mesh'), coverage
+                        )
+                        if coverage_mask is not None:
+                            self._log_execution(
+                                f"Coverage threshold: {coverage_threshold:.3f} "
+                                f"(kept {keep_frac*100:.1f}% cells, "
+                                f"deepest point {deepest_depth:.1f} m, "
+                                f"min target {min_required_depth:.1f} m)"
+                            )
                         
                         # Compute dynamic colormap limits for resistivity
                         res_model = np.array(inv['resistivity_model'])
                         cMin_res, cMax_res = compute_colormap_limits(res_model, log_scale=True)
-                        self._log_execution(f"Resistivity colormap: {cMin_res:.1f} to {cMax_res:.1f} Ωm")
+                        self._log_execution(f"Resistivity colormap: {cMin_res:.1f} to {cMax_res:.1f} ohm-m")
                         
                         # Plot with coverage masking
                         ax, cbar = pg.show(
@@ -624,6 +813,15 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                         ax.set_xlabel('Distance (m)', fontsize=14, fontfamily='Arial')
                         ax.set_ylabel('Elevation (m)', fontsize=14, fontfamily='Arial')
                         ax.set_title('ERT Inversion Results', fontsize=16, fontfamily='Arial')
+
+                        applied, shown_span, min_span = _apply_vertical_limits(
+                            ax, inv.get('mesh'), coverage_mask
+                        )
+                        if applied and shown_span is not None and min_span is not None:
+                            self._log_execution(
+                                f"Vertical display span set to {shown_span:.1f} m "
+                                f"(min required {min_span:.1f} m)"
+                            )
                         
                         res_file = os.path.join(output_dir, 'resistivity_model.png')
                         fig.savefig(res_file, dpi=300, bbox_inches='tight')
@@ -651,7 +849,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                         if 'inversion_results' in workflow_data:
                             inv = workflow_data['inversion_results']
                             coverage = inv.get('coverage')
-                        coverage_mask = coverage > -1.0 if coverage is not None else None
+                        coverage_mask, _, _, _, _ = compute_coverage_mask(wc.get('mesh'), coverage)
                         
                         # Compute dynamic colormap limits for water content
                         cMin_wc, cMax_wc = compute_colormap_limits(wc_mean, log_scale=False)
@@ -677,6 +875,8 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                         ax.set_xlabel('Distance (m)', fontsize=14, fontfamily='Arial')
                         ax.set_ylabel('Elevation (m)', fontsize=14, fontfamily='Arial')
                         ax.set_title('Water Content Distribution', fontsize=16, fontfamily='Arial')
+
+                        _apply_vertical_limits(ax, wc.get('mesh'), coverage_mask)
                         
                         wc_file = os.path.join(output_dir, 'water_content.png')
                         fig.savefig(wc_file, dpi=300, bbox_inches='tight')
@@ -702,7 +902,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                             if 'inversion_results' in workflow_data:
                                 inv = workflow_data['inversion_results']
                                 coverage = inv.get('coverage')
-                            coverage_mask = coverage > -1.0 if coverage is not None else None
+                            coverage_mask, _, _, _, _ = compute_coverage_mask(wc.get('mesh'), coverage)
                             
                             # Compute dynamic colormap limits for uncertainty
                             cMin_std, cMax_std = compute_colormap_limits(wc_std, log_scale=False)
@@ -726,6 +926,8 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                             ax.set_xlabel('Distance (m)', fontsize=14, fontfamily='Arial')
                             ax.set_ylabel('Elevation (m)', fontsize=14, fontfamily='Arial')
                             ax.set_title('Water Content Uncertainty', fontsize=16, fontfamily='Arial')
+
+                            _apply_vertical_limits(ax, wc.get('mesh'), coverage_mask)
                             
                             uncertainty_file = os.path.join(output_dir, 'water_content_uncertainty.png')
                             fig.savefig(uncertainty_file, dpi=300, bbox_inches='tight')
@@ -1398,25 +1600,31 @@ Correlation between mean resistivity changes and climate variables:
             coverage = inversion_results.get('coverage')
             
             # Debug: Print what we received
-            print(f"\n  [DEBUG] Visualization generation:")
-            print(f"    → final_models type: {type(final_models)}")
-            print(f"    → final_models shape: {final_models.shape if final_models is not None else 'None'}")
-            print(f"    → mesh type: {type(mesh)}")
-            print(f"    → mesh exists: {mesh is not None}")
-            print(f"    → coverage type: {type(coverage)}")
-            print(f"    → coverage shape: {coverage.shape if coverage is not None and hasattr(coverage, 'shape') else 'None'}")
+            self._log_execution("Visualization generation", level='DEBUG')
+            self._log_execution(f"-> final_models type: {type(final_models)}", level='DEBUG')
+            self._log_execution(
+                f"-> final_models shape: {final_models.shape if final_models is not None else 'None'}",
+                level='DEBUG'
+            )
+            self._log_execution(f"-> mesh type: {type(mesh)}", level='DEBUG')
+            self._log_execution(f"-> mesh exists: {mesh is not None}", level='DEBUG')
+            self._log_execution(f"-> coverage type: {type(coverage)}", level='DEBUG')
+            self._log_execution(
+                f"-> coverage shape: {coverage.shape if coverage is not None and hasattr(coverage, 'shape') else 'None'}",
+                level='DEBUG'
+            )
             
             # Convert coverage to numpy array if it's a list
             if coverage is not None and isinstance(coverage, list):
-                print(f"    → Converting coverage from list to numpy array")
+                self._log_execution("-> Converting coverage from list to numpy array", level='DEBUG')
                 coverage = np.array(coverage)
-                print(f"    → coverage shape after conversion: {coverage.shape}")
+                self._log_execution(f"-> coverage shape after conversion: {coverage.shape}", level='DEBUG')
             
             if final_models is not None and mesh is not None:
-                print(f"    → Attempting to generate baseline resistivity plot...")
+                self._log_execution("-> Attempting to generate baseline resistivity plot", level='DEBUG')
                 try:
                     import pygimli as pg
-                    print(f"    → PyGIMLi imported successfully")
+                    self._log_execution("-> PyGIMLi imported successfully", level='DEBUG')
                     
                     # Use cellMarkers to properly index the data
                     cell_markers = mesh.cellMarkers()
@@ -1480,9 +1688,12 @@ Correlation between mean resistivity changes and climate variables:
                     import traceback
                     self._log_execution(f"Could not generate baseline resistivity plot: {e}", level='ERROR')
                     self._log_execution(f"Traceback: {traceback.format_exc()}", level='ERROR')
-                    print(f"  ❌ Baseline resistivity plot failed: {e}")
+                    self._log_execution(f"Baseline resistivity plot failed: {e}", level='ERROR')
             else:
-                print(f"    ⚠️  Skipping baseline plot: final_models={final_models is not None}, mesh={mesh is not None}")
+                self._log_execution(
+                    f"Skipping baseline plot: final_models={final_models is not None}, mesh={mesh is not None}",
+                    level='WARNING'
+                )
             
             # 2. All timestep resistivity maps (1x4 layout: all 4 timesteps)
             if final_models is not None and mesh is not None:
@@ -1563,7 +1774,7 @@ Correlation between mean resistivity changes and climate variables:
                     import traceback
                     self._log_execution(f"Could not generate all timesteps resistivity plot: {e}", level='ERROR')
                     self._log_execution(f"Traceback: {traceback.format_exc()}", level='ERROR')
-                    print(f"  ❌ All timesteps plot failed: {e}")
+                    self._log_execution(f"All timesteps plot failed: {e}", level='ERROR')
             
             # 3. Time-lapse resistivity percentage change maps (1x4 layout: baseline + changes)
             if final_models is not None and mesh is not None:
@@ -1770,7 +1981,7 @@ Correlation between mean resistivity changes and climate variables:
                     import traceback
                     self._log_execution(f"Could not generate time-lapse absolute changes plot: {e}", level='ERROR')
                     self._log_execution(f"Traceback: {traceback.format_exc()}", level='ERROR')
-                    print(f"  ❌ Time-lapse changes plot failed: {e}")
+                    self._log_execution(f"Time-lapse changes plot failed: {e}", level='ERROR')
             
             # 2. Climate-Resistivity comparison plots
             if comparison_df is not None and not comparison_df.empty and climate_data is not None:
@@ -2663,6 +2874,13 @@ All workflow parameters were extracted from the natural language request:
     
     def _log_execution(self, message: str, level: str = 'INFO'):
         """Log execution message."""
-        print(f"[{self.name}] [{level}] {message}")
+        prefix = f"[{self.name}] [{level}] "
+        try:
+            print(f"{prefix}{message}")
+        except UnicodeEncodeError:
+            # Keep logging robust on Windows terminals with non-UTF-8 code pages.
+            encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+            safe_message = message.encode(encoding, errors="replace").decode(encoding, errors="replace")
+            print(f"{prefix}{safe_message}")
 
 

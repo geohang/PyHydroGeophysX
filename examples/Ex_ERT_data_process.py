@@ -172,6 +172,8 @@ def process_ert_input(
     epsg: Optional[int] = None,
     local_ref: Optional[LocalRef] = None,
     use_source_error: bool = False,
+    use_electrode_file: bool = False,
+    electrode_file: Optional[str | Path] = None,
 ) -> Dict[str, object]:
     """
     End-to-end processing helper:
@@ -186,10 +188,22 @@ def process_ert_input(
     if project_dir is None:
         project_dir = data_file.parent
 
+    electrode_file_path = None
+    if use_electrode_file:
+        if electrode_file is None:
+            raise ValueError(
+                "use_electrode_file=True but no electrode_file path was provided."
+            )
+        electrode_file_path = _resolve_path(electrode_file)
+        if not electrode_file_path.exists():
+            raise FileNotFoundError(f"Electrode file not found: {electrode_file_path}")
+        print(f"Using electrode file: {electrode_file_path}")
+
     ert = load_ert_resipy(
         project_dir=str(project_dir),
         data_file=str(data_file),
         instrument=resolved_instrument,
+        electrode_file=str(electrode_file_path) if electrode_file_path else None,
         crs=crs,
         epsg=epsg,
         local_ref=local_ref,
@@ -209,6 +223,8 @@ def process_ert_input(
         "instrument": resolved_instrument,
         "project_dir": str(project_dir),
         "use_source_error": bool(use_source_error),
+        "use_electrode_file": bool(use_electrode_file),
+        "electrode_file": str(electrode_file_path) if electrode_file_path else None,
         "artifacts": artifacts,
         "bert_path": bert_path,
     }
