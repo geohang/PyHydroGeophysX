@@ -4,12 +4,17 @@ ERT Inversion Agent
 Specialized agent for performing ERT inversion with optional structural constraints.
 """
 
-from typing import Dict, Any, Optional
-import numpy as np
 import os
+from typing import Any, Dict, Optional
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# ERTInversion Agent
+# ---------------------------------------------------------------------------
 class ERTInversionAgent(BaseAgent):
     """
     Agent specialized in ERT inversion.
@@ -66,10 +71,11 @@ constraints, structural constraints, and convergence criteria."""
         self._log_execution("Starting standard ERT inversion")
         
         try:
-            from PyHydroGeophysX.inversion.ert_inversion import ERTInversion
-            from PyHydroGeophysX.data_processing.ert_data_agent import export_for_inversion
             import pygimli as pg
-            
+
+            from PyHydroGeophysX.data_processing.ert_data_agent import export_for_inversion
+            from PyHydroGeophysX.inversion.ert_inversion import ERTInversion
+
             # Extract parameters
             ert_data = input_data.get('ert_data')
             inversion_params = input_data.get('inversion_params', {})
@@ -88,15 +94,26 @@ constraints, structural constraints, and convergence criteria."""
                 'use_source_error',
                 inversion_params.get('use_source_error', True)
             )
+            export_strategy = input_data.get(
+                'export_strategy',
+                inversion_params.get('export_strategy', 'default')
+            )
             self._log_execution(
-                "Export error model: "
+                "Export mode: "
+                + f"{export_strategy}, "
                 + ("source (dataset-provided)" if bool(use_source_error) else "reciprocal (auto-estimated)")
             )
             data_file = export_for_inversion(
                 ert_data, 
                 outdir=output_dir, 
                 fmt='pgimli',
-                use_source_error=bool(use_source_error)
+                use_source_error=bool(use_source_error),
+                export_strategy=str(export_strategy),
+                default_relative_error=float(inversion_params.get('default_relative_error', 0.01)),
+                default_absolute_error=float(inversion_params.get('default_absolute_error', 0.001)),
+                default_rhoa_limits=tuple(inversion_params.get('default_rhoa_limits', (0.1, 10000.0))),
+                default_reciprocal_percent=float(inversion_params.get('default_reciprocal_percent', 10.0)),
+                default_fit_error_lin=bool(inversion_params.get('default_fit_error_lin', True)),
             )
             self._log_execution(f"ERT data exported to: {data_file}")
             
@@ -110,7 +127,6 @@ constraints, structural constraints, and convergence criteria."""
             max_iterations = inversion_params.get('max_iterations', 10)
             method = inversion_params.get('method', 'cgls')
             use_gpu = inversion_params.get('use_gpu', False)
-            
             self._log_execution(f"Inversion parameters: lambda={lambda_val}, "
                               f"max_iter={max_iterations}, method={method}")
             
@@ -128,7 +144,21 @@ constraints, structural constraints, and convergence criteria."""
                 method=method,
                 use_gpu=use_gpu,
                 max_iterations=max_iterations,
-                mesh=mesh
+                mesh=mesh,
+                lambda_rate=inversion_params.get('lambda_rate', 1.0),
+                lambda_min=inversion_params.get('lambda_min', 1.0),
+                model_constraints=tuple(inversion_params.get('model_constraints', (1e-6, 1e7))),
+                quality=inversion_params.get('quality', 34.0),
+                paraDX=inversion_params.get('paraDX', 0.3),
+                paraMaxCellSize=inversion_params.get('paraMaxCellSize', 0.0),
+                paraDepth=inversion_params.get('paraDepth', 0.0),
+                absoluteUError=inversion_params.get('absoluteUError', 0.0),
+                relativeError=inversion_params.get('relativeError', 0.05),
+                maxLineSearch=inversion_params.get('maxLineSearch'),
+                zWeight=inversion_params.get('zWeight'),
+                robustData=inversion_params.get('robustData'),
+                blockyModel=inversion_params.get('blockyModel'),
+                verbose=inversion_params.get('verbose', False),
             )
             
             inversion_result = inversion.run()
@@ -151,14 +181,14 @@ constraints, structural constraints, and convergence criteria."""
                 'mesh': inversion_result.mesh,
                 'resistivity_model': inversion_result.final_model,
                 'coverage': inversion_result.coverage,
-                'chi2': float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else None,
-                'iterations': len(inversion_result.iteration_chi2),
+                'chi2': float(inversion_result.meta.get('final_chi2')) if inversion_result.meta.get('final_chi2') is not None else (float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else None),
+                'iterations': int(inversion_result.meta.get('native_iterations')) if inversion_result.meta.get('native_iterations') is not None else len(inversion_result.iteration_chi2),
                 'interpretation': interpretation,
                 'output_dir': output_dir
             }
             
-            final_chi2 = float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else 0.0
-            n_iterations = len(inversion_result.iteration_chi2)
+            final_chi2 = float(inversion_result.meta.get('final_chi2')) if inversion_result.meta.get('final_chi2') is not None else (float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else 0.0)
+            n_iterations = int(inversion_result.meta.get('native_iterations')) if inversion_result.meta.get('native_iterations') is not None else len(inversion_result.iteration_chi2)
             self._log_execution(f"Final chi2: {final_chi2:.3f}, "
                               f"Iterations: {n_iterations}")
             
@@ -208,6 +238,7 @@ Return as: lambda=XX, max_iterations=YY"""
             
             try:
                 import re
+
                 # Try to extract lambda value
                 lambda_match = re.search(r'lambda[=:\s]+(\d+\.?\d*)', response, re.IGNORECASE)
                 if lambda_match:
@@ -242,7 +273,7 @@ Return as: lambda=XX, max_iterations=YY"""
         """
         try:
             from PyHydroGeophysX.Geophy_modular.structure_integration import (
-                create_ert_mesh_with_structure
+                create_ert_mesh_with_structure,
             )
             
             interface_coords = seismic_structure.get('interface_coords')
@@ -315,10 +346,11 @@ Provide a brief interpretation (2-3 sentences) about:
         self._log_execution("Starting time-lapse ERT inversion")
         
         try:
-            from PyHydroGeophysX.inversion.time_lapse import TimeLapseERTInversion
-            from PyHydroGeophysX.data_processing.ert_data_agent import export_for_inversion
             import pygimli as pg
-            
+
+            from PyHydroGeophysX.data_processing.ert_data_agent import export_for_inversion
+            from PyHydroGeophysX.inversion.time_lapse import TimeLapseERTInversion
+
             # Extract parameters
             time_lapse_data = input_data.get('time_lapse_data', [])
             tl_method = input_data.get('time_lapse_method', 'difference')

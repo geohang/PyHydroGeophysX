@@ -1,8 +1,8 @@
 Case: geostat_joint
-ERT file: c:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\ERT\Bert\fielddataline2.dat
-SRT file: c:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\Seismic\srtfieldline2.dat
+ERT file: C:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\ERT\Bert\fielddataline2.dat
+SRT file: C:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\Seismic\srtfieldline2.dat
 Iterations: 12
-Final ERT chi2: 1.241217
+Final ERT chi2: 1.241250
 Final SRT chi2: 4.420145
 Parameters:
   auto_disable_cross_gradient_first_iteration: True

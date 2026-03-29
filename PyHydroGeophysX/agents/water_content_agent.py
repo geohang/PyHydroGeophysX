@@ -4,12 +4,17 @@ Water Content Conversion Agent
 Specialized agent for converting resistivity to water content using petrophysical models.
 """
 
-from typing import Dict, Any, Optional
-import numpy as np
 import os
+from typing import Any, Dict, Optional
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Water Content Agent
+# ---------------------------------------------------------------------------
 class WaterContentAgent(BaseAgent):
     """
     Agent specialized in converting resistivity to water content.
@@ -46,7 +51,7 @@ different geological layers, and quantify uncertainties."""
         
         try:
             from PyHydroGeophysX.Geophy_modular.ERT_to_WC import ERTtoWC
-            
+
             # Extract parameters
             inversion_results = input_data.get('inversion_results')
             petro_params = input_data.get('petrophysical_params', {})

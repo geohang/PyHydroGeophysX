@@ -1,4 +1,3 @@
-# %%
 """
 Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation
 ====================================================================
@@ -19,14 +18,19 @@ Uncertainty quantification is essential for reliable hydrological
 interpretation of geophysical data, providing confidence bounds on
 water content estimates and identifying regions of high/low certainty.
 """
+from typing import Any
+
+# %%
 # sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_MC_Hydro_fig_01.png'
+
+import os
+import sys
+
+import matplotlib.pyplot as plt
 
 # %%
 import numpy as np
-import matplotlib.pyplot as plt
-import os
 import pygimli as pg
-import sys
 from tqdm import tqdm
 
 # Setup package path for development
@@ -215,11 +219,13 @@ print(f"Mean uncertainty (std): {np.mean(water_content_std):.4f}")
 # %% [markdown]
 # ### Plot the water content distribution
 
-# %%
-from palettable.lightbartlein.diverging import BlueDarkRed18_18_r
+import matplotlib.pylab as pylab
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.pylab as pylab
+
+# %%
+from palettable.lightbartlein.diverging import BlueDarkRed18_18_r
+
 params = {'legend.fontsize': 13,
           #'figure.figsize': (15, 5),
          'axes.labelsize': 13,
@@ -350,7 +356,11 @@ ax.plot([55],[1590],'*')
 
 # %%
 # Modified function to extract time series based on x AND y positions
-def extract_mc_time_series(mesh, values_all, positions):
+def extract_mc_time_series(
+    mesh: Any,
+    values_all: Any,
+    positions: Any,
+) -> Any:
     """
     Extract Monte Carlo time series at specific x,y positions
     
@@ -385,7 +395,11 @@ def extract_mc_time_series(mesh, values_all, positions):
     return time_series, cell_indices
 
 
-def extract_true_values_at_positions(mesh, true_values, positions):
+def extract_true_values_at_positions(
+    mesh: Any,
+    true_values: Any,
+    positions: Any,
+) -> Any:
     """
     Extract true water content values at specific x,y positions.
     

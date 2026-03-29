@@ -1,12 +1,16 @@
 """
 Forward modeling utilities for Electrical Resistivity Tomography (ERT).
 """
+from typing import Any, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
 from pygimli.physics import ert
-from typing import Tuple, Optional, Union
 
 
+# ---------------------------------------------------------------------------
+# ERTForward Modeling
+# ---------------------------------------------------------------------------
 class ERTForwardModeling:
     """Class for forward modeling of Electrical Resistivity Tomography (ERT) data."""
     
@@ -278,7 +282,15 @@ class ERTForwardModeling:
         
         return synth_data, grid
 
-def ertforward(fob, mesh, rhomodel, xr):
+# ---------------------------------------------------------------------------
+# ertforward
+# ---------------------------------------------------------------------------
+def ertforward(
+    fob: Any,
+    mesh: Any,
+    rhomodel: Any,
+    xr: Any,
+) -> Any:
     """
     Forward model for ERT.
 
@@ -299,7 +311,14 @@ def ertforward(fob, mesh, rhomodel, xr):
     return np.log(dr.array()), rhomodel
 
 
-def ertforward2(fob, xr, mesh):
+# ---------------------------------------------------------------------------
+# ertforward2
+# ---------------------------------------------------------------------------
+def ertforward2(
+    fob: Any,
+    xr: Any,
+    mesh: Any,
+) -> Any:
     """
     Simplified ERT forward model.
 
@@ -336,7 +355,14 @@ def ertforward2(fob, xr, mesh):
     return dr
 
 
-def ertforandjac(fob, rhomodel, xr):
+# ---------------------------------------------------------------------------
+# ertforandjac
+# ---------------------------------------------------------------------------
+def ertforandjac(
+    fob: Any,
+    rhomodel: Any,
+    xr: Any,
+) -> Any:
     """
     Forward model and Jacobian for ERT.
 
@@ -360,7 +386,14 @@ def ertforandjac(fob, rhomodel, xr):
     return dr, J
 
 
-def ertforandjac2(fob, xr, mesh):
+# ---------------------------------------------------------------------------
+# ertforandjac2
+# ---------------------------------------------------------------------------
+def ertforandjac2(
+    fob: Any,
+    xr: Any,
+    mesh: Any,
+) -> Any:
     """
     Alternative ERT forward model and Jacobian using log-resistivity values.
 

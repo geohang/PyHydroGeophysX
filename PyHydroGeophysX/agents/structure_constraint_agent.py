@@ -6,12 +6,17 @@ Implements the workflow from Ex_Structure_resinv.py for creating structure-const
 resistivity models.
 """
 
-from typing import Dict, Any, Optional
-import numpy as np
 import os
+from typing import Any, Dict, Optional
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Structure Constraint Agent
+# ---------------------------------------------------------------------------
 class StructureConstraintAgent(BaseAgent):
     """
     Agent for applying structural constraints from seismic data to ERT inversion.
@@ -50,11 +55,15 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
         self._log_execution("Starting structure-constrained ERT inversion")
         
         try:
-            from pygimli.physics import ert
-            from PyHydroGeophysX.core.mesh_utils import add_velocity_interface, extract_velocity_interface
             import pygimli as pg
             import pygimli.physics.traveltime as tt
-            
+            from pygimli.physics import ert
+
+            from PyHydroGeophysX.core.mesh_utils import (
+                add_velocity_interface,
+                extract_velocity_interface,
+            )
+
             # Extract parameters
             ert_data = input_data.get('ert_data')
             seismic_data = input_data.get('seismic_data')  # Optional traveltime data
@@ -392,6 +401,7 @@ Return as: lambda=XX, max_iterations=XX, limits=[XX, XX]"""
             
             try:
                 import re
+
                 # Parse lambda
                 match = re.search(r'lambda[=:\s]+(\d+\.?\d*)', response, re.IGNORECASE)
                 if match:

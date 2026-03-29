@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -73,6 +74,9 @@ _EXTENSION_TO_INSTRUMENT = {
 }
 
 
+# ---------------------------------------------------------------------------
+# resolve path
+# ---------------------------------------------------------------------------
 def _resolve_path(path: str | Path) -> Path:
     resolved = Path(path).expanduser()
     if not resolved.is_absolute():
@@ -80,6 +84,9 @@ def _resolve_path(path: str | Path) -> Path:
     return resolved
 
 
+# ---------------------------------------------------------------------------
+# find ert data file
+# ---------------------------------------------------------------------------
 def _find_ert_data_file(input_path: str | Path) -> Path:
     resolved = _resolve_path(input_path)
     if resolved.is_file():
@@ -115,6 +122,9 @@ def _find_ert_data_file(input_path: str | Path) -> Path:
     return candidates[0]
 
 
+# ---------------------------------------------------------------------------
+# detect instrument
+# ---------------------------------------------------------------------------
 def _detect_instrument(data_file: Path) -> str:
     suffix = data_file.suffix.lower()
     if suffix in _EXTENSION_TO_INSTRUMENT:
@@ -126,6 +136,9 @@ def _detect_instrument(data_file: Path) -> str:
     return "BERT"
 
 
+# ---------------------------------------------------------------------------
+# process with data agent
+# ---------------------------------------------------------------------------
 def _process_with_data_agent(
     input_path: str | Path,
     instrument: Optional[str],
@@ -178,6 +191,9 @@ def _process_with_data_agent(
     }
 
 
+# ---------------------------------------------------------------------------
+# run single ert inversion
+# ---------------------------------------------------------------------------
 def run_single_ert_inversion(
     input_path: str | Path,
     instrument: Optional[str] = None,
@@ -309,6 +325,9 @@ def run_single_ert_inversion(
     return summary
 
 
+# ---------------------------------------------------------------------------
+# build arg parser
+# ---------------------------------------------------------------------------
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(

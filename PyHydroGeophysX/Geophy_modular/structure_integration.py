@@ -1,14 +1,25 @@
 """
 Structure integration module for constrained geophysical inversion.
 """
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
 import pygimli.meshtools as mt
-from typing import Tuple, List, Optional, Union, Dict, Any
 
 
-def integrate_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2, 
-                               quality=28, paraMaxCellSize=30, paraDepth=30.0):
+# ---------------------------------------------------------------------------
+# integrate velocity interface
+# ---------------------------------------------------------------------------
+def integrate_velocity_interface(
+    ertData: Any,
+    smooth_x: Any,
+    smooth_z: Any,
+    paraBoundary: Any = 2,
+    quality: Any = 28,
+    paraMaxCellSize: Any = 30,
+    paraDepth: Any = 30.0,
+) -> Any:
     """
     Integrate velocity interface into mesh for constrained ERT inversion.
     
@@ -82,7 +93,14 @@ def integrate_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2,
     return markers, meshafter
 
 
-def create_ert_mesh_with_structure(ertData, interface_data, **kwargs):
+# ---------------------------------------------------------------------------
+# create ert mesh with structure
+# ---------------------------------------------------------------------------
+def create_ert_mesh_with_structure(
+    ertData: Any,
+    interface_data: Any,
+    **kwargs: Any,
+) -> Any:
     """
     Create ERT mesh with structure interface for constrained inversion.
     
@@ -137,7 +155,15 @@ def create_ert_mesh_with_structure(ertData, interface_data, **kwargs):
     return meshafter, markers, regions
 
 
-def create_joint_inversion_mesh(ertData, ttData, velocity_threshold=1200, **kwargs):
+# ---------------------------------------------------------------------------
+# create joint inversion mesh
+# ---------------------------------------------------------------------------
+def create_joint_inversion_mesh(
+    ertData: Any,
+    ttData: Any,
+    velocity_threshold: Any = 1200,
+    **kwargs: Any,
+) -> Any:
     """
     Create a mesh for joint ERT-seismic inversion by first inverting seismic data,
     extracting the velocity interface, and then creating a constrained ERT mesh.
@@ -158,9 +184,10 @@ def create_joint_inversion_mesh(ertData, ttData, velocity_threshold=1200, **kwar
     # Import required modules
     from pygimli.physics import traveltime as tt
     from watershed_geophysics.Geophy_modular.seismic_processor import (
-        process_seismic_tomography, extract_velocity_structure
+        extract_velocity_structure,
+        process_seismic_tomography,
     )
-    
+
     # Extract parameter dictionaries
     seismic_params = kwargs.get('seismic_params', {})
     mesh_params = kwargs.get('mesh_params', {})

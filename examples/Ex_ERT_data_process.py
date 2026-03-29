@@ -57,6 +57,9 @@ _EXTENSION_TO_INSTRUMENT = {
 }
 
 
+# ---------------------------------------------------------------------------
+# resolve path
+# ---------------------------------------------------------------------------
 def _resolve_path(path: str | Path) -> Path:
     """Resolve a user path against the current working directory if needed."""
     resolved = Path(path).expanduser()
@@ -65,6 +68,9 @@ def _resolve_path(path: str | Path) -> Path:
     return resolved
 
 
+# ---------------------------------------------------------------------------
+# read header text
+# ---------------------------------------------------------------------------
 def _read_header_text(data_file: Path, max_lines: int = 40) -> str:
     """Read the first few lines of a text file in a robust way."""
     lines = []
@@ -80,6 +86,9 @@ def _read_header_text(data_file: Path, max_lines: int = 40) -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# detect ert instrument
+# ---------------------------------------------------------------------------
 def detect_ert_instrument(data_file: str | Path) -> str:
     """
     Guess instrument type from file extension and simple header checks.
@@ -108,6 +117,9 @@ def detect_ert_instrument(data_file: str | Path) -> str:
     return "BERT"
 
 
+# ---------------------------------------------------------------------------
+# find ert data file
+# ---------------------------------------------------------------------------
 def find_ert_data_file(
     input_path: str | Path,
     extensions: Iterable[str] = SUPPORTED_ERT_EXTENSIONS,
@@ -163,6 +175,9 @@ def find_ert_data_file(
     return candidates[0]
 
 
+# ---------------------------------------------------------------------------
+# process ert input
+# ---------------------------------------------------------------------------
 def process_ert_input(
     input_path: str | Path,
     instrument: Optional[str] = None,
@@ -230,6 +245,9 @@ def process_ert_input(
     }
 
 
+# ---------------------------------------------------------------------------
+# run default example
+# ---------------------------------------------------------------------------
 def run_default_example() -> Dict[str, object]:
     """Run the original E4D processing example."""
     input_file = Path(current_dir) / "data" / "ERT" / "E4D" / "2021-10-08_1400.ohm"

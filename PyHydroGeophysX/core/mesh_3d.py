@@ -5,11 +5,12 @@ This module provides tools for creating 3D meshes using GMSH and PyGIMLi
 for applications such as 3D ERT forward modeling and inversion.
 """
 
+import os
+import subprocess
+from typing import Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
-import subprocess
-import os
-from typing import Tuple, List, Optional, Union, Dict
 import pygimli as pg
 import pygimli.meshtools as mt
 
@@ -26,6 +27,9 @@ except ImportError:
     PYVISTA_AVAILABLE = False
 
 
+# ---------------------------------------------------------------------------
+# Mesh3 DCreator
+# ---------------------------------------------------------------------------
 class Mesh3DCreator:
     """
     Class for creating 3D meshes for geophysical modeling.
@@ -661,7 +665,7 @@ class Mesh3DCreator:
         ... )
         """
         from scipy.interpolate import RegularGridInterpolator, interp2d
-        
+
         # Get electrode bounds
         x_min, x_max = electrode_positions['x'].min(), electrode_positions['x'].max()
         y_min, y_max = electrode_positions['y'].min(), electrode_positions['y'].max()
@@ -859,7 +863,7 @@ class Mesh3DCreator:
                                                   mesh_quality: float) -> pg.Mesh:
         """Create tetrahedral mesh with topography using PyGIMLi PLC (internal method)."""
         from pygimli.physics import ert
-        
+
         # Create sensor array
         sensors = electrode_positions[['x', 'y', 'z']].values
         
@@ -986,6 +990,9 @@ class Mesh3DCreator:
         plotter.show()
 
 
+# ---------------------------------------------------------------------------
+# create 3d ert mesh from modflow
+# ---------------------------------------------------------------------------
 def create_3d_ert_mesh_from_modflow(model_grid: Dict,
                                     electrode_positions: pd.DataFrame,
                                     output_name: str = 'ert_3d_mesh',
@@ -1048,6 +1055,9 @@ def create_3d_ert_mesh_from_modflow(model_grid: Dict,
     return mesh
 
 
+# ---------------------------------------------------------------------------
+# interpolate modflow to 3d mesh
+# ---------------------------------------------------------------------------
 def interpolate_modflow_to_3d_mesh(mesh: pg.Mesh,
                                    modflow_data: np.ndarray,
                                    model_grid: Dict,
@@ -1072,7 +1082,7 @@ def interpolate_modflow_to_3d_mesh(mesh: pg.Mesh,
         Interpolated values at mesh cell centers
     """
     from scipy.interpolate import RegularGridInterpolator
-    
+
     # Get mesh cell centers
     cell_centers = np.array(mesh.cellCenters())
     
@@ -1107,6 +1117,9 @@ def interpolate_modflow_to_3d_mesh(mesh: pg.Mesh,
     return mesh_values
 
 
+# ---------------------------------------------------------------------------
+# create 3d ert data container
+# ---------------------------------------------------------------------------
 def create_3d_ert_data_container(electrode_positions: pd.DataFrame,
                                  scheme: str = 'dd',
                                  dimension: int = 3) -> pg.DataContainer:
@@ -1128,7 +1141,7 @@ def create_3d_ert_data_container(electrode_positions: pd.DataFrame,
         ERT data container with electrode positions and measurement scheme
     """
     from pygimli.physics import ert
-    
+
     # Create sensor positions array
     sensors = electrode_positions[['x', 'y', 'z']].values
     
@@ -1141,6 +1154,9 @@ def create_3d_ert_data_container(electrode_positions: pd.DataFrame,
     return data
 
 
+# ---------------------------------------------------------------------------
+# export electrodes to csv
+# ---------------------------------------------------------------------------
 def export_electrodes_to_csv(electrode_positions: pd.DataFrame,
                              output_path: str,
                              include_neumann: pd.DataFrame = None) -> None:

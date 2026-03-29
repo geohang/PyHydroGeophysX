@@ -11,15 +11,18 @@ Error inputs use ``ert_relative_error`` / ``ert_absolute_u_error`` and
 ``srt_relative_error`` / ``srt_absolute_error`` for both modalities.
 """
 
-# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_joint_inversion_fig_01.png'
-
 import os
 import sys
-import numpy as np
+from typing import Any
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pygimli as pg
 import pygimli.physics.traveltime as tt
 from pygimli.physics import ert
+
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_joint_inversion_fig_01.png'
+
 
 # Setup package path for development
 try:
@@ -119,7 +122,19 @@ cases = {
 }
 
 
-def run_case(case_name, case_params):
+def run_case(
+    case_name: Any,
+    case_params: Any,
+) -> Any:
+    """Run one joint ERT-SRT inversion configuration and save its outputs.
+
+    Args:
+        case_name: Label for the inversion scenario.
+        case_params: Scenario-specific inversion parameters.
+
+    Returns:
+        Dictionary containing the result object, saved arrays, and run metadata.
+    """
     print("")
     print(f"==================== Running case: {case_name} ====================")
     run_params = dict(common_params)
@@ -187,14 +202,18 @@ cross = run_outputs["cross_gradient_joint"]
 geo = run_outputs["geostat_joint"]
 
 # ---- Helper: coverage masks ----
-def ert_cov_mask(result):
+def ert_cov_mask(
+    result: Any,
+) -> Any:
     """ERT coverage mask: log10(covTrans/paramSizes) > -1."""
     cov = result.ert_coverage
     if cov is None:
         return None
     return cov > -1
 
-def srt_cov_mask(result):
+def srt_cov_mask(
+    result: Any,
+) -> Any:
     """SRT coverage mask: standardizedCoverage (already 0/1)."""
     cov = result.srt_coverage
     if cov is None:
@@ -216,6 +235,7 @@ def _draw_mesh(ax, mesh, data, cov, cmap, vmin, vmax, label, log=False):
 
 # ---- Publication-quality comparison figure ----
 from palettable.lightbartlein.diverging import BlueDarkRed18_18
+
 ert_cmap = "Spectral_r"
 srt_cmap = BlueDarkRed18_18.mpl_colormap
 

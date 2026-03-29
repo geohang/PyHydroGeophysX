@@ -1,21 +1,25 @@
 """
 Time-lapse ERT inversion functionality.
 """
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
-from pygimli.physics import ert
 import scipy.sparse as sp
-from scipy.sparse import diags, csr_matrix, block_diag as sparse_block_diag, lil_matrix
-from scipy.sparse.linalg import lsqr
-from typing import Optional, Union, List, Dict, Any, Tuple
+from pygimli.physics import ert
 from scipy.linalg import block_diag as dense_block_diag
+from scipy.sparse import block_diag as sparse_block_diag
+from scipy.sparse import csr_matrix, diags, lil_matrix
+from scipy.sparse.linalg import lsqr
 
-
-from .base import InversionBase, TimeLapseInversionResult
-from ..forward.ert_forward import ertforward2, ertforandjac2
+from ..forward.ert_forward import ertforandjac2, ertforward2
 from ..solvers.solver import generalized_solver
+from .base import InversionBase, TimeLapseInversionResult
 
 
+# ---------------------------------------------------------------------------
+# calculate jacobian
+# ---------------------------------------------------------------------------
 def _calculate_jacobian(fwd_operators, model, mesh, size, as_sparse: bool = False,
                         dtype=np.float64):
     """
@@ -53,6 +57,9 @@ def _calculate_jacobian(fwd_operators, model, mesh, size, as_sparse: bool = Fals
     return obs_stacked, J
 
 
+# ---------------------------------------------------------------------------
+# calculate forward
+# ---------------------------------------------------------------------------
 def _calculate_forward(fwd_operators, model, mesh, size):
     """
     Calculate forward response for multi-time model.
@@ -81,6 +88,9 @@ def _calculate_forward(fwd_operators, model, mesh, size):
     return obs_stacked
 
 
+# ---------------------------------------------------------------------------
+# calculate forward separate
+# ---------------------------------------------------------------------------
 def _calculate_forward_separate(fwd_operators, model, mesh, size):
     """
     Calculate forward response for multi-time model without stacking.
@@ -104,6 +114,9 @@ def _calculate_forward_separate(fwd_operators, model, mesh, size):
     return obs
 
 
+# ---------------------------------------------------------------------------
+# Time Lapse ERTInversion
+# ---------------------------------------------------------------------------
 class TimeLapseERTInversion(InversionBase):
     """Time-lapse ERT inversion class."""
     
@@ -123,7 +136,7 @@ class TimeLapseERTInversion(InversionBase):
                 - method: Solver method ('cgls', 'lsqr', etc.)
                 - model_constraints: (min, max) model parameter bounds
                 - max_iterations: Maximum iterations
-                - absoluteUError: Absolute data error
+                - absoluteError: Absolute resistance error floor [Ohm] (default 0.0001)
                 - relativeError: Relative data error
                 - lambda_rate: Lambda reduction rate
                 - lambda_min: Minimum lambda value
@@ -149,7 +162,7 @@ class TimeLapseERTInversion(InversionBase):
             'alpha': 10.0,
             'decay_rate': 0.0,
             'method': 'cgls',
-            'absoluteUError': 0.0,
+            'absoluteError': 0.0001,
             'relativeError': 0.05,
             'lambda_rate': 0.8,
             'lambda_min': 1.0,
@@ -210,15 +223,21 @@ class TimeLapseERTInversion(InversionBase):
             
             # Get or estimate data errors
             if np.all(dataert['err']) != 0.0:
-                dataerr.append(dataert['err'].array())
+                dataerr.append(np.clip(dataert['err'].array(), 0.01, 0.50))
             else:
-                ert1 = ert.ERTManager(dataert)
-                dataert['err'] = ert1.estimateError(
-                    dataert,
-                    absoluteUError=self.parameters['absoluteUError'],
-                    relativeError=self.parameters['relativeError']
-                )
-                dataerr.append(dataert['err'].array())
+                # Seb's per-measurement formula: err_i = relativeError + absoluteError / |r_i|
+                abs_e = float(self.parameters['absoluteError'])
+                rel_e = float(self.parameters['relativeError'])
+                if 'r' in dataert.dataMap():
+                    r_abs = np.abs(dataert['r'].array())
+                elif 'k' in dataert.dataMap():
+                    r_abs = np.abs(dataert['rhoa'].array()) / np.maximum(
+                        np.abs(dataert['k'].array()), 1e-10)
+                else:
+                    raise RuntimeError(
+                        f"Dataset {fname}: cannot estimate error without 'r' or 'k'.")
+                err_i = rel_e + abs_e / np.maximum(r_abs, 1e-10)
+                dataerr.append(np.clip(err_i, 0.01, 0.50))
             
             # Create forward operator
             fwd_operator = ert.ERTModelling()

@@ -10,14 +10,17 @@ from typing import Any, Optional
 
 import numpy as np
 import pygimli as pg
-from pygimli.physics import TravelTimeManager
 import pygimli.physics.traveltime as tt
+from pygimli.physics import TravelTimeManager
 from scipy.sparse import diags, issparse
 
-from .base import InversionBase, InversionResult
 from ..solvers.linear_solvers import generalized_solver
+from .base import InversionBase, InversionResult
 
 
+# ---------------------------------------------------------------------------
+# SRTInversion
+# ---------------------------------------------------------------------------
 class SRTInversion(InversionBase):
     """
     Seismic Refraction Tomography inversion class.

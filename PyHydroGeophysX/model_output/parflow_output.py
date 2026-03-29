@@ -8,12 +8,16 @@ falling back to the `parflow` package if available for maximum compatibility.
 """
 import os
 import struct
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
-from typing import Tuple, Optional, Union, List, Dict, Any
 
 from .base import HydroModelOutput
 
 
+# ---------------------------------------------------------------------------
+# read pfb standalone
+# ---------------------------------------------------------------------------
 def read_pfb_standalone(filename: str) -> np.ndarray:
     """
     Read a ParFlow Binary (PFB) file without requiring the parflow package.
@@ -90,6 +94,9 @@ def read_pfb_standalone(filename: str) -> np.ndarray:
         return data
 
 
+# ---------------------------------------------------------------------------
+# read pfb
+# ---------------------------------------------------------------------------
 def read_pfb(filename: str) -> np.ndarray:
     """
     Read a ParFlow Binary (PFB) file.
@@ -110,6 +117,9 @@ def read_pfb(filename: str) -> np.ndarray:
         return read_pfb_standalone(filename)
 
 
+# ---------------------------------------------------------------------------
+# Parflow Output
+# ---------------------------------------------------------------------------
 class ParflowOutput(HydroModelOutput):
     """
     Base class for processing ParFlow model outputs.
@@ -240,6 +250,9 @@ class ParflowOutput(HydroModelOutput):
         return data_array.shape # Returns (nz, ny, nx)
 
 
+# ---------------------------------------------------------------------------
+# Parflow Saturation
+# ---------------------------------------------------------------------------
 class ParflowSaturation(ParflowOutput):
     """
     Processes saturation data from ParFlow simulations (.out.satur.*.pfb files).
@@ -429,6 +442,9 @@ class ParflowSaturation(ParflowOutput):
         return [(ts_num, float(ts_num)) for ts_num in self.available_timesteps]
 
 
+# ---------------------------------------------------------------------------
+# Parflow Porosity
+# ---------------------------------------------------------------------------
 class ParflowPorosity(ParflowOutput):
     """
     Processes porosity data from ParFlow simulations.

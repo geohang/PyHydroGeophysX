@@ -8,10 +8,13 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import numpy as np
-from simpeg import maps
 import simpeg.electromagnetics.frequency_domain as fdem
+from simpeg import maps
 
 
+# ---------------------------------------------------------------------------
+# FDEMSurvey Config
+# ---------------------------------------------------------------------------
 @dataclass
 class FDEMSurveyConfig:
     """Configuration for FDEM survey geometry."""
@@ -33,6 +36,9 @@ class FDEMSurveyConfig:
             self.frequencies = np.logspace(1, 4, 16)
 
 
+# ---------------------------------------------------------------------------
+# FDEMForward Modeling
+# ---------------------------------------------------------------------------
 class FDEMForwardModeling:
     """
     Forward modeling of Frequency-Domain EM data using SimPEG.

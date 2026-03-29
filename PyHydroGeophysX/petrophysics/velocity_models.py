@@ -1,11 +1,15 @@
 """
 Seismic velocity models for relating rock properties to elastic wave velocities.
 """
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 from scipy.optimize import fsolve, root
-from typing import Tuple, Optional, Union, List, Dict, Any
 
 
+# ---------------------------------------------------------------------------
+# water content to velocity
+# ---------------------------------------------------------------------------
 def water_content_to_velocity(water_content: np.ndarray, 
                                v_dry: float = 3500.0,
                                v_sat: float = 4500.0,
@@ -72,6 +76,9 @@ def water_content_to_velocity(water_content: np.ndarray,
     return velocity
 
 
+# ---------------------------------------------------------------------------
+# Base Velocity Model
+# ---------------------------------------------------------------------------
 class BaseVelocityModel:
     """Base class for seismic velocity models."""
     
@@ -92,6 +99,9 @@ class BaseVelocityModel:
         raise NotImplementedError("Velocity calculation must be implemented in derived classes")
 
 
+# ---------------------------------------------------------------------------
+# VRHModel
+# ---------------------------------------------------------------------------
 class VRHModel(BaseVelocityModel):
     """
     Voigt-Reuss-Hill (VRH) mixing model for effective elastic properties of composites.
@@ -180,6 +190,9 @@ class VRHModel(BaseVelocityModel):
         return Vp, Vs
 
 
+# ---------------------------------------------------------------------------
+# Brie Model
+# ---------------------------------------------------------------------------
 class BrieModel:
     """
     Brie's model for calculating the effective bulk modulus of a partially saturated medium.
@@ -244,6 +257,9 @@ class BrieModel:
         return (numerator / denominator) * mineral_modulus
 
 
+# ---------------------------------------------------------------------------
+# DEMModel
+# ---------------------------------------------------------------------------
 class DEMModel(BaseVelocityModel):
     """
     Differential Effective Medium (DEM) model for calculating elastic properties
@@ -341,6 +357,9 @@ class DEMModel(BaseVelocityModel):
         return Keff, Geff, Vp
 
 
+# ---------------------------------------------------------------------------
+# Hertz Mindlin Model
+# ---------------------------------------------------------------------------
 class HertzMindlinModel(BaseVelocityModel):
     """
     Hertz-Mindlin model and Hashin-Shtrikman bounds for seismic velocity in porous rocks.
@@ -464,10 +483,15 @@ class HertzMindlinModel(BaseVelocityModel):
         return Vp_high, Vp_low
 
 
-def VRH_model(f=[0.35, 0.25, 0.2, 0.125, 0.075],
-             K=[55.4, 36.6, 75.6, 46.7, 50.4],
-             G=[28.1, 45, 25.6, 23.65, 27.4],
-             rho=[2560, 2650, 2630, 2540, 3050]):
+# ---------------------------------------------------------------------------
+# VRH model
+# ---------------------------------------------------------------------------
+def VRH_model(
+    f: Any = [0.35, 0.25, 0.2, 0.125, 0.075],
+    K: Any = [55.4, 36.6, 75.6, 46.7, 50.4],
+    G: Any = [28.1, 45, 25.6, 23.65, 27.4],
+    rho: Any = [2560, 2650, 2630, 2540, 3050],
+) -> Any:
     """
     Implements the Voigt-Reuss-Hill (VRH) mixing model to estimate the effective bulk modulus (Km),
     shear modulus (Gm), and density (rho_b) of a composite material made from various minerals.
@@ -505,7 +529,15 @@ def VRH_model(f=[0.35, 0.25, 0.2, 0.125, 0.075],
     return Km, Gm, rho_b
 
 
-def satK(Keff, Km, phi, Sat):
+# ---------------------------------------------------------------------------
+# sat K
+# ---------------------------------------------------------------------------
+def satK(
+    Keff: Any,
+    Km: Any,
+    phi: Any,
+    Sat: Any,
+) -> Any:
     """
     Calculate the saturated bulk modulus (K_sat) based on Brie's equation.
 
@@ -525,7 +557,17 @@ def satK(Keff, Km, phi, Sat):
     return K_sat
 
 
-def velDEM(phi, Km, Gm, rho_b, Sat, alpha):
+# ---------------------------------------------------------------------------
+# vel DEM
+# ---------------------------------------------------------------------------
+def velDEM(
+    phi: Any,
+    Km: Any,
+    Gm: Any,
+    rho_b: Any,
+    Sat: Any,
+    alpha: Any,
+) -> Any:
     """
     Calculate effective bulk modulus (Keff), shear modulus (Geff), and P-wave velocity (Vp)
     for a rock with varying porosity (phi) based on the DEM model, taking into account
@@ -604,7 +646,17 @@ def velDEM(phi, Km, Gm, rho_b, Sat, alpha):
     return Keff1, Geff1, Vp
 
 
-def vel_porous(phi, Km, Gm, rho_b, Sat, depth=1):
+# ---------------------------------------------------------------------------
+# vel porous
+# ---------------------------------------------------------------------------
+def vel_porous(
+    phi: Any,
+    Km: Any,
+    Gm: Any,
+    rho_b: Any,
+    Sat: Any,
+    depth: Any = 1,
+) -> Any:
     """
     Calculate P-wave velocity (Vp) for a rock with varying porosity (phi) based on the 
     Hertz-Mindlin model and Hashin-Shtrikman bounds, taking into account the saturation (Sat).

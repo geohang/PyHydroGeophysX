@@ -1,13 +1,14 @@
 """
 Linear solvers for geophysical inversion.
 """
+import sys
+import time
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import scipy
 import scipy.sparse
 from scipy.sparse import linalg as splinalg
-import sys
-import time
-from typing import Optional, Union, Dict, Any, Tuple, List, Callable
 
 # Try to import cupy for GPU acceleration
 try:
@@ -25,11 +26,17 @@ except ImportError:
     PARALLEL_AVAILABLE = False
 
 
+# ---------------------------------------------------------------------------
+# scalar dot
+# ---------------------------------------------------------------------------
 def _scalar_dot(xp, a, b):
     """Return scalar dot product regardless of vector shape (works for NumPy/CuPy)."""
     return float(xp.vdot(a.ravel(), b.ravel()))
 
 
+# ---------------------------------------------------------------------------
+# scipy lsmr solve
+# ---------------------------------------------------------------------------
 def _scipy_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
     """
     Solve min ||Ax - b|| using SciPy's LSMR algorithm.
@@ -45,6 +52,9 @@ def _scipy_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
     return np.asarray(x, dtype=float).reshape(-1, 1)
 
 
+# ---------------------------------------------------------------------------
+# precond lsmr solve
+# ---------------------------------------------------------------------------
 def _precond_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
     """
     Solve min ||Ax - b|| using LSMR with column-scaling (Jacobi) preconditioning.
@@ -74,8 +84,22 @@ def _precond_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
     return np.asarray(x, dtype=float).reshape(-1, 1)
 
 
-def generalized_solver(A, b, method="cgls", x=None, maxiter=200, tol=1e-8,
-                      verbose=False, damp=0.0, use_gpu=False, parallel=False, n_jobs=-1):
+# ---------------------------------------------------------------------------
+# generalized solver
+# ---------------------------------------------------------------------------
+def generalized_solver(
+    A: Any,
+    b: Any,
+    method: Any = "cgls",
+    x: Any = None,
+    maxiter: Any = 200,
+    tol: Any = 1e-8,
+    verbose: Any = False,
+    damp: Any = 0.0,
+    use_gpu: Any = False,
+    parallel: Any = False,
+    n_jobs: Any = -1,
+) -> Any:
     """
     Generalized solver for Ax = b with optional GPU acceleration and parallelism.
 
@@ -174,6 +198,9 @@ def generalized_solver(A, b, method="cgls", x=None, maxiter=200, tol=1e-8,
         raise ValueError(f"Unknown method: {method}. Supported: 'lsqr', 'rrlsqr', 'cgls', 'rrls', 'scipy_lsqr', 'scipy_lsmr', 'precond_lsmr'")
 
 
+# ---------------------------------------------------------------------------
+# matrix multiply
+# ---------------------------------------------------------------------------
 def _matrix_multiply(A, v, use_gpu, parallel, n_jobs, xp):
     """
     Helper function for matrix-vector multiplication with optional GPU or parallel CPU support.
@@ -219,6 +246,9 @@ def _matrix_multiply(A, v, use_gpu, parallel, n_jobs, xp):
                 return A.dot(v)
 
 
+# ---------------------------------------------------------------------------
+# cgls
+# ---------------------------------------------------------------------------
 def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
          use_gpu, parallel, n_jobs, xp):
     """
@@ -312,6 +342,9 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     return x.get() if use_gpu and GPU_AVAILABLE else x
 
 
+# ---------------------------------------------------------------------------
+# lsqr
+# ---------------------------------------------------------------------------
 def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
          use_gpu, parallel, n_jobs, xp):
     """
@@ -401,6 +434,9 @@ def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     return x.get() if use_gpu and GPU_AVAILABLE else x
 
 
+# ---------------------------------------------------------------------------
+# rrlsqr
+# ---------------------------------------------------------------------------
 def _rrlsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
           use_gpu, parallel, n_jobs, xp):
     """
@@ -495,6 +531,9 @@ def _rrlsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     return x.get() if use_gpu and GPU_AVAILABLE else x
 
 
+# ---------------------------------------------------------------------------
+# rrls
+# ---------------------------------------------------------------------------
 def _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
          use_gpu, parallel, n_jobs, xp):
     """
@@ -555,6 +594,9 @@ def _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     return x.get() if use_gpu and GPU_AVAILABLE else x
 
 
+# ---------------------------------------------------------------------------
+# Linear Solver
+# ---------------------------------------------------------------------------
 class LinearSolver:
     """Base class for linear system solvers."""
     
@@ -618,6 +660,9 @@ class LinearSolver:
         )
 
 
+# ---------------------------------------------------------------------------
+# CGLSSolver
+# ---------------------------------------------------------------------------
 class CGLSSolver(LinearSolver):
     """CGLS (Conjugate Gradient Least Squares) solver."""
     
@@ -642,6 +687,9 @@ class CGLSSolver(LinearSolver):
         )
 
 
+# ---------------------------------------------------------------------------
+# LSQRSolver
+# ---------------------------------------------------------------------------
 class LSQRSolver(LinearSolver):
     """LSQR solver for least squares problems."""
     
@@ -666,6 +714,9 @@ class LSQRSolver(LinearSolver):
         )
 
 
+# ---------------------------------------------------------------------------
+# RRLSQRSolver
+# ---------------------------------------------------------------------------
 class RRLSQRSolver(LinearSolver):
     """Regularized LSQR solver."""
     
@@ -690,6 +741,9 @@ class RRLSQRSolver(LinearSolver):
         )
 
 
+# ---------------------------------------------------------------------------
+# RRLSSolver
+# ---------------------------------------------------------------------------
 class RRLSSolver(LinearSolver):
     """Range-Restricted Least Squares solver."""
     
@@ -716,7 +770,17 @@ class RRLSSolver(LinearSolver):
 
 # Additional solver implementations
 import scipy.linalg
-def direct_solver(A, b, method="lu", **kwargs):
+
+
+# ---------------------------------------------------------------------------
+# direct solver
+# ---------------------------------------------------------------------------
+def direct_solver(
+    A: Any,
+    b: Any,
+    method: Any = "lu",
+    **kwargs: Any,
+) -> Any:
     """
     Solve a linear system using direct methods.
     
@@ -781,6 +845,9 @@ def direct_solver(A, b, method="lu", **kwargs):
             raise ValueError(f"Unknown direct solver method: {method}")
 
 
+# ---------------------------------------------------------------------------
+# Tikhonv Regularization
+# ---------------------------------------------------------------------------
 class TikhonvRegularization:
     """Tikhonov regularization for ill-posed problems."""
     
@@ -863,6 +930,9 @@ class TikhonvRegularization:
             return solver.solve(A_aug, b_aug)
 
 
+# ---------------------------------------------------------------------------
+# Iterative Refinement
+# ---------------------------------------------------------------------------
 class IterativeRefinement:
     """
     Iterative refinement to improve accuracy of a solution to a linear system.
@@ -918,8 +988,16 @@ class IterativeRefinement:
         return x
 
 
-def get_optimal_solver(A, b, estimate_condition=True, 
-                      time_limit=None, memory_limit=None):
+# ---------------------------------------------------------------------------
+# get optimal solver
+# ---------------------------------------------------------------------------
+def get_optimal_solver(
+    A: Any,
+    b: Any,
+    estimate_condition: Any = True,
+    time_limit: Any = None,
+    memory_limit: Any = None,
+) -> Any:
     """
     Automatically select the optimal solver for a given linear system.
     

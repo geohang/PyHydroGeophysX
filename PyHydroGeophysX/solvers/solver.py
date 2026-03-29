@@ -1,8 +1,11 @@
-# time_lapse_inversion/solver.py
+"""Legacy generalized solver implementations for time-lapse inversion workflows."""
+
+from typing import Any
+
 import numpy as np
+import pygimli as pg
 import scipy.sparse
 from joblib import Parallel, delayed
-import pygimli as pg
 
 # Optional GPU acceleration with CuPy (if available)
 try:
@@ -13,8 +16,22 @@ except ImportError:
     gpu_available = False
 
 
-def generalized_solver(A, b, method="cgls", x=None, maxiter=2000, tol=1e-8,
-                       verbose=False, damp=0.0, use_gpu=False, parallel=False, n_jobs=-1):
+# ---------------------------------------------------------------------------
+# generalized solver
+# ---------------------------------------------------------------------------
+def generalized_solver(
+    A: Any,
+    b: Any,
+    method: Any = "cgls",
+    x: Any = None,
+    maxiter: Any = 2000,
+    tol: Any = 1e-8,
+    verbose: Any = False,
+    damp: Any = 0.0,
+    use_gpu: Any = False,
+    parallel: Any = False,
+    n_jobs: Any = -1,
+) -> Any:
     """
     Generalized solver for Ax = b with optional GPU acceleration and parallelism.
     
@@ -97,6 +114,9 @@ def generalized_solver(A, b, method="cgls", x=None, maxiter=2000, tol=1e-8,
         raise ValueError("Unknown method: {}".format(method))
 
 
+# ---------------------------------------------------------------------------
+# matrix multiply
+# ---------------------------------------------------------------------------
 def _matrix_multiply(A, v, use_gpu, parallel, n_jobs, xp):
     """
     Helper routine for matrix-vector multiplication with optional GPU or parallel CPU support.
@@ -117,6 +137,9 @@ def _matrix_multiply(A, v, use_gpu, parallel, n_jobs, xp):
                 return A.dot(v)
 
 
+# ---------------------------------------------------------------------------
+# lsqr
+# ---------------------------------------------------------------------------
 def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
           use_gpu, parallel, n_jobs, xp):
     """
@@ -197,6 +220,9 @@ def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
 
 
 
+# ---------------------------------------------------------------------------
+# rrlsqr
+# ---------------------------------------------------------------------------
 def _rrlsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
             use_gpu, parallel, n_jobs, xp):
     """
@@ -282,6 +308,9 @@ def _rrlsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
 
 
 
+# ---------------------------------------------------------------------------
+# cgls
+# ---------------------------------------------------------------------------
 def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
           use_gpu, parallel, n_jobs, xp):
     """
@@ -318,6 +347,9 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     return x.get() if use_gpu and gpu_available else x
 
 
+# ---------------------------------------------------------------------------
+# rrls
+# ---------------------------------------------------------------------------
 def _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
           use_gpu, parallel, n_jobs, xp):
     # Ensure x, r, and s are column vectors

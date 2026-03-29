@@ -1,7 +1,7 @@
 """Field data IO helpers for seismic and EM workflows."""
 
 import csv
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -56,7 +56,11 @@ def read_tem_fast(file: str) -> Dict[str, np.ndarray]:
     return result
 
 
-def export_to_vtk(result, mesh, filename: str) -> str:
+def export_to_vtk(
+    result: Any,
+    mesh: Any,
+    filename: str,
+) -> str:
     """
     Export result/model values to a lightweight VTK PolyData file.
 
@@ -116,7 +120,10 @@ def export_to_vtk(result, mesh, filename: str) -> str:
     return filename
 
 
-def export_results_to_csv(result, filename: str) -> str:
+def export_results_to_csv(
+    result: Any,
+    filename: str,
+) -> str:
     """Export inversion result arrays to a tabular CSV file."""
     fields = [
         "final_model",

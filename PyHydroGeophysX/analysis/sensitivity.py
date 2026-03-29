@@ -16,7 +16,12 @@ def _as_matrix(weights, size: Optional[int] = None) -> np.ndarray:
     return np.eye(size) * float(arr)
 
 
-def compute_resolution_matrix(J, Wd, Wm, lam):
+def compute_resolution_matrix(
+    J: Any,
+    Wd: Any,
+    Wm: Any,
+    lam: Any,
+) -> Any:
     """
     Compute model resolution matrix:
 
@@ -35,7 +40,7 @@ def compute_resolution_matrix(J, Wd, Wm, lam):
 
 
 def compute_depth_of_investigation(
-    inv_class,
+    inv_class: Any,
     data: Any,
     mesh: Any,
     scale_low: float = 0.8,
@@ -69,7 +74,9 @@ def compute_depth_of_investigation(
     return doi, {"model_low": model_low, "model_high": model_high}
 
 
-def compute_cumulative_sensitivity(J):
+def compute_cumulative_sensitivity(
+    J: Any,
+) -> Any:
     """Compute cumulative sensitivity as absolute column sums of the Jacobian."""
     J = np.asarray(J, dtype=float)
     if J.ndim != 2:
@@ -77,7 +84,11 @@ def compute_cumulative_sensitivity(J):
     return np.sum(np.abs(J), axis=0)
 
 
-def plot_sensitivity_map(sensitivity, mesh, ax=None):
+def plot_sensitivity_map(
+    sensitivity: Any,
+    mesh: Any,
+    ax: Any = None,
+) -> Any:
     """Plot a sensitivity map on a mesh (or as a simple line plot fallback)."""
     import matplotlib.pyplot as plt
 

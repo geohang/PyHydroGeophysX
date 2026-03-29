@@ -5,11 +5,15 @@ Translates user's natural language requests into structured workflow configurati
 Supports multiple LLM providers (OpenAI GPT, Google Gemini, Anthropic Claude).
 """
 
-from typing import Dict, Any, Optional, List
 import json
+from typing import Any, Dict, List, Optional
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Context Input Agent
+# ---------------------------------------------------------------------------
 class ContextInputAgent(BaseAgent):
     """
     Agent that interprets natural language requests and generates workflow configurations.
@@ -256,7 +260,7 @@ class ContextInputAgent(BaseAgent):
         - "electrodes at path/electrodes.dat"
         """
         import re
-        
+
         # Pattern 1: "electrode file in/at/: <path>"
         patterns = [
             r'electrode[s]?\s+file\s+(?:in|at|:)\s+([^\s,]+\.dat)',
@@ -930,7 +934,7 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
             Updated configuration with normalized paths
         """
         from pathlib import Path
-        
+
         # Extract or set base data directory
         if 'project_dir' in config:
             base_data_dir = Path(config['project_dir'])
@@ -1000,9 +1004,9 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
         Returns:
             Updated configuration with normalized climate_config
         """
-        from pathlib import Path
         from datetime import datetime, timedelta
-        
+        from pathlib import Path
+
         # Ensure use_climate flag is set
         if 'climate_config' in config and not config.get('use_climate'):
             config['use_climate'] = True
@@ -1065,8 +1069,8 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
         Returns:
             [start_date, end_date] in "YYYY-MM-DD" format, or None if cannot infer
         """
-        from datetime import datetime, timedelta
         import re
+        from datetime import datetime, timedelta
         
         dates = []
         
@@ -1110,7 +1114,7 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
             Updated configuration with normalized fusion parameters
         """
         from pathlib import Path
-        
+
         # Set default fusion parameters
         fusion_defaults = {
             'coverage_threshold': -1.0,

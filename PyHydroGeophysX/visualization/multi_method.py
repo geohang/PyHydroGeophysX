@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+# ---------------------------------------------------------------------------
+# result field
+# ---------------------------------------------------------------------------
 def _result_field(result, preferred):
     for key in preferred:
         if result is not None and hasattr(result, key):
@@ -15,6 +18,9 @@ def _result_field(result, preferred):
     return None
 
 
+# ---------------------------------------------------------------------------
+# as 1d
+# ---------------------------------------------------------------------------
 def _as_1d(values, name):
     arr = np.asarray(values, dtype=float).ravel()
     if arr.size == 0:
@@ -22,6 +28,9 @@ def _as_1d(values, name):
     return arr
 
 
+# ---------------------------------------------------------------------------
+# plot on mesh
+# ---------------------------------------------------------------------------
 def _plot_on_mesh(ax, mesh, values, title, cmap="viridis"):
     try:
         import pygimli as pg
@@ -36,7 +45,15 @@ def _plot_on_mesh(ax, mesh, values, title, cmap="viridis"):
     return False
 
 
-def plot_multi_method_panel(ert_result, srt_result, em_result, mesh=None):
+# ---------------------------------------------------------------------------
+# plot multi method panel
+# ---------------------------------------------------------------------------
+def plot_multi_method_panel(
+    ert_result: Any,
+    srt_result: Any,
+    em_result: Any,
+    mesh: Any = None,
+) -> Any:
     """Plot side-by-side ERT/SRT/EM model panels."""
     fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 
@@ -65,7 +82,14 @@ def plot_multi_method_panel(ert_result, srt_result, em_result, mesh=None):
     return fig, axes
 
 
-def plot_hydro_vs_geophys(hydro_wc, inverted_wc, mesh=None):
+# ---------------------------------------------------------------------------
+# plot hydro vs geophys
+# ---------------------------------------------------------------------------
+def plot_hydro_vs_geophys(
+    hydro_wc: Any,
+    inverted_wc: Any,
+    mesh: Any = None,
+) -> Any:
     """Compare hydrological water content to geophysics-derived water content."""
     hydro_wc = _as_1d(hydro_wc, "hydro_wc")
     inverted_wc = _as_1d(inverted_wc, "inverted_wc")
@@ -95,7 +119,14 @@ def plot_hydro_vs_geophys(hydro_wc, inverted_wc, mesh=None):
     return fig, axes
 
 
-def plot_cross_section_with_wells(result, mesh, well_data: Optional[Dict[str, np.ndarray]] = None):
+# ---------------------------------------------------------------------------
+# plot cross section with wells
+# ---------------------------------------------------------------------------
+def plot_cross_section_with_wells(
+    result: Any,
+    mesh: Any,
+    well_data: Optional[Dict[str, np.ndarray]] = None,
+) -> Any:
     """Plot a model cross-section and overlay optional well picks."""
     values = _result_field(result, ["final_model", "recovered_conductivity", "recovered_model"])
     if values is None:
@@ -129,18 +160,21 @@ def plot_cross_section_with_wells(result, mesh, well_data: Optional[Dict[str, np
     return fig, ax
 
 
+# ---------------------------------------------------------------------------
+# plot em data fit
+# ---------------------------------------------------------------------------
 def plot_em_data_fit(
-    times,
-    observed,
-    predicted,
-    uncertainties=None,
-    true_data=None,
+    times: Any,
+    observed: Any,
+    predicted: Any,
+    uncertainties: Any = None,
+    true_data: Any = None,
     chi2: Optional[float] = None,
     time_scale: float = 1e3,
     time_label: str = "Time (ms)",
     data_label: str = "|Response|",
-    ax=None,
-):
+    ax: Any = None,
+) -> Any:
     """Plot log-log EM data fit similar to TDEM workflow examples."""
     t = _as_1d(times, "times")
     dobs = _as_1d(observed, "observed")
@@ -186,16 +220,19 @@ def plot_em_data_fit(
     return fig, ax
 
 
+# ---------------------------------------------------------------------------
+# plot em residuals
+# ---------------------------------------------------------------------------
 def plot_em_residuals(
-    times,
-    observed,
-    predicted,
-    uncertainties,
+    times: Any,
+    observed: Any,
+    predicted: Any,
+    uncertainties: Any,
     sigma_bound: float = 2.0,
     time_scale: float = 1e3,
     time_label: str = "Time (ms)",
-    ax=None,
-):
+    ax: Any = None,
+) -> Any:
     """Plot normalized residuals with +/-sigma bounds."""
     t = _as_1d(times, "times")
     dobs = _as_1d(observed, "observed")
@@ -231,15 +268,18 @@ def plot_em_residuals(
     return fig, ax
 
 
+# ---------------------------------------------------------------------------
+# plot em fit and residuals
+# ---------------------------------------------------------------------------
 def plot_em_fit_and_residuals(
-    times,
-    observed,
-    predicted,
-    uncertainties,
-    true_data=None,
+    times: Any,
+    observed: Any,
+    predicted: Any,
+    uncertainties: Any,
+    true_data: Any = None,
     chi2: Optional[float] = None,
     time_scale: float = 1e3,
-):
+) -> Any:
     """Create side-by-side EM data fit and residual plots."""
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     plot_em_data_fit(
@@ -264,13 +304,16 @@ def plot_em_fit_and_residuals(
     return fig, axes
 
 
+# ---------------------------------------------------------------------------
+# plot time lapse panel
+# ---------------------------------------------------------------------------
 def plot_time_lapse_panel(
     models: Sequence[Any],
-    mesh=None,
+    mesh: Any = None,
     titles: Optional[Sequence[str]] = None,
     ncols: int = 4,
     cmap: str = "viridis",
-):
+) -> Any:
     """Plot a grid of time-lapse model snapshots."""
     if not models:
         raise ValueError("models must contain at least one model.")
@@ -320,17 +363,20 @@ def plot_time_lapse_panel(
     return fig, axes
 
 
+# ---------------------------------------------------------------------------
+# plot petrophysical scatter
+# ---------------------------------------------------------------------------
 def plot_petrophysical_scatter(
-    x,
-    y,
-    color=None,
+    x: Any,
+    y: Any,
+    color: Any = None,
     xlabel: str = "Porosity (-)",
     ylabel: str = "Property",
     color_label: str = "Saturation (-)",
     cmap: str = "Blues",
     fit_line: bool = True,
-    ax=None,
-):
+    ax: Any = None,
+) -> Any:
     """Plot petrophysical scatter diagnostics with optional trend line."""
     xv = _as_1d(x, "x")
     yv = _as_1d(y, "y")
@@ -372,12 +418,15 @@ def plot_petrophysical_scatter(
     return fig, ax
 
 
+# ---------------------------------------------------------------------------
+# plot layered profiles
+# ---------------------------------------------------------------------------
 def plot_layered_profiles(
-    depth_edges,
+    depth_edges: Any,
     profiles: Dict[str, Sequence[float]],
     colors: Optional[Sequence[str]] = None,
     xscale: str = "linear",
-):
+) -> Any:
     """Plot one or more layered profiles as step-like vertical columns."""
     z = _as_1d(depth_edges, "depth_edges")
     if z.size < 2:

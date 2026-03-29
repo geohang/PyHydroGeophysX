@@ -5,13 +5,18 @@ Agent for processing Time-Domain Electromagnetic data using SimPEG.
 Supports forward modeling, inversion, and integration with hydrological models.
 """
 
-from typing import Dict, Any, Optional, Tuple, List
-import numpy as np
 import os
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# TDEMAgent
+# ---------------------------------------------------------------------------
 class TDEMAgent(BaseAgent):
     """
     Agent for Time-Domain Electromagnetic (TDEM) data processing.
@@ -373,8 +378,8 @@ and can interpret conductivity structures in terms of geological and hydrologica
     def _generate_inversion_plots(self, tdem_inv, result, times, dobs, uncertainties, 
                                    output_dir: str) -> str:
         """Generate inversion result plots."""
-        import matplotlib.pyplot as plt
         import matplotlib
+        import matplotlib.pyplot as plt
         
         matplotlib.rcParams['font.family'] = 'Arial'
         matplotlib.rcParams['font.size'] = 12

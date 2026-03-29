@@ -11,11 +11,16 @@ Supported Workflows:
     - Multi-method data fusion (seismic + ERT)
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Workflow Orchestrator Agent
+# ---------------------------------------------------------------------------
 class WorkflowOrchestratorAgent(BaseAgent):
     """
     Master orchestrator that detects workflow type and coordinates execution.

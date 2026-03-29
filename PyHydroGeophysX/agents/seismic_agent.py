@@ -5,13 +5,18 @@ Specialized agent for processing seismic refraction data and extracting velocity
 Supports standalone seismic refraction tomography (SRT) inversion workflows.
 """
 
-from typing import Dict, Any, Optional, Tuple
-import numpy as np
 import os
 from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Seismic Agent
+# ---------------------------------------------------------------------------
 class SeismicAgent(BaseAgent):
     """
     Agent specialized in seismic refraction tomography (SRT) processing.
@@ -71,10 +76,15 @@ and fresh bedrock (>3000 m/s)."""
         
         try:
             import pygimli as pg
-            from pygimli.physics import TravelTimeManager
             import pygimli.physics.traveltime as tt
-            from PyHydroGeophysX.core.mesh_utils import extract_velocity_interface, fill_holes_2d, createTriangles
-            
+            from pygimli.physics import TravelTimeManager
+
+            from PyHydroGeophysX.core.mesh_utils import (
+                createTriangles,
+                extract_velocity_interface,
+                fill_holes_2d,
+            )
+
             # Extract parameters
             seismic_file = input_data.get('seismic_file')
             seismic_data = input_data.get('seismic_data')
@@ -280,10 +290,11 @@ Return as: lam=XX, zWeight=XX, vTop=XX, vBottom=XX"""
         Returns:
             Path to saved visualization file
         """
-        import matplotlib.pyplot as plt
         import matplotlib
+        import matplotlib.pyplot as plt
         import pygimli as pg
-        from PyHydroGeophysX.core.mesh_utils import fill_holes_2d, createTriangles
+
+        from PyHydroGeophysX.core.mesh_utils import createTriangles, fill_holes_2d
         
         matplotlib.rcParams['font.family'] = 'Arial'
         matplotlib.rcParams['font.size'] = 12

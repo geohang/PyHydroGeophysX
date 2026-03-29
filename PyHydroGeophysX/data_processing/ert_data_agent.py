@@ -1,15 +1,20 @@
-# PyHydroGeophysX/core/data_processing/ert_data_agent.py
+"""ERT field-data loading, fallback parsing, QC, and export helpers."""
+
 from __future__ import annotations
-from dataclasses import dataclass, asdict
-from pathlib import Path
+
 import io
-from typing import Optional, Dict, Any, List, Literal, NamedTuple
 import json
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+import re
+import struct
 import tempfile
 import warnings
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Literal, NamedTuple, Optional
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 # =============================================================================
 # ERT Data Loading with Fallback Parsers
@@ -35,9 +40,6 @@ import warnings
 #   Website: https://gitlab.com/hkex/resipy
 #   Documentation: https://hkex.gitlab.io/resipy/
 # =============================================================================
-
-import re
-import struct
 
 _RESIPY_ERROR = None
 _HAS_RESIPY = False
@@ -651,23 +653,34 @@ Instrument = Literal[
 ]
 
 class LocalRef(NamedTuple):
+    """Local coordinate reference information for profile-based ERT data."""
+
     origin_x: float = 0.0   # optional world X of profile start
     origin_y: float = 0.0   # optional world Y of profile start
     azimuth_deg: float = 0.0  # profile direction (deg clockwise from north)
 
+
 @dataclass
 class Electrode:
+    """Electrode position and identifier for standardized ERT datasets."""
+
     id: int
     x: float
     y: float = 0.0
     z: float = 0.0
 
+
 @dataclass
 class Quadruplet:
+    """Current and potential electrode indices for one ERT measurement."""
+
     A: int; B: int; M: int; N: int
+
 
 @dataclass
 class Observation:
+    """Single apparent-resistivity observation and its supporting metadata."""
+
     quad: Quadruplet
     app_res: float | None = None   # apparent resistivity (ohm·m)
     dV: float | None = None        # potential difference (V)
@@ -676,8 +689,11 @@ class Observation:
     K: float | None = None         # geometric factor
     fid: str | None = None         # field id/record id
 
+
 @dataclass
 class StandardERT:
+    """Standardized ERT container with coordinates, observations, and metadata."""
+
     # "local" or "EPSG:xxxx"
     crs: str = "local"
     instrument: str = "Syscal"
@@ -2061,14 +2077,23 @@ def export_for_inversion(
     outdir: str = "examples/results/ert",
     fmt: str = "pgimli",
     use_source_error: bool = False,
+    export_strategy: str = "default",
+    default_relative_error: float = 0.01,
+    default_absolute_error: float = 0.001,
+    default_rhoa_limits: tuple[float, float] = (0.1, 10000.0),
+    default_reciprocal_percent: float = 10.0,
+    default_fit_error_lin: bool = True,
 ) -> str:
     """
     Export to inversion-ready formats:
     - fmt='pgimli': Unified data format for pyGIMLi/BERT with electrode coordinates and measurements
     - fmt='resipy': return the RESIPY project directory for running prj.start().
-    - use_source_error=False (default): estimate error from reciprocal pairs
-      using exported resistance values; if no pairs are found, use default 5%.
-      Set use_source_error=True to use dataset-provided error values instead.
+    - export_strategy='default' (default): rebuild the raw survey in ResIPy,
+      keep only reciprocal-paired measurements, export recipMean as resistance,
+      and use abs((relative * resist + absolute) / recipMean) for the error.
+      If that path is unavailable, the function falls back to the legacy export.
+    - export_strategy='legacy': use the older full-dataset export path.
+    - use_source_error only affects the legacy export path.
     """
     def _coord_stats(x_vals: np.ndarray, y_vals: np.ndarray, z_vals: np.ndarray) -> str:
         return (
@@ -2190,7 +2215,19 @@ def export_for_inversion(
         if not ert.observations:
             raise ValueError("ERT dataset has no observations; cannot export.")
 
-        path = outdir_path / "bert_data.dat"
+        strategy_raw = str(export_strategy).strip().lower()
+        if strategy_raw in {"", "default", "native", "recommended"}:
+            requested_export_mode = "default"
+        elif strategy_raw in {"legacy", "standard", "classic"}:
+            requested_export_mode = "legacy"
+        else:
+            raise ValueError(
+                f"Unsupported export_strategy: {export_strategy}. "
+                "Expected 'default' or 'legacy'."
+            )
+
+        path_name = "bert_data.dat" if requested_export_mode == "default" else "bert_data_legacy.dat"
+        path = outdir_path / path_name
 
         x_vals = np.array([float(e.x) for e in ert.electrodes], dtype=float)
         y_vals = np.array([float(e.y) for e in ert.electrodes], dtype=float)
@@ -2222,10 +2259,41 @@ def export_for_inversion(
         source_default_err = 0.08
         source_min_err = 0.01
         source_max_err = 0.50
-        print(
-            "   DEBUG: Error mode: "
-            + ("source (dataset-provided)" if use_source_error else "reciprocal (auto-estimated)")
+        metadata = ert.metadata or {}
+        source_file = metadata.get("data_file") or metadata.get("source_file")
+        source_path = None
+        if source_file:
+            source_path = Path(source_file)
+            if not source_path.is_absolute():
+                source_path = Path.cwd() / source_path
+
+        can_use_default_export = bool(
+            _HAS_RESIPY and source_path is not None and source_path.exists()
         )
+        use_default_export = requested_export_mode == "default" and can_use_default_export
+        if requested_export_mode == "default" and not use_default_export:
+            reason = []
+            if not _HAS_RESIPY:
+                reason.append("ResIPy unavailable")
+            if source_path is None:
+                reason.append("raw source file missing from metadata")
+            elif not source_path.exists():
+                reason.append(f"raw source file not found: {source_path}")
+            reason_text = "; ".join(reason) if reason else "default export unavailable"
+            print(f"   DEBUG: Default reciprocal-pair export unavailable ({reason_text}); falling back to legacy export.")
+
+        if use_default_export:
+            print("   DEBUG: Export strategy: default reciprocal-pair path")
+            print(
+                "   DEBUG: Error mode: abs((relative * resist + absolute) / recipMean) "
+                f"with relative={default_relative_error:.4f}, absolute={default_absolute_error:.4f}"
+            )
+        else:
+            print("   DEBUG: Export strategy: legacy full-dataset path")
+            print(
+                "   DEBUG: Error mode: "
+                + ("source (dataset-provided)" if use_source_error else "reciprocal (auto-estimated)")
+            )
         valid_rows = []
         skipped_counts = {
             "invalid_abmn": 0,
@@ -2234,70 +2302,169 @@ def export_for_inversion(
             "missing_resistivity": 0,
             "non_finite_values": 0,
         }
+        _fallback_to_legacy = False
+        if use_default_export:
+            ftype = str(metadata.get("ftype") or _to_ftype(ert.instrument))
+            elec_xyz = np.column_stack((x_vals, y_vals, z_vals))
+            if elec_xyz.shape[1] < 3:
+                elec_xyz = np.pad(elec_xyz, ((0, 0), (0, 3 - elec_xyz.shape[1])), constant_values=0.0)
 
-        for obs in ert.observations:
             try:
-                a = int(obs.quad.A)
-                b = int(obs.quad.B)
-                m = int(obs.quad.M)
-                n = int(obs.quad.N)
-            except Exception:
-                skipped_counts["invalid_abmn"] += 1
-                continue
+                with tempfile.TemporaryDirectory(prefix="phgx_default_export_") as tmp_project_dir:
+                    prj = Project(tmp_project_dir)
+                    prj.createSurvey(fname=str(source_path), ftype=ftype)
+                    if not prj.surveys:
+                        raise RuntimeError("ResIPy did not create a survey from the raw data file.")
 
-            # Allow 0 for remote electrodes, but disallow negative or > n_elec indices.
-            if min(a, b, m, n) < 0 or max(a, b, m, n) > n_elec:
-                skipped_counts["index_out_of_range"] += 1
-                continue
-            if a == b or m == n:
-                skipped_counts["degenerate_quad"] += 1
-                continue
+                    survey = prj.surveys[0]
+                    if hasattr(survey, "setElec"):
+                        survey.setElec(elec_xyz)
+                    else:
+                        survey.elec = elec_xyz
 
-            R = None
-            rhoa = None
-            k = 1.0
-            if (
-                obs.I is not None
-                and obs.dV is not None
-                and np.isfinite(obs.I)
-                and np.isfinite(obs.dV)
-                and obs.I != 0
-            ):
-                R = abs(float(obs.dV) / float(obs.I))
-                rhoa = R
-                k = 1.0
-            elif obs.app_res is not None and np.isfinite(obs.app_res):
-                if obs.K is not None and np.isfinite(obs.K) and float(obs.K) > 1:
-                    k = float(obs.K)
-                    R = float(obs.app_res) / k
-                    rhoa = float(obs.app_res)
+                    rhoa_min, rhoa_max = default_rhoa_limits
+                    filter_app_resist = getattr(prj, "filterAppResist", None)
+                    if callable(filter_app_resist):
+                        filter_app_resist(vmin=float(rhoa_min), vmax=float(rhoa_max))
+
+                    filter_recip = getattr(prj, "filterRecip", None)
+                    if not callable(filter_recip):
+                        raise RuntimeError("ResIPy Project.filterRecip is not available in this environment.")
+                    filter_recip(percent=float(default_reciprocal_percent))
+
+                    if default_fit_error_lin:
+                        fit_error_lin = getattr(prj, "fitErrorLin", None)
+                        if callable(fit_error_lin):
+                            fit_error_lin()
+
+                    df = prj.surveys[0].df.copy()
+            except Exception as e:
+                if "no reciprocal" in str(e).lower():
+                    print(
+                        f"   Warning: No reciprocal measurements detected in survey data; "
+                        f"falling back to legacy export. ({e})"
+                    )
+                    _fallback_to_legacy = True
+                    use_default_export = False
                 else:
-                    R = float(obs.app_res)
-                    rhoa = float(obs.app_res)
+                    raise RuntimeError(
+                        f"Failed to rebuild the default reciprocal-pair export with ResIPy: {e}"
+                    ) from e
+
+            if use_default_export:
+                required_cols = {"a", "b", "m", "n", "irecip", "recipMean", "resist"}
+                missing_cols = sorted(required_cols.difference(df.columns))
+                if missing_cols:
+                    raise ValueError(
+                        "Default reciprocal-pair export requires ResIPy columns "
+                        f"{missing_cols}, but they were not found in the rebuilt survey."
+                    )
+
+                recip_mask = pd.to_numeric(df["irecip"], errors="coerce").fillna(0).to_numpy(dtype=float) > 0
+                default_df = df.loc[recip_mask].copy()
+                if len(default_df) == 0:
+                    raise ValueError("Default reciprocal-pair export found no reciprocal-paired measurements after filtering.")
+
+                print(f"   DEBUG: Default export retained {len(default_df)} reciprocal-paired measurements")
+                skipped_counts["missing_resistivity"] = 0
+                for _, row in default_df.iterrows():
+                    try:
+                        a = int(row["a"])
+                        b = int(row["b"])
+                        m = int(row["m"])
+                        n = int(row["n"])
+                    except Exception:
+                        skipped_counts["invalid_abmn"] += 1
+                        continue
+
+                    if min(a, b, m, n) < 0 or max(a, b, m, n) > n_elec:
+                        skipped_counts["index_out_of_range"] += 1
+                        continue
+                    if a == b or m == n:
+                        skipped_counts["degenerate_quad"] += 1
+                        continue
+
+                    recip_mean = float(row["recipMean"])
+                    resist_val = float(row["resist"])
+                    if not (np.isfinite(recip_mean) and np.isfinite(resist_val)):
+                        skipped_counts["non_finite_values"] += 1
+                        continue
+
+                    R = abs(recip_mean)
+                    if R <= 1e-12:
+                        skipped_counts["missing_resistivity"] += 1
+                        continue
+
+                    err_val = abs(((float(default_relative_error) * resist_val) + float(default_absolute_error)) / recip_mean)
+                    if not (np.isfinite(err_val) and err_val > 0):
+                        skipped_counts["non_finite_values"] += 1
+                        continue
+
+                    valid_rows.append((a, b, m, n, R, R, 1.0, float(err_val)))
+        if not use_default_export:
+            for obs in ert.observations:
+                try:
+                    a = int(obs.quad.A)
+                    b = int(obs.quad.B)
+                    m = int(obs.quad.M)
+                    n = int(obs.quad.N)
+                except Exception:
+                    skipped_counts["invalid_abmn"] += 1
+                    continue
+
+                # Allow 0 for remote electrodes, but disallow negative or > n_elec indices.
+                if min(a, b, m, n) < 0 or max(a, b, m, n) > n_elec:
+                    skipped_counts["index_out_of_range"] += 1
+                    continue
+                if a == b or m == n:
+                    skipped_counts["degenerate_quad"] += 1
+                    continue
+
+                R = None
+                rhoa = None
+                k = 1.0
+                if (
+                    obs.I is not None
+                    and obs.dV is not None
+                    and np.isfinite(obs.I)
+                    and np.isfinite(obs.dV)
+                    and obs.I != 0
+                ):
+                    R = abs(float(obs.dV) / float(obs.I))
+                    rhoa = R
                     k = 1.0
-            else:
-                skipped_counts["missing_resistivity"] += 1
-                continue
+                elif obs.app_res is not None and np.isfinite(obs.app_res):
+                    if obs.K is not None and np.isfinite(obs.K) and float(obs.K) > 1:
+                        k = float(obs.K)
+                        R = float(obs.app_res) / k
+                        rhoa = float(obs.app_res)
+                    else:
+                        R = float(obs.app_res)
+                        rhoa = float(obs.app_res)
+                        k = 1.0
+                else:
+                    skipped_counts["missing_resistivity"] += 1
+                    continue
 
-            if not (np.isfinite(R) and np.isfinite(rhoa) and np.isfinite(k)):
-                skipped_counts["non_finite_values"] += 1
-                continue
+                if not (np.isfinite(R) and np.isfinite(rhoa) and np.isfinite(k)):
+                    skipped_counts["non_finite_values"] += 1
+                    continue
 
-            R = abs(float(R))
-            rhoa = abs(float(rhoa))
-            k = abs(float(k)) if k != 0 else 1.0
-            if R <= 0 or rhoa <= 0:
-                skipped_counts["missing_resistivity"] += 1
-                continue
+                R = abs(float(R))
+                rhoa = abs(float(rhoa))
+                k = abs(float(k)) if k != 0 else 1.0
+                if R <= 0 or rhoa <= 0:
+                    skipped_counts["missing_resistivity"] += 1
+                    continue
 
-            rhoa = float(np.clip(rhoa, rho_min, rho_max))
-            R = float(max(R, rho_min))
+                rhoa = float(np.clip(rhoa, rho_min, rho_max))
+                R = float(max(R, rho_min))
 
-            src_err_val = np.nan
-            if obs.rel_err is not None and np.isfinite(obs.rel_err) and obs.rel_err > 0:
-                src_err_val = float(obs.rel_err)
+                src_err_val = np.nan
+                if obs.rel_err is not None and np.isfinite(obs.rel_err) and obs.rel_err > 0:
+                    src_err_val = float(obs.rel_err)
 
-            valid_rows.append((a, b, m, n, R, rhoa, k, src_err_val))
+                valid_rows.append((a, b, m, n, R, rhoa, k, src_err_val))
 
         if len(valid_rows) == 0:
             total_obs = len(ert.observations)
@@ -2313,7 +2480,20 @@ def export_for_inversion(
                 f"Diagnostics: {details}.{hint}"
             )
 
-        if use_source_error:
+        if use_default_export:
+            source_err_rows = np.array([r[7] for r in valid_rows], dtype=float)
+            err_rows = np.where(
+                np.isfinite(source_err_rows) & (source_err_rows > 0),
+                source_err_rows,
+                source_default_err,
+            ).astype(float)
+            n_source_valid = int(np.sum(np.isfinite(source_err_rows) & (source_err_rows > 0)))
+            print(
+                f"   DEBUG: Preserved default export errors on rows: "
+                f"valid={n_source_valid}/{len(valid_rows)}, "
+                f"err_range=[{np.nanmin(err_rows):.3f}, {np.nanmax(err_rows):.3f}]"
+            )
+        elif use_source_error:
             source_err_rows = np.array([r[7] for r in valid_rows], dtype=float)
             err_rows = _sanitize_source_error(
                 source_err_rows,
@@ -2403,12 +2583,18 @@ def export_for_inversion(
                 print(f"   Computed K range: [{np.nanmin(k_vals):.1f}, {np.nanmax(k_vals):.1f}]")
 
             keep_mask = np.ones(data.size(), dtype=bool)
-            k_threshold = 1000
             k_vals = np.array(data['k'], dtype=float)
-            k_valid = np.isfinite(k_vals) & (np.abs(k_vals) < k_threshold)
-            n_k_filtered = int(np.sum(~k_valid))
-            if n_k_filtered > 0:
-                print(f"   Filtered {n_k_filtered} measurements with invalid/large |K| (threshold={k_threshold})")
+            if use_default_export:
+                k_valid = np.isfinite(k_vals) & (np.abs(k_vals) > 1e-12)
+                n_k_filtered = int(np.sum(~k_valid))
+                if n_k_filtered > 0:
+                    print(f"   Filtered {n_k_filtered} measurements with invalid K")
+            else:
+                k_threshold = 1000
+                k_valid = np.isfinite(k_vals) & (np.abs(k_vals) < k_threshold)
+                n_k_filtered = int(np.sum(~k_valid))
+                if n_k_filtered > 0:
+                    print(f"   Filtered {n_k_filtered} measurements with invalid/large |K| (threshold={k_threshold})")
             keep_mask = keep_mask & k_valid
 
             if not np.any(keep_mask):
@@ -2441,19 +2627,25 @@ def export_for_inversion(
                 data['rhoa'] = data['r'] * data['k']
 
             rhoa_vals = np.array(data['rhoa'], dtype=float)
-            rhoa_valid = np.isfinite(rhoa_vals) & (rhoa_vals > 0.1) & (rhoa_vals < 1e6)
-            stat_mask = keep_mask & rhoa_valid
-            valid_rhoa = rhoa_vals[stat_mask]
-            if len(valid_rhoa) > 0:
-                rhoa_median = float(np.median(valid_rhoa))
-                rhoa_std = float(np.std(valid_rhoa))
-                lower_bound = max(0.1, rhoa_median - 3 * rhoa_std)
-                upper_bound = min(1e6, rhoa_median + 3 * rhoa_std)
-                rhoa_valid = rhoa_valid & (rhoa_vals >= lower_bound) & (rhoa_vals <= upper_bound)
+            if use_default_export:
+                rhoa_valid = np.isfinite(rhoa_vals) & (rhoa_vals > 0)
+                n_filtered = int(np.sum(keep_mask & ~rhoa_valid))
+                if n_filtered > 0:
+                    print(f"   Filtered {n_filtered} measurements with invalid apparent resistivity")
+            else:
+                rhoa_valid = np.isfinite(rhoa_vals) & (rhoa_vals > 0.1) & (rhoa_vals < 1e6)
+                stat_mask = keep_mask & rhoa_valid
+                valid_rhoa = rhoa_vals[stat_mask]
+                if len(valid_rhoa) > 0:
+                    rhoa_median = float(np.median(valid_rhoa))
+                    rhoa_std = float(np.std(valid_rhoa))
+                    lower_bound = max(0.1, rhoa_median - 3 * rhoa_std)
+                    upper_bound = min(1e6, rhoa_median + 3 * rhoa_std)
+                    rhoa_valid = rhoa_valid & (rhoa_vals >= lower_bound) & (rhoa_vals <= upper_bound)
 
-            n_filtered = int(np.sum(keep_mask & ~rhoa_valid))
-            if n_filtered > 0:
-                print(f"   Filtered {n_filtered} measurements with extreme apparent resistivity")
+                n_filtered = int(np.sum(keep_mask & ~rhoa_valid))
+                if n_filtered > 0:
+                    print(f"   Filtered {n_filtered} measurements with extreme apparent resistivity")
             keep_mask = keep_mask & rhoa_valid
 
             if not np.any(keep_mask):
@@ -2504,7 +2696,20 @@ def export_for_inversion(
                 if rows_written == 0:
                     raise RuntimeError("No valid measurements remained for final rewrite.")
 
-                if use_source_error:
+                if use_default_export:
+                    source_err_final = np.array([r[7] for r in row_records], dtype=float)
+                    err_final = np.where(
+                        np.isfinite(source_err_final) & (source_err_final > 0),
+                        source_err_final,
+                        source_default_err,
+                    ).astype(float)
+                    n_source_valid_final = int(np.sum(np.isfinite(source_err_final) & (source_err_final > 0)))
+                    print(
+                        f"   DEBUG: Preserved default export errors on final rows: "
+                        f"valid={n_source_valid_final}/{rows_written}, "
+                        f"err_range=[{np.nanmin(err_final):.3f}, {np.nanmax(err_final):.3f}]"
+                    )
+                elif use_source_error:
                     source_err_final = np.array([r[7] for r in row_records], dtype=float)
                     err_final = _sanitize_source_error(
                         source_err_final,

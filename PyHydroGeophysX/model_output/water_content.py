@@ -7,13 +7,17 @@ binary 'WaterContent' files produced by MODFLOW's UZF package. It also includes
 a utility for calculating saturation.
 """
 import os
-import numpy as np
-from typing import Tuple, Optional, Union, List, Any # Added Any for file_obj in binaryread
+from typing import Any, List, Optional, Tuple, Union  # Added Any for file_obj in binaryread
 
+import numpy as np
 
 # This binaryread function is identical to the one in modflow_output.py.
 # To avoid duplication, it would typically be in a shared utility module.
 # For this exercise, it's documented here as per the file context.
+
+# ---------------------------------------------------------------------------
+# binaryread
+# ---------------------------------------------------------------------------
 def binaryread(file_obj: Any, # Should be BinaryIO
                vartype: Union[type, List[Tuple[str, str]]],
                shape: Tuple[int, ...] = (1,),
@@ -62,6 +66,9 @@ def binaryread(file_obj: Any, # Should be BinaryIO
         return np.reshape(data_array, shape)
 
 
+# ---------------------------------------------------------------------------
+# MODFLOWWater Content
+# ---------------------------------------------------------------------------
 class MODFLOWWaterContent: # Renamed to avoid direct conflict if imported alongside the other one.
                            # Or, this is the primary one if water_content.py is the intended module.
                            # Assuming this is the version to be documented from water_content.py.

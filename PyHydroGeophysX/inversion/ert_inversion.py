@@ -1,18 +1,22 @@
 """
 Single-time ERT inversion functionality.
 """
+import sys
+from typing import Any, Dict, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
 from pygimli.physics import ert
 from scipy.sparse import diags
-import sys
-from typing import Optional, Union, Dict, Any, Tuple
 
-from .base import InversionBase, InversionResult
-from ..forward.ert_forward import ertforward2, ertforandjac2
+from ..forward.ert_forward import ertforandjac2, ertforward2
 from ..solvers.linear_solvers import generalized_solver
+from .base import InversionBase, InversionResult
 
 
+# ---------------------------------------------------------------------------
+# ERTInversion
+# ---------------------------------------------------------------------------
 class ERTInversion(InversionBase):
     """Single-time ERT inversion class."""
     
@@ -28,10 +32,12 @@ class ERTInversion(InversionBase):
                 - method: Solver method ('cgls', 'lsqr', etc.)
                 - model_constraints: (min, max) model parameter bounds
                 - max_iterations: Maximum iterations
-                - absoluteUError: Absolute data error
+                - absoluteError: Absolute resistance error floor [Ohm] (default 0.0001)
                 - relativeError: Relative data error
                 - lambda_rate: Lambda reduction rate
                 - lambda_min: Minimum lambda value
+                - min_relative_error: Minimum error floor (default 0.01)
+                - max_relative_error: Maximum error cap (default 0.50)
                 - use_gpu: Whether to use GPU acceleration (requires CuPy)
                 - parallel: Whether to use parallel CPU computation
                 - n_jobs: Number of parallel jobs (-1 for all cores)
@@ -45,7 +51,7 @@ class ERTInversion(InversionBase):
         if 'k' not in data.dataMap() or len(data['k']) == 0 or np.allclose(data['k'], 0) or np.allclose(data['k'], 1):
             print("   Computing geometric factors from electrode positions...")
             data['k'] = ert.createGeometricFactors(data, numerical=True)
-        
+            data['rhoa'] = data['r'] * data['k']
         # Call parent initializer
         super().__init__(data, mesh, **kwargs)
         
@@ -54,10 +60,12 @@ class ERTInversion(InversionBase):
         ert_defaults = {
             'lambda_val': 10.0,
             'method': 'cgls',
-            'absoluteUError': 0.0,
+            'absoluteError': 0.0001,
             'relativeError': 0.05,
             'lambda_rate': 1.0,
             'lambda_min': 1.0,
+            'min_relative_error': 0.01,
+            'max_relative_error': 2.00,
             'use_gpu': False,      # Add GPU acceleration option
             'parallel': False,     # Add parallel computation option
             'n_jobs': -1           # Number of parallel jobs (-1 means all available cores)
@@ -78,20 +86,17 @@ class ERTInversion(InversionBase):
         """Set up ERT inversion (create operators, matrices, etc.)"""
         # DEBUG: Print electrode positions from data before mesh creation
         sensors = self.data.sensorPositions()
-        print(f"DEBUG [ert_inversion.py]: Data has {len(sensors)} electrode positions before mesh creation")
+       
         if len(sensors) > 0:
             y_vals = [s.y() for s in sensors]
-            print(f"DEBUG [ert_inversion.py]: Electrode Y-range (elevation): [{min(y_vals):.3f}, {max(y_vals):.3f}]")
+            
 
         # Create mesh if not provided
         if self.mesh is None:
             ert_manager = ert.ERTManager(self.data)
             self.mesh = ert_manager.createMesh(data=self.data, quality=34)
-
-            # DEBUG: Print mesh information
-            print(f"DEBUG [ert_inversion.py]: Mesh created with {self.mesh.nodeCount()} nodes, {self.mesh.cellCount()} cells")
+            
             y_coords = [n.y() for n in self.mesh.nodes()]
-            print(f"DEBUG [ert_inversion.py]: Mesh Y-range: [{min(y_coords):.3f}, {max(y_coords):.3f}]")
 
         # Initialize forward operator
         self.fwd_operator = ert.ERTModelling()
@@ -115,16 +120,31 @@ class ERTInversion(InversionBase):
             Delta_rhoa_rhoa = self.data['err'].array()
             print(f'   Using provided error estimates (mean: {np.mean(Delta_rhoa_rhoa):.4f}, range: [{np.min(Delta_rhoa_rhoa):.4f}, {np.max(Delta_rhoa_rhoa):.4f}])')
         else:
-            # Otherwise, estimate error using PyGIMLi's built-in estimator
-            print(f'   No valid error data found, estimating errors (absoluteUError={self.parameters["absoluteUError"]}, relativeError={self.parameters["relativeError"]})')
-            ert_manager = ert.ERTManager(self.data)
-            Delta_rhoa_rhoa = ert_manager.estimateError(
-                self.data,
-                absoluteUError=self.parameters['absoluteUError'],
-                relativeError=self.parameters['relativeError']
-            )
-            print(f'   Estimated error statistics (mean: {np.mean(Delta_rhoa_rhoa):.4f}, range: [{np.min(Delta_rhoa_rhoa):.4f}, {np.max(Delta_rhoa_rhoa):.4f}])')
-        
+            # Estimate per-measurement relative error (Seb's resistance-based formula):
+            #   err_i = relativeError + absoluteError / |r_i|
+            # Because δρa/ρa = δr/r, noise lives in resistance space.
+            # r is used directly if available; otherwise reconstructed from rhoa / k.
+            abs_e = float(self.parameters['absoluteError'])
+            rel_e = float(self.parameters['relativeError'])
+            print(f'   No valid error data found, estimating errors '
+                  f'(absoluteError={abs_e}, relativeError={rel_e})')
+
+            if 'r' in self.data.dataMap():
+                r_abs = np.abs(self.data['r'].array())
+            elif 'k' in self.data.dataMap():
+                r_abs = np.abs(rhos.array()) / np.maximum(np.abs(self.data['k'].array()), 1e-10)
+            else:
+                raise RuntimeError("Cannot estimate error: data must contain 'r' or ('rhoa' + 'k').")
+
+            Delta_rhoa_rhoa = rel_e + abs_e / np.maximum(r_abs, 1e-10)
+            print(f'   Estimated error statistics (mean: {np.mean(Delta_rhoa_rhoa):.4f}, '
+                  f'range: [{np.min(Delta_rhoa_rhoa):.4f}, {np.max(Delta_rhoa_rhoa):.4f}])')
+
+        # Clip errors: too small → min_relative_error, too large → max_relative_error
+        min_err = float(self.parameters.get('min_relative_error', 0.01))
+        max_err = float(self.parameters.get('max_relative_error', 2.00))
+        Delta_rhoa_rhoa = np.clip(np.asarray(Delta_rhoa_rhoa, dtype=float), min_err, max_err)
+
         # Create data weighting matrix
         self.Wdert = np.diag(1.0 / np.log(Delta_rhoa_rhoa + 1))
         

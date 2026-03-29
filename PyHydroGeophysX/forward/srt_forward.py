@@ -1,13 +1,17 @@
 """
 Forward modeling utilities for Seismic Refraction Tomography (SRT).
 """
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
 import pygimli.physics.traveltime as tt
 from pygimli.physics import TravelTimeManager
-from typing import Tuple, Optional, Union, List, Dict, Any
 
 
+# ---------------------------------------------------------------------------
+# Seismic Forward Modeling
+# ---------------------------------------------------------------------------
 class SeismicForwardModeling:
     """Class for forward modeling of Seismic Refraction Tomography (SRT) data."""
     

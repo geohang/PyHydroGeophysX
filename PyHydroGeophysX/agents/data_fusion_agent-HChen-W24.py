@@ -8,12 +8,17 @@ workflows like seismic-constrained ERT inversion.
 The DataFusionAgent is designed to be extensible for future multi-method combinations.
 """
 
-from typing import Dict, Any, Optional, List
-import numpy as np
 import os
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Data Fusion Agent
+# ---------------------------------------------------------------------------
 class DataFusionAgent(BaseAgent):
     """
     Agent for intelligent coordination of multi-method geophysical workflows.
@@ -424,7 +429,7 @@ Provide a brief explanation (3-4 sentences) suitable for a user about:
             # Import specialized agents if not provided
             from .seismic_agent import SeismicAgent
             from .structure_constraint_agent import StructureConstraintAgent
-            
+
             # Extract configuration
             workflow_config = input_data.get('workflow_config', {})
             fusion_pattern = input_data.get('fusion_pattern', 

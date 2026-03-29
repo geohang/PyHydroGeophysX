@@ -8,11 +8,16 @@ workflows like seismic-constrained ERT inversion.
 The DataFusionAgent is designed to be extensible for future multi-method combinations.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Data Fusion Agent
+# ---------------------------------------------------------------------------
 class DataFusionAgent(BaseAgent):
     """
     Agent for intelligent coordination of multi-method geophysical workflows.
@@ -513,8 +518,9 @@ Provide a brief explanation (3-4 sentences) suitable for a user about:
             if not seismic_file:
                 raise ValueError("Seismic data file not provided")
             
-            import pygimli.physics.traveltime as tt
             from pathlib import Path
+
+            import pygimli.physics.traveltime as tt
             
             seismic_path = Path(seismic_file)
             if not seismic_path.exists():
@@ -591,8 +597,9 @@ Provide a brief explanation (3-4 sentences) suitable for a user about:
             
             self._log_execution(f"Loading ERT data from: {ert_file}")
             
-            from pygimli.physics import ert as pygimli_ert
             from pathlib import Path
+
+            from pygimli.physics import ert as pygimli_ert
             
             ert_path = Path(ert_file)
             if not ert_path.exists():
@@ -677,8 +684,9 @@ Provide a brief explanation (3-4 sentences) suitable for a user about:
         if not ert_file:
             raise ValueError("ERT data file not provided")
         
-        from pygimli.physics import ert as pygimli_ert
         from pathlib import Path
+
+        from pygimli.physics import ert as pygimli_ert
         
         ert_path = Path(ert_file)
         if not ert_path.exists():

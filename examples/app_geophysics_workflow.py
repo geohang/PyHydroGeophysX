@@ -6,8 +6,8 @@ Natural-language interface for geophysical workflows.
 Usage: streamlit run app_geophysics_workflow.py
 """
 
-import os
 import json
+import os
 import re
 import sys
 import tempfile
@@ -66,8 +66,11 @@ except Exception as _exc:  # noqa: BLE001
 if not DATA_ACCESS_AVAILABLE:
     try:
         from PyHydroGeophysX.data_access.accessors import (
-            LocalHydroAccessor, HttpHydroAccessor, load_manifest, get_manifest_entry,
             REQUIRED_FILES,
+            HttpHydroAccessor,
+            LocalHydroAccessor,
+            get_manifest_entry,
+            load_manifest,
         )
         DATA_ACCESS_AVAILABLE = True
         _DATA_ACCESS_ERROR = ""
@@ -772,6 +775,11 @@ def _apply_hydro_notebook_defaults(force: bool = False) -> None:
 
 
 def init_session_state() -> None:
+    """Initialize default Streamlit session-state values for the app.
+
+    Returns:
+        None.
+    """
     defaults = {
         "context_agent": None,
         "workflow_result": None,
@@ -863,6 +871,11 @@ def init_session_state() -> None:
 
 
 def render_header() -> None:
+    """Render the application header, subtitle, and project metadata.
+
+    Returns:
+        None.
+    """
     st.markdown('<div class="phgx-header">PyHydroGeophysX Workflows</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="phgx-subtitle-main">AQUAH: Autonomous Query-driven Understanding Agent for Hydrogeophysics</div>',
@@ -894,6 +907,11 @@ def render_header() -> None:
 
 
 def render_example_buttons() -> None:
+    """Render preset example requests that populate the workflow text box.
+
+    Returns:
+        None.
+    """
     st.subheader("Example workflows")
     cols = st.columns(len(EXAMPLE_REQUESTS))
     for idx, (label, text) in enumerate(EXAMPLE_REQUESTS.items()):
@@ -904,6 +922,11 @@ def render_example_buttons() -> None:
 
 
 def render_tutorial_tab() -> None:
+    """Render the tutorial tab with videos and getting-started guidance.
+
+    Returns:
+        None.
+    """
     st.subheader("Tutorial")
 
     # Video Tutorial
@@ -1228,6 +1251,11 @@ Regularization lambda: 15""",
 
 
 def render_concepts_tab() -> None:
+    """Render the hydrogeophysics concepts overview tab.
+
+    Returns:
+        None.
+    """
     st.subheader("Hydrogeophysics Concepts")
     st.markdown(
         """
@@ -2172,6 +2200,11 @@ When providing code examples:
 
 
 def render_author_tab() -> None:
+    """Render the author and project-information tab.
+
+    Returns:
+        None.
+    """
     # Custom CSS for author page
     st.markdown("""
     <style>
@@ -2516,6 +2549,11 @@ def render_author_tab() -> None:
 
 
 def render_local_deployment_tab() -> None:
+    """Render local deployment instructions for the web application.
+
+    Returns:
+        None.
+    """
     st.subheader("Local Deployment")
     st.markdown(
         """
@@ -2553,6 +2591,14 @@ In the sidebar:
 
 
 def render_workflow_tab(sidebar_state: Dict[str, str]) -> None:
+    """Render the natural-language workflow builder tab.
+
+    Args:
+        sidebar_state: Sidebar configuration values for the current session.
+
+    Returns:
+        None.
+    """
     st.markdown("---")
     st.info(
         "Cloud resources are limited. For big datasets, use the Local Deployment tab so you can run the same web interface with local compute."
@@ -2815,6 +2861,7 @@ def _convert_modflow_to_npy(
     Returns the directory containing the converted files.
     """
     import numpy as np
+
     from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
 
     modflow_path = Path(modflow_dir)
@@ -2874,7 +2921,8 @@ def _convert_parflow_to_npy(
     Returns the directory containing the converted files.
     """
     import numpy as np
-    from PyHydroGeophysX.model_output.parflow_output import ParflowSaturation, ParflowPorosity
+
+    from PyHydroGeophysX.model_output.parflow_output import ParflowPorosity, ParflowSaturation
 
     pf_path = Path(parflow_dir)
     if out_dir is None:
@@ -3156,6 +3204,7 @@ def _render_surface_picker(data_dir: Path) -> None:
     render_backend = "unknown"
     try:
         import inspect
+
         import plotly.graph_objects as go
         try:
             from streamlit_plotly_events import plotly_events
@@ -3877,6 +3926,7 @@ def _build_hydro_profile(
     num_points: int,
 ) -> Dict[str, Any]:
     import numpy as np
+
     from PyHydroGeophysX.core.interpolation import ProfileInterpolator
 
     water_content_4d = np.load(data_dir / "Watercontent.npy")
@@ -3983,8 +4033,8 @@ def _build_hydro_profile(
 
 
 def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
-    import numpy as np
     import matplotlib.pyplot as plt
+    import numpy as np
 
     methods = _ordered_unique_methods(config.get("hydro_methods", HYDRO_RESPONSE_METHODS))
     output_dir = _resolve_user_path(config.get("hydro_output_dir", "results/hydro_to_multigeophys"))
@@ -4041,11 +4091,12 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
         else:
             try:
                 import pygimli as pg
-                from pygimli.physics import ert as pg_ert
                 import pygimli.physics.traveltime as tt
-                from PyHydroGeophysX.Hydro_modular import hydro_to_ert, hydro_to_srt
+                from pygimli.physics import ert as pg_ert
+
                 from PyHydroGeophysX.core.interpolation import create_surface_lines
                 from PyHydroGeophysX.core.mesh_utils import MeshCreator
+                from PyHydroGeophysX.Hydro_modular import hydro_to_ert, hydro_to_srt
 
                 n_bounds = profile["structure"].shape[0]
                 mid_idx = max(1, min(4, n_bounds // 3))
@@ -5598,6 +5649,11 @@ def _render_results_step() -> None:
 # ---------------------------------------------------------------------------
 
 def render_hydro_multigeophys_tab() -> None:
+    """Render the hydro-to-geophysics workflow tab and step navigation.
+
+    Returns:
+        None.
+    """
     st.subheader("Hydro to Geophysics")
     st.caption(
         "Convert hydro-model outputs into synthetic geophysical responses. "
@@ -5641,6 +5697,11 @@ def render_hydro_multigeophys_tab() -> None:
 
 
 def render_sidebar() -> Dict[str, str]:
+    """Render sidebar controls and return the selected configuration values.
+
+    Returns:
+        Dictionary containing provider, model, API key, and output directory values.
+    """
     st.sidebar.header("Configuration")
 
     provider = st.sidebar.selectbox(
@@ -5716,7 +5777,19 @@ def render_sidebar() -> Dict[str, str]:
     return {"provider": provider, "model": model, "api_key": api_key, "output_dir": output_dir}
 
 
-def save_upload(file_obj, target_dir: Path) -> Path:
+def save_upload(
+    file_obj: Any,
+    target_dir: Path,
+) -> Path:
+    """Save one uploaded file into the target directory.
+
+    Args:
+        file_obj: Uploaded file object from Streamlit.
+        target_dir: Directory where the file should be stored.
+
+    Returns:
+        Path to the saved file.
+    """
     target_dir.mkdir(parents=True, exist_ok=True)
     dest = target_dir / file_obj.name
     dest.write_bytes(file_obj.read())
@@ -5870,6 +5943,18 @@ def run_workflow(
     output_dir: Path,
     direct_config: Optional[Dict[str, Any]] = None,
 ) -> None:
+    """Execute a workflow request and stream progress updates to the UI.
+
+    Args:
+        user_request: Natural-language workflow request from the user.
+        upload_overrides: File-derived configuration overrides.
+        saved_paths: Mapping of uploaded filenames to saved paths.
+        output_dir: Directory for workflow outputs.
+        direct_config: Optional prebuilt workflow configuration.
+
+    Returns:
+        None.
+    """
     # Create progress container for real-time updates
     progress_container = st.container()
     with progress_container:
@@ -6013,6 +6098,11 @@ def _detect_workflow_type(config: Dict) -> str:
 
 
 def render_results() -> None:
+    """Render workflow outputs, summaries, and downloadable artifacts.
+
+    Returns:
+        None.
+    """
     data = st.session_state.workflow_result
     if not data:
         return
@@ -6084,6 +6174,11 @@ def render_results() -> None:
 
 
 def render_cloud_tips() -> None:
+    """Render deployment guidance for running the app in the cloud.
+
+    Returns:
+        None.
+    """
     st.markdown("---")
     st.markdown("### Run in the cloud")
     st.markdown(
@@ -6121,6 +6216,11 @@ def render_support_section() -> None:
 
 
 def main() -> None:
+    """Run the Streamlit application entrypoint.
+
+    Returns:
+        None.
+    """
     init_session_state()
     render_header()
     

@@ -1,17 +1,16 @@
 """VTK export utilities for ParaView visualization."""
 
 import os
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import numpy as np
-
 
 # ---------------------------------------------------------------------------
 # 2-D mesh export (unstructured triangular / quad mesh)
 # ---------------------------------------------------------------------------
 
 def export_mesh_to_vtk(
-    mesh,
+    mesh: Any,
     filename: str,
     cell_data: Optional[Dict[str, np.ndarray]] = None,
 ) -> str:
@@ -219,7 +218,7 @@ def export_structured_vtk_multi(
 # ---------------------------------------------------------------------------
 
 def export_timelapse_vtk(
-    mesh,
+    mesh: Any,
     models: Sequence[np.ndarray],
     output_dir: str,
     prefix: str = "timelapse",

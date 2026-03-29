@@ -1,15 +1,23 @@
 """
 Seismic data processing module for structure identification.
 """
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
 from pygimli.physics import traveltime as tt
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
-from typing import Tuple, List, Optional, Union, Dict, Any
 
 
-def process_seismic_tomography(ttData, mesh=None, **kwargs):
+# ---------------------------------------------------------------------------
+# process seismic tomography
+# ---------------------------------------------------------------------------
+def process_seismic_tomography(
+    ttData: Any,
+    mesh: Any = None,
+    **kwargs: Any,
+) -> Any:
     """
     Process seismic tomography data and perform inversion.
     
@@ -66,7 +74,14 @@ def process_seismic_tomography(ttData, mesh=None, **kwargs):
     return TT
 
 
-def seismic_velocity_classifier(velocity_data, mesh, threshold=1200):
+# ---------------------------------------------------------------------------
+# seismic velocity classifier
+# ---------------------------------------------------------------------------
+def seismic_velocity_classifier(
+    velocity_data: Any,
+    mesh: Any,
+    threshold: Any = 1200,
+) -> Any:
     """
     Classify mesh cells based on velocity threshold.
     
@@ -107,7 +122,15 @@ def seismic_velocity_classifier(velocity_data, mesh, threshold=1200):
     return thresholded
 
 
-def extract_velocity_structure(mesh, velocity_data, threshold=1200, interval=4.0):
+# ---------------------------------------------------------------------------
+# extract velocity structure
+# ---------------------------------------------------------------------------
+def extract_velocity_structure(
+    mesh: Any,
+    velocity_data: Any,
+    threshold: Any = 1200,
+    interval: Any = 4.0,
+) -> Any:
     """
     Extract structure interface from velocity model at the specified threshold.
     
@@ -228,7 +251,15 @@ def extract_velocity_structure(mesh, velocity_data, threshold=1200, interval=4.0
     return x_dense, z_dense, interface_data
 
 
-def save_velocity_structure(filename, x_coords, z_coords, interface_data=None):
+# ---------------------------------------------------------------------------
+# save velocity structure
+# ---------------------------------------------------------------------------
+def save_velocity_structure(
+    filename: Any,
+    x_coords: Any,
+    z_coords: Any,
+    interface_data: Any = None,
+) -> None:
     """
     Save velocity structure data to file.
     

@@ -5,13 +5,18 @@ Specialized agent for evaluating ERT inversion quality and automatically
 adjusting regularization parameters to achieve optimal results.
 """
 
-from typing import Dict, Any, Optional, List, Tuple
-import numpy as np
 import os
 import sys
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Inversion Evaluation Agent
+# ---------------------------------------------------------------------------
 class InversionEvaluationAgent(BaseAgent):
     """
     Agent specialized in evaluating inversion quality and optimizing parameters.
@@ -540,7 +545,7 @@ optimal regularization parameter selection."""
                         adjusted_params: Dict[str, Any]) -> Dict[str, Any]:
         """Re-run inversion with adjusted parameters."""
         from .ert_inversion_agent import ERTInversionAgent
-        
+
         # Create new inversion agent
         inversion_agent = ERTInversionAgent(
             api_key=self.api_key,

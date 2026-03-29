@@ -1,11 +1,15 @@
 """
 Interpolation utilities for geophysical data processing.
 """
+from typing import Any, List, Optional, Tuple, Union
+
 import numpy as np
 from scipy.interpolate import griddata
-from typing import Tuple, List, Optional, Union
 
 
+# ---------------------------------------------------------------------------
+# interpolate to profile
+# ---------------------------------------------------------------------------
 def interpolate_to_profile(data: np.ndarray, 
                          X_grid: np.ndarray, 
                          Y_grid: np.ndarray,
@@ -35,6 +39,9 @@ def interpolate_to_profile(data: np.ndarray,
                    method=method)
 
 
+# ---------------------------------------------------------------------------
+# setup profile coordinates
+# ---------------------------------------------------------------------------
 def setup_profile_coordinates(point1: List[int], 
                             point2: List[int],
                             surface_data: np.ndarray,
@@ -89,6 +96,9 @@ def setup_profile_coordinates(point1: List[int],
     return X_pro, Y_pro, L_profile, XX, YY
 
 
+# ---------------------------------------------------------------------------
+# interpolate structure to profile
+# ---------------------------------------------------------------------------
 def interpolate_structure_to_profile(structure_data: List[np.ndarray],
                                    X_grid: np.ndarray,
                                    Y_grid: np.ndarray,
@@ -115,6 +125,9 @@ def interpolate_structure_to_profile(structure_data: List[np.ndarray],
     return np.array(structure)
 
 
+# ---------------------------------------------------------------------------
+# prepare 2 D profile data
+# ---------------------------------------------------------------------------
 def prepare_2D_profile_data(data: np.ndarray, 
                           XX: np.ndarray, 
                           YY: np.ndarray,
@@ -147,14 +160,19 @@ def prepare_2D_profile_data(data: np.ndarray,
     return np.array(profile_values)
 
 
-def interpolate_to_mesh(property_values: np.ndarray,
-                       profile_distance: np.ndarray,
-                       depth_values: np.ndarray,
-                       mesh_x: np.ndarray,
-                       mesh_y: np.ndarray,
-                       mesh_markers: np.ndarray,
-                       ID,
-                       layer_markers: list = [3, 0, 2]) -> np.ndarray:
+# ---------------------------------------------------------------------------
+# interpolate to mesh
+# ---------------------------------------------------------------------------
+def interpolate_to_mesh(
+    property_values: np.ndarray,
+    profile_distance: np.ndarray,
+    depth_values: np.ndarray,
+    mesh_x: np.ndarray,
+    mesh_y: np.ndarray,
+    mesh_markers: np.ndarray,
+    ID: Any,
+    layer_markers: list = [3, 0, 2],
+) -> np.ndarray:
     """
     Interpolate property values from profile to mesh with layer-specific handling.
     
@@ -208,6 +226,9 @@ def interpolate_to_mesh(property_values: np.ndarray,
     return result
 
 
+# ---------------------------------------------------------------------------
+# Profile Interpolator
+# ---------------------------------------------------------------------------
 class ProfileInterpolator:
     """Class for handling interpolation of data to/from profiles."""
     
@@ -301,6 +322,9 @@ class ProfileInterpolator:
         )
 
 
+# ---------------------------------------------------------------------------
+# create surface lines
+# ---------------------------------------------------------------------------
 def create_surface_lines(L_profile: np.ndarray,
                         structure: np.ndarray,
                         top_idx: int = 0,

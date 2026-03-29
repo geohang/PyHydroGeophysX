@@ -1,19 +1,23 @@
 """
 Windowed time-lapse ERT inversion for handling large temporal datasets.
 """
+import os
+import sys
+import tempfile
+from functools import partial
+from multiprocessing import Lock, Manager, Pool
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
-import os
-import tempfile
-import sys
-from multiprocessing import Pool, Lock, Manager
-from functools import partial
-from typing import List, Optional, Union, Tuple, Dict, Any, Callable
 
 from .base import TimeLapseInversionResult
 from .time_lapse import TimeLapseERTInversion
 
 
+# ---------------------------------------------------------------------------
+# process window
+# ---------------------------------------------------------------------------
 def _process_window(start_idx: int, print_lock, data_dir: str, ert_files: List[str],
                   measurement_times: List[float], window_size: int, mesh: str,
                   inversion_params: Dict[str, Any]) -> Tuple[int, Dict[str, Any]]:
@@ -33,9 +37,10 @@ def _process_window(start_idx: int, print_lock, data_dir: str, ert_files: List[s
     Returns:
         Tuple of (window index, result dictionary)
     """
-    import pygimli as pg
     import sys
-    
+
+    import pygimli as pg
+
     # Extract inversion type
     inversion_type = inversion_params.get('inversion_type', 'L2')
     
@@ -91,6 +96,9 @@ def _process_window(start_idx: int, print_lock, data_dir: str, ert_files: List[s
         raise
 
 
+# ---------------------------------------------------------------------------
+# Windowed Time Lapse ERTInversion
+# ---------------------------------------------------------------------------
 class WindowedTimeLapseERTInversion:
     """
     Class for windowed time-lapse ERT inversion to handle large temporal datasets.

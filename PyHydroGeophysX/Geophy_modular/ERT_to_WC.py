@@ -15,16 +15,20 @@ Statistics (mean, std, percentiles) can then be calculated from these distributi
 The module also includes utilities for plotting results and extracting time series.
 """
 
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
 from tqdm import tqdm
-from typing import Dict, List, Optional, Tuple, Union, Callable
+
+from ..petrophysics.resistivity_models import (
+    resistivity_to_saturation2 as resistivity_to_saturation,
+)
 
 
-from ..petrophysics.resistivity_models import resistivity_to_saturation2 as resistivity_to_saturation
-
-
-
+# ---------------------------------------------------------------------------
+# ERTto WC
+# ---------------------------------------------------------------------------
 class ERTtoWC:
     """Class for converting ERT resistivity models to water content."""
     
@@ -224,11 +228,17 @@ class ERTtoWC:
             np.save(os.path.join(output_dir, f"{base_filename}_{stat_name}.npy"), stat_values)
 
 
-def plot_time_series(time_steps: np.ndarray, time_series_data: np.ndarray,
-                    true_values: Optional[np.ndarray] = None,
-                    labels: Optional[List[str]] = None,
-                    colors: Optional[List[str]] = None,
-                    output_file: Optional[str] = None):
+# ---------------------------------------------------------------------------
+# plot time series
+# ---------------------------------------------------------------------------
+def plot_time_series(
+    time_steps: np.ndarray,
+    time_series_data: np.ndarray,
+    true_values: Optional[np.ndarray] = None,
+    labels: Optional[List[str]] = None,
+    colors: Optional[List[str]] = None,
+    output_file: Optional[str] = None,
+) -> Any:
     """Plot time series with uncertainty bands."""
     import matplotlib.pyplot as plt
     

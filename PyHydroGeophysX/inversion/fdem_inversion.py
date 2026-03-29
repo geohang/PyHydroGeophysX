@@ -8,14 +8,25 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import numpy as np
-from discretize import TensorMesh
-from simpeg import data, data_misfit, directives, inverse_problem, inversion, maps
-from simpeg import optimization, regularization
 import simpeg.electromagnetics.frequency_domain as fdem
+from discretize import TensorMesh
+from simpeg import (
+    data,
+    data_misfit,
+    directives,
+    inverse_problem,
+    inversion,
+    maps,
+    optimization,
+    regularization,
+)
 
 from PyHydroGeophysX.forward.fdem_forward import FDEMSurveyConfig
 
 
+# ---------------------------------------------------------------------------
+# FDEMInversion Result
+# ---------------------------------------------------------------------------
 @dataclass
 class FDEMInversionResult:
     """Container for FDEM inversion results."""
@@ -31,6 +42,9 @@ class FDEMInversionResult:
     frequencies: np.ndarray = None
 
 
+# ---------------------------------------------------------------------------
+# FDEMInversion
+# ---------------------------------------------------------------------------
 class FDEMInversion:
     """
     1D FDEM inversion using SimPEG.

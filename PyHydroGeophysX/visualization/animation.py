@@ -2,19 +2,19 @@
 
 import io
 import os
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 def create_timelapse_gif(
-    mesh,
+    mesh: Any,
     models: Sequence[np.ndarray],
     filename: str,
     *,
     titles: Optional[Sequence[str]] = None,
-    cmap=None,
+    cmap: Any = None,
     cmin: Optional[float] = None,
     cmax: Optional[float] = None,
     log_scale: bool = False,
@@ -126,12 +126,12 @@ def create_timelapse_gif(
 
 
 def create_timelapse_mp4(
-    mesh,
+    mesh: Any,
     models: Sequence[np.ndarray],
     filename: str,
     *,
     titles: Optional[Sequence[str]] = None,
-    cmap=None,
+    cmap: Any = None,
     cmin: Optional[float] = None,
     cmax: Optional[float] = None,
     log_scale: bool = False,
@@ -163,7 +163,7 @@ def create_timelapse_mp4(
         Path to the saved MP4 file.
     """
     import pygimli as pg
-    from matplotlib.animation import FuncAnimation, FFMpegWriter
+    from matplotlib.animation import FFMpegWriter, FuncAnimation
 
     from .plotting import _get_cmap
 
@@ -205,7 +205,7 @@ def create_timelapse_mp4(
 
 
 def create_difference_gif(
-    mesh,
+    mesh: Any,
     models: Sequence[np.ndarray],
     reference: np.ndarray,
     filename: str,
@@ -278,7 +278,7 @@ def create_difference_gif(
 
 
 def create_combined_timelapse_gif(
-    mesh,
+    mesh: Any,
     filename: str,
     *,
     wc_models: Optional[Sequence[np.ndarray]] = None,
@@ -286,9 +286,9 @@ def create_combined_timelapse_gif(
     app_res_data: Optional[Sequence] = None,
     precipitation: Optional[np.ndarray] = None,
     n_frames: Optional[int] = None,
-    wc_cmap=None,
-    res_cmap=None,
-    app_res_cmap=None,
+    wc_cmap: Any = None,
+    res_cmap: Any = None,
+    app_res_cmap: Any = None,
     wc_cmin: float = 0.0,
     wc_cmax: float = 0.32,
     res_cmin: float = 100,
@@ -404,10 +404,11 @@ def create_combined_timelapse_gif(
     # Pre-convert SimPEG data if needed
     simpeg_data_list = None
     if app_res_data is not None:
-        from .plotting import _convert_pygimli_to_simpeg
         from SimPEG.electromagnetics.static.utils.static_utils import (
             plot_pseudosection,
         )
+
+        from .plotting import _convert_pygimli_to_simpeg
         simpeg_data_list = []
         for d in app_res_data:
             try:

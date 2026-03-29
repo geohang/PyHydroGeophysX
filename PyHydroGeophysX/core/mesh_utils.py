@@ -1,16 +1,19 @@
 """
 Mesh utilities for geophysical modeling and inversion.
 """
+from typing import Any, List, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
 import pygimli.meshtools as mt
-from typing import Tuple, List, Optional, Union
-from scipy.interpolate import interp1d
-from scipy.signal import savgol_filter
 from scipy import ndimage
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, interp1d
+from scipy.signal import savgol_filter
 
 
+# ---------------------------------------------------------------------------
+# create mesh from layers
+# ---------------------------------------------------------------------------
 def create_mesh_from_layers(surface: np.ndarray,
                           line1: np.ndarray,
                           line2: np.ndarray,
@@ -102,7 +105,17 @@ def create_mesh_from_layers(surface: np.ndarray,
 
 
 
-def extract_velocity_interface(mesh, velocity_data, threshold=1200, interval=4.0, x_min=None, x_max=None):
+# ---------------------------------------------------------------------------
+# extract velocity interface
+# ---------------------------------------------------------------------------
+def extract_velocity_interface(
+    mesh: Any,
+    velocity_data: Any,
+    threshold: Any = 1200,
+    interval: Any = 4.0,
+    x_min: Any = None,
+    x_max: Any = None,
+) -> Any:
     """
     Extract the interface where velocity equals the threshold value.
     
@@ -211,8 +224,19 @@ def extract_velocity_interface(mesh, velocity_data, threshold=1200, interval=4.0
 
 
 
-def add_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2, boundary=1,
-                          paraDepth=30.0, paraDX=None, paraMaxCellSize=30):
+# ---------------------------------------------------------------------------
+# add velocity interface
+# ---------------------------------------------------------------------------
+def add_velocity_interface(
+    ertData: Any,
+    smooth_x: Any,
+    smooth_z: Any,
+    paraBoundary: Any = 2,
+    boundary: Any = 1,
+    paraDepth: Any = 30.0,
+    paraDX: Any = None,
+    paraMaxCellSize: Any = 30,
+) -> Any:
     """
     Add a velocity interface line to the geometry and create a mesh with different markers:
     - Outside survey area: marker = 1
@@ -297,7 +321,14 @@ def add_velocity_interface(ertData, smooth_x, smooth_z, paraBoundary=2, boundary
     return markers, meshafter
 
 
-def fill_holes_2d(pos, cov, grid_resolution=100):
+# ---------------------------------------------------------------------------
+# fill holes 2d
+# ---------------------------------------------------------------------------
+def fill_holes_2d(
+    pos: Any,
+    cov: Any,
+    grid_resolution: Any = 100,
+) -> Any:
     """
     Fill holes (0 values) surrounded by 1 values in 2D scattered data.
     
@@ -345,7 +376,12 @@ def fill_holes_2d(pos, cov, grid_resolution=100):
     
     return filled_cov
 
-def createTriangles(mesh):
+# ---------------------------------------------------------------------------
+# create Triangles
+# ---------------------------------------------------------------------------
+def createTriangles(
+    mesh: Any,
+) -> Any:
     """Generate triangle objects for later drawing.
 
     Creates triangle for each 2D triangle cell or 3D boundary.
@@ -404,6 +440,9 @@ def createTriangles(mesh):
     return x, y, triangles, z, dataIdx
 
 
+# ---------------------------------------------------------------------------
+# Mesh Creator
+# ---------------------------------------------------------------------------
 class MeshCreator:
     """Class for creating and managing meshes for geophysical inversion."""
     

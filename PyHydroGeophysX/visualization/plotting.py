@@ -1,11 +1,10 @@
 """2D plotting utilities for geophysical models and data."""
 
 import os
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -41,11 +40,11 @@ def _get_cmap(name: Optional[str] = None):
 # ---------------------------------------------------------------------------
 
 def plot_model_section(
-    mesh,
+    mesh: Any,
     values: np.ndarray,
     *,
-    ax=None,
-    cmap=None,
+    ax: Any = None,
+    cmap: Any = None,
     cmin: Optional[float] = None,
     cmax: Optional[float] = None,
     log_scale: bool = False,
@@ -114,12 +113,12 @@ def plot_model_section(
 # ---------------------------------------------------------------------------
 
 def plot_timelapse_snapshots(
-    mesh,
+    mesh: Any,
     models: Sequence[np.ndarray],
     *,
     titles: Optional[Sequence[str]] = None,
     ncols: int = 4,
-    cmap=None,
+    cmap: Any = None,
     cmin: Optional[float] = None,
     cmax: Optional[float] = None,
     log_scale: bool = False,
@@ -221,12 +220,12 @@ def plot_timelapse_snapshots(
 # ---------------------------------------------------------------------------
 
 def plot_difference_map(
-    mesh,
+    mesh: Any,
     model_a: np.ndarray,
     model_b: np.ndarray,
     *,
     mode: str = "difference",
-    ax=None,
+    ax: Any = None,
     cmap: str = "RdBu_r",
     symmetric: bool = True,
     label: str = "",
@@ -298,7 +297,7 @@ def plot_difference_map(
 def plot_convergence(
     chi2_history: Sequence[float],
     *,
-    ax=None,
+    ax: Any = None,
     target_chi2: float = 1.0,
     ylabel: str = r"$\chi^2$",
     title: str = "Inversion Convergence",
@@ -340,8 +339,8 @@ def plot_convergence(
 def plot_pseudosection_matrix(
     data_matrix: np.ndarray,
     *,
-    ax=None,
-    cmap=None,
+    ax: Any = None,
+    cmap: Any = None,
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
     xlabel: str = "Time",
@@ -384,7 +383,7 @@ def plot_pseudosection_matrix(
 def plot_electrode_layout(
     positions: Dict[str, np.ndarray],
     *,
-    ax=None,
+    ax: Any = None,
     color_by: str = "z",
     cmap: str = "terrain",
     title: str = "Electrode Layout",
@@ -427,7 +426,7 @@ def plot_topography(
     topo_grid: np.ndarray,
     *,
     profile_endpoints: Optional[List[Tuple[float, float]]] = None,
-    ax=None,
+    ax: Any = None,
     cmap: str = "terrain",
     title: str = "Surface Topography",
 ) -> Tuple:
@@ -472,7 +471,7 @@ def plot_monitoring_timeseries(
     *,
     true_series: Optional[Dict[str, np.ndarray]] = None,
     uncertainties: Optional[Dict[str, Tuple[np.ndarray, np.ndarray]]] = None,
-    ax=None,
+    ax: Any = None,
     ylabel: str = "Value",
     title: str = "Monitoring Point Time Series",
 ) -> Tuple:
@@ -540,9 +539,8 @@ def _convert_pygimli_to_simpeg(data_obj):
     """
     import pygimli as pg
     from pygimli.physics import ert as pgert
-
-    from SimPEG.electromagnetics.static import resistivity as dc
     from SimPEG import data as simpeg_data
+    from SimPEG.electromagnetics.static import resistivity as dc
 
     # Load if path
     if isinstance(data_obj, (str, os.PathLike)):
@@ -602,11 +600,11 @@ def _convert_pygimli_to_simpeg(data_obj):
 
 
 def plot_apparent_resistivity_pseudosection(
-    data_obj,
+    data_obj: Any,
     *,
-    ax=None,
+    ax: Any = None,
     plot_type: str = "scatter",
-    cmap=None,
+    cmap: Any = None,
     cmin: Optional[float] = None,
     cmax: Optional[float] = None,
     scale: str = "linear",
@@ -745,12 +743,12 @@ def plot_apparent_resistivity_pseudosection(
 
 
 def plot_apparent_resistivity_timelapse(
-    data_objs,
+    data_objs: Any,
     *,
     titles: Optional[Sequence[str]] = None,
     ncols: int = 4,
     plot_type: str = "scatter",
-    cmap=None,
+    cmap: Any = None,
     cmin: Optional[float] = None,
     cmax: Optional[float] = None,
     scale: str = "linear",
@@ -880,10 +878,10 @@ def plot_apparent_resistivity_timelapse(
 # ---------------------------------------------------------------------------
 
 def plot_coverage(
-    mesh,
+    mesh: Any,
     coverage: np.ndarray,
     *,
-    ax=None,
+    ax: Any = None,
     cmap: str = "YlGn",
     threshold: Optional[float] = None,
     title: str = "Data Coverage",

@@ -4,14 +4,18 @@ Base Agent Class for Multi-Agent System
 Provides the foundation for all specialized agents in the workflow.
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
-import os
 import json
+import os
+from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any, Dict, Optional
+
 import numpy as np
 
 
+# ---------------------------------------------------------------------------
+# Base Agent
+# ---------------------------------------------------------------------------
 class BaseAgent(ABC):
     """
     Abstract base class for all agents in the multi-agent system.
@@ -461,8 +465,8 @@ class BaseAgent(ABC):
 
         elif workflow_type == 'time_lapse':
             # Use ERT agents for time-lapse workflow
-            from .ert_loader_agent import ERTLoaderAgent
             from .ert_inversion_agent import ERTInversionAgent
+            from .ert_loader_agent import ERTLoaderAgent
             from .inversion_evaluation_agent import InversionEvaluationAgent
             ert_loader = ERTLoaderAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
             ert_inversion = ERTInversionAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
@@ -576,8 +580,9 @@ class BaseAgent(ABC):
             climate_results = None
             if workflow_config.get('use_climate', False) or workflow_config.get('climate_config'):
                 print('\nFetching climate data for correlation analysis...')
-                from .climate_data_agent import ClimateDataAgent
                 import json
+
+                from .climate_data_agent import ClimateDataAgent
                 
                 climate_agent = ClimateDataAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
                 
@@ -618,7 +623,7 @@ class BaseAgent(ABC):
                         # Load the fetched climate data from CSV
                         import re
                         from datetime import datetime, timedelta
-                        
+
                         # Extract ERT dates from filenames
                         ert_dates = []
                         for fname in time_lapse_files:
@@ -843,8 +848,9 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
 
         elif workflow_type == 'ert_data_process':
             # ERT data processing workflow (QC + export)
-            from .ert_loader_agent import ERTLoaderAgent
             from PyHydroGeophysX.data_processing.ert_data_agent import export_for_inversion
+
+            from .ert_loader_agent import ERTLoaderAgent
 
             ert_loader = ERTLoaderAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
 
@@ -1029,10 +1035,10 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
 
         elif workflow_type == 'direct_ert':
             # Use ERT agents for direct ERT workflow
-            from .ert_loader_agent import ERTLoaderAgent
             from .ert_inversion_agent import ERTInversionAgent
-            from .petrophysics_agent import PetrophysicsAgent
+            from .ert_loader_agent import ERTLoaderAgent
             from .inversion_evaluation_agent import InversionEvaluationAgent
+            from .petrophysics_agent import PetrophysicsAgent
             ert_loader = ERTLoaderAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
             ert_inversion = ERTInversionAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
             petrophysics_agent = PetrophysicsAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)

@@ -7,12 +7,15 @@ data processing (ERT, seismic, and more) with multiple LLM API providers
 (GPT, Gemini, Claude).
 """
 
-from typing import Dict, Any, List, Optional
-import os
 import json
+import os
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
+# ---------------------------------------------------------------------------
+# Agent Coordinator
+# ---------------------------------------------------------------------------
 class AgentCoordinator:
     """
     Coordinates multiple agents to execute a complete workflow.

@@ -7,15 +7,24 @@ This example demonstrates a complete 1D FDEM workflow:
 2. Invert the synthetic data with `FDEMInversion`.
 """
 
-# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_FDEM_workflow_fig_01.png'
+from typing import Any
 
 import numpy as np
 
 from PyHydroGeophysX.forward.fdem_forward import FDEMForwardModeling
 from PyHydroGeophysX.inversion.fdem_inversion import FDEMInversion
 
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_FDEM_workflow_fig_01.png'
 
-def run_example():
+
+
+
+def run_example() -> Any:
+    """Run the synthetic FDEM forward-and-inversion example.
+
+    Returns:
+        Tuple containing the inversion result and the clean synthetic response.
+    """
     water_content = np.array([0.12, 0.16, 0.22, 0.28])
     porosity = np.array([0.30, 0.32, 0.35, 0.38])
     thicknesses = np.array([5.0, 10.0, 15.0])

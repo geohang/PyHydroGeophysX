@@ -6,9 +6,11 @@ from PyDaymet and computes potential evapotranspiration (PET) using multiple
 methods for integration with ERT resistivity imaging and moisture analysis.
 """
 
-from typing import Dict, Any, Optional, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
+
 try:
     import xarray as xr
 except ImportError:
@@ -17,6 +19,9 @@ except ImportError:
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Climate Data Agent
+# ---------------------------------------------------------------------------
 class ClimateDataAgent(BaseAgent):
     """
     Agent for retrieving meteorological data and computing PET.
@@ -80,8 +85,8 @@ class ClimateDataAgent(BaseAgent):
                 - message: Status or error message
                 - stdout: Command output
         """
-        import subprocess
         import os
+        import subprocess
         from pathlib import Path
         
         self._log("Fetching climate data using conda environment")
@@ -596,8 +601,8 @@ class ClimateDataAgent(BaseAgent):
         Returns:
             Dictionary containing climate data and derived features
         """
-        import os
         import json
+        import os
         from pathlib import Path
         
         self._log(f"Loading pre-fetched climate data from CSV: {csv_file}")

@@ -6,13 +6,18 @@ using structure-constrained petrophysical models with Monte Carlo uncertainty qu
 Implements the workflow from Ex_MC_Hydro.py.
 """
 
-from typing import Dict, Any, Optional
-import numpy as np
 import os
+from typing import Any, Dict, Optional
+
+import numpy as np
 from tqdm import tqdm
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Petrophysics Agent
+# ---------------------------------------------------------------------------
 class PetrophysicsAgent(BaseAgent):
     """
     Agent for converting resistivity to hydrological properties with uncertainty.
@@ -70,10 +75,8 @@ different geological materials and quantify uncertainties."""
         self._log_execution("Starting petrophysical conversion with uncertainty analysis")
         
         try:
-            from PyHydroGeophysX.petrophysics.resistivity_models import (
-                resistivity_to_saturation
-            )
-            
+            from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_saturation
+
             # Extract parameters
             resistivity_model = input_data.get('resistivity_model')
             mesh = input_data.get('mesh')
@@ -505,9 +508,7 @@ different geological materials and quantify uncertainties."""
         Returns:
             Dictionary with MC results
         """
-        from PyHydroGeophysX.petrophysics.resistivity_models import (
-            resistivity_to_saturation
-        )
+        from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_saturation
         
         n_cells, n_timesteps = resistivity_array.shape
         unique_layers = np.unique(cell_markers)

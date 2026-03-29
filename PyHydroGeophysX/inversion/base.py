@@ -13,13 +13,17 @@ This module defines:
 """
 
 
+import os  # For path manipulation in save/load
+from typing import Any, Dict, List, Optional, Tuple, Union  # Dict is used in InversionResult.meta
+
+import matplotlib.pyplot as plt  # Used for plotting methods
 import numpy as np
 import pygimli as pg
-import matplotlib.pyplot as plt # Used for plotting methods
-import os # For path manipulation in save/load
-from typing import Optional, Union, List, Dict, Any, Tuple # Dict is used in InversionResult.meta
 
 
+# ---------------------------------------------------------------------------
+# Inversion Result
+# ---------------------------------------------------------------------------
 class InversionResult:
     """
     Base class to store, save, load, and plot results from a geophysical inversion.
@@ -65,7 +69,7 @@ class InversionResult:
             IOError: If there's an error during file writing.
             pickle.PicklingError: If an object cannot be pickled.
         """
-        import pickle # Local import for a standard library module is fine.
+        import pickle  # Local import for a standard library module is fine.
 
         # Ensure filename doesn't inadvertently include .pkl if we append it later.
         base_filename, ext = os.path.splitext(filename)
@@ -130,8 +134,8 @@ class InversionResult:
             IOError: If there's an error during file reading.
             pickle.UnpicklingError: If the file cannot be unpickled.
         """
-        import pickle # Local import
-        
+        import pickle  # Local import
+
         # Determine the pickle filename
         base_filename, ext = os.path.splitext(filename)
         pickle_filename = filename if ext.lower() == '.pkl' else filename + ".pkl"
@@ -273,6 +277,9 @@ class InversionResult:
         return fig, ax
 
 
+# ---------------------------------------------------------------------------
+# Time Lapse Inversion Result
+# ---------------------------------------------------------------------------
 class TimeLapseInversionResult(InversionResult):
     """
     Specialized class to store and manage results from time-lapse inversions.
@@ -541,6 +548,9 @@ class TimeLapseInversionResult(InversionResult):
             plt.close(fig) # Close the figure to free memory, especially if run in a loop.
 
 
+# ---------------------------------------------------------------------------
+# Inversion Base
+# ---------------------------------------------------------------------------
 class InversionBase:
     """
     Abstract base class for geophysical inversion methods.

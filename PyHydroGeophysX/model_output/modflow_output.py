@@ -2,13 +2,22 @@
 Module for processing MODFLOW model outputs.
 """
 import os
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
-from typing import Tuple, Optional, Union, List, Dict
 
 from .base import HydroModelOutput
 
 
-def binaryread(file, vartype, shape=(1,), charlen=16):
+# ---------------------------------------------------------------------------
+# binaryread
+# ---------------------------------------------------------------------------
+def binaryread(
+    file: Any,
+    vartype: Any,
+    shape: Any = (1,),
+    charlen: Any = 16,
+) -> Any:
     """
     Uses numpy to read from binary file. This was found to be faster than the
     struct approach and is used as the default.
@@ -36,6 +45,9 @@ def binaryread(file, vartype, shape=(1,), charlen=16):
     return result
 
 
+# ---------------------------------------------------------------------------
+# MODFLOWWater Content
+# ---------------------------------------------------------------------------
 class MODFLOWWaterContent(HydroModelOutput):
     """Class for processing water content data from MODFLOW simulations."""
     
@@ -216,6 +228,9 @@ class MODFLOWWaterContent(HydroModelOutput):
         return timestep_info
 
 
+# ---------------------------------------------------------------------------
+# MODFLOWPorosity
+# ---------------------------------------------------------------------------
 class MODFLOWPorosity(HydroModelOutput):
     """Class for processing porosity data from MODFLOW simulations."""
     
@@ -253,7 +268,7 @@ class MODFLOWPorosity(HydroModelOutput):
             
         try:
             import flopy
-            
+
             # Check if this is a MODFLOW 6 model
             mf6_indicator_files = ["mfsim.nam", f"{self.model_name}.sim"]
             is_mf6 = any(os.path.exists(os.path.join(self.model_directory, f)) for f in mf6_indicator_files)
@@ -261,11 +276,15 @@ class MODFLOWPorosity(HydroModelOutput):
             if is_mf6:
                 # MODFLOW 6 approach
                 try:
-                    # Load the MODFLOW 6 simulation
+                    # Load only DIS and STO packages to avoid failures from
+                    # optional packages (e.g. UZF) whose files may be absent
                     sim = flopy.mf6.MFSimulation.load(
                         sim_name=self.model_name,
                         sim_ws=self.model_directory,
                         exe_name="mf6",
+                        verbosity_level=0,
+                        load_only=["dis", "sto"],
+                        strict=False,
                     )
                     
                     # Get the groundwater flow model
@@ -274,9 +293,9 @@ class MODFLOWPorosity(HydroModelOutput):
                     # Try to get dimensions from DIS package
                     
                     dis = gwf.get_package("DIS")
-                    self.nlay = dis.nlay.data
-                    self.nrow = dis.nrow.data
-                    self.ncol = dis.ncol.data
+                    self.nlay = int(dis.nlay.data)
+                    self.nrow = int(dis.nrow.data)
+                    self.ncol = int(dis.ncol.data)
                     
                     # Try to get porosity from the STO (Storage) package
                     

@@ -5,14 +5,18 @@ Uses LLM to generate and execute custom code when user requests are not covered
 by the standard workflow configuration.
 """
 
-from typing import Dict, Any, Optional, Tuple
 import os
+import sys
 import traceback
 from io import StringIO
-import sys
+from typing import Any, Dict, Optional, Tuple
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Code Generation Agent
+# ---------------------------------------------------------------------------
 class CodeGenerationAgent(BaseAgent):
     """
     Agent that uses LLM to generate custom Python code for out-of-scope requests.
@@ -194,7 +198,7 @@ Start with necessary imports."""
     def _clean_code_response(self, code: str) -> str:
         """Clean up LLM code response by removing markdown formatting."""
         import re
-        
+
         # Remove markdown code blocks
         code = re.sub(r'^```python\s*', '', code, flags=re.MULTILINE)
         code = re.sub(r'^```\s*$', '', code, flags=re.MULTILINE)

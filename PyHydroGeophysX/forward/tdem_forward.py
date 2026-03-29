@@ -5,17 +5,21 @@ This module provides classes for 1D TDEM forward modeling using SimPEG,
 including support for layered Earth models derived from hydrological data.
 """
 
-import numpy as np
-from typing import Optional, Tuple, List, Union
 from dataclasses import dataclass
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
+import simpeg.electromagnetics.time_domain as tdem
 
 # SimPEG imports
 from discretize import TensorMesh
-import simpeg.electromagnetics.time_domain as tdem
 from simpeg import maps
 from simpeg.utils import mkvc
 
 
+# ---------------------------------------------------------------------------
+# TDEMSurvey Config
+# ---------------------------------------------------------------------------
 @dataclass
 class TDEMSurveyConfig:
     """Configuration for TDEM survey geometry.
@@ -46,6 +50,9 @@ class TDEMSurveyConfig:
             self.times = np.logspace(-5, -2, 31)
 
 
+# ---------------------------------------------------------------------------
+# TDEMForward Modeling
+# ---------------------------------------------------------------------------
 class TDEMForwardModeling:
     """Class for forward modeling of Time-Domain Electromagnetic (TDEM) data.
     
@@ -203,6 +210,9 @@ class TDEMForwardModeling:
         return self.survey.nD
 
 
+# ---------------------------------------------------------------------------
+# create tdem survey
+# ---------------------------------------------------------------------------
 def create_tdem_survey(
     times: np.ndarray,
     source_radius: float = 10.0,
@@ -246,6 +256,9 @@ def create_tdem_survey(
     return fwd.survey
 
 
+# ---------------------------------------------------------------------------
+# hydro to tdem
+# ---------------------------------------------------------------------------
 def hydro_to_tdem(
     water_content: np.ndarray,
     porosity: np.ndarray,

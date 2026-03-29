@@ -22,6 +22,9 @@ from PyHydroGeophysX.petrophysics.velocity_models import (
 )
 
 
+# ---------------------------------------------------------------------------
+# Structural Constraint
+# ---------------------------------------------------------------------------
 class StructuralConstraint:
     """Build structural constraint terms from one method for another."""
 
@@ -340,6 +343,9 @@ class StructuralConstraint:
         raise ValueError("Unsupported boundary_weights format for Wm scaling.")
 
 
+# ---------------------------------------------------------------------------
+# Petrophysical Coupling
+# ---------------------------------------------------------------------------
 class PetrophysicalCoupling:
     """Coupling helpers from hydrological state to multi-method geophysics."""
 
