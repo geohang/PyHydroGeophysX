@@ -1,5 +1,5 @@
 """
-WatershedGeo - A comprehensive package for geophysical modeling and inversion in watershed monitoring.
+PyHydroGeophysX - A comprehensive package for geophysical modeling and inversion in watershed monitoring.
 
 This package integrates MODFLOW hydrological model outputs with geophysical forward modeling
 and inversion, specializing in electrical resistivity tomography (ERT) and seismic velocity modeling.
@@ -166,7 +166,7 @@ except ImportError:
     velDEM = None
     vel_porous = None
 
-# Define what gets imported with 'from watershed_geophysics import *'
+# Define what gets imported with 'from PyHydroGeophysX import *'
 __all__ = [
     # Feature flags
     'PYGIMLI_AVAILABLE',

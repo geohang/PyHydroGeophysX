@@ -21,7 +21,7 @@ long_description = read_readme()
 
 setup(
     name="PyHydroGeophysX",
-    version="0.2.0",
+    version="0.3.0",
     author="Hang Chen",
     author_email="hangchen.work@gmail.com",
     description="A Python package for hydrological-geophysical model integration and inversion.",

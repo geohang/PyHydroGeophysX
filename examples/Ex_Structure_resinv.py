@@ -59,9 +59,9 @@ plt.rcParams["font.family"] = "Arial"
 
 # %%
 # load seismic data
-ttData = tt.load("../examples/results/workflow_example/synthetic_seismic_data.dat")
+ttData = tt.load("results/workflow_example/synthetic_seismic_data.dat")
 # load ERT data
-ertData = ert.load("../examples/results/TL_measurements/appres/synthetic_data30.dat")
+ertData = ert.load("results/TL_measurements/appres/synthetic_data30.dat")
 
 # %% [markdown]
 # ### 2. Set up inversion domain

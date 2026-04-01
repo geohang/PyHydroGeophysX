@@ -183,7 +183,7 @@ def create_joint_inversion_mesh(
     """
     # Import required modules
     from pygimli.physics import traveltime as tt
-    from watershed_geophysics.Geophy_modular.seismic_processor import (
+    from PyHydroGeophysX.Geophy_modular.seismic_processor import (
         extract_velocity_structure,
         process_seismic_tomography,
     )

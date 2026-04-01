@@ -49,13 +49,13 @@ from PyHydroGeophysX.forward.ert_forward import ERTForwardModeling
 
 # %%
 
-output_dir = os.path.join(current_dir,  "results", "TL_measurements") #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/results/TL_measurements"
+output_dir = os.path.join(current_dir,  "results", "TL_measurements")
 os.makedirs(output_dir, exist_ok=True)
 
 # %%
 print("Step 1: Set up the ERT profiles like in the workflow example.")
 
-data_dir = os.path.join(current_dir,  "data") #"C:/Users/HChen8/Documents/GitHub/PyHydroGeophysX/examples/data/"
+data_dir = os.path.join(current_dir,  "data")
 modflow_dir = os.path.join(data_dir, "modflow")
 
 # Load domain information from files

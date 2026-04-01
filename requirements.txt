@@ -8,9 +8,9 @@ pyarrow>=10.0
 # Geophysics libraries
 # Note: pygimli may require conda for best compatibility:
 #   conda install -c gimli pygimli
-pygimli>=1.4
-SimPEG>=0.21
-resipy>=3.0
+pygimli>=1.5
+simpeg>=0.20
+resipy>=3.4.0
 
 # LLM APIs (at least one required for agent functionality)
 openai>=1.0

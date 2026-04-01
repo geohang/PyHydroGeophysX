@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath('../../PyHydroGeophysX'))
 project = 'PyHydroGeophysX'
 copyright = '2025, Hang Chen'
 author = 'Hang Chen'
-release = '0.1.0'
+release = '0.3.0'
 
 # Extensions
 extensions = [
