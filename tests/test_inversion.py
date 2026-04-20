@@ -1,3 +1,8 @@
+import pytest
+
+pygimli = pytest.importorskip("pygimli", reason="pygimli not installed")
+
+
 def test_ert_inversion_import():
     from PyHydroGeophysX.inversion.ert_inversion import ERTInversion  # noqa: F401
 
