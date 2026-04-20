@@ -1,8 +1,3 @@
-import pytest
-
-pygimli = pytest.importorskip("pygimli", reason="pygimli not installed")
-
-
 def test_mesh_creator_import():
     from PyHydroGeophysX.core import mesh_utils  # noqa: F401
 
