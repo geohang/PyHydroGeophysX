@@ -37,7 +37,7 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "numpy>=1.21,<3.0",
-        "scipy>=1.8,<2.0",
+        "scipy>=1.8,<3.0",
         "matplotlib>=3.5,<4.0",
         "pygimli>=1.4,<2.0",
         "simpeg>=0.22,<1.0",

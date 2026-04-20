@@ -1,6 +1,6 @@
 # Core dependencies — pinned tested version ranges (R1-5)
 numpy>=1.21,<3.0
-scipy>=1.8,<2.0
+scipy>=1.8,<3.0
 matplotlib>=3.5,<4.0
 pygimli>=1.4,<2.0
 simpeg>=0.22,<1.0
