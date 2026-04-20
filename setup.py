@@ -36,29 +36,22 @@ setup(
     packages=find_packages(),
     python_requires=">=3.8",
     install_requires=[
-        "numpy>=1.19",
-        "scipy>=1.5",
-        "matplotlib>=3.2",
-        "tqdm>=4.0",
-        "pyarrow>=10.0",  # Required for parquet file support
-        # Core dependencies only - heavy deps are optional
+        "numpy>=1.21,<3.0",
+        "scipy>=1.8,<2.0",
+        "matplotlib>=3.5,<4.0",
+        "pygimli>=1.4,<2.0",
+        "simpeg>=0.22,<1.0",
+        "flopy>=3.5,<4.0",
+        "pftools>=1.3",
+        "joblib>=1.2",
+        "tqdm>=4.62",
     ],
     extras_require={
-        "geophysics": [
-            "pygimli>=1.5",   # Optional, heavy dependencies for real geophysical usage
-            "simpeg>=0.20",   # EM forward/inversion engines (TDEM/FDEM)
-            "resipy>=3.4.0",  # ERT data processing and inversion
-            "flopy",
-            "cupy",
-            "parflow",
-            "joblib",
-            "meshop",
-        ],
+        "gpu": ["cupy-cuda11x"],
         "agents": [
-            "openai>=1.0.0",  # For OpenAI GPT models
-            "google-generativeai>=0.3.0",  # For Google Gemini models
-            "anthropic>=0.18.0",  # For Anthropic Claude models
-            "markdown>=3.0",  # For HTML report generation
+            "openai",
+            "google-generativeai",
+            "anthropic",
         ],
         "climate": [
             "pydaymet>=0.16.0",  # For meteorological data retrieval
@@ -66,33 +59,23 @@ setup(
             "xarray>=0.19.0",  # For gridded data handling
         ],
         "docs": [
-            "sphinx>=7.1.2",
-            "sphinx-rtd-theme>=1.3.0",
-            "pydata-sphinx-theme>=0.14.0",
-            "myst-parser>=2.0.0",
-            "nbsphinx>=0.9.1",
-            "sphinx-copybutton>=0.5.2",
-            "sphinx-design>=0.5.0",
-            "sphinx-gallery>=0.14.0",
-            "palettable",
-            "Pillow",  # For image processing
+            "sphinx>=5.0",
+            "sphinx-gallery",
+            "sphinx_rtd_theme",
         ],
         "dev": [
-            "pytest>=6.0",
+            "pytest>=7.0",
             "pytest-cov",
-            "black",
             "flake8",
-            "mypy",
+            "black",
         ],
         "all": [
             # Combines all optional dependencies
-            "pygimli>=1.5", "simpeg>=0.20", "resipy>=3.4.0", "flopy", "cupy", "parflow", "joblib", "meshop",
-            "openai>=1.0.0", "google-generativeai>=0.3.0", "anthropic>=0.18.0", "markdown>=3.0",
+            "cupy-cuda11x",
+            "openai", "google-generativeai", "anthropic",
             "pydaymet>=0.16.0", "pandas>=1.3.0", "xarray>=0.19.0",
-            "sphinx>=7.1.2", "sphinx-rtd-theme>=1.3.0", "myst-parser>=2.0.0",
-            "pydata-sphinx-theme>=0.14.0", "nbsphinx>=0.9.1", "sphinx-copybutton>=0.5.2",
-            "sphinx-design>=0.5.0", "sphinx-gallery>=0.14.0", "palettable", "Pillow",
-            "pytest>=6.0", "pytest-cov", "black", "flake8", "mypy",
+            "sphinx>=5.0", "sphinx-gallery", "sphinx_rtd_theme",
+            "pytest>=7.0", "pytest-cov", "flake8", "black",
         ]
     },
     include_package_data=True,
