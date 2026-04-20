@@ -1,3 +1,8 @@
+[![tests](https://github.com/geohang/PyHydroGeophysX/actions/workflows/tests.yml/badge.svg)](https://github.com/geohang/PyHydroGeophysX/actions/workflows/tests.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17025139.svg)](https://doi.org/10.5281/zenodo.17025139)
+
 <div align="center">
   <img src="logo.png" alt="PyHydroGeophysX Logo" width="400">
 </div>
@@ -71,6 +76,8 @@ joint_result = joint.run()
 - Core: NumPy, SciPy, Matplotlib, tqdm
 - Optional geophysics engines: PyGIMLi, SimPEG, RESIPY, FloPy
 - Optional acceleration: CuPy, joblib
+
+**Tested version ranges:** PyGIMLi ≥ 1.4 (<2.0), SimPEG ≥ 0.22, NumPy ≥ 1.21, SciPy ≥ 1.8, Matplotlib ≥ 3.5. Full pins are specified in `setup.py`, `requirements.txt`, and `environment.yml`.
 
 ## 🛠️ Installation
 ### From PyPI (Recommended)
@@ -598,7 +605,7 @@ inversion = TimeLapseERTInversion(
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our Contributing Guidelines for details.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines, including how to add new petrophysical models, hydrological-model loaders, and geophysical backends.
 
 - Fork the repository  
 - Create your feature branch (`git checkout -b feature/AmazingFeature`)  
@@ -611,13 +618,13 @@ We welcome contributions! Please see our Contributing Guidelines for details.
 If you use PyHydroGeophysX in your research, please cite:
 
 ```bibtex
-@misc{chen2026pyhydrogeophysx,
-  author = {Chen, Hang and Niu, Qifei and Wu, Yuxin},
-  title = {PyHydroGeophysX: An Extensible Open-Source Platform for Integrating Hydrological Models with Geophysical Measurements},
-  year = {2026},
-  howpublished = {SSRN},
-  doi = {10.2139/ssrn.6238293},
-  url = {https://ssrn.com/abstract=6238293}
+@article{chen2026pyhydrogeophysx,
+  author  = {Chen, Hang and Niu, Qifei and Wu, Yuxin},
+  title   = {PyHydroGeophysX: An Extensible Open-Source Platform for Integrating Hydrological Models with Geophysical Measurements},
+  journal = {SoftwareX},
+  year    = {2026},
+  note    = {In press},
+  url     = {https://github.com/geohang/PyHydroGeophysX}
 }
 ```
 
@@ -725,7 +732,7 @@ This project is licensed under the Apache-2.0 license - see the LICENSE file for
 ## 📧 Contact
 
 Author: Hang Chen  
-Email: hangchen.work@gmail.com
+Email: hchen117@uiowa.edu
 Issues: GitHub Issues  
 
 ---
