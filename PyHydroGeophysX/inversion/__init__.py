@@ -14,12 +14,17 @@ from PyHydroGeophysX.inversion.ert_inversion import (
     ERTInversion
 )
 
-# Import TDEM inversion classes
-from PyHydroGeophysX.inversion.tdem_inversion import (
-    TDEMInversion,
-    TDEMInversionResult,
-    run_tdem_inversion
-)
+# Import TDEM inversion classes (simpeg is optional)
+try:
+    from PyHydroGeophysX.inversion.tdem_inversion import (
+        TDEMInversion,
+        TDEMInversionResult,
+        run_tdem_inversion
+    )
+except ImportError:
+    TDEMInversion = None
+    TDEMInversionResult = None
+    run_tdem_inversion = None
 
 # Import time-lapse inversion classes
 from PyHydroGeophysX.inversion.time_lapse import (
