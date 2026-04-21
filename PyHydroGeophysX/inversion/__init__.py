@@ -63,8 +63,12 @@ from PyHydroGeophysX.inversion.srt_inversion import SRTInversion
 # SRT time-lapse inversion
 from PyHydroGeophysX.inversion.srt_time_lapse import TimeLapseSRTInversion
 
-# FDEM inversion
-from PyHydroGeophysX.inversion.fdem_inversion import FDEMInversion, FDEMInversionResult
+# FDEM inversion (simpeg is optional)
+try:
+    from PyHydroGeophysX.inversion.fdem_inversion import FDEMInversion, FDEMInversionResult
+except ImportError:
+    FDEMInversion = None
+    FDEMInversionResult = None
 
 # Multi-method interface
 from PyHydroGeophysX.inversion.multi_method import GeophysicalInversion
