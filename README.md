@@ -77,7 +77,7 @@ joint_result = joint.run()
 - Optional geophysics engines: PyGIMLi, SimPEG, RESIPY, FloPy
 - Optional acceleration: CuPy, joblib
 
-**Tested version ranges:** PyGIMLi ≥ 1.4 (<2.0), SimPEG ≥ 0.22, NumPy ≥ 1.21, SciPy ≥ 1.8, Matplotlib ≥ 3.5. Full pins are specified in `setup.py`, `requirements.txt`, and `environment.yml`.
+**Tested version ranges:** PyGIMLi ≥ 1.5.5 (<2.0), SimPEG ≥ 0.24, NumPy ≥ 1.21, SciPy ≥ 1.8, Matplotlib ≥ 3.5. Full pins are specified in `setup.py`, `requirements.txt`, and `environment.yml`.
 
 ## 🛠️ Installation
 ### From PyPI (Recommended)

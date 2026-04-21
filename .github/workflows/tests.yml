@@ -44,7 +44,7 @@ jobs:
             tqdm
             pytest
             pytest-cov
-            pygimli>=1.5.0
+            pygimli>=1.5.5
           cache-environment: true
 
       - name: Install package (editable, no heavy optional deps)

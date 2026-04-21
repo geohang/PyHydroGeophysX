@@ -2,8 +2,8 @@
 numpy>=1.21,<3.0
 scipy>=1.8,<3.0
 matplotlib>=3.5,<4.0
-pygimli>=1.4,<2.0
-simpeg>=0.22,<1.0
+pygimli>=1.5.5,<2.0
+simpeg>=0.24,<1.0
 flopy>=3.5,<4.0
 pftools>=1.3
 joblib>=1.2
