@@ -8,39 +8,21 @@ on:
 
 jobs:
   test:
-    name: "test (ubuntu, py3.10)"
+    name: "test (ubuntu, py3.11)"
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up micromamba with pygimli
-        uses: mamba-org/setup-micromamba@v2
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          environment-name: test-env
-          init-shell: bash
-          condarc: |
-            channel_priority: strict
-            remote_connect_timeout_secs: 30
-            remote_read_timeout_secs: 120
-          create-args: >-
-            -c gimli
-            -c conda-forge
-            python=3.10
-            numpy>=2.2,<2.3
-            scipy>=1.8,<3.0
-            matplotlib
-            pandas
-            joblib
-            tqdm
-            pytest
-            pygimli=1.5.5
+          python-version: "3.11"
+          cache: "pip"
 
-      - name: Install package (editable, no heavy optional deps)
-        shell: bash -el {0}
-        run: pip install -e . --no-deps
+      - name: Install test dependencies
+        run: python -m pip install -e . pytest pyarrow
 
       - name: Run tests
-        shell: bash -el {0}
         run: python -m pytest tests/ -v --tb=short -p no:warnings
 
