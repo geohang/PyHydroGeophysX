@@ -10,7 +10,7 @@ import tempfile
 import warnings
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Literal, NamedTuple, Optional
+from typing import Any, Dict, Iterable, List, Literal, NamedTuple, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1627,6 +1627,7 @@ def load_ert_resipy(
     # if a PermissionError (or OSError with permission) occurs, fall back to
     # a temporary directory and warn the user.
     chosen_dir = project_dir
+    Path(chosen_dir).mkdir(parents=True, exist_ok=True)
     try:
         prj = Project(chosen_dir)
     except PermissionError:
@@ -2071,6 +2072,112 @@ def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> 
         "electrodes_csv": str(outdir_path/"electrodes.csv"),
         "standard_json": str(outdir_path/"ert_standard.json"),
     }
+
+
+def calculate_reciprocal_errors(ert: StandardERT) -> pd.DataFrame:
+    """
+    Estimate reciprocal error for each standardized ERT observation.
+
+    Reciprocal pairs are matched by comparing the current pair ``(A, B)`` and
+    potential pair ``(M, N)`` after sorting within each pair. Measurements where
+    those two pair roles are swapped are treated as reciprocal observations.
+    The returned error is a percentage,
+    ``200 * |R_normal - R_recip| / (|R_normal| + |R_recip|)``.
+
+    Parameters
+    ----------
+    ert : StandardERT
+        Standardized ERT dataset.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per observation with reciprocal metadata and error estimates.
+        Unmatched observations have ``NaN`` reciprocal errors.
+    """
+
+    if ert is None or not ert.observations:
+        return pd.DataFrame(
+            columns=[
+                "observation_index",
+                "reciprocal_group",
+                "reciprocal_pair_count",
+                "reciprocal_error_percent",
+                "reciprocal_mean_value",
+                "reciprocal_partner_value",
+            ]
+        )
+
+    records: List[Dict[str, Any]] = []
+    groups: Dict[tuple[tuple[int, int], tuple[int, int]], List[int]] = {}
+    directions: List[tuple[tuple[int, int], tuple[int, int]]] = []
+    values: List[float] = []
+
+    for idx, obs in enumerate(ert.observations):
+        a = int(obs.quad.A)
+        b = int(obs.quad.B)
+        m = int(obs.quad.M)
+        n = int(obs.quad.N)
+        ab = tuple(sorted((a, b)))
+        mn = tuple(sorted((m, n)))
+        direction = (ab, mn)
+        group_key = tuple(sorted((ab, mn)))
+        value = np.nan if obs.app_res is None else float(obs.app_res)
+        directions.append(direction)
+        values.append(value)
+        groups.setdefault(group_key, []).append(idx)
+        records.append(
+            {
+                "observation_index": idx,
+                "A": a,
+                "B": b,
+                "M": m,
+                "N": n,
+                "value": value,
+                "reciprocal_group": f"{group_key[0][0]}-{group_key[0][1]}|{group_key[1][0]}-{group_key[1][1]}",
+                "reciprocal_pair_count": 0,
+                "reciprocal_error_percent": np.nan,
+                "reciprocal_mean_value": np.nan,
+                "reciprocal_partner_value": np.nan,
+            }
+        )
+
+    for group_indices in groups.values():
+        direction_to_indices: Dict[tuple[tuple[int, int], tuple[int, int]], List[int]] = {}
+        for idx in group_indices:
+            direction_to_indices.setdefault(directions[idx], []).append(idx)
+
+        if len(direction_to_indices) < 2:
+            continue
+
+        direction_medians: Dict[tuple[tuple[int, int], tuple[int, int]], float] = {}
+        for direction, indices in direction_to_indices.items():
+            direction_values = np.asarray([values[i] for i in indices], dtype=float)
+            direction_values = direction_values[np.isfinite(direction_values)]
+            if direction_values.size:
+                direction_medians[direction] = float(np.nanmedian(np.abs(direction_values)))
+
+        for idx in group_indices:
+            ab, mn = directions[idx]
+            opposite_direction = (mn, ab)
+            if opposite_direction not in direction_medians:
+                continue
+            value = abs(float(values[idx]))
+            partner_value = float(direction_medians[opposite_direction])
+            if not (np.isfinite(value) and np.isfinite(partner_value)):
+                continue
+            denom = value + abs(partner_value)
+            if denom <= 1e-12:
+                continue
+            reciprocal_error = 200.0 * abs(value - abs(partner_value)) / denom
+            reciprocal_mean = 0.5 * (value + abs(partner_value))
+            partner_count = len(direction_to_indices.get(opposite_direction, []))
+            records[idx]["reciprocal_pair_count"] = int(partner_count)
+            records[idx]["reciprocal_error_percent"] = float(reciprocal_error)
+            records[idx]["reciprocal_mean_value"] = float(reciprocal_mean)
+            records[idx]["reciprocal_partner_value"] = float(partner_value)
+
+    return pd.DataFrame.from_records(records)
 
 def export_for_inversion(
     ert: StandardERT,
@@ -2762,4 +2869,135 @@ def export_for_inversion(
         return ert.metadata.get("project_dir", "")
     else:
         raise ValueError(f"Unsupported fmt: {fmt}")
+
+
+def export_ert_dataset(
+    ert: StandardERT,
+    outdir: str = "examples/results/ert",
+    formats: Iterable[str] = ("standard_json", "observations_csv", "electrodes_csv"),
+    export_strategy: str = "legacy",
+) -> Dict[str, str]:
+    """
+    Export standardized ERT data to one or more user-facing formats.
+
+    Parameters
+    ----------
+    ert : StandardERT
+        Standardized ERT dataset to export.
+    outdir : str
+        Destination directory.
+    formats : iterable of str
+        Requested formats. Supported values are ``standard_json``,
+        ``observations_csv``, ``electrodes_csv``, ``observations_parquet``,
+        ``reciprocal_csv``, ``pygimli_bert``, and ``resipy_project``.
+    export_strategy : str
+        Strategy passed to :func:`export_for_inversion` for ``pygimli_bert``.
+
+    Returns
+    -------
+    dict
+        Mapping from format key to exported file path or project directory.
+    """
+
+    if ert is None:
+        raise ValueError("ERT dataset is None")
+
+    outdir_path = Path(outdir)
+    outdir_path.mkdir(parents=True, exist_ok=True)
+    requested = {str(fmt).strip().lower() for fmt in formats}
+    outputs: Dict[str, str] = {}
+
+    electrode_rows = [asdict(e) for e in (ert.electrodes or [])]
+    observation_rows = []
+    for index, obs in enumerate(ert.observations or []):
+        observation_rows.append(
+            {
+                "observation_index": index,
+                "A": obs.quad.A,
+                "B": obs.quad.B,
+                "M": obs.quad.M,
+                "N": obs.quad.N,
+                "value": obs.app_res,
+                "dV": obs.dV,
+                "I": obs.I,
+                "rel_err": obs.rel_err,
+                "K": obs.K,
+                "fid": obs.fid,
+            }
+        )
+
+    electrodes_df = pd.DataFrame(electrode_rows)
+    observations_df = pd.DataFrame(observation_rows)
+    reciprocal_df = calculate_reciprocal_errors(ert)
+
+    if not observations_df.empty and not reciprocal_df.empty:
+        reciprocal_cols = [
+            "observation_index",
+            "reciprocal_group",
+            "reciprocal_pair_count",
+            "reciprocal_error_percent",
+            "reciprocal_mean_value",
+            "reciprocal_partner_value",
+        ]
+        observations_df = observations_df.merge(
+            reciprocal_df[reciprocal_cols],
+            on="observation_index",
+            how="left",
+        )
+
+    if "standard_json" in requested:
+        path = outdir_path / "ert_standard.json"
+        ert.to_json(path)
+        outputs["standard_json"] = str(path)
+
+    if "observations_csv" in requested:
+        path = outdir_path / "observations.csv"
+        observations_df.to_csv(path, index=False)
+        outputs["observations_csv"] = str(path)
+
+    if "electrodes_csv" in requested:
+        path = outdir_path / "electrodes.csv"
+        electrodes_df.to_csv(path, index=False)
+        outputs["electrodes_csv"] = str(path)
+
+    if "observations_parquet" in requested:
+        path = outdir_path / "observations.parquet"
+        observations_df.to_parquet(path, index=False)
+        outputs["observations_parquet"] = str(path)
+
+    if "reciprocal_csv" in requested:
+        path = outdir_path / "reciprocal_qc.csv"
+        reciprocal_df.to_csv(path, index=False)
+        outputs["reciprocal_csv"] = str(path)
+
+    if "pygimli_bert" in requested:
+        outputs["pygimli_bert"] = export_for_inversion(
+            ert,
+            outdir=str(outdir_path),
+            fmt="pgimli",
+            export_strategy=export_strategy,
+        )
+
+    if "resipy_project" in requested:
+        outputs["resipy_project"] = export_for_inversion(
+            ert,
+            outdir=str(outdir_path),
+            fmt="resipy",
+        )
+
+    unsupported = requested.difference(
+        {
+            "standard_json",
+            "observations_csv",
+            "electrodes_csv",
+            "observations_parquet",
+            "reciprocal_csv",
+            "pygimli_bert",
+            "resipy_project",
+        }
+    )
+    if unsupported:
+        raise ValueError(f"Unsupported ERT export format(s): {sorted(unsupported)}")
+
+    return outputs
 

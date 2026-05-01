@@ -1,0 +1,493 @@
+- generic:
+  - generic [ref=e2]:
+    - generic [ref=e11]:
+      - heading "Configuration" [level=2] [ref=e15]
+      - generic [ref=e18] [cursor=pointer]:
+        - checkbox "Demo mode (no API key required)"
+        - generic [ref=e21]:
+          - paragraph [ref=e23]: Demo mode (no API key required)
+          - button "Help for Demo mode (no API key required)" [ref=e27]:
+            - img [ref=e28]
+      - generic [ref=e33]:
+        - paragraph [ref=e37]: Estimated LLM cost
+        - paragraph [ref=e41]: $0.0000
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - paragraph [ref=e47]: LLM provider
+          - button "Help for LLM provider" [ref=e51] [cursor=pointer]:
+            - img [ref=e52]
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: openai
+            - combobox "Selected openai. LLM provider" [ref=e60]
+          - img "open" [ref=e62]
+      - generic [ref=e65]:
+        - paragraph [ref=e69]: Model name
+        - textbox "Model name" [ref=e72]:
+          - /placeholder: ""
+          - text: gpt-4o-mini
+      - group [ref=e75]:
+        - generic "keyboard_arrow_down Enter API key to run on my own data" [ref=e76] [cursor=pointer]:
+          - generic [ref=e77]:
+            - generic [ref=e79]: keyboard_arrow_down
+            - paragraph [ref=e82]: Enter API key to run on my own data
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - paragraph [ref=e90]: API key
+            - button "Help for API key" [ref=e94] [cursor=pointer]:
+              - img [ref=e95]
+          - generic [ref=e99]:
+            - textbox "API key" [ref=e100]:
+              - /placeholder: ""
+            - button "Show password text" [ref=e101] [cursor=pointer]:
+              - img "Show password text" [ref=e102]
+      - generic [ref=e105]:
+        - paragraph [ref=e109]: Output directory
+        - textbox "Output directory" [ref=e112]:
+          - /placeholder: ""
+          - text: results/streamlit_workflow
+      - generic [ref=e114]:
+        - button "Initialize" [ref=e119] [cursor=pointer]:
+          - paragraph [ref=e123]: Initialize
+        - button "Reset state" [ref=e128] [cursor=pointer]:
+          - paragraph [ref=e132]: Reset state
+      - separator [ref=e137]
+      - alert [ref=e140]:
+        - paragraph [ref=e145]: "System status: not initialized"
+      - generic [ref=e416]:
+        - generic [ref=e417]: 🎉 FREE & OPEN SOURCE
+        - generic [ref=e418]: Support PyHydroGeophysX Development
+        - generic [ref=e419]:
+          - text: This app is developed for
+          - strong [ref=e420]: free usage
+          - text: by the research community.
+          - text: If you find it useful, consider supporting better Cloud Services!
+        - link "💙 Donate via Venmo @Hang-Chen-35" [ref=e421] [cursor=pointer]:
+          - /url: https://venmo.com/Hang-Chen-35
+        - generic [ref=e422]:
+          - strong [ref=e423]: Need a GPT API key to try?
+          - text: Email me at
+          - link "hang-chen-1@uiowa.edu" [ref=e424] [cursor=pointer]:
+            - /url: mailto:hang-chen-1@uiowa.edu
+    - generic [ref=e3]:
+      - banner [ref=e148]:
+        - generic [ref=e151]:
+          - button "Deploy" [ref=e161] [cursor=pointer]:
+            - generic [ref=e163]: Deploy
+          - button [ref=e165] [cursor=pointer]:
+            - img [ref=e166]
+      - generic [ref=e169]:
+        - generic [ref=e174]: PyHydroGeophysX Workflows
+        - generic [ref=e179]: "AQUAH: Autonomous Query-driven Understanding Agent for Hydrogeophysics"
+        - generic [ref=e184]:
+          - text: "Paper reference:"
+          - link "A Generalizable Automated Geophysical Agent Workflow for Accessible Subsurface Hydrology Analysis" [ref=e185] [cursor=pointer]:
+            - /url: https://www.sciencedirect.com/science/article/pii/S3050740526000024
+        - generic [ref=e190]:
+          - generic [ref=e191]: v1.0
+          - generic [ref=e192]:
+            - text: Developed by
+            - link "Hang Chen" [ref=e193] [cursor=pointer]:
+              - /url: https://sites.google.com/view/hangchen
+            - text: · University of Iowa
+          - link "▶ Video Tutorial" [ref=e194] [cursor=pointer]:
+            - /url: https://www.youtube.com/watch?v=d4lgs_hQqDo
+        - generic [ref=e198]:
+          - generic [ref=e199]: Unified Workflow
+          - generic [ref=e200]: MODFLOW/ParFlow
+          - generic [ref=e201]: ERT
+          - generic [ref=e202]: TDEM
+          - generic [ref=e203]: Seismic
+          - generic [ref=e204]: Data Fusion
+        - generic [ref=e206]:
+          - tablist [ref=e208]:
+            - tab "🚀 Run Workflow" [ref=e209] [cursor=pointer]:
+              - paragraph [ref=e211]: 🚀 Run Workflow
+            - tab "Geophysical Data Processing" [selected] [ref=e212] [cursor=pointer]:
+              - paragraph [ref=e214]: Geophysical Data Processing
+            - tab "🌊 Hydro → Geophysics" [ref=e215] [cursor=pointer]:
+              - paragraph [ref=e217]: 🌊 Hydro → Geophysics
+            - tab "📖 Step-by-Step Tutorials" [ref=e218] [cursor=pointer]:
+              - paragraph [ref=e220]: 📖 Step-by-Step Tutorials
+            - tab "🔬 Learn Hydrogeophysics & Ask AI" [ref=e221] [cursor=pointer]:
+              - paragraph [ref=e223]: 🔬 Learn Hydrogeophysics & Ask AI
+            - tab "💻 Local Deployment" [ref=e224] [cursor=pointer]:
+              - paragraph [ref=e226]: 💻 Local Deployment
+            - tab "👤 About Author" [ref=e227] [cursor=pointer]:
+              - paragraph [ref=e229]: 👤 About Author
+          - tabpanel "Geophysical Data Processing" [ref=e425]:
+            - generic [ref=e426]:
+              - heading "Geophysical Data Processing" [level=3] [ref=e431]:
+                - text: Geophysical Data Processing
+                - generic [ref=e432]:
+                  - link "Link to heading":
+                    - /url: "#geophysical-data-processing"
+                    - img
+              - paragraph [ref=e437]: Local tools for field-data QC, preprocessing, picking/conversion, inversion setup, and method-specific exports.
+              - generic [ref=e439]:
+                - tablist [ref=e441]:
+                  - tab "Seismic" [ref=e442] [cursor=pointer]:
+                    - paragraph [ref=e444]: Seismic
+                  - tab "ERT" [selected] [ref=e445] [cursor=pointer]:
+                    - paragraph [ref=e447]: ERT
+                  - tab "EM" [ref=e448] [cursor=pointer]:
+                    - paragraph [ref=e450]: EM
+                  - tab "Gravity / Magnetics" [ref=e451] [cursor=pointer]:
+                    - paragraph [ref=e453]: Gravity / Magnetics
+                - tabpanel "ERT" [ref=e590]:
+                  - generic [ref=e591]:
+                    - heading "ERT field data QC and export" [level=3] [ref=e596]:
+                      - text: ERT field data QC and export
+                      - generic [ref=e597]:
+                        - link "Link to heading":
+                          - /url: "#ert-field-data-qc-and-export"
+                          - img
+                    - paragraph [ref=e602]: Load DAS-1/Syscal/ABEM/ResIPy-style field files, inspect electrode geometry and apparent values, apply light QC, then export inversion-ready PyGIMLi/BERT data.
+                    - group [ref=e605]:
+                      - generic "keyboard_arrow_right LLM language control" [ref=e606] [cursor=pointer]:
+                        - generic [ref=e607]:
+                          - generic [ref=e609]: keyboard_arrow_right
+                          - paragraph [ref=e612]: LLM language control
+                    - generic [ref=e614]:
+                      - generic [ref=e616]:
+                        - heading "Input" [level=5] [ref=e622]:
+                          - text: Input
+                          - generic [ref=e623]:
+                            - link "Link to heading":
+                              - /url: "#input"
+                              - img
+                        - generic [ref=e625]:
+                          - generic [ref=e626]:
+                            - paragraph [ref=e629]: Local ERT file or folder
+                            - button "Help for Local ERT file or folder" [ref=e633] [cursor=pointer]:
+                              - img [ref=e634]
+                          - textbox "Local ERT file or folder" [ref=e639]:
+                            - /placeholder: ""
+                            - text: C:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\ERT\DAS
+                        - generic [ref=e641]:
+                          - generic [ref=e642]:
+                            - paragraph [ref=e645]: Or upload one ERT data file
+                            - button "Help for Or upload one ERT data file" [ref=e649] [cursor=pointer]:
+                              - img [ref=e650]
+                          - region "Or upload one ERT data file" [ref=e653] [cursor=pointer]:
+                            - button "Choose File" [ref=e654]
+                            - generic [ref=e656]:
+                              - generic [ref=e657]: Drag and drop file here
+                              - generic [ref=e658]: Limit 200MB per file
+                            - button "Browse files" [ref=e660]
+                        - generic [ref=e662]:
+                          - paragraph [ref=e666]: ERT survey file
+                          - generic [ref=e668]:
+                            - generic [ref=e669]:
+                              - generic [ref=e670]: 20171105_1418.Data
+                              - combobox "Selected 20171105_1418.Data. ERT survey file" [ref=e672]
+                            - img "open" [ref=e674]
+                        - generic [ref=e677]:
+                          - generic [ref=e678]:
+                            - paragraph [ref=e681]: Electrode coordinate file (optional)
+                            - button "Help for Electrode coordinate file (optional)" [ref=e685] [cursor=pointer]:
+                              - img [ref=e686]
+                          - textbox "Electrode coordinate file (optional)" [ref=e691]:
+                            - /placeholder: ""
+                            - text: C:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\ERT\DAS\electrodes.dat
+                      - generic [ref=e693]:
+                        - heading "Loader" [level=5] [ref=e699]:
+                          - text: Loader
+                          - generic [ref=e700]:
+                            - link "Link to heading":
+                              - /url: "#loader"
+                              - img
+                        - generic [ref=e702]:
+                          - generic [ref=e703]:
+                            - paragraph [ref=e706]: Instrument / file type
+                            - button "Help for Instrument / file type" [ref=e710] [cursor=pointer]:
+                              - img [ref=e711]
+                          - generic [ref=e715]:
+                            - generic [ref=e716]:
+                              - generic [ref=e717]: DAS-1
+                              - combobox "Selected DAS-1. Instrument / file type" [ref=e719]
+                            - img "open" [ref=e721]
+                        - generic [ref=e724]:
+                          - generic [ref=e725]:
+                            - paragraph [ref=e728]: Fallback electrode spacing (m)
+                            - button "Help for Fallback electrode spacing (m)" [ref=e732] [cursor=pointer]:
+                              - img [ref=e733]
+                          - generic [ref=e736]:
+                            - spinbutton "Fallback electrode spacing (m)" [ref=e739]: "0.00"
+                            - generic [ref=e740]:
+                              - button [disabled] [ref=e741]:
+                                - img [ref=e742]
+                              - button [ref=e744] [cursor=pointer]:
+                                - img [ref=e745]
+                        - paragraph [ref=e751]: "Project/output folder: results\\streamlit_workflow\\ert_processing"
+                        - button "Load ERT data" [active] [ref=e754] [cursor=pointer]:
+                          - paragraph [ref=e758]: Load ERT data
+                        - alert [ref=e819]:
+                          - paragraph [ref=e824]: Loaded 930 measurements and 56 electrodes.
+                    - generic [ref=e825]:
+                      - generic [ref=e830]:
+                        - paragraph [ref=e834]: Electrodes
+                        - paragraph [ref=e838]: "56"
+                      - generic [ref=e843]:
+                        - paragraph [ref=e847]: Measurements
+                        - paragraph [ref=e851]: "930"
+                      - generic [ref=e856]:
+                        - paragraph [ref=e860]: Finite values
+                        - paragraph [ref=e864]: "930"
+                      - generic [ref=e869]:
+                        - paragraph [ref=e873]: Min value
+                        - paragraph [ref=e877]: "5.83"
+                      - generic [ref=e882]:
+                        - paragraph [ref=e886]: Max value
+                        - paragraph [ref=e890]: "434"
+                    - paragraph [ref=e895]: "Loaded file: C:\\Users\\hchen117\\OneDrive - University of Iowa\\Documents\\GitHub\\PyHydroGeophysX\\examples\\data\\ERT\\DAS\\20171105_1418.Data | Loader: RESIPY | Value source: resistance"
+                    - generic [ref=e897]:
+                      - generic [ref=e899]:
+                        - heading "QC filter" [level=5] [ref=e905]:
+                          - text: QC filter
+                          - generic [ref=e906]:
+                            - link "Link to heading":
+                              - /url: "#qc-filter"
+                              - img
+                        - generic [ref=e908]:
+                          - paragraph [ref=e912]: Minimum Resistance (ohm)
+                          - generic [ref=e913]:
+                            - spinbutton "Minimum Resistance (ohm)" [ref=e916]: "2.97"
+                            - generic [ref=e917]:
+                              - button [disabled] [ref=e918]:
+                                - img [ref=e919]
+                              - button [ref=e921] [cursor=pointer]:
+                                - img [ref=e922]
+                        - generic [ref=e925]:
+                          - paragraph [ref=e929]: Maximum Resistance (ohm)
+                          - generic [ref=e930]:
+                            - spinbutton "Maximum Resistance (ohm)" [ref=e933]: "792.69"
+                            - generic [ref=e934]:
+                              - button [ref=e935] [cursor=pointer]:
+                                - img [ref=e936]
+                              - button [ref=e938] [cursor=pointer]:
+                                - img [ref=e939]
+                        - generic [ref=e943]:
+                          - paragraph [ref=e947]: Maximum relative error (%)
+                          - generic [ref=e948]:
+                            - slider "Maximum relative error (%)" [ref=e952]:
+                              - generic:
+                                - generic:
+                                  - paragraph: "20.00"
+                            - generic:
+                              - generic:
+                                - paragraph: "0.00"
+                              - generic:
+                                - paragraph: "100.00"
+                        - generic [ref=e956]:
+                          - paragraph [ref=e960]: Kept after QC
+                          - paragraph [ref=e964]: "930"
+                          - generic [ref=e965]:
+                            - img [ref=e966]
+                            - paragraph [ref=e971]: "0"
+                        - generic [ref=e973]:
+                          - generic [ref=e974]:
+                            - paragraph [ref=e977]: Export strategy
+                            - button "Help for Export strategy" [ref=e981] [cursor=pointer]:
+                              - img [ref=e982]
+                          - generic [ref=e986]:
+                            - generic [ref=e987]:
+                              - generic [ref=e988]: legacy
+                              - combobox "Selected legacy. Export strategy" [ref=e990]
+                            - img "open" [ref=e992]
+                        - generic [ref=e995]:
+                          - button "Run QC artifacts" [ref=e1000] [cursor=pointer]:
+                            - paragraph [ref=e1004]: Run QC artifacts
+                          - button "Export for inversion" [ref=e1009] [cursor=pointer]:
+                            - paragraph [ref=e1013]: Export for inversion
+                        - group [ref=e1016]:
+                          - generic "keyboard_arrow_right Optional ERT inversion" [ref=e1017] [cursor=pointer]:
+                            - generic [ref=e1018]:
+                              - generic [ref=e1020]: keyboard_arrow_right
+                              - paragraph [ref=e1023]: Optional ERT inversion
+                      - generic [ref=e1025]:
+                        - heading "Preview" [level=5] [ref=e1031]:
+                          - text: Preview
+                          - generic [ref=e1032]:
+                            - link "Link to heading":
+                              - /url: "#preview"
+                              - img
+                        - generic [ref=e1034]:
+                          - tablist [ref=e1036]:
+                            - tab "Plots" [selected] [ref=e1037] [cursor=pointer]:
+                              - paragraph [ref=e1039]: Plots
+                            - tab "Tables" [ref=e1040] [cursor=pointer]:
+                              - paragraph [ref=e1042]: Tables
+                          - tabpanel "Plots" [ref=e1045]:
+                            - generic [ref=e1046]:
+                              - generic [ref=e1052]:
+                                - img:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic: "20"
+                                        - generic:
+                                          - generic: "40"
+                                        - generic:
+                                          - generic: "60"
+                                        - generic:
+                                          - generic: "80"
+                                        - generic:
+                                          - generic: "100"
+                                      - generic:
+                                        - generic:
+                                          - generic: "2940"
+                                        - generic:
+                                          - generic: "2950"
+                                        - generic:
+                                          - generic: "2960"
+                                - img:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic: Electrode geometry
+                                    - generic:
+                                      - generic: Profile x (m)
+                                    - generic:
+                                      - generic: y coordinate
+                                - toolbar [ref=e1066]:
+                                  - button "Download plot as a PNG" [ref=e1068] [cursor=pointer]:
+                                    - img [ref=e1069]
+                                  - generic [ref=e1071]:
+                                    - button "Zoom" [ref=e1072] [cursor=pointer]:
+                                      - img [ref=e1073]
+                                    - button "Pan" [ref=e1075] [cursor=pointer]:
+                                      - img [ref=e1076]
+                                  - generic [ref=e1078]:
+                                    - button "Zoom in" [ref=e1079] [cursor=pointer]:
+                                      - img [ref=e1080]
+                                    - button "Zoom out" [ref=e1082] [cursor=pointer]:
+                                      - img [ref=e1083]
+                                    - button "Autoscale" [ref=e1085] [cursor=pointer]:
+                                      - img [ref=e1086]
+                                    - button "Reset axes" [ref=e1088] [cursor=pointer]:
+                                      - img [ref=e1089]
+                                  - button "Fullscreen" [ref=e1092] [cursor=pointer]:
+                                    - img [ref=e1093]
+                                - img
+                              - generic [ref=e1100]:
+                                - img:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic: "50"
+                                        - generic:
+                                          - generic: "100"
+                                      - generic:
+                                        - generic:
+                                          - generic: "12"
+                                        - generic:
+                                          - generic: "10"
+                                        - generic:
+                                          - generic: "8"
+                                        - generic:
+                                          - generic: "6"
+                                        - generic:
+                                          - generic: "4"
+                                        - generic:
+                                          - generic: "2"
+                                        - generic:
+                                          - generic: "0"
+                                - img:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic: "1"
+                                        - generic:
+                                          - generic: "1.5"
+                                        - generic:
+                                          - generic: "2"
+                                        - generic:
+                                          - generic: "2.5"
+                                      - generic:
+                                        - generic:
+                                          - generic: log10 Resistance (ohm)
+                                    - generic:
+                                      - generic:
+                                        - generic: QC pseudosection
+                                    - generic:
+                                      - generic: Profile midpoint x (m)
+                                    - generic:
+                                      - generic: Pseudo-depth (m)
+                                - toolbar [ref=e1114]:
+                                  - button "Download plot as a PNG" [ref=e1116] [cursor=pointer]:
+                                    - img [ref=e1117]
+                                  - generic [ref=e1119]:
+                                    - button "Zoom" [ref=e1120] [cursor=pointer]:
+                                      - img [ref=e1121]
+                                    - button "Pan" [ref=e1123] [cursor=pointer]:
+                                      - img [ref=e1124]
+                                  - generic [ref=e1126]:
+                                    - button "Zoom in" [ref=e1127] [cursor=pointer]:
+                                      - img [ref=e1128]
+                                    - button "Zoom out" [ref=e1130] [cursor=pointer]:
+                                      - img [ref=e1131]
+                                    - button "Autoscale" [ref=e1133] [cursor=pointer]:
+                                      - img [ref=e1134]
+                                    - button "Reset axes" [ref=e1136] [cursor=pointer]:
+                                      - img [ref=e1137]
+                                  - button "Fullscreen" [ref=e1140] [cursor=pointer]:
+                                    - img [ref=e1141]
+                                - img
+                              - generic [ref=e1148]:
+                                - img:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic: "1"
+                                        - generic:
+                                          - generic: "1.5"
+                                        - generic:
+                                          - generic: "2"
+                                        - generic:
+                                          - generic: "2.5"
+                                      - generic:
+                                        - generic:
+                                          - generic: "0"
+                                        - generic:
+                                          - generic: "20"
+                                        - generic:
+                                          - generic: "40"
+                                        - generic:
+                                          - generic: "60"
+                                        - generic:
+                                          - generic: "80"
+                                - img:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic: Distribution of kept Resistance (ohm)
+                                    - generic:
+                                      - generic: log10 Resistance (ohm)
+                                    - generic:
+                                      - generic: Count
+                                - toolbar [ref=e1162]:
+                                  - button "Download plot as a PNG" [ref=e1164] [cursor=pointer]:
+                                    - img [ref=e1165]
+                                  - generic [ref=e1167]:
+                                    - button "Zoom" [ref=e1168] [cursor=pointer]:
+                                      - img [ref=e1169]
+                                    - button "Pan" [ref=e1171] [cursor=pointer]:
+                                      - img [ref=e1172]
+                                  - generic [ref=e1174]:
+                                    - button "Zoom in" [ref=e1175] [cursor=pointer]:
+                                      - img [ref=e1176]
+                                    - button "Zoom out" [ref=e1178] [cursor=pointer]:
+                                      - img [ref=e1179]
+                                    - button "Autoscale" [ref=e1181] [cursor=pointer]:
+                                      - img [ref=e1182]
+                                    - button "Reset axes" [ref=e1184] [cursor=pointer]:
+                                      - img [ref=e1185]
+                                  - button "Fullscreen" [ref=e1188] [cursor=pointer]:
+                                    - img [ref=e1189]
+                                - img
+  - img [ref=e1191]

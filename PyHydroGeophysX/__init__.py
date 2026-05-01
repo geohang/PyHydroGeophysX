@@ -395,13 +395,27 @@ except ImportError:
 # Data processing IO utilities
 try:
     from .data_processing import (
+        FirstBreakPick,
         read_seg2_seismic,
+        read_segy,
+        apply_agc,
+        normalize_traces,
+        pick_first_breaks,
+        export_first_breaks,
+        first_breaks_to_traveltime,
         read_tem_fast,
         export_to_vtk,
         export_results_to_csv,
     )
     __all__ += [
+        "FirstBreakPick",
         "read_seg2_seismic",
+        "read_segy",
+        "apply_agc",
+        "normalize_traces",
+        "pick_first_breaks",
+        "export_first_breaks",
+        "first_breaks_to_traveltime",
         "read_tem_fast",
         "export_to_vtk",
         "export_results_to_csv",

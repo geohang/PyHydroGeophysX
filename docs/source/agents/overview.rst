@@ -7,6 +7,17 @@ Large Language Models (LLMs), the system enables users to describe their
 analysis goals in natural language and have the system automatically orchestrate
 the necessary processing steps.
 
+Who This Is For
+---------------
+
+* **Hydrogeophysics researchers** who know the science but may not know this
+  codebase should start with :doc:`quick_start` and the Python API examples.
+* **Graduate students and non-experts** running field data should start with
+  the :doc:`webapp`, especially demo mode before using their own uploads.
+* **Reviewers and collaborators** evaluating the project should start with
+  :doc:`webapp`, then use :doc:`workflows` and :doc:`agent_reference` to inspect
+  the supported workflow surface.
+
 Design Principles
 -----------------
 

@@ -1,0 +1,204 @@
+- generic:
+  - generic [ref=e2]:
+    - generic [ref=e11]:
+      - heading "Configuration" [level=2] [ref=e15]
+      - generic [ref=e18] [cursor=pointer]:
+        - checkbox "Demo mode (no API key required)"
+        - generic [ref=e21]:
+          - paragraph [ref=e23]: Demo mode (no API key required)
+          - button "Help for Demo mode (no API key required)" [ref=e27]:
+            - img [ref=e28]
+      - generic [ref=e33]:
+        - paragraph [ref=e37]: Estimated LLM cost
+        - paragraph [ref=e41]: $0.0000
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - paragraph [ref=e47]: LLM provider
+          - button "Help for LLM provider" [ref=e51] [cursor=pointer]:
+            - img [ref=e52]
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: openai
+            - combobox "Selected openai. LLM provider" [ref=e60]
+          - img "open" [ref=e62]
+      - generic [ref=e65]:
+        - paragraph [ref=e69]: Model name
+        - textbox "Model name" [ref=e72]:
+          - /placeholder: ""
+          - text: gpt-4o-mini
+      - group [ref=e75]:
+        - generic "keyboard_arrow_down Enter API key to run on my own data" [ref=e76] [cursor=pointer]:
+          - generic [ref=e77]:
+            - generic [ref=e79]: keyboard_arrow_down
+            - paragraph [ref=e82]: Enter API key to run on my own data
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - paragraph [ref=e90]: API key
+            - button "Help for API key" [ref=e94] [cursor=pointer]:
+              - img [ref=e95]
+          - generic [ref=e99]:
+            - textbox "API key" [ref=e100]:
+              - /placeholder: ""
+            - button "Show password text" [ref=e101] [cursor=pointer]:
+              - img "Show password text" [ref=e102]
+      - generic [ref=e105]:
+        - paragraph [ref=e109]: Output directory
+        - textbox "Output directory" [ref=e112]:
+          - /placeholder: ""
+          - text: results/streamlit_workflow
+      - generic [ref=e114]:
+        - button "Initialize" [ref=e119] [cursor=pointer]:
+          - paragraph [ref=e123]: Initialize
+        - button "Reset state" [ref=e128] [cursor=pointer]:
+          - paragraph [ref=e132]: Reset state
+      - separator [ref=e137]
+      - alert [ref=e140]:
+        - paragraph [ref=e145]: "System status: not initialized"
+      - generic [ref=e150]:
+        - generic [ref=e151]: 🎉 FREE & OPEN SOURCE
+        - generic [ref=e152]: Support PyHydroGeophysX Development
+        - generic [ref=e153]:
+          - text: This app is developed for
+          - strong [ref=e154]: free usage
+          - text: by the research community.
+          - text: If you find it useful, consider supporting better Cloud Services!
+        - link "💙 Donate via Venmo @Hang-Chen-35" [ref=e155] [cursor=pointer]:
+          - /url: https://venmo.com/Hang-Chen-35
+        - generic [ref=e156]:
+          - strong [ref=e157]: Need a GPT API key to try?
+          - text: Email me at
+          - link "hang-chen-1@uiowa.edu" [ref=e158] [cursor=pointer]:
+            - /url: mailto:hang-chen-1@uiowa.edu
+    - generic [ref=e3]:
+      - banner [ref=e161]:
+        - generic [ref=e164]:
+          - button "Deploy" [ref=e166] [cursor=pointer]:
+            - generic [ref=e168]: Deploy
+          - button [ref=e170] [cursor=pointer]:
+            - img [ref=e171]
+      - generic [ref=e174]:
+        - generic [ref=e179]: PyHydroGeophysX Workflows
+        - generic [ref=e184]: "AQUAH: Autonomous Query-driven Understanding Agent for Hydrogeophysics"
+        - generic [ref=e189]:
+          - text: "Paper reference:"
+          - link "A Generalizable Automated Geophysical Agent Workflow for Accessible Subsurface Hydrology Analysis" [ref=e190] [cursor=pointer]:
+            - /url: https://www.sciencedirect.com/science/article/pii/S3050740526000024
+        - generic [ref=e195]:
+          - generic [ref=e196]: v1.0
+          - generic [ref=e197]:
+            - text: Developed by
+            - link "Hang Chen" [ref=e198] [cursor=pointer]:
+              - /url: https://sites.google.com/view/hangchen
+            - text: · University of Iowa
+          - link "▶ Video Tutorial" [ref=e199] [cursor=pointer]:
+            - /url: https://www.youtube.com/watch?v=d4lgs_hQqDo
+        - generic [ref=e203]:
+          - generic [ref=e204]: Unified Workflow
+          - generic [ref=e205]: MODFLOW/ParFlow
+          - generic [ref=e206]: ERT
+          - generic [ref=e207]: TDEM
+          - generic [ref=e208]: Seismic
+          - generic [ref=e209]: Data Fusion
+        - generic [ref=e211]:
+          - tablist [ref=e213]:
+            - tab "🚀 Run Workflow" [ref=e214] [cursor=pointer]:
+              - paragraph [ref=e216]: 🚀 Run Workflow
+            - tab "Geophysical Data Processing" [active] [selected] [ref=e217] [cursor=pointer]:
+              - paragraph [ref=e219]: Geophysical Data Processing
+            - tab "🌊 Hydro → Geophysics" [ref=e220] [cursor=pointer]:
+              - paragraph [ref=e222]: 🌊 Hydro → Geophysics
+            - tab "📖 Step-by-Step Tutorials" [ref=e223] [cursor=pointer]:
+              - paragraph [ref=e225]: 📖 Step-by-Step Tutorials
+            - tab "🔬 Learn Hydrogeophysics & Ask AI" [ref=e226] [cursor=pointer]:
+              - paragraph [ref=e228]: 🔬 Learn Hydrogeophysics & Ask AI
+            - tab "💻 Local Deployment" [ref=e229] [cursor=pointer]:
+              - paragraph [ref=e231]: 💻 Local Deployment
+            - tab "👤 About Author" [ref=e232] [cursor=pointer]:
+              - paragraph [ref=e234]: 👤 About Author
+          - tabpanel "Geophysical Data Processing" [ref=e434]:
+            - generic [ref=e435]:
+              - heading "Geophysical Data Processing" [level=3] [ref=e440]:
+                - text: Geophysical Data Processing
+                - generic [ref=e441]:
+                  - link "Link to heading":
+                    - /url: "#geophysical-data-processing"
+                    - img
+              - paragraph [ref=e446]: Local tools for field-data QC, preprocessing, picking/conversion, inversion setup, and method-specific exports.
+              - generic [ref=e448]:
+                - tablist [ref=e450]:
+                  - tab "Seismic" [selected] [ref=e451] [cursor=pointer]:
+                    - paragraph [ref=e453]: Seismic
+                  - tab "ERT" [ref=e454] [cursor=pointer]:
+                    - paragraph [ref=e456]: ERT
+                  - tab "Mesh 3D" [ref=e457] [cursor=pointer]:
+                    - paragraph [ref=e459]: Mesh 3D
+                  - tab "EM" [ref=e460] [cursor=pointer]:
+                    - paragraph [ref=e462]: EM
+                  - tab "Gravity / Magnetics" [ref=e463] [cursor=pointer]:
+                    - paragraph [ref=e465]: Gravity / Magnetics
+                - tabpanel "Seismic" [ref=e468]:
+                  - generic [ref=e469]:
+                    - group [ref=e472]:
+                      - generic "keyboard_arrow_right LLM language control" [ref=e473] [cursor=pointer]:
+                        - generic [ref=e474]:
+                          - generic [ref=e476]: keyboard_arrow_right
+                          - paragraph [ref=e479]: LLM language control
+                    - separator [ref=e484]
+                    - heading "Raw seismic data to SRT" [level=3] [ref=e489]:
+                      - text: Raw seismic data to SRT
+                      - generic [ref=e490]:
+                        - link "Link to heading":
+                          - /url: "#raw-seismic-data-to-srt"
+                          - img
+                    - paragraph [ref=e495]: "Local workflow for SEG-Y or Geometrics DAT shot gathers: preprocess, pick first breaks, export travel-time data, then run SRT."
+                    - generic [ref=e497]:
+                      - generic [ref=e499]:
+                        - generic [ref=e501]:
+                          - generic [ref=e502]:
+                            - paragraph [ref=e505]: Raw seismic file
+                            - button "Help for Raw seismic file" [ref=e509] [cursor=pointer]:
+                              - img [ref=e510]
+                          - region "Raw seismic file" [ref=e513] [cursor=pointer]:
+                            - button "Choose File" [ref=e514]
+                            - generic [ref=e516]:
+                              - generic [ref=e517]: Drag and drop file here
+                              - generic [ref=e518]: Limit 200MB per file • SGY, SEGY, DAT
+                            - button "Browse files" [ref=e520]
+                        - generic [ref=e522]:
+                          - generic [ref=e523]:
+                            - paragraph [ref=e526]: Or use a local seismic file/folder path
+                            - button "Help for Or use a local seismic file/folder path" [ref=e530] [cursor=pointer]:
+                              - img [ref=e531]
+                          - textbox "Or use a local seismic file/folder path" [ref=e536]:
+                            - /placeholder: ""
+                      - generic [ref=e538]:
+                        - generic [ref=e540]:
+                          - generic [ref=e541]:
+                            - paragraph [ref=e544]: Max traces to load
+                            - button "Help for Max traces to load" [ref=e548] [cursor=pointer]:
+                              - img [ref=e549]
+                          - generic [ref=e552]:
+                            - spinbutton "Max traces to load" [ref=e555]: "960"
+                            - generic [ref=e556]:
+                              - button [ref=e557] [cursor=pointer]:
+                                - img [ref=e558]
+                              - button [ref=e560] [cursor=pointer]:
+                                - img [ref=e561]
+                        - generic [ref=e565] [cursor=pointer]:
+                          - checkbox "Load all traces"
+                          - paragraph [ref=e570]: Load all traces
+                        - generic [ref=e572]:
+                          - generic [ref=e573]:
+                            - paragraph [ref=e576]: Receiver spacing (m)
+                            - button "Help for Receiver spacing (m)" [ref=e580] [cursor=pointer]:
+                              - img [ref=e581]
+                          - generic [ref=e584]:
+                            - spinbutton "Receiver spacing (m)" [ref=e587]: "1.00"
+                            - generic [ref=e588]:
+                              - button [ref=e589] [cursor=pointer]:
+                                - img [ref=e590]
+                              - button [ref=e592] [cursor=pointer]:
+                                - img [ref=e593]
+                    - button "Load seismic data" [ref=e597] [cursor=pointer]:
+                      - paragraph [ref=e601]: Load seismic data
+  - img [ref=e432]

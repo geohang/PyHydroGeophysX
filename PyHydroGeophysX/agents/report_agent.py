@@ -971,7 +971,8 @@ incorporates cross-modal climate-geophysics reasoning."""
             
             narrative = self.query_llm(prompt, self.system_message, 
                                       temperature=0.6, max_tokens=600)
-            return f"\n## Narrative Summary\n\n{narrative}\n"
+            caveat = "**AI-generated interpretation - verify before citing.**"
+            return f"\n## Narrative Summary\n\n{caveat}\n\n{narrative}\n"
         except:
             return ""
     
@@ -2171,7 +2172,8 @@ that effectively combines temporal ERT analysis with meteorological context."""
             
             narrative = self.query_llm(prompt, self.system_message,
                                       temperature=0.6, max_tokens=700)
-            return f"\n## Integrated Analysis and Interpretation\n\n{narrative}\n"
+            caveat = "**AI-generated interpretation - verify before citing.**"
+            return f"\n## Integrated Analysis and Interpretation\n\n{caveat}\n\n{narrative}\n"
         except Exception as e:
             self._log_execution(f"Could not generate narrative: {e}")
             return ""

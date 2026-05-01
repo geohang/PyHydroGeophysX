@@ -1,16 +1,20 @@
 name: pyhydrogeophysx
 channels:
+  - gimli
   - conda-forge
+  - defaults
 dependencies:
   - python>=3.8,<3.13
   - numpy>=1.21,<3.0
   - scipy>=1.8,<3.0
   - matplotlib>=3.5,<4.0
-  - pygimli>=1.5.5,<2.0
-  - simpeg>=0.24,<1.0
-  - flopy>=3.5,<4.0
   - joblib>=1.2
   - tqdm>=4.62
+  # Geophysics engines (recommended via conda for binary deps)
+  - pygimli>=1.5.5,<2.0
   - pip
   - pip:
+      - simpeg>=0.24,<1.0
+      - flopy>=3.5,<4.0
       - pftools>=1.3
+      - pyhydrogeophysx

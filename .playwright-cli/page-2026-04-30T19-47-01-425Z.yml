@@ -1,0 +1,364 @@
+- generic:
+  - generic [ref=e2]:
+    - generic [ref=e11]:
+      - heading "Configuration" [level=2] [ref=e15]
+      - generic [ref=e18] [cursor=pointer]:
+        - checkbox "Demo mode (no API key required)"
+        - generic [ref=e21]:
+          - paragraph [ref=e23]: Demo mode (no API key required)
+          - button "Help for Demo mode (no API key required)" [ref=e27]:
+            - img [ref=e28]
+      - generic [ref=e33]:
+        - paragraph [ref=e37]: Estimated LLM cost
+        - paragraph [ref=e41]: $0.0000
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - paragraph [ref=e47]: LLM provider
+          - button "Help for LLM provider" [ref=e51] [cursor=pointer]:
+            - img [ref=e52]
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: openai
+            - combobox "Selected openai. LLM provider" [ref=e60]
+          - img "open" [ref=e62]
+      - generic [ref=e65]:
+        - paragraph [ref=e69]: Model name
+        - textbox "Model name" [ref=e72]:
+          - /placeholder: ""
+          - text: gpt-4o-mini
+      - group [ref=e75]:
+        - generic "keyboard_arrow_down Enter API key to run on my own data" [ref=e76] [cursor=pointer]:
+          - generic [ref=e77]:
+            - generic [ref=e79]: keyboard_arrow_down
+            - paragraph [ref=e82]: Enter API key to run on my own data
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - paragraph [ref=e90]: API key
+            - button "Help for API key" [ref=e94] [cursor=pointer]:
+              - img [ref=e95]
+          - generic [ref=e99]:
+            - textbox "API key" [ref=e100]:
+              - /placeholder: ""
+            - button "Show password text" [ref=e101] [cursor=pointer]:
+              - img "Show password text" [ref=e102]
+      - generic [ref=e105]:
+        - paragraph [ref=e109]: Output directory
+        - textbox "Output directory" [ref=e112]:
+          - /placeholder: ""
+          - text: results/streamlit_workflow
+      - generic [ref=e114]:
+        - button "Initialize" [ref=e119] [cursor=pointer]:
+          - paragraph [ref=e123]: Initialize
+        - button "Reset state" [ref=e128] [cursor=pointer]:
+          - paragraph [ref=e132]: Reset state
+      - separator [ref=e137]
+      - alert [ref=e140]:
+        - paragraph [ref=e145]: "System status: not initialized"
+      - generic [ref=e431]:
+        - generic [ref=e432]: 🎉 FREE & OPEN SOURCE
+        - generic [ref=e433]: Support PyHydroGeophysX Development
+        - generic [ref=e434]:
+          - text: This app is developed for
+          - strong [ref=e435]: free usage
+          - text: by the research community.
+          - text: If you find it useful, consider supporting better Cloud Services!
+        - link "💙 Donate via Venmo @Hang-Chen-35" [ref=e436] [cursor=pointer]:
+          - /url: https://venmo.com/Hang-Chen-35
+        - generic [ref=e437]:
+          - strong [ref=e438]: Need a GPT API key to try?
+          - text: Email me at
+          - link "hang-chen-1@uiowa.edu" [ref=e439] [cursor=pointer]:
+            - /url: mailto:hang-chen-1@uiowa.edu
+    - generic [ref=e3]:
+      - banner [ref=e148]:
+        - generic [ref=e151]:
+          - button "Deploy" [ref=e161] [cursor=pointer]:
+            - generic [ref=e163]: Deploy
+          - button [ref=e165] [cursor=pointer]:
+            - img [ref=e166]
+      - generic [ref=e169]:
+        - generic [ref=e174]: PyHydroGeophysX Workflows
+        - generic [ref=e179]: "AQUAH: Autonomous Query-driven Understanding Agent for Hydrogeophysics"
+        - generic [ref=e184]:
+          - text: "Paper reference:"
+          - link "A Generalizable Automated Geophysical Agent Workflow for Accessible Subsurface Hydrology Analysis" [ref=e185] [cursor=pointer]:
+            - /url: https://www.sciencedirect.com/science/article/pii/S3050740526000024
+        - generic [ref=e190]:
+          - generic [ref=e191]: v1.0
+          - generic [ref=e192]:
+            - text: Developed by
+            - link "Hang Chen" [ref=e193] [cursor=pointer]:
+              - /url: https://sites.google.com/view/hangchen
+            - text: · University of Iowa
+          - link "▶ Video Tutorial" [ref=e194] [cursor=pointer]:
+            - /url: https://www.youtube.com/watch?v=d4lgs_hQqDo
+        - generic [ref=e198]:
+          - generic [ref=e199]: Unified Workflow
+          - generic [ref=e200]: MODFLOW/ParFlow
+          - generic [ref=e201]: ERT
+          - generic [ref=e202]: TDEM
+          - generic [ref=e203]: Seismic
+          - generic [ref=e204]: Data Fusion
+        - generic [ref=e206]:
+          - tablist [ref=e208]:
+            - tab "🚀 Run Workflow" [ref=e209] [cursor=pointer]:
+              - paragraph [ref=e211]: 🚀 Run Workflow
+            - tab "Geophysical Data Processing" [selected] [ref=e212] [cursor=pointer]:
+              - paragraph [ref=e214]: Geophysical Data Processing
+            - tab "🌊 Hydro → Geophysics" [ref=e215] [cursor=pointer]:
+              - paragraph [ref=e217]: 🌊 Hydro → Geophysics
+            - tab "📖 Step-by-Step Tutorials" [ref=e218] [cursor=pointer]:
+              - paragraph [ref=e220]: 📖 Step-by-Step Tutorials
+            - tab "🔬 Learn Hydrogeophysics & Ask AI" [ref=e221] [cursor=pointer]:
+              - paragraph [ref=e223]: 🔬 Learn Hydrogeophysics & Ask AI
+            - tab "💻 Local Deployment" [ref=e224] [cursor=pointer]:
+              - paragraph [ref=e226]: 💻 Local Deployment
+            - tab "👤 About Author" [ref=e227] [cursor=pointer]:
+              - paragraph [ref=e229]: 👤 About Author
+          - tabpanel "Geophysical Data Processing" [ref=e442]:
+            - generic [ref=e443]:
+              - heading "Geophysical Data Processing" [level=3] [ref=e448]:
+                - text: Geophysical Data Processing
+                - generic [ref=e449]:
+                  - link "Link to heading":
+                    - /url: "#geophysical-data-processing"
+                    - img
+              - paragraph [ref=e454]: Local tools for field-data QC, preprocessing, picking/conversion, inversion setup, and method-specific exports.
+              - generic [ref=e456]:
+                - tablist [ref=e458]:
+                  - tab "Seismic" [ref=e459] [cursor=pointer]:
+                    - paragraph [ref=e461]: Seismic
+                  - tab "ERT" [ref=e462] [cursor=pointer]:
+                    - paragraph [ref=e464]: ERT
+                  - tab "Mesh 3D" [active] [selected] [ref=e465] [cursor=pointer]:
+                    - paragraph [ref=e467]: Mesh 3D
+                  - tab "EM" [ref=e468] [cursor=pointer]:
+                    - paragraph [ref=e470]: EM
+                  - tab "Gravity / Magnetics" [ref=e471] [cursor=pointer]:
+                    - paragraph [ref=e473]: Gravity / Magnetics
+                - tabpanel "Mesh 3D" [ref=e610]:
+                  - generic [ref=e611]:
+                    - heading "3D mesh builder" [level=3] [ref=e616]:
+                      - text: 3D mesh builder
+                      - generic [ref=e617]:
+                        - link "Link to heading":
+                          - /url: "#3-d-mesh-builder"
+                          - img
+                    - paragraph [ref=e622]: Build electrode arrays, preview topography, generate 3D PyGIMLi meshes, and export BMS/VTK/CSV files for ERT modeling.
+                    - group [ref=e625]:
+                      - generic "keyboard_arrow_right LLM language control" [ref=e626] [cursor=pointer]:
+                        - generic [ref=e627]:
+                          - generic [ref=e629]: keyboard_arrow_right
+                          - paragraph [ref=e632]: LLM language control
+                    - generic [ref=e634]:
+                      - generic [ref=e636]:
+                        - heading "Geometry" [level=5] [ref=e642]:
+                          - text: Geometry
+                          - generic [ref=e643]:
+                            - link "Link to heading":
+                              - /url: "#geometry"
+                              - img
+                        - generic [ref=e645]:
+                          - generic [ref=e646]:
+                            - paragraph [ref=e649]: Mesh type
+                            - button "Help for Mesh type" [ref=e653] [cursor=pointer]:
+                              - img [ref=e654]
+                          - radiogroup "Mesh type" [ref=e657] [cursor=pointer]:
+                            - generic [ref=e658]:
+                              - radio "Surface with topography" [checked]
+                              - paragraph [ref=e663]: Surface with topography
+                            - generic [ref=e664]:
+                              - radio "Box mesh"
+                              - paragraph [ref=e669]: Box mesh
+                        - generic [ref=e671]:
+                          - paragraph [ref=e675]: Electrode array
+                          - generic [ref=e677]:
+                            - generic [ref=e678]:
+                              - generic [ref=e679]: Surface grid
+                              - combobox "Selected Surface grid. Electrode array" [ref=e681]
+                            - img "open" [ref=e683]
+                        - generic [ref=e686]:
+                          - generic [ref=e688]:
+                            - generic [ref=e690]:
+                              - paragraph [ref=e694]: nx
+                              - spinbutton "nx" [ref=e698]: "10"
+                            - generic [ref=e700]:
+                              - paragraph [ref=e704]: dx (m)
+                              - spinbutton "dx (m)" [ref=e708]: "5.00"
+                            - generic [ref=e710]:
+                              - paragraph [ref=e714]: x offset (m)
+                              - spinbutton "x offset (m)" [ref=e718]: "0.00"
+                          - generic [ref=e720]:
+                            - generic [ref=e722]:
+                              - paragraph [ref=e726]: ny
+                              - spinbutton "ny" [ref=e730]: "6"
+                            - generic [ref=e732]:
+                              - paragraph [ref=e736]: dy (m)
+                              - spinbutton "dy (m)" [ref=e740]: "5.00"
+                            - generic [ref=e742]:
+                              - paragraph [ref=e746]: y offset (m)
+                              - spinbutton "y offset (m)" [ref=e750]: "0.00"
+                        - heading "Topography" [level=5] [ref=e756]:
+                          - text: Topography
+                          - generic [ref=e757]:
+                            - link "Link to heading":
+                              - /url: "#topography"
+                              - img
+                        - generic [ref=e759]:
+                          - paragraph [ref=e763]: Topography
+                          - generic [ref=e765]:
+                            - generic [ref=e766]:
+                              - generic [ref=e767]: Flat
+                              - combobox "Selected Flat. Topography" [ref=e769]
+                            - img "open" [ref=e771]
+                        - generic [ref=e774]:
+                          - paragraph [ref=e778]: Surface elevation (m)
+                          - generic [ref=e779]:
+                            - spinbutton "Surface elevation (m)" [ref=e782]: "0.00"
+                            - generic [ref=e783]:
+                              - button [ref=e784] [cursor=pointer]:
+                                - img [ref=e785]
+                              - button [ref=e787] [cursor=pointer]:
+                                - img [ref=e788]
+                        - heading "Mesh parameters" [level=5] [ref=e795]:
+                          - text: Mesh parameters
+                          - generic [ref=e796]:
+                            - link "Link to heading":
+                              - /url: "#mesh-parameters"
+                              - img
+                        - generic [ref=e798]:
+                          - generic [ref=e800]:
+                            - generic [ref=e802]:
+                              - paragraph [ref=e806]: Electrode refinement (m)
+                              - spinbutton "Electrode refinement (m)" [ref=e810]: "0.50"
+                            - generic [ref=e812]:
+                              - paragraph [ref=e816]: Attractor distance (m)
+                              - spinbutton "Attractor distance (m)" [ref=e820]: "5.00"
+                          - generic [ref=e822]:
+                            - generic [ref=e824]:
+                              - paragraph [ref=e828]: Boundary refinement (m)
+                              - spinbutton "Boundary refinement (m)" [ref=e832]: "2.00"
+                            - generic [ref=e834]:
+                              - paragraph [ref=e838]: Investigation depth (m)
+                              - spinbutton "Investigation depth (m)" [ref=e842]: "20.00"
+                        - generic [ref=e844]:
+                          - paragraph [ref=e848]: Fine layer dz (m)
+                          - generic [ref=e849]:
+                            - spinbutton "Fine layer dz (m)" [ref=e852]: "0.50"
+                            - generic [ref=e853]:
+                              - button [ref=e854] [cursor=pointer]:
+                                - img [ref=e855]
+                              - button [ref=e857] [cursor=pointer]:
+                                - img [ref=e858]
+                        - generic [ref=e861]:
+                          - paragraph [ref=e865]: Coarse layer dz (m)
+                          - generic [ref=e866]:
+                            - spinbutton "Coarse layer dz (m)" [ref=e869]: "2.00"
+                            - generic [ref=e870]:
+                              - button [ref=e871] [cursor=pointer]:
+                                - img [ref=e872]
+                              - button [ref=e874] [cursor=pointer]:
+                                - img [ref=e875]
+                        - generic [ref=e879]:
+                          - paragraph [ref=e883]: Boundary extension factor
+                          - generic [ref=e884]:
+                            - slider "Boundary extension factor" [ref=e888]:
+                              - generic:
+                                - generic:
+                                  - paragraph: "1.40"
+                            - generic:
+                              - generic:
+                                - paragraph: "1.00"
+                              - generic:
+                                - paragraph: "3.00"
+                        - heading "Output" [level=5] [ref=e895]:
+                          - text: Output
+                          - generic [ref=e896]:
+                            - link "Link to heading":
+                              - /url: "#output"
+                              - img
+                        - generic [ref=e898]:
+                          - paragraph [ref=e902]: Mesh name
+                          - textbox "Mesh name" [ref=e905]:
+                            - /placeholder: ""
+                            - text: my_3d_mesh
+                        - generic [ref=e907]:
+                          - paragraph [ref=e911]: Output directory
+                          - textbox "Output directory" [ref=e914]:
+                            - /placeholder: ""
+                            - text: C:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\results\streamlit_workflow\mesh3d
+                        - generic [ref=e916]:
+                          - paragraph [ref=e920]: Export formats
+                          - generic [ref=e923]:
+                            - generic [ref=e924]:
+                              - button "BMS mesh (.bms), close by backspace" [ref=e925]:
+                                - generic "BMS mesh (.bms)" [ref=e926]
+                                - img [ref=e928] [cursor=pointer]
+                              - button "VTK mesh (.vtk), close by backspace" [ref=e930]:
+                                - generic "VTK mesh (.vtk)" [ref=e931]
+                                - img [ref=e933] [cursor=pointer]
+                              - button "Electrode CSV, close by backspace" [ref=e935]:
+                                - generic "Electrode CSV" [ref=e936]
+                                - img [ref=e938] [cursor=pointer]
+                              - combobox "Selected BMS mesh (.bms), VTK mesh (.vtk), Electrode CSV. Export formats" [ref=e941]
+                            - generic [ref=e942]:
+                              - button "Clear all" [ref=e943] [cursor=pointer]
+                              - img "open" [ref=e945] [cursor=pointer]
+                      - generic [ref=e950]:
+                        - tablist [ref=e952]:
+                          - tab "Electrode preview" [selected] [ref=e953] [cursor=pointer]:
+                            - paragraph [ref=e955]: Electrode preview
+                          - tab "Generate mesh" [ref=e956] [cursor=pointer]:
+                            - paragraph [ref=e958]: Generate mesh
+                          - tab "Export" [ref=e959] [cursor=pointer]:
+                            - paragraph [ref=e961]: Export
+                        - tabpanel "Electrode preview" [ref=e964]:
+                          - generic [ref=e965]:
+                            - generic [ref=e967]:
+                              - generic [ref=e972]:
+                                - paragraph [ref=e976]: Electrodes
+                                - paragraph [ref=e980]: "60"
+                              - generic [ref=e985]:
+                                - paragraph [ref=e989]: X range
+                                - paragraph [ref=e993]: 0.0 to 45.0 m
+                              - generic [ref=e998]:
+                                - paragraph [ref=e1002]: Y range
+                                - paragraph [ref=e1006]: 0.0 to 25.0 m
+                              - generic [ref=e1011]:
+                                - paragraph [ref=e1015]: Z range
+                                - paragraph [ref=e1019]: 0.00 to 0.00 m
+                            - generic [ref=e1025]:
+                              - img
+                              - generic [ref=e1026]:
+                                - img
+                              - img:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic: Electrode preview (60 electrodes)
+                              - toolbar [ref=e1028]:
+                                - button "Download plot as a PNG" [ref=e1030] [cursor=pointer]:
+                                  - img [ref=e1031]
+                                - generic [ref=e1033]:
+                                  - button "Zoom" [ref=e1034] [cursor=pointer]:
+                                    - img [ref=e1035]
+                                  - button "Pan" [ref=e1037] [cursor=pointer]:
+                                    - img [ref=e1038]
+                                  - button "Orbital rotation" [ref=e1040] [cursor=pointer]:
+                                    - img [ref=e1041]
+                                  - button "Turntable rotation" [ref=e1043] [cursor=pointer]:
+                                    - img [ref=e1044]
+                                - generic [ref=e1046]:
+                                  - button "Reset camera to default" [ref=e1047] [cursor=pointer]:
+                                    - img [ref=e1048]
+                                  - button "Reset camera to last save" [ref=e1050] [cursor=pointer]:
+                                    - img [ref=e1051]
+                                - button "Fullscreen" [ref=e1054] [cursor=pointer]:
+                                  - img [ref=e1055]
+                              - img
+                            - group [ref=e1059]:
+                              - generic "keyboard_arrow_right Electrode table" [ref=e1060] [cursor=pointer]:
+                                - generic [ref=e1061]:
+                                  - generic [ref=e1063]: keyboard_arrow_right
+                                  - paragraph [ref=e1066]: Electrode table
+  - img [ref=e440]

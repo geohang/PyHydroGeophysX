@@ -1,5 +1,13 @@
 # PyPI Release Guide for PyHydroGeophysX v0.3.0
 
+## Unreleased
+
+- Added agent UX safeguards: dry-run workflow preview, dict-compatible `AgentResult`, clearer file validation errors, and transparent quality-loop status.
+- Updated the Streamlit app with default no-key demo mode, bundled cached ERT/joint-demo outputs, and a mandatory parsed-config confirmation step before execution.
+- Reordered agent documentation toward user entry points and added troubleshooting guidance for common setup, data, and LLM failures.
+- Added LLM token/cost accounting in agent ledgers and surfaced estimated cost in the Streamlit workflow UI.
+- Added `examples/Ex_hello_agent.py` and notebook as a no-API-key local ERT hello-world path.
+
 This guide walks you through publishing the updated PyHydroGeophysX package to PyPI.
 
 ## Prerequisites

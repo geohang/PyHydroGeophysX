@@ -143,34 +143,120 @@ You provide clear descriptions of what will be done and which agents will be use
     def _detect_workflow_type(self, config: Dict[str, Any]) -> str:
         """
         Detect workflow type from configuration.
-        
+
+        This is the single authoritative implementation used both by this agent
+        and by ``BaseAgent.run_unified_agent_workflow``.
+
         Args:
             config: Workflow configuration dictionary
-            
+
         Returns:
-            Workflow type: 'standard_ert', 'time_lapse', or 'data_fusion'
+            Workflow type string.  Possible values:
+            'tdem', 'seismic', 'model_output', 'time_lapse', 'data_fusion',
+            'ert_data_process', 'direct_ert', 'standard_ert', 'custom'
         """
-        # Check for data fusion indicators
-        if config.get('fusion_pattern') or config.get('use_seismic'):
+        config_keys = set(config.keys())
+        user_request_lower = config.get('user_request', '').lower()
+
+        # ── Intent flags ────────────────────────────────────────────────────
+        mentions_ert = ('ert' in user_request_lower) or bool(config.get('ert_file'))
+        mentions_seismic = (
+            ('seismic' in user_request_lower)
+            or bool(config.get('seismic_file') or config.get('raw_seismic_file'))
+        )
+        mentions_tdem = ('tdem' in user_request_lower) or bool(config.get('tdem_file'))
+        inversion_keywords = ['invert', 'inversion', 'tomography', 'forward']
+        mentions_inversion = any(kw in user_request_lower for kw in inversion_keywords)
+
+        hydro_keywords = [
+            'modflow', 'parflow', 'par flow', 'hydrological model',
+            'watercontent', 'saturation', 'porosity',
+        ]
+        mentions_hydro = (
+            any(kw in user_request_lower for kw in hydro_keywords)
+            or bool(config.get('hydro_model'))
+        )
+        hydro_only = mentions_hydro and not (
+            mentions_ert or mentions_seismic or mentions_tdem or mentions_inversion
+        )
+
+        processing_keywords = [
+            'data processing', 'quality control', 'qc', 'preprocess', 'export', 'resipy',
+        ]
+        ert_processing = bool(config.get('ert_data_processing')) or (
+            bool(config.get('ert_file'))
+            and any(kw in user_request_lower for kw in processing_keywords)
+            and not any(kw in user_request_lower for kw in inversion_keywords)
+        )
+
+        # ── Priority order ───────────────────────────────────────────────────
+        # 1. TDEM
+        if (
+            config.get('tdem_file')
+            or config.get('tdem_data')
+            or 'tdem' in user_request_lower
+            or 'tem ' in user_request_lower
+            or 'electromagnetic' in user_request_lower
+        ):
+            return 'tdem'
+
+        # 2. Standalone seismic
+        if (
+            (config.get('raw_seismic_file') and not config.get('ert_file'))
+            or (config.get('seismic_file') and not config.get('ert_file'))
+            or config.get('seismic_only', False)
+            or (
+                'seismic' in user_request_lower
+                and 'ert' not in user_request_lower
+                and 'resistivity' not in user_request_lower
+                and 'fusion' not in user_request_lower
+            )
+            or 'srt inversion' in user_request_lower
+            or 'seismic refraction' in user_request_lower
+            or 'travel time' in user_request_lower
+        ):
+            return 'seismic'
+
+        # 3. Hydrological model output (MODFLOW / ParFlow)
+        if config.get('hydro_model') in ['modflow', 'parflow', 'both'] or hydro_only:
+            return 'model_output'
+
+        # 4. Time-lapse ERT
+        if not hydro_only and (
+            'timelapse_files' in config_keys
+            or 'time_lapse_files' in config_keys
+            or 'timelapse_params' in config_keys
+            or config.get('inversion_mode') == 'time-lapse'
+        ):
+            return 'time_lapse'
+
+        # 5. Data fusion (ERT + seismic or explicit fusion config)
+        if (
+            config.get('velocity_threshold')
+            or (config.get('ert_file') and (config.get('seismic_file') or config.get('raw_seismic_file')))
+            or (
+                config.get('fusion_pattern')
+                and config.get('fusion_pattern') not in [None, 'None', '']
+            )
+            or (
+                config.get('methods')
+                and len(config.get('methods', [])) > 1
+                and 'seismic' in config.get('methods', [])
+            )
+            or config.get('use_seismic')
+        ):
             return 'data_fusion'
-        
-        # Check for multi-method indicators
-        methods = config.get('methods', [])
-        if len(methods) > 1 or 'seismic' in methods:
-            return 'data_fusion'
-        
-        # Check for time-lapse indicators
-        if config.get('inversion_mode') == 'time-lapse':
-            return 'time_lapse'
-        
-        if config.get('time_lapse_files') and len(config.get('time_lapse_files', [])) > 1:
-            return 'time_lapse'
-        
-        if config.get('time_lapse_method'):
-            return 'time_lapse'
-        
-        # Default to standard ERT workflow
-        return 'standard_ert'
+
+        # 6. ERT data processing (QC / export, no inversion)
+        if ert_processing:
+            return 'ert_data_process'
+
+        # 7. Standard / direct ERT
+        if config.get('ert_file'):
+            return 'direct_ert'
+
+        # 8. Unknown — attempt custom code generation
+        return 'custom'
     
     def _generate_workflow_plan(self, workflow_type: str, 
                                 config: Dict[str, Any]) -> tuple:

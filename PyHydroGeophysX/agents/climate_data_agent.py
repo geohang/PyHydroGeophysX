@@ -16,7 +16,7 @@ try:
 except ImportError:
     xr = None
 
-from .base_agent import BaseAgent
+from .base_agent import AgentResult, BaseAgent
 
 
 # ---------------------------------------------------------------------------
@@ -260,6 +260,14 @@ class ClimateDataAgent(BaseAgent):
         # Check if pre-fetched CSV file is provided
         csv_file = input_data.get('csv_file')
         if csv_file:
+            validation_error = self.validate_input_file(
+                csv_file,
+                supported_extensions=[".csv"],
+                field_name="csv_file",
+                max_size_mb=input_data.get("max_file_size_mb"),
+            )
+            if validation_error:
+                return validation_error
             return self._load_from_csv(csv_file, input_data)
         
         # Extract parameters
@@ -275,10 +283,22 @@ class ClimateDataAgent(BaseAgent):
         
         # Validate inputs
         if dates is None:
-            raise ValueError("dates parameter is required")
+            return AgentResult(
+                status="failed",
+                summary="Climate data request is missing the date range.",
+                data={},
+                error="dates parameter is required",
+                error_fix_hint="Provide dates as (start_date, end_date), for example ('2022-03-01', '2022-06-30').",
+            )
         
         if coords is None and geometry is None:
-            raise ValueError("Either coords or geometry must be provided")
+            return AgentResult(
+                status="failed",
+                summary="Climate data request is missing a location.",
+                data={},
+                error="Either coords or geometry must be provided",
+                error_fix_hint="Provide coords for a point site or geometry for a polygon/bounding box.",
+            )
         
         # Retrieve climate data
         if coords is not None:

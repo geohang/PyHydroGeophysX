@@ -1,0 +1,246 @@
+- generic [ref=e2]:
+  - generic [ref=e11]:
+    - heading "Configuration" [level=2] [ref=e15]
+    - generic [ref=e18] [cursor=pointer]:
+      - checkbox "Demo mode (no API key required)"
+      - generic [ref=e21]:
+        - paragraph [ref=e23]: Demo mode (no API key required)
+        - button "Help for Demo mode (no API key required)" [ref=e27]:
+          - img [ref=e28]
+    - generic [ref=e33]:
+      - paragraph [ref=e37]: Estimated LLM cost
+      - paragraph [ref=e41]: $0.0000
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - paragraph [ref=e47]: LLM provider
+        - button "Help for LLM provider" [ref=e51] [cursor=pointer]:
+          - img [ref=e52]
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - generic [ref=e58]: openai
+          - combobox "Selected openai. LLM provider" [ref=e60]
+        - img "open" [ref=e62]
+    - generic [ref=e65]:
+      - paragraph [ref=e69]: Model name
+      - textbox "Model name" [ref=e72]:
+        - /placeholder: ""
+        - text: gpt-4o-mini
+    - group [ref=e75]:
+      - generic "keyboard_arrow_down Enter API key to run on my own data" [ref=e76] [cursor=pointer]:
+        - generic [ref=e77]:
+          - generic [ref=e79]: keyboard_arrow_down
+          - paragraph [ref=e82]: Enter API key to run on my own data
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - paragraph [ref=e90]: API key
+          - button "Help for API key" [ref=e94] [cursor=pointer]:
+            - img [ref=e95]
+        - generic [ref=e99]:
+          - textbox "API key" [ref=e100]:
+            - /placeholder: ""
+          - button "Show password text" [ref=e101] [cursor=pointer]:
+            - img "Show password text" [ref=e102]
+    - generic [ref=e105]:
+      - paragraph [ref=e109]: Output directory
+      - textbox "Output directory" [ref=e112]:
+        - /placeholder: ""
+        - text: results/streamlit_workflow
+    - generic [ref=e114]:
+      - button "Initialize" [ref=e119] [cursor=pointer]:
+        - paragraph [ref=e123]: Initialize
+      - button "Reset state" [ref=e128] [cursor=pointer]:
+        - paragraph [ref=e132]: Reset state
+    - separator [ref=e137]
+    - alert [ref=e140]:
+      - paragraph [ref=e145]: "System status: not initialized"
+    - generic [ref=e150]:
+      - generic [ref=e151]: 🎉 FREE & OPEN SOURCE
+      - generic [ref=e152]: Support PyHydroGeophysX Development
+      - generic [ref=e153]:
+        - text: This app is developed for
+        - strong [ref=e154]: free usage
+        - text: by the research community.
+        - text: If you find it useful, consider supporting better Cloud Services!
+      - link "💙 Donate via Venmo @Hang-Chen-35" [ref=e155] [cursor=pointer]:
+        - /url: https://venmo.com/Hang-Chen-35
+      - generic [ref=e156]:
+        - strong [ref=e157]: Need a GPT API key to try?
+        - text: Email me at
+        - link "hang-chen-1@uiowa.edu" [ref=e158] [cursor=pointer]:
+          - /url: mailto:hang-chen-1@uiowa.edu
+  - generic [ref=e3]:
+    - banner [ref=e161]:
+      - generic [ref=e164]:
+        - button "Deploy" [ref=e166] [cursor=pointer]:
+          - generic [ref=e168]: Deploy
+        - button [ref=e170] [cursor=pointer]:
+          - img [ref=e171]
+    - generic [ref=e174]:
+      - generic [ref=e179]: PyHydroGeophysX Workflows
+      - generic [ref=e184]: "AQUAH: Autonomous Query-driven Understanding Agent for Hydrogeophysics"
+      - generic [ref=e189]:
+        - text: "Paper reference:"
+        - link "A Generalizable Automated Geophysical Agent Workflow for Accessible Subsurface Hydrology Analysis" [ref=e190] [cursor=pointer]:
+          - /url: https://www.sciencedirect.com/science/article/pii/S3050740526000024
+      - generic [ref=e195]:
+        - generic [ref=e196]: v1.0
+        - generic [ref=e197]:
+          - text: Developed by
+          - link "Hang Chen" [ref=e198] [cursor=pointer]:
+            - /url: https://sites.google.com/view/hangchen
+          - text: · University of Iowa
+        - link "▶ Video Tutorial" [ref=e199] [cursor=pointer]:
+          - /url: https://www.youtube.com/watch?v=d4lgs_hQqDo
+      - generic [ref=e203]:
+        - generic [ref=e204]: Unified Workflow
+        - generic [ref=e205]: MODFLOW/ParFlow
+        - generic [ref=e206]: ERT
+        - generic [ref=e207]: TDEM
+        - generic [ref=e208]: Seismic
+        - generic [ref=e209]: Data Fusion
+      - generic [ref=e211]:
+        - tablist [ref=e213]:
+          - tab "🚀 Run Workflow" [ref=e214] [cursor=pointer]:
+            - paragraph [ref=e216]: 🚀 Run Workflow
+          - tab "Geophysical Data Processing" [selected] [ref=e217] [cursor=pointer]:
+            - paragraph [ref=e219]: Geophysical Data Processing
+          - tab "🌊 Hydro → Geophysics" [ref=e220] [cursor=pointer]:
+            - paragraph [ref=e222]: 🌊 Hydro → Geophysics
+          - tab "📖 Step-by-Step Tutorials" [ref=e223] [cursor=pointer]:
+            - paragraph [ref=e225]: 📖 Step-by-Step Tutorials
+          - tab "🔬 Learn Hydrogeophysics & Ask AI" [ref=e226] [cursor=pointer]:
+            - paragraph [ref=e228]: 🔬 Learn Hydrogeophysics & Ask AI
+          - tab "💻 Local Deployment" [ref=e229] [cursor=pointer]:
+            - paragraph [ref=e231]: 💻 Local Deployment
+          - tab "👤 About Author" [ref=e232] [cursor=pointer]:
+            - paragraph [ref=e234]: 👤 About Author
+        - tabpanel "Geophysical Data Processing" [ref=e432]:
+          - generic [ref=e433]:
+            - heading "Geophysical Data Processing" [level=3] [ref=e438]:
+              - text: Geophysical Data Processing
+              - generic [ref=e439]:
+                - link "Link to heading":
+                  - /url: "#geophysical-data-processing"
+                  - img
+            - paragraph [ref=e444]: Local tools for field-data QC, preprocessing, picking/conversion, inversion setup, and method-specific exports.
+            - generic [ref=e446]:
+              - tablist [ref=e448]:
+                - tab "Seismic" [ref=e449] [cursor=pointer]:
+                  - paragraph [ref=e451]: Seismic
+                - tab "ERT" [active] [selected] [ref=e452] [cursor=pointer]:
+                  - paragraph [ref=e454]: ERT
+                - tab "EM" [ref=e455] [cursor=pointer]:
+                  - paragraph [ref=e457]: EM
+                - tab "Gravity / Magnetics" [ref=e458] [cursor=pointer]:
+                  - paragraph [ref=e460]: Gravity / Magnetics
+              - tabpanel "ERT" [ref=e597]:
+                - generic [ref=e598]:
+                  - heading "ERT field data QC and export" [level=3] [ref=e603]:
+                    - text: ERT field data QC and export
+                    - generic [ref=e604]:
+                      - link "Link to heading":
+                        - /url: "#ert-field-data-qc-and-export"
+                        - img
+                  - paragraph [ref=e609]: Load DAS-1/Syscal/ABEM/ResIPy-style field files, inspect electrode geometry and apparent values, apply light QC, then export inversion-ready PyGIMLi/BERT data.
+                  - group [ref=e612]:
+                    - generic "keyboard_arrow_right LLM language control" [ref=e613] [cursor=pointer]:
+                      - generic [ref=e614]:
+                        - generic [ref=e616]: keyboard_arrow_right
+                        - paragraph [ref=e619]: LLM language control
+                  - generic [ref=e621]:
+                    - generic [ref=e623]:
+                      - heading "Input" [level=5] [ref=e629]:
+                        - text: Input
+                        - generic [ref=e630]:
+                          - link "Link to heading":
+                            - /url: "#input"
+                            - img
+                      - generic [ref=e632]:
+                        - generic [ref=e633]:
+                          - paragraph [ref=e636]: Local ERT file or folder
+                          - button "Help for Local ERT file or folder" [ref=e640] [cursor=pointer]:
+                            - img [ref=e641]
+                        - textbox "Local ERT file or folder" [ref=e646]:
+                          - /placeholder: ""
+                          - text: C:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\ERT\DAS
+                      - generic [ref=e648]:
+                        - generic [ref=e649]:
+                          - paragraph [ref=e652]: Or upload one ERT data file
+                          - button "Help for Or upload one ERT data file" [ref=e656] [cursor=pointer]:
+                            - img [ref=e657]
+                        - region "Or upload one ERT data file" [ref=e660] [cursor=pointer]:
+                          - button "Choose File" [ref=e661]
+                          - generic [ref=e663]:
+                            - generic [ref=e664]: Drag and drop file here
+                            - generic [ref=e665]: Limit 200MB per file
+                          - button "Browse files" [ref=e667]
+                      - generic [ref=e669]:
+                        - paragraph [ref=e673]: ERT survey file
+                        - generic [ref=e675]:
+                          - generic [ref=e676]:
+                            - generic [ref=e677]: 20171105_1418.Data
+                            - combobox "Selected 20171105_1418.Data. ERT survey file" [ref=e679]
+                          - img "open" [ref=e681]
+                      - generic [ref=e684]:
+                        - generic [ref=e685]:
+                          - paragraph [ref=e688]: Electrode coordinate file (optional)
+                          - button "Help for Electrode coordinate file (optional)" [ref=e692] [cursor=pointer]:
+                            - img [ref=e693]
+                        - textbox "Electrode coordinate file (optional)" [ref=e698]:
+                          - /placeholder: ""
+                          - text: C:\Users\hchen117\OneDrive - University of Iowa\Documents\GitHub\PyHydroGeophysX\examples\data\ERT\DAS\electrodes.dat
+                    - generic [ref=e700]:
+                      - heading "Loader" [level=5] [ref=e706]:
+                        - text: Loader
+                        - generic [ref=e707]:
+                          - link "Link to heading":
+                            - /url: "#loader"
+                            - img
+                      - generic [ref=e709]:
+                        - generic [ref=e710]:
+                          - paragraph [ref=e713]: Instrument / file type
+                          - button "Help for Instrument / file type" [ref=e717] [cursor=pointer]:
+                            - img [ref=e718]
+                        - generic [ref=e722]:
+                          - generic [ref=e723]:
+                            - generic [ref=e724]: DAS-1
+                            - combobox "Selected DAS-1. Instrument / file type" [ref=e726]
+                          - img "open" [ref=e728]
+                      - generic [ref=e731]:
+                        - generic [ref=e732]:
+                          - paragraph [ref=e735]: Fallback electrode spacing (m)
+                          - button "Help for Fallback electrode spacing (m)" [ref=e739] [cursor=pointer]:
+                            - img [ref=e740]
+                        - generic [ref=e743]:
+                          - spinbutton "Fallback electrode spacing (m)" [ref=e746]: "0.00"
+                          - generic [ref=e747]:
+                            - button [disabled] [ref=e748]:
+                              - img [ref=e749]
+                            - button [ref=e751] [cursor=pointer]:
+                              - img [ref=e752]
+                      - paragraph [ref=e758]: "Project/output folder: results\\streamlit_workflow\\ert_processing"
+                      - button "Load ERT data" [ref=e761] [cursor=pointer]:
+                        - paragraph [ref=e765]: Load ERT data
+                  - group [ref=e768]:
+                    - generic "keyboard_arrow_down Bundled DAS example files" [ref=e769] [cursor=pointer]:
+                      - generic [ref=e770]:
+                        - generic [ref=e772]: keyboard_arrow_down
+                        - paragraph [ref=e775]: Bundled DAS example files
+                    - generic [ref=e777]:
+                      - paragraph [ref=e782]:
+                        - text: Use the prefilled DAS folder, select
+                        - code [ref=e783]: 20171105_1418.Data
+                        - text: ", keep"
+                        - code [ref=e784]: DAS-1
+                        - text: ", and click"
+                        - strong [ref=e785]: Load ERT data
+                        - text: .
+                      - generic [ref=e790]:
+                        - button "Show/hide columns" [ref=e794] [cursor=pointer]:
+                          - img [ref=e795]
+                        - button "Download as CSV" [ref=e800] [cursor=pointer]:
+                          - img [ref=e801]
+                        - button "Search" [ref=e806] [cursor=pointer]:
+                          - img [ref=e807]
+                        - button "Fullscreen" [ref=e812] [cursor=pointer]:
+                          - img [ref=e813]

@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 
-from .base_agent import BaseAgent
+from .base_agent import AgentResult, BaseAgent
 
 
 # ---------------------------------------------------------------------------
@@ -75,6 +75,38 @@ and fresh bedrock (>3000 m/s)."""
         self._log_execution("Starting seismic data processing")
         
         try:
+            seismic_file = input_data.get('seismic_file')
+            raw_seismic_file = input_data.get('raw_seismic_file')
+            seismic_data = input_data.get('seismic_data')
+            velocity_threshold = input_data.get('velocity_threshold', 1200)
+            velocity_thresholds = input_data.get('velocity_thresholds', [velocity_threshold])
+            inversion_params = input_data.get('inversion_params', {})
+            output_dir = input_data.get('output_dir', 'results/seismic')
+            extract_interfaces = input_data.get('extract_interfaces', True)
+
+            if raw_seismic_file is None and seismic_file is not None:
+                if Path(str(seismic_file)).suffix.lower() in {'.sgy', '.segy'}:
+                    raw_seismic_file = seismic_file
+
+            if raw_seismic_file is not None:
+                validation_error = self.validate_input_file(
+                    raw_seismic_file,
+                    supported_extensions=[".sgy", ".segy"],
+                    field_name="raw_seismic_file",
+                    max_size_mb=input_data.get("max_file_size_mb"),
+                )
+                if validation_error:
+                    return validation_error
+            elif seismic_file is not None:
+                validation_error = self.validate_input_file(
+                    seismic_file,
+                    supported_extensions=[".dat", ".txt"],
+                    field_name="seismic_file",
+                    max_size_mb=input_data.get("max_file_size_mb"),
+                )
+                if validation_error:
+                    return validation_error
+
             import pygimli as pg
             import pygimli.physics.traveltime as tt
             from pygimli.physics import TravelTimeManager
@@ -85,16 +117,16 @@ and fresh bedrock (>3000 m/s)."""
                 fill_holes_2d,
             )
 
-            # Extract parameters
-            seismic_file = input_data.get('seismic_file')
-            seismic_data = input_data.get('seismic_data')
-            velocity_threshold = input_data.get('velocity_threshold', 1200)
-            velocity_thresholds = input_data.get('velocity_thresholds', [velocity_threshold])
-            inversion_params = input_data.get('inversion_params', {})
-            output_dir = input_data.get('output_dir', 'results/seismic')
-            extract_interfaces = input_data.get('extract_interfaces', True)
-            
             os.makedirs(output_dir, exist_ok=True)
+            raw_artifacts: Dict[str, Any] = {}
+
+            if raw_seismic_file is not None:
+                self._log_execution(f"Processing raw SEG-Y data from {Path(str(raw_seismic_file)).name}")
+                seismic_file, raw_artifacts = self._process_raw_segy_to_traveltime(
+                    raw_seismic_file=str(raw_seismic_file),
+                    output_dir=output_dir,
+                    input_data=input_data,
+                )
             
             # Load seismic data from file if provided
             if seismic_file is not None:
@@ -207,18 +239,106 @@ and fresh bedrock (>3000 m/s)."""
                 'n_data': n_data,
                 'interpretation': interpretation,
                 'visualization_file': vis_file,
-                'output_dir': output_dir
+                'output_dir': output_dir,
+                **raw_artifacts,
             }
             
             return self.results
             
         except Exception as e:
             self._log_execution(f"Error during seismic processing: {str(e)}", level='ERROR')
-            self.results = {
-                'status': 'failed',
-                'error': str(e)
-            }
-            raise
+            self.results = AgentResult(
+                status="failed",
+                summary="Seismic data could not be processed.",
+                data={},
+                error=str(e),
+                error_fix_hint="Check that seismic_file exists, has a supported extension, and matches the expected travel-time format.",
+            )
+            return self.results
+
+    def _process_raw_segy_to_traveltime(
+        self,
+        raw_seismic_file: str,
+        output_dir: str,
+        input_data: Dict[str, Any],
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Convert raw SEG-Y traces into PyGIMLi travel-time input."""
+
+        from PyHydroGeophysX.data_processing.seismic import (
+            SeismicDataset,
+            apply_agc,
+            bandpass_filter,
+            export_first_breaks,
+            first_breaks_to_traveltime,
+            pick_first_breaks,
+            read_segy,
+        )
+
+        first_break_params = dict(input_data.get("first_break_params") or {})
+        max_traces = input_data.get("raw_max_traces", first_break_params.get("max_traces"))
+        if max_traces in ("", None):
+            max_traces = None
+        elif max_traces is not None:
+            max_traces = int(max_traces)
+
+        dataset = read_segy(raw_seismic_file, max_traces=max_traces)
+        traces = dataset.traces
+        dt = dataset.metadata.sample_interval_s
+
+        agc_window = float(first_break_params.get("agc_window", 0.05))
+        if agc_window > 0:
+            traces = apply_agc(traces, dt=dt, window=agc_window)
+
+        bandpass = first_break_params.get("bandpass")
+        if bandpass:
+            traces = bandpass_filter(
+                traces,
+                dt=dt,
+                f1=float(bandpass[0]),
+                f2=float(bandpass[1]),
+                f3=float(bandpass[2]),
+                f4=float(bandpass[3]),
+            )
+
+        processed = SeismicDataset(
+            path=dataset.path,
+            traces=traces,
+            time=dataset.time,
+            headers=dataset.headers,
+            metadata=dataset.metadata,
+        )
+        picks = pick_first_breaks(
+            processed,
+            threshold=float(first_break_params.get("threshold", 0.2)),
+            noise_multiplier=float(first_break_params.get("noise_multiplier", 5.0)),
+            min_time=float(first_break_params.get("min_time", 0.0)),
+            max_time=first_break_params.get("max_time", 0.15),
+            polarity=float(first_break_params.get("polarity", 1.0)),
+        )
+
+        output = Path(output_dir)
+        picks_csv = export_first_breaks(picks, str(output / "first_break_picks.csv"))
+        traveltime_file = first_breaks_to_traveltime(
+            picks,
+            str(output / "seismic_traveltime_from_segy.dat"),
+            receiver_spacing=float(first_break_params.get("receiver_spacing", 1.0)),
+            shot_spacing=first_break_params.get("shot_spacing"),
+        )
+
+        self._log_execution(
+            f"Raw SEG-Y processing exported {len(picks)} picks to {Path(traveltime_file).name}"
+        )
+        return traveltime_file, {
+            "raw_seismic_file": raw_seismic_file,
+            "traveltime_file": traveltime_file,
+            "first_break_picks_file": picks_csv,
+            "segy_metadata": {
+                "sample_interval_us": dataset.metadata.sample_interval_us,
+                "samples_per_trace": dataset.metadata.samples_per_trace,
+                "format_code": dataset.metadata.format_code,
+                "trace_count": dataset.metadata.trace_count,
+            },
+        }
     
     def _get_recommended_params(self, seismic_data) -> Dict[str, Any]:
         """

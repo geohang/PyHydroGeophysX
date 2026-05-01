@@ -12,7 +12,7 @@ import re
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -556,6 +556,12 @@ DATA_LINKS: Dict[str, str] = {
     "Example data folder (all)": "https://github.com/geohang/PyHydroGeophysX/tree/main/examples/data",
 }
 
+DEMO_CACHE_DIR = CURRENT_DIR / "demo_cache"
+DEMO_WORKFLOWS: Dict[str, str] = {
+    "ERT demo": "ert_demo.json",
+    "Joint ERT+SRT demo": "joint_demo.json",
+}
+
 # Example-specific data links organized by workflow type
 EXAMPLE_DATA_LINKS: Dict[str, Dict[str, str]] = {
     "ParFlow Example": {
@@ -790,6 +796,47 @@ def init_session_state() -> None:
         "user_request": "",
         "upload_dir": None,
         "workflow_config": None,
+        "demo_mode": False,
+        "selected_demo": "ERT demo",
+        "pending_workflow_config": None,
+        "pending_upload_overrides": {},
+        "pending_saved_paths": {},
+        "pending_user_request": "",
+        "confirm_config_ready": False,
+        "confirmed_config_signature": "",
+        "llm_cost_estimate_usd": 0.0,
+        "llm_usage_ledger": [],
+        "seismic_dataset": None,
+        "seismic_processed": None,
+        "seismic_picks_df": None,
+        "seismic_pick_history": [],
+        "seismic_pick_redo": [],
+        "seismic_active_trace": None,
+        "seismic_active_time": None,
+        "seismic_last_click_signature": "",
+        "seismic_manual_picker_version": 0,
+        "seismic_focus_view_active": False,
+        "seismic_focus_view_pending": False,
+        "seismic_focus_trace_halfwidth": 18,
+        "seismic_focus_time_halfwidth": 0.025,
+        "seismic_auto_advance_after_save": True,
+        "seismic_advance_mode": "Next non-manual",
+        "seismic_advance_trace_step": 5,
+        "seismic_learn_window": 0.008,
+        "seismic_learning_method": "1D velocity model",
+        "seismic_velocity_model": None,
+        "seismic_update_after_save": True,
+        "seismic_picker_ui_version": 1,
+        "seismic_anchor_review_traces": [],
+        "seismic_export_files": {},
+        "seismic_srt_result": None,
+        "seismic_all_picks": {},
+        "seismic_receiver_spacing": 1.0,
+        "seismic_srt_lam": 50.0,
+        "seismic_srt_vtop": 500.0,
+        "seismic_srt_vbottom": 5000.0,
+        "seismic_srt_paradepth": 30.0,
+        "seismic_srt_vel_threshold": 1200.0,
         "hydro_data_dir": "data",
         "hydro_output_dir": "results/hydro_to_multigeophys",
         "hydro_methods": [],
@@ -857,10 +904,24 @@ def init_session_state() -> None:
         "hydro_run_clicked": False,
         "hydro_results_paths": {},
         "hydro_defaults_version": 0,
+        # --- Interactive clarification keys ---
+        "clarification_state": "idle",  # "idle" | "pending" | "answered"
+        "clarification_items": [],      # list of dicts: {type, question, key, options}
+        "clarification_answers": {},    # {key: answer}
+        "intent_suggestions": [],       # list of workflow option dicts
+        "intent_selected": None,        # selected suggestion key
+        "pre_run_enrichment": "",       # extra context appended to user request
     }
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+    if int(st.session_state.get("seismic_picker_ui_version", 0)) < 4:
+        st.session_state.seismic_auto_advance_after_save = True
+        st.session_state.seismic_advance_mode = "Next non-manual"
+        st.session_state.seismic_update_after_save = True
+        st.session_state.seismic_learning_method = "1D velocity model"
+        st.session_state.seismic_picker_ui_version = 4
 
     # Migrate persisted sessions to current notebook-aligned defaults once.
     if int(st.session_state.get("hydro_defaults_version", 0)) != HYDRO_DEFAULTS_VERSION:
@@ -2590,7 +2651,343 @@ In the sidebar:
     )
 
 
-def render_workflow_tab(sidebar_state: Dict[str, str]) -> None:
+def analyze_user_intent(user_request: str) -> Dict[str, Any]:
+    """Use the LLM to analyze a user request and return clarification needs or workflow options.
+
+    Returns a dict with keys:
+      - ``clarity``: "clear" | "ambiguous" | "vague"
+      - ``detected_type``: detected workflow type string (may be empty)
+      - ``clarifications``: list of {type, question, key, options} dicts — questions to ask
+      - ``suggestions``: list of {key, label, description, enrichment} dicts — selectable options
+    """
+    if not st.session_state.context_agent:
+        return {"clarity": "clear", "detected_type": "", "clarifications": [], "suggestions": []}
+
+    prompt = f"""You are the AI assistant for PyHydroGeophysX, a geophysics workflow platform.
+The user submitted the following request:
+---
+{user_request}
+---
+
+Analyze this request and respond with a JSON object ONLY (no markdown, no extra text).
+
+Determine:
+1. How clear the request is: "clear" (all info present), "ambiguous" (multiple interpretations), or "vague" (too little info).
+2. The most likely workflow type from: ["ERT Inversion", "Time-Lapse ERT", "Seismic SRT", "Data Fusion (Seismic+ERT)", "TDEM Inversion", "MODFLOW Output", "ParFlow Output", "Hydro→Geophysics", "Monte Carlo", "Unknown"].
+3. If ambiguous or vague, generate up to 3 clarifying questions. Each question has:
+   - "type": "choice" (user picks one of preset options) or "text" (free text answer)
+   - "question": the question string
+   - "key": a short identifier string (no spaces)
+   - "options": list of string choices (only for type "choice"), otherwise []
+4. If ambiguous (multiple interpretations), also generate up to 4 workflow suggestions. Each has:
+   - "key": short unique identifier
+   - "label": short workflow name
+   - "description": one sentence describing this workflow
+   - "enrichment": extra text to append to the user request if this is selected
+
+Rules:
+- If clarity == "clear", set clarifications=[] and suggestions=[].
+- If clarity == "ambiguous", provide suggestions (2-4 options) AND optionally 1-2 clarifications.
+- If clarity == "vague", provide 2-4 clarifications but no suggestions.
+- Keep questions concise and domain-relevant.
+- Only ask about things genuinely missing: file paths, instrument type, petrophysical parameters, number of timesteps, etc.
+- Never ask for the API key or LLM model.
+
+Example output for an ambiguous request:
+{{
+  "clarity": "ambiguous",
+  "detected_type": "ERT Inversion",
+  "clarifications": [
+    {{"type": "choice", "question": "Which ERT instrument was used?", "key": "instrument", "options": ["DAS-1", "E4D", "ABEM-Lund", "Syscal", "Other"]}}
+  ],
+  "suggestions": [
+    {{"key": "standard_ert", "label": "Standard ERT Inversion", "description": "Single-timestep resistivity inversion with petrophysical conversion.", "enrichment": "Run a standard single-timestep ERT inversion."}},
+    {{"key": "timelapse_ert", "label": "Time-Lapse ERT", "description": "Multi-timestep difference inversion to monitor changes.", "enrichment": "Run a time-lapse ERT inversion with temporal regularization."}}
+  ]
+}}"""
+
+    try:
+        raw = st.session_state.context_agent.query_llm(prompt)
+        # Strip any accidental markdown fencing
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```[a-z]*\n?", "", raw)
+            raw = re.sub(r"\n?```$", "", raw)
+        result = json.loads(raw)
+        # Validate structure
+        result.setdefault("clarity", "clear")
+        result.setdefault("detected_type", "")
+        result.setdefault("clarifications", [])
+        result.setdefault("suggestions", [])
+        return result
+    except Exception:  # noqa: BLE001
+        return {"clarity": "clear", "detected_type": "", "clarifications": [], "suggestions": []}
+
+
+def render_clarification_panel() -> bool:
+    """Render the interactive clarification / options panel.
+
+    Returns True if the user has completed all clarifications and is ready to run.
+    """
+    state = st.session_state.clarification_state
+    items = st.session_state.clarification_items
+    suggestions = st.session_state.intent_suggestions
+
+    # ── Workflow suggestions (ambiguous) ──────────────────────────────────────
+    if suggestions:
+        st.markdown("#### I detected several possible workflows — which one do you want?")
+        cols = st.columns(min(len(suggestions), 4))
+        for i, sug in enumerate(suggestions):
+            col = cols[i % len(cols)]
+            selected = st.session_state.intent_selected == sug["key"]
+            btn_type = "primary" if selected else "secondary"
+            with col:
+                if st.button(
+                    f"**{sug['label']}**",
+                    key=f"sug_btn_{sug['key']}",
+                    type=btn_type,
+                    use_container_width=True,
+                ):
+                    st.session_state.intent_selected = sug["key"]
+                    # Append enrichment to the request
+                    enrichment = sug.get("enrichment", "")
+                    current = st.session_state.user_request.rstrip()
+                    if enrichment and enrichment not in current:
+                        st.session_state.pre_run_enrichment = enrichment
+                    st.rerun()
+                st.caption(sug.get("description", ""))
+
+        if st.session_state.intent_selected:
+            st.success(
+                f"Selected: **{next((s['label'] for s in suggestions if s['key'] == st.session_state.intent_selected), '')}**"
+            )
+
+    # ── Clarifying questions ──────────────────────────────────────────────────
+    if items:
+        st.markdown("#### A few quick questions to refine your request:")
+        answers = dict(st.session_state.clarification_answers)
+        all_answered = True
+        for item in items:
+            key = item.get("key", "q")
+            question = item.get("question", "")
+            q_type = item.get("type", "text")
+            options = item.get("options", [])
+
+            if q_type == "choice" and options:
+                current_val = answers.get(key, options[0])
+                answers[key] = st.selectbox(question, options, index=options.index(current_val) if current_val in options else 0, key=f"clr_{key}")
+            else:
+                current_val = answers.get(key, "")
+                val = st.text_input(question, value=current_val, key=f"clr_{key}")
+                answers[key] = val
+                if not val.strip():
+                    all_answered = False
+
+        st.session_state.clarification_answers = answers
+
+        if all_answered or not items:
+            # Build enrichment text from answers
+            enrichment_parts = []
+            for item in items:
+                k = item.get("key", "")
+                v = answers.get(k, "")
+                if v:
+                    enrichment_parts.append(f"{item.get('question', k)}: {v}")
+            if enrichment_parts:
+                st.session_state.pre_run_enrichment = (
+                    (st.session_state.pre_run_enrichment or "") + "\n" + "\n".join(enrichment_parts)
+                ).strip()
+
+    # Ready check: if suggestions exist, at least one must be selected
+    if suggestions and not st.session_state.intent_selected:
+        return False
+    if items and not all(st.session_state.clarification_answers.get(item.get("key", ""), "").strip() for item in items if item.get("type") != "choice"):
+        # Choice items are always answered; only text items can block
+        return False
+    return True
+
+
+def load_demo_result(name: str) -> Dict[str, Any]:
+    """Load one bundled demo result.
+
+    Args:
+        name: Display name from ``DEMO_WORKFLOWS``.
+
+    Returns:
+        Demo result dictionary.
+    """
+    demo_file = DEMO_CACHE_DIR / DEMO_WORKFLOWS.get(name, "ert_demo.json")
+    try:
+        with open(demo_file, "r", encoding="utf-8") as handle:
+            demo = json.load(handle)
+    except FileNotFoundError:
+        st.error(f"Demo file not found: {demo_file}. The bundled demo cache may be incomplete.")
+        return {}
+    except json.JSONDecodeError as exc:
+        st.error(f"Demo file is corrupted ({demo_file}): {exc}")
+        return {}
+    for figure in demo.get("figures", []):
+        figure["absolute_path"] = str((DEMO_CACHE_DIR / figure["path"]).resolve())
+    return demo
+
+
+def render_demo_walkthrough() -> None:
+    """Render the short first-visit walkthrough."""
+    st.markdown("### How it works")
+
+    with st.expander("Step 1 — What you'll upload", expanded=False):
+        st.markdown(
+            """
+- **ERT**: `.dat`, `.ohm`, or Syscal/DAS-1/ABEM exported files
+- **Seismic refraction (SRT)**: `.sgt` first-arrival pick files
+- **TDEM**: time-domain EM sounding files
+- **Hydrologic model output**: NetCDF or CSV files from ParFlow / MODFLOW
+
+In **Demo mode** no upload is needed — bundled cached results are shown instead.
+"""
+        )
+
+    with st.expander("Step 2 — What the agents do", expanded=False):
+        st.markdown(
+            """
+1. **Context agent** parses your natural-language request and identifies the workflow type
+2. **Validation agent** checks uploaded files for format and completeness
+3. **Processing agent** runs the selected inversion or forward modelling pipeline
+4. **Report agent** compiles numerical metrics, figures, and an interpretation summary
+"""
+        )
+
+    with st.expander("Step 3 — What you'll get", expanded=False):
+        st.markdown(
+            """
+- **Numerical metrics** (resistivity range, velocity range, water content, RMS misfit, …)
+- **Inverted model figures** (2-D cross-sections, time-lapse panels, joint fusion maps)
+- **AI-generated interpretation** clearly labelled as model output, not ground truth
+"""
+        )
+        img = DEMO_CACHE_DIR / "ert_demo_resistivity.png"
+        if img.exists():
+            st.image(str(img), caption="Example: time-lapse ERT resistivity (4 survey epochs)", use_container_width=True)
+
+
+def render_demo_mode_panel() -> None:
+    """Render bundled demo results without LLM calls."""
+    st.warning("Demo mode - results are from a bundled example, not from your upload.")
+    render_demo_walkthrough()
+
+    selected = st.selectbox(
+        "Choose a bundled demo",
+        options=list(DEMO_WORKFLOWS.keys()),
+        index=list(DEMO_WORKFLOWS.keys()).index(st.session_state.selected_demo)
+        if st.session_state.selected_demo in DEMO_WORKFLOWS
+        else 0,
+    )
+    st.session_state.selected_demo = selected
+    demo = load_demo_result(selected)
+
+    st.subheader(demo.get("title", "Demo workflow"))
+    st.caption(demo.get("caveat", "Demo mode uses cached outputs."))
+    st.success(demo.get("summary", "Demo result loaded."))
+
+    metrics = demo.get("metrics", {})
+    if metrics:
+        metric_cols = st.columns(min(3, len(metrics)))
+        for idx, (key, value) in enumerate(metrics.items()):
+            label = key.replace("_", " ").title()
+            if isinstance(value, list) and len(value) == 2:
+                display = f"{value[0]:.3g} to {value[1]:.3g}"
+            else:
+                display = str(value)
+            metric_cols[idx % len(metric_cols)].metric(label, display)
+
+    for figure in demo.get("figures", []):
+        path = Path(figure.get("absolute_path", ""))
+        if path.exists():
+            st.image(str(path), caption=figure.get("label", path.name), use_container_width=True)
+        else:
+            st.warning(f"Missing demo figure: {path}")
+
+    st.markdown("---")
+    if st.button("Exit demo mode", type="secondary"):
+        st.session_state.demo_mode = False
+        st.rerun()
+
+
+def render_config_confirm_form(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Render an editable confirmation form for parsed workflow config."""
+    edited = dict(config or {})
+    st.info("I interpreted your request as the following. Edit anything before running.")
+    with st.container(border=True):
+        workflow_guess = _detect_workflow_type(edited)
+        st.caption(f"Detected workflow type: {workflow_guess}")
+
+        if "instrument" in edited or edited.get("ert_file") or edited.get("data_file"):
+            instruments = ["DAS-1", "E4D", "Syscal", "ABEM-Lund", "BERT", "Sting", "ARES", "Protocol DC", "Custom"]
+            current = edited.get("instrument", "DAS-1")
+            edited["instrument"] = st.selectbox(
+                "ERT instrument",
+                instruments,
+                index=instruments.index(current) if current in instruments else 0,
+            )
+
+        for key in ["data_file", "ert_file", "electrode_file", "seismic_file", "tdem_file"]:
+            if key in edited or key in ["data_file", "ert_file"]:
+                value = "" if edited.get(key) is None else str(edited.get(key, ""))
+                edited[key] = st.text_input(key, value=value)
+
+        inversion_params = dict(edited.get("inversion_params") or {})
+        if edited.get("ert_file") or edited.get("data_file") or inversion_params:
+            lam = float(inversion_params.get("lambda", inversion_params.get("lam", 20.0)))
+            inversion_params["lambda"] = st.number_input(
+                "Regularization lambda",
+                min_value=0.1,
+                max_value=10000.0,
+                value=lam,
+                step=1.0,
+            )
+            inversion_params["max_iterations"] = int(
+                st.number_input(
+                    "Max inversion iterations",
+                    min_value=1,
+                    max_value=200,
+                    value=int(inversion_params.get("max_iterations", 10)),
+                    step=1,
+                )
+            )
+            edited["inversion_params"] = inversion_params
+
+        edited["max_attempts"] = int(
+            st.number_input(
+                "Quality-loop max attempts",
+                min_value=1,
+                max_value=10,
+                value=int(edited.get("max_attempts", 3)),
+                step=1,
+            )
+        )
+        edited["quality_threshold"] = float(
+            st.number_input(
+                "Quality threshold",
+                min_value=0.0,
+                max_value=100.0,
+                value=float(edited.get("quality_threshold", 70)),
+                step=5.0,
+            )
+        )
+
+        with st.expander("Full parsed configuration"):
+            st.json(edited)
+
+    st.session_state.pending_workflow_config = edited
+    return edited
+
+
+def _config_signature(config: Dict[str, Any]) -> str:
+    """Return a stable signature for a workflow configuration."""
+    return json.dumps(config or {}, sort_keys=True, default=str)
+
+
+def render_workflow_tab(sidebar_state: Dict[str, Any]) -> None:
     """Render the natural-language workflow builder tab.
 
     Args:
@@ -2604,12 +3001,40 @@ def render_workflow_tab(sidebar_state: Dict[str, str]) -> None:
         "Cloud resources are limited. For big datasets, use the Local Deployment tab so you can run the same web interface with local compute."
     )
     st.subheader("Describe your workflow")
+    if sidebar_state.get("demo_mode"):
+        render_demo_mode_panel()
+        return
+
+    if not AGENTS_AVAILABLE:
+        st.warning(
+            f"⚠️ Workflow execution is disabled — required packages are not installed (`{IMPORT_ERROR}`).  \n"
+            "You can still use **Demo mode** (enable in the sidebar) or the **No-LLM Quick** buttons below "
+            "(configuration will be built, but the run step requires the agents to be installed)."
+        )
+
+    # When the user edits the text area, reset the clarification state so the
+    # agent re-analyzes from scratch.
+    prev_request = st.session_state.user_request
     request_text = st.text_area(
         "Describe what you want to do (files, parameters, outputs)",
-        value=st.session_state.user_request,
+        value=prev_request,
         height=180,
         placeholder="Example: Run a time-lapse ERT inversion on four surveys...",
     )
+    if request_text != prev_request:
+        # User edited the text — reset clarification so agent re-analyzes
+        st.session_state.clarification_state = "idle"
+        st.session_state.clarification_items = []
+        st.session_state.clarification_answers = {}
+        st.session_state.intent_suggestions = []
+        st.session_state.intent_selected = None
+        st.session_state.pre_run_enrichment = ""
+        st.session_state.pending_workflow_config = None
+        st.session_state.pending_upload_overrides = {}
+        st.session_state.pending_saved_paths = {}
+        st.session_state.pending_user_request = ""
+        st.session_state.confirm_config_ready = False
+        st.session_state.confirmed_config_signature = ""
     st.session_state.user_request = request_text
 
     render_example_buttons()
@@ -2646,10 +3071,68 @@ def render_workflow_tab(sidebar_state: Dict[str, str]) -> None:
         st.caption(_quick_mode_description(st.session_state.quick_run_mode))
 
     st.markdown("---")
-    run_clicked = st.button("Run workflow", type="primary", width="stretch")
 
-    if run_clicked:
-        quick_mode = st.session_state.quick_run_mode
+    # ── Interactive clarification panel ──────────────────────────────────────
+    # Only shown when using the LLM (Auto mode) and LLM is available.
+    quick_mode = st.session_state.quick_run_mode
+    clr_state = st.session_state.clarification_state
+
+    if quick_mode == "Auto (LLM)" and st.session_state.context_agent and request_text.strip():
+        # "Check my request" button — runs intent analysis
+        col_analyze, col_reset = st.columns([3, 1])
+        with col_analyze:
+            analyze_clicked = st.button(
+                "Analyze request & check for missing info",
+                key="btn_analyze_intent",
+                help="Let the AI check whether your request is complete and suggest options.",
+            )
+        with col_reset:
+            if clr_state != "idle":
+                if st.button("Reset", key="btn_reset_clr", help="Clear suggestions and start over"):
+                    st.session_state.clarification_state = "idle"
+                    st.session_state.clarification_items = []
+                    st.session_state.clarification_answers = {}
+                    st.session_state.intent_suggestions = []
+                    st.session_state.intent_selected = None
+                    st.session_state.pre_run_enrichment = ""
+                    st.rerun()
+
+        if analyze_clicked:
+            with st.spinner("Analyzing your request..."):
+                analysis = analyze_user_intent(request_text)
+            clarity = analysis.get("clarity", "clear")
+            detected = analysis.get("detected_type", "")
+            clr_items = analysis.get("clarifications", [])
+            suggestions = analysis.get("suggestions", [])
+
+            if clarity == "clear" and not clr_items and not suggestions:
+                st.success(
+                    f"Your request looks complete! Detected workflow: **{detected or 'Auto'}**. "
+                    "Click **Preview configuration** below."
+                )
+                st.session_state.clarification_state = "answered"
+            else:
+                st.session_state.clarification_state = "pending"
+                st.session_state.clarification_items = clr_items
+                st.session_state.clarification_answers = {}
+                st.session_state.intent_suggestions = suggestions
+                st.session_state.intent_selected = None
+                st.session_state.pre_run_enrichment = ""
+                if detected:
+                    st.info(f"Detected workflow type: **{detected}**")
+                st.rerun()
+
+        # Show the clarification panel if pending
+        if st.session_state.clarification_state == "pending":
+            with st.container(border=True):
+                ready = render_clarification_panel()
+            if ready and (st.session_state.intent_suggestions or st.session_state.clarification_items):
+                st.session_state.clarification_state = "answered"
+
+    # ── Run button ────────────────────────────────────────────────────────────
+    preview_clicked = st.button("Preview configuration", type="secondary", use_container_width=True)
+
+    if preview_clicked:
         if quick_mode == "Auto (LLM)":
             if not request_text.strip():
                 st.error("Please describe your workflow.")
@@ -2661,33 +3144,95 @@ def render_workflow_tab(sidebar_state: Dict[str, str]) -> None:
         output_path = Path(sidebar_state["output_dir"]).expanduser()
         output_path.mkdir(parents=True, exist_ok=True)
 
-        # Parse uploads
         upload_overrides: Dict[str, Any] = {}
         saved_paths = handle_uploads(output_path, uploaded_files, upload_overrides)
-
-        # Merge uploaded workflow overrides into the text-derived config during run_workflow
         st.session_state.workflow_config = upload_overrides
 
-        if quick_mode == "Auto (LLM)":
-            run_workflow(request_text, upload_overrides, saved_paths, output_path)
-        else:
-            try:
-                quick_cfg = _build_no_llm_workflow_config(
+        enrichment = (st.session_state.pre_run_enrichment or "").strip()
+        final_request = request_text.strip()
+        if enrichment:
+            final_request = final_request + "\n\nAdditional context:\n" + enrichment
+
+        try:
+            if quick_mode == "Auto (LLM)":
+                with st.spinner("Parsing request into a reviewable configuration..."):
+                    parsed_result = st.session_state.context_agent.execute(
+                        {"user_request": final_request, "available_data": upload_overrides}
+                    )
+                parsed_data = parsed_result.to_dict() if hasattr(parsed_result, "to_dict") else dict(parsed_result)
+                context_ledger = getattr(st.session_state.context_agent, "llm_usage_ledger", [])
+                st.session_state.llm_usage_ledger = list(context_ledger or [])
+                st.session_state.llm_cost_estimate_usd = sum(
+                    float(item.get("cost_estimate_usd") or 0.0)
+                    for item in st.session_state.llm_usage_ledger
+                )
+                status = parsed_data.get("status", "needs_review")
+                if status == "failed":
+                    st.error(parsed_data.get("summary") or "The request could not be parsed.")
+                    if parsed_data.get("error_fix_hint"):
+                        st.info(parsed_data["error_fix_hint"])
+                    return
+                workflow_config = dict(parsed_data.get("data", {}).get("workflow_config", {}))
+                workflow_config.update(upload_overrides)
+                if status == "needs_review":
+                    st.warning(parsed_data.get("summary") or "Please review the parsed configuration before running.")
+                    if parsed_data.get("error_fix_hint"):
+                        st.info(parsed_data["error_fix_hint"])
+            else:
+                workflow_config = _build_no_llm_workflow_config(
                     quick_mode=quick_mode,
                     upload_overrides=upload_overrides,
-                    user_request=request_text,
+                    user_request=final_request,
                 )
-            except Exception as exc:  # noqa: BLE001
-                st.error(f"Quick mode configuration error: {exc}")
-                return
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Configuration preview error: {exc}")
+            return
 
-            run_workflow(
-                request_text or f"Quick mode run: {quick_mode}",
-                upload_overrides,
-                saved_paths,
-                output_path,
-                direct_config=quick_cfg,
-            )
+        workflow_config["user_request"] = final_request or workflow_config.get("user_request", "")
+        workflow_config["output_dir"] = str(output_path)
+        st.session_state.pending_workflow_config = workflow_config
+        st.session_state.pending_upload_overrides = upload_overrides
+        st.session_state.pending_saved_paths = saved_paths
+        st.session_state.pending_user_request = final_request or f"Quick mode run: {quick_mode}"
+        st.session_state.workflow_config = workflow_config
+        st.session_state.confirm_config_ready = False
+        st.session_state.confirmed_config_signature = ""
+        st.success("Configuration preview is ready. Review it below before running.")
+
+    if st.session_state.pending_workflow_config:
+        edited_config = render_config_confirm_form(st.session_state.pending_workflow_config)
+        signature = _config_signature(edited_config)
+        if st.session_state.confirmed_config_signature != signature:
+            st.session_state.confirm_config_ready = False
+
+        if st.button("Confirm configuration", type="secondary", use_container_width=True):
+            st.session_state.pending_workflow_config = edited_config
+            st.session_state.confirmed_config_signature = signature
+            st.session_state.confirm_config_ready = True
+            st.success("Configuration confirmed. You can now run the workflow.")
+
+    run_clicked = st.button(
+        "Run confirmed workflow",
+        type="primary",
+        use_container_width=True,
+        disabled=not st.session_state.confirm_config_ready,
+    )
+
+    if run_clicked:
+        output_path = Path(sidebar_state["output_dir"]).expanduser()
+        output_path.mkdir(parents=True, exist_ok=True)
+        confirmed_config = dict(st.session_state.pending_workflow_config or {})
+        if not confirmed_config:
+            st.error("Preview and confirm the configuration before running.")
+            return
+
+        run_workflow(
+            st.session_state.pending_user_request or request_text.strip() or f"Quick mode run: {quick_mode}",
+            dict(st.session_state.pending_upload_overrides or {}),
+            dict(st.session_state.pending_saved_paths or {}),
+            output_path,
+            direct_config=confirmed_config,
+        )
 
     if st.session_state.workflow_result:
         st.markdown("---")
@@ -3581,12 +4126,12 @@ def _build_no_llm_workflow_config(
         )
 
     elif quick_mode == "Seismic SRT":
+        raw_seismic_file = cfg.get("raw_seismic_file")
         seismic_file = cfg.get("seismic_file")
-        if not seismic_file:
+        if not (raw_seismic_file or seismic_file):
             raise ValueError("No seismic file found. Upload one seismic `.dat/.sgy/.segy` file.")
         cfg.update(
             {
-                "seismic_file": seismic_file,
                 "seismic_only": True,
                 "extract_interfaces": True,
                 "velocity_threshold": 1200,
@@ -3600,6 +4145,21 @@ def _build_no_llm_workflow_config(
                 },
             }
         )
+        if raw_seismic_file:
+            cfg.update(
+                {
+                    "raw_seismic_file": raw_seismic_file,
+                    "raw_seismic_processing": True,
+                    "first_break_params": {
+                        "threshold": 0.2,
+                        "noise_multiplier": 5.0,
+                        "max_time": 0.15,
+                        "agc_window": 0.05,
+                    },
+                }
+            )
+        else:
+            cfg["seismic_file"] = seismic_file
     else:
         raise ValueError(f"Unsupported quick mode: {quick_mode}")
 
@@ -5696,13 +6256,23 @@ def render_hydro_multigeophys_tab() -> None:
             st.rerun()
 
 
-def render_sidebar() -> Dict[str, str]:
+def render_sidebar() -> Dict[str, Any]:
     """Render sidebar controls and return the selected configuration values.
 
     Returns:
         Dictionary containing provider, model, API key, and output directory values.
     """
     st.sidebar.header("Configuration")
+
+    demo_mode = st.sidebar.checkbox(
+        "Demo mode (no API key required)",
+        value=bool(st.session_state.demo_mode),
+        help="Use bundled cached results and disable live LLM/inversion execution.",
+    )
+    st.session_state.demo_mode = demo_mode
+    if demo_mode:
+        st.sidebar.info("Demo mode uses bundled cached outputs and makes no LLM calls.")
+    st.sidebar.metric("Estimated LLM cost", f"${float(st.session_state.llm_cost_estimate_usd):.4f}")
 
     provider = st.sidebar.selectbox(
         "LLM provider",
@@ -5713,18 +6283,19 @@ def render_sidebar() -> Dict[str, str]:
         help="Used by the context agent to parse your natural-language request.",
     )
 
-    default_models = {"openai": "gpt-4o-mini", "gemini": "gemini-pro", "claude": "claude-3-opus-20240229"}
+    default_models = {"openai": "gpt-4o-mini", "gemini": "gemini-pro", "claude": "claude-3-5-sonnet-20241022"}
     model_default = st.session_state.llm_model or default_models.get(provider, "gpt-4o-mini")
     model = st.sidebar.text_input("Model name", value=model_default)
 
     env_map = {"openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY", "claude": "ANTHROPIC_API_KEY"}
-    preset_key = st.session_state.api_key or os.getenv(env_map[provider], "")
-    api_key = st.sidebar.text_input(
-        "API key",
-        type="password",
-        value=preset_key,
-        help=f"Read from environment if set: {env_map[provider]}",
-    )
+    with st.sidebar.expander("Enter API key to run on my own data", expanded=not demo_mode):
+        preset_key = st.session_state.api_key or os.getenv(env_map[provider], "")
+        api_key = st.text_input(
+            "API key",
+            type="password",
+            value=preset_key,
+            help=f"Read from environment if set: {env_map[provider]}",
+        )
 
     output_dir = st.sidebar.text_input("Output directory", value=st.session_state.output_dir)
 
@@ -5736,6 +6307,14 @@ def render_sidebar() -> Dict[str, str]:
         for key in ["context_agent", "workflow_result", "workflow_config", "upload_dir"]:
             st.session_state[key] = None
         st.session_state.user_request = ""
+        st.session_state.pending_workflow_config = None
+        st.session_state.pending_upload_overrides = {}
+        st.session_state.pending_saved_paths = {}
+        st.session_state.pending_user_request = ""
+        st.session_state.confirm_config_ready = False
+        st.session_state.confirmed_config_signature = ""
+        st.session_state.llm_cost_estimate_usd = 0.0
+        st.session_state.llm_usage_ledger = []
         for key in [
             "hydro_last_run",
             "hydro_data_summary",
@@ -5753,7 +6332,12 @@ def render_sidebar() -> Dict[str, str]:
         st.sidebar.info("Session cleared and Hydro defaults restored from notebook.")
 
     if init_clicked:
-        if not api_key.strip():
+        if not AGENTS_AVAILABLE:
+            st.sidebar.error(
+                f"Cannot initialize: required packages are not installed (`{IMPORT_ERROR}`).  \n"
+                "Run `pip install pygimli SimPEG openai` and restart the app."
+            )
+        elif not api_key.strip():
             st.sidebar.error("Please provide an API key or set the environment variable first.")
         else:
             try:
@@ -5774,7 +6358,7 @@ def render_sidebar() -> Dict[str, str]:
     else:
         st.sidebar.warning("System status: not initialized")
 
-    return {"provider": provider, "model": model, "api_key": api_key, "output_dir": output_dir}
+    return {"provider": provider, "model": model, "api_key": api_key, "output_dir": output_dir, "demo_mode": demo_mode}
 
 
 def save_upload(
@@ -5878,7 +6462,12 @@ def handle_uploads(
         and not is_tdem(p)
         and not is_hydro(p)
     ]
-    seismic_candidates = [p for p in all_paths if "seis" in p.name.lower() or p.suffix.lower() in [".sgy", ".segy"]]
+    raw_seismic_candidates = [p for p in all_paths if p.suffix.lower() in [".sgy", ".segy"]]
+    seismic_candidates = [
+        p for p in all_paths
+        if p.suffix.lower() not in [".sgy", ".segy"]
+        and ("seis" in p.name.lower() or "srt" in p.name.lower())
+    ]
 
     if electrode_files:
         workflow_config["electrode_file"] = str(electrode_files[0])
@@ -5890,7 +6479,11 @@ def handle_uploads(
         workflow_config["time_lapse_files"] = [str(p) for p in data_candidates]
         workflow_config["timelapse_files"] = [str(p) for p in data_candidates]
 
-    if seismic_candidates:
+    if raw_seismic_candidates:
+        workflow_config["raw_seismic_file"] = str(raw_seismic_candidates[0])
+        workflow_config["raw_seismic_processing"] = True
+        workflow_config["seismic_only"] = True
+    elif seismic_candidates:
         workflow_config["seismic_file"] = str(seismic_candidates[0])
     
     if tdem_candidates:
@@ -6000,6 +6593,14 @@ def run_workflow(
         st.exception(exc)
         return
 
+    if BaseAgent is None:
+        st.error(
+            "⚠️ Cannot run workflow: the agents module is not available.  \n"
+            f"Missing package: `{IMPORT_ERROR}`.  \n"
+            "Install with `pip install pygimli SimPEG openai` and restart the app."
+        )
+        return
+
     try:
         # Show execution plan before running
         with step_expander:
@@ -6015,6 +6616,13 @@ def run_workflow(
             st.session_state.llm_provider,
             output_dir,
             progress_callback=update_progress,
+        )
+        workflow_ledger = list(results.get("llm_usage_ledger", []) if isinstance(results, dict) else [])
+        merged_ledger = list(st.session_state.llm_usage_ledger or []) + workflow_ledger
+        st.session_state.llm_usage_ledger = merged_ledger
+        st.session_state.llm_cost_estimate_usd = sum(
+            float(item.get("cost_estimate_usd") or 0.0)
+            for item in merged_ledger
         )
         
         # Display execution steps
@@ -6032,6 +6640,8 @@ def run_workflow(
             "report_files": report_files,
             "workflow_config": workflow_config,
             "uploads": saved_paths,
+            "llm_usage_ledger": merged_ledger,
+            "total_llm_cost_estimate_usd": st.session_state.llm_cost_estimate_usd,
         }
     except Exception as exc:  # noqa: BLE001
         update_progress("Workflow failed", 1.0)
@@ -6080,6 +6690,9 @@ def _detect_workflow_type(config: Dict) -> str:
         'tdem' in user_request or 'tem ' in user_request or
         'electromagnetic' in user_request):
         return "TDEM Inversion"
+    # Raw SEG-Y processing before SRT inversion
+    elif config.get('raw_seismic_file') or config.get('raw_seismic_processing'):
+        return "Raw Seismic Processing + SRT"
     # Seismic-only detection
     elif (config.get('seismic_file') and not config.get('ert_file') or
           config.get('seismic_only') or
@@ -6108,11 +6721,8 @@ def render_results() -> None:
         return
 
     st.success("Workflow complete.")
-
-    interpretation = data.get("interpretation")
-    if interpretation:
-        st.markdown("### Interpretation")
-        st.info(interpretation)
+    if data.get("total_llm_cost_estimate_usd") is not None:
+        st.metric("Estimated LLM cost", f"${float(data['total_llm_cost_estimate_usd']):.4f}")
 
     execution_plan = data.get("execution_plan") or []
     if execution_plan:
@@ -6140,6 +6750,12 @@ def render_results() -> None:
                 st.metric("Time steps", stats["n_timesteps"])
     elif results:
         st.error(f"Workflow reported an error: {results.get('error','Unknown error')}")
+
+    interpretation = data.get("interpretation")
+    if interpretation:
+        st.markdown("### AI-generated interpretation")
+        st.warning("AI-generated interpretation - verify before citing.")
+        st.info(interpretation)
 
     report_files = data.get("report_files") or {}
     if report_files:
@@ -6171,6 +6787,3795 @@ def render_results() -> None:
     if data.get("uploads"):
         with st.expander("Uploaded file locations"):
             st.json(data["uploads"])
+
+
+def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
+    """Render raw seismic preprocessing, first-break picking, and SRT launch UI."""
+
+    st.subheader("Raw seismic data to SRT")
+    st.caption(
+        "Local workflow for SEG-Y or Geometrics DAT shot gathers: preprocess, pick first breaks, export travel-time data, then run SRT."
+    )
+
+    try:
+        import numpy as np
+        import pandas as pd
+        import plotly.graph_objects as go
+
+        from PyHydroGeophysX.data_processing.seismic import (
+            SeismicShotGather,
+            apply_agc,
+            bandpass_filter,
+            export_first_breaks,
+            fit_velocity_traveltime_model,
+            first_breaks_to_traveltime,
+            normalize_traces,
+            pick_first_breaks,
+            predict_velocity_traveltimes,
+            read_geometrics_dat,
+            read_segy,
+        )
+    except Exception as exc:  # noqa: BLE001
+        st.error(f"Seismic processing tools are not available: {exc}")
+        return
+
+    def _reset_pick_edit_state() -> None:
+        st.session_state.seismic_pick_history = []
+        st.session_state.seismic_pick_redo = []
+        st.session_state.seismic_active_trace = None
+        st.session_state.seismic_active_time = None
+        st.session_state.seismic_last_click_signature = ""
+        st.session_state.seismic_anchor_review_traces = []
+        st.session_state.seismic_velocity_model = None
+
+    def _push_pick_history() -> None:
+        picks = st.session_state.get("seismic_picks_df")
+        if picks is None:
+            return
+        history = list(st.session_state.get("seismic_pick_history") or [])
+        history.append(picks.copy(deep=True))
+        st.session_state.seismic_pick_history = history[-30:]
+        st.session_state.seismic_pick_redo = []
+
+    def _bump_manual_picker_version() -> None:
+        version = int(st.session_state.get("seismic_manual_picker_version") or 0)
+        st.session_state.seismic_manual_picker_version = version + 1
+
+    def _activate_pick_focus_view() -> None:
+        st.session_state.seismic_focus_view_active = True
+
+    def _sync_picks_for_record(record: Any, picks_df: Any) -> None:
+        all_picks = st.session_state.get("seismic_all_picks") or {}
+        if picks_df is None or picks_df.empty:
+            all_picks.pop(record, None)
+        else:
+            all_picks[record] = picks_df.copy(deep=True)
+        st.session_state.seismic_all_picks = all_picks
+
+    def _gather_geometry_arrays(selected_gather: Any) -> Tuple[np.ndarray, np.ndarray]:
+        """Return source/receiver x coordinates while preserving valid zero coordinates."""
+
+        n_traces = int(selected_gather.traces.shape[1])
+        spacing = float(st.session_state.get("seismic_receiver_spacing") or 1.0)
+        if not np.isfinite(spacing) or spacing <= 0:
+            spacing = 1.0
+
+        source_x = np.full(n_traces, np.nan, dtype=float)
+        receiver_x = np.full(n_traces, np.nan, dtype=float)
+        for idx, header in enumerate(selected_gather.headers[:n_traces]):
+            try:
+                sx = float(getattr(header, "source_x", np.nan))
+            except (TypeError, ValueError):
+                sx = np.nan
+            try:
+                rx = float(getattr(header, "receiver_x", np.nan))
+            except (TypeError, ValueError):
+                rx = np.nan
+            if np.isfinite(sx):
+                source_x[idx] = sx
+            if np.isfinite(rx):
+                receiver_x[idx] = rx
+
+        offsets = np.asarray(getattr(selected_gather, "offsets", np.full(n_traces, np.nan)), dtype=float).reshape(-1)
+        if offsets.size != n_traces:
+            offsets = np.full(n_traces, np.nan, dtype=float)
+
+        source_finite = np.isfinite(source_x)
+        if source_finite.any():
+            fill_source = float(np.nanmedian(source_x[source_finite]))
+            source_x[~source_finite] = fill_source
+        else:
+            source_x[:] = 0.0
+
+        receiver_finite = np.isfinite(receiver_x)
+        receiver_has_spread = bool(
+            receiver_finite.sum() >= 2 and np.nanmax(receiver_x[receiver_finite]) - np.nanmin(receiver_x[receiver_finite]) > 1e-9
+        )
+        if receiver_has_spread:
+            fallback_receivers = np.arange(n_traces, dtype=float) * spacing
+            receiver_x[~receiver_finite] = fallback_receivers[~receiver_finite]
+        elif np.isfinite(offsets).sum() >= 2 and np.nanmax(offsets[np.isfinite(offsets)]) - np.nanmin(offsets[np.isfinite(offsets)]) > 1e-9:
+            receiver_x = source_x + np.nan_to_num(offsets, nan=0.0)
+        else:
+            receiver_x = np.arange(n_traces, dtype=float) * spacing
+
+        if not np.isfinite(receiver_x).all():
+            receiver_x = np.where(np.isfinite(receiver_x), receiver_x, np.arange(n_traces, dtype=float) * spacing)
+        if np.nanmax(np.abs(receiver_x - source_x)) <= 1e-9:
+            if np.isfinite(offsets).sum() >= 2 and np.nanmax(np.abs(offsets[np.isfinite(offsets)])) > 1e-9:
+                receiver_x = source_x + np.nan_to_num(offsets, nan=0.0)
+            else:
+                receiver_x = np.arange(n_traces, dtype=float) * spacing
+
+        return source_x.astype(float), receiver_x.astype(float)
+
+    def _local_trace_positions(picks_df: Any, selected_gather: Any) -> np.ndarray:
+        if picks_df is None or picks_df.empty:
+            return np.array([], dtype=float)
+        trace_indices = np.asarray(selected_gather.trace_indices, dtype=int)
+        channels = np.asarray(selected_gather.channels, dtype=int)
+        by_index = {int(value): idx for idx, value in enumerate(trace_indices)}
+        by_channel = {int(value): idx for idx, value in enumerate(channels)}
+        positions = []
+        for _, row in picks_df.iterrows():
+            local = by_index.get(int(row.get("trace_index", -1)))
+            if local is None:
+                local = by_channel.get(int(row.get("trace_number", row.get("receiver_id", -1))))
+            positions.append(float(local) if local is not None else np.nan)
+        return np.asarray(positions, dtype=float)
+
+    def _pick_row_for_click(
+        selected_gather: Any,
+        trace_pos: int,
+        sample_idx: int,
+        pick_source: str = "manual",
+    ) -> Dict[str, Any]:
+        header = selected_gather.headers[trace_pos]
+        time_s = float(selected_gather.time[sample_idx])
+        amplitude = float(selected_gather.traces[sample_idx, trace_pos])
+        source_id = int(header.energy_source_point or header.field_record or selected_gather.field_record or 1)
+        receiver_id = int(header.trace_number or selected_gather.channels[trace_pos] or trace_pos + 1)
+        source_x = float(header.source_x) if np.isfinite(header.source_x) else float(source_id)
+        receiver_x = float(header.receiver_x) if np.isfinite(header.receiver_x) else float(selected_gather.offsets[trace_pos])
+        if source_x == receiver_x:
+            receiver_x = source_x + float(selected_gather.offsets[trace_pos])
+        return {
+            "source_id": source_id,
+            "receiver_id": receiver_id,
+            "time_s": time_s,
+            "auto_time_s": time_s,
+            "source_x": source_x,
+            "source_z": float(header.source_z),
+            "receiver_x": receiver_x,
+            "receiver_z": float(header.receiver_z),
+            "field_record": int(header.field_record or selected_gather.field_record),
+            "trace_number": int(header.trace_number or selected_gather.channels[trace_pos] or trace_pos + 1),
+            "trace_index": int(selected_gather.trace_indices[trace_pos]),
+            "amplitude": amplitude,
+            "pick_source": pick_source,
+        }
+
+    def _update_pick_from_click(
+        picks_df: Any,
+        selected_gather: Any,
+        x_value: float,
+        y_value: float,
+        mode: str,
+        pick_source: str = "manual",
+    ) -> Any:
+        trace_pos = int(np.clip(round(float(x_value)), 0, selected_gather.traces.shape[1] - 1))
+        sample_idx = int(np.clip(np.searchsorted(selected_gather.time, float(y_value)), 0, len(selected_gather.time) - 1))
+        st.session_state.seismic_active_trace = trace_pos
+        st.session_state.seismic_active_time = float(selected_gather.time[sample_idx])
+
+        if picks_df is None or picks_df.empty:
+            picks_df = pd.DataFrame(
+                columns=list(_pick_row_for_click(selected_gather, trace_pos, sample_idx, pick_source).keys())
+            )
+        else:
+            picks_df = picks_df.copy(deep=True)
+            if "pick_source" not in picks_df.columns:
+                picks_df["pick_source"] = "auto"
+            if "auto_time_s" not in picks_df.columns and "time_s" in picks_df.columns:
+                picks_df["auto_time_s"] = picks_df["time_s"]
+
+        local_positions = _local_trace_positions(picks_df, selected_gather)
+        row_matches = np.where(local_positions == trace_pos)[0]
+
+        if mode == "Delete clicked trace":
+            if row_matches.size:
+                return picks_df.drop(picks_df.index[int(row_matches[0])]).reset_index(drop=True)
+            return picks_df
+
+        new_row = _pick_row_for_click(selected_gather, trace_pos, sample_idx, pick_source=pick_source)
+        if row_matches.size:
+            row_index = picks_df.index[int(row_matches[0])]
+            previous_auto_time = picks_df.loc[row_index, "auto_time_s"] if "auto_time_s" in picks_df.columns else np.nan
+            previous_auto_time_numeric = pd.to_numeric(previous_auto_time, errors="coerce")
+            if not np.isfinite(previous_auto_time_numeric):
+                previous_auto_time = picks_df.loc[row_index, "time_s"] if "time_s" in picks_df.columns else new_row["time_s"]
+            for key, value in new_row.items():
+                picks_df.loc[row_index, key] = value
+            picks_df.loc[row_index, "auto_time_s"] = previous_auto_time
+        else:
+            picks_df = pd.concat([picks_df, pd.DataFrame([new_row])], ignore_index=True)
+        return picks_df.sort_values(["field_record", "trace_index", "trace_number"], ignore_index=True)
+
+    def _delete_active_pick(selected_gather: Any) -> None:
+        trace_pos = st.session_state.get("seismic_active_trace")
+        picks_df = st.session_state.get("seismic_picks_df")
+        if trace_pos is None or picks_df is None or picks_df.empty:
+            st.warning("Click a trace pick first.")
+            return
+        _push_pick_history()
+        st.session_state.seismic_picks_df = _update_pick_from_click(
+            picks_df,
+            selected_gather,
+            float(trace_pos),
+            float(st.session_state.get("seismic_active_time") or 0.0),
+            "Delete clicked trace",
+        )
+        _sync_picks_for_record(selected_gather.field_record, st.session_state.seismic_picks_df)
+        st.session_state.seismic_export_files = {}
+        st.session_state.seismic_velocity_model = None
+        _bump_manual_picker_version()
+        st.rerun()
+
+    def _nudge_active_pick(selected_gather: Any, samples: int) -> None:
+        trace_pos = st.session_state.get("seismic_active_trace")
+        picks_df = st.session_state.get("seismic_picks_df")
+        if trace_pos is None or picks_df is None or picks_df.empty:
+            st.warning("Click a trace pick first.")
+            return
+        local_positions = _local_trace_positions(picks_df, selected_gather)
+        row_matches = np.where(local_positions == int(trace_pos))[0]
+        if not row_matches.size:
+            st.warning("No pick exists on the active trace.")
+            return
+        row_index = picks_df.index[int(row_matches[0])]
+        current_time = float(picks_df.loc[row_index, "time_s"])
+        current_sample = int(np.clip(np.searchsorted(selected_gather.time, current_time), 0, len(selected_gather.time) - 1))
+        sample_idx = int(np.clip(current_sample + samples, 0, len(selected_gather.time) - 1))
+        _push_pick_history()
+        st.session_state.seismic_picks_df = _update_pick_from_click(
+            picks_df,
+            selected_gather,
+            float(trace_pos),
+            float(selected_gather.time[sample_idx]),
+            "Update clicked trace",
+        )
+        _sync_picks_for_record(selected_gather.field_record, st.session_state.seismic_picks_df)
+        st.session_state.seismic_export_files = {}
+        st.session_state.seismic_velocity_model = None
+        _bump_manual_picker_version()
+        st.rerun()
+
+    def _pick_time_for_trace(picks_df: Any, selected_gather: Any, trace_pos: int, fallback: float) -> float:
+        active_trace = st.session_state.get("seismic_active_trace")
+        active_time = st.session_state.get("seismic_active_time")
+        if active_trace is not None and int(active_trace) == int(trace_pos) and active_time is not None:
+            try:
+                value = float(active_time)
+                if np.isfinite(value):
+                    return value
+            except (TypeError, ValueError):
+                pass
+        if picks_df is not None and not picks_df.empty:
+            local_positions = _local_trace_positions(picks_df, selected_gather)
+            row_matches = np.where(local_positions == int(trace_pos))[0]
+            if row_matches.size:
+                row_index = picks_df.index[int(row_matches[0])]
+                try:
+                    value = float(picks_df.loc[row_index, "time_s"])
+                    if np.isfinite(value):
+                        return value
+                except (KeyError, TypeError, ValueError):
+                    pass
+        return float(fallback)
+
+    def _manual_pick_count(picks_df: Any) -> int:
+        if picks_df is None or picks_df.empty or "pick_source" not in picks_df.columns:
+            return 0
+        sources = picks_df["pick_source"].fillna("").astype(str).str.lower()
+        return int((sources == "manual").sum())
+
+    def _nonmanual_pick_count(picks_df: Any) -> int:
+        if picks_df is None or picks_df.empty:
+            return 0
+        if "pick_source" not in picks_df.columns:
+            return int(len(picks_df))
+        sources = picks_df["pick_source"].fillna("auto").astype(str).str.lower()
+        return int((sources != "manual").sum())
+
+    def _manual_trace_positions(picks_df: Any, selected_gather: Any) -> set:
+        if picks_df is None or picks_df.empty or "pick_source" not in picks_df.columns:
+            return set()
+        positions = _local_trace_positions(picks_df, selected_gather)
+        sources = picks_df["pick_source"].fillna("").astype(str).str.lower().to_numpy()
+        return {
+            int(position)
+            for position, source in zip(positions, sources)
+            if np.isfinite(position) and source == "manual"
+        }
+
+    def _valid_anchor_review_traces(selected_gather: Any) -> List[int]:
+        n_traces = int(selected_gather.traces.shape[1])
+        raw_traces = st.session_state.get("seismic_anchor_review_traces") or []
+        anchors: List[int] = []
+        for value in raw_traces:
+            try:
+                trace_pos = int(value)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= trace_pos < n_traces and trace_pos not in anchors:
+                anchors.append(trace_pos)
+        return sorted(anchors)
+
+    def _anchor_review_status(picks_df: Any, selected_gather: Any) -> Tuple[List[int], List[int], int]:
+        anchors = _valid_anchor_review_traces(selected_gather)
+        manual_positions = _manual_trace_positions(picks_df, selected_gather)
+        pending = [trace for trace in anchors if trace not in manual_positions]
+        confirmed = len(anchors) - len(pending)
+        return anchors, pending, confirmed
+
+    def _suggest_anchor_review_traces(
+        picks_df: Any,
+        selected_gather: Any,
+        processed_data: Dict[str, Any],
+        target_count: int,
+    ) -> List[int]:
+        n_traces = int(selected_gather.traces.shape[1])
+        if n_traces <= 0:
+            return []
+        target = int(np.clip(target_count, 1, n_traces))
+        anchors = set(_manual_trace_positions(picks_df, selected_gather))
+
+        base_count = min(target, max(2, int(np.ceil(target * 0.65)))) if n_traces > 1 else 1
+        anchors.update(int(value) for value in np.linspace(0, n_traces - 1, base_count).round())
+
+        if picks_df is not None and not picks_df.empty and "time_s" in picks_df.columns:
+            positions = _local_trace_positions(picks_df, selected_gather)
+            pick_times = pd.to_numeric(picks_df["time_s"], errors="coerce").to_numpy(dtype=float)
+            valid = np.isfinite(positions) & np.isfinite(pick_times) & (pick_times > 0)
+            if int(valid.sum()) >= 3:
+                fit_x = positions[valid].astype(float)
+                fit_t = pick_times[valid].astype(float)
+                degree = 2 if fit_x.size >= 6 else 1
+                try:
+                    coeffs = np.polyfit(fit_x, fit_t, deg=degree)
+                    residual = np.abs(fit_t - np.polyval(coeffs, fit_x))
+                    residual_scale = np.nanmedian(residual) or np.nanmax(residual) or 1.0
+                    score = residual / max(float(residual_scale), 1e-12)
+                except (TypeError, ValueError, np.linalg.LinAlgError):
+                    score = np.zeros_like(fit_t, dtype=float)
+
+                trace_data = np.asarray(processed_data.get("raw_traces", selected_gather.traces), dtype=float)
+                time_values = np.asarray(selected_gather.time, dtype=float)
+                if trace_data.shape == selected_gather.traces.shape and time_values.size == trace_data.shape[0]:
+                    for i, (trace_pos_f, pick_time) in enumerate(zip(fit_x, fit_t)):
+                        trace_pos = int(np.clip(round(float(trace_pos_f)), 0, n_traces - 1))
+                        sample_idx = int(np.clip(np.searchsorted(time_values, float(pick_time)), 0, len(time_values) - 1))
+                        early_stop = max(2, min(sample_idx, 20))
+                        noise = float(np.median(np.abs(trace_data[:early_stop, trace_pos]))) if early_stop > 1 else 0.0
+                        half_window = max(2, min(8, sample_idx + 1))
+                        lo = max(0, sample_idx - half_window)
+                        hi = min(trace_data.shape[0], sample_idx + half_window + 1)
+                        signal = float(np.max(np.abs(trace_data[lo:hi, trace_pos]))) if hi > lo else 0.0
+                        confidence = signal / max(noise, 1e-12)
+                        if np.isfinite(confidence) and confidence > 0:
+                            score[i] += 1.0 / confidence
+
+                needed = max(0, target - len(anchors))
+                if needed:
+                    ranked = np.argsort(score)[::-1]
+                    for idx in ranked:
+                        anchors.add(int(np.clip(round(float(fit_x[idx])), 0, n_traces - 1)))
+                        if len(anchors) >= target:
+                            break
+
+        if len(anchors) < target:
+            for value in np.linspace(0, n_traces - 1, target).round():
+                anchors.add(int(value))
+                if len(anchors) >= target:
+                    break
+
+        return sorted(int(np.clip(value, 0, n_traces - 1)) for value in anchors)
+
+    def _next_review_trace(
+        picks_df: Any,
+        selected_gather: Any,
+        current_trace: int,
+        step: int,
+        mode: str,
+    ) -> int:
+        n_traces = int(selected_gather.traces.shape[1])
+        if n_traces <= 1:
+            return 0
+        current = int(np.clip(current_trace, 0, n_traces - 1))
+        step = max(1, int(step))
+
+        if mode == "Next trace":
+            return int((current + 1) % n_traces)
+        if mode == "Step forward":
+            return int((current + step) % n_traces)
+
+        anchors, pending_anchors, _confirmed_anchors = _anchor_review_status(picks_df, selected_gather)
+        if anchors and pending_anchors:
+            for candidate in pending_anchors:
+                if candidate > current:
+                    return int(candidate)
+            return int(pending_anchors[0])
+
+        if picks_df is not None and not picks_df.empty:
+            picks_work = picks_df.copy(deep=True)
+            if "pick_source" not in picks_work.columns:
+                picks_work["pick_source"] = "auto"
+            local_positions = _local_trace_positions(picks_work, selected_gather)
+            sources = picks_work["pick_source"].fillna("auto").astype(str).str.lower().to_numpy()
+            candidates = sorted(
+                {
+                    int(position)
+                    for position, source in zip(local_positions, sources)
+                    if np.isfinite(position) and source != "manual"
+                }
+            )
+            if candidates:
+                for candidate in candidates:
+                    if candidate > current:
+                        return candidate
+                return candidates[0]
+
+        return int((current + step) % n_traces)
+
+    def _advance_trace_after_save(
+        picks_df: Any,
+        selected_gather: Any,
+        current_trace: int,
+        current_time: float,
+        fallback_step: int,
+        mode: str,
+        force: bool = False,
+    ) -> None:
+        if not force and not st.session_state.get("seismic_auto_advance_after_save"):
+            st.session_state.seismic_active_trace = int(current_trace)
+            st.session_state.seismic_active_time = float(current_time)
+            return
+        next_trace = _next_review_trace(
+            picks_df,
+            selected_gather,
+            current_trace=int(current_trace),
+            step=int(fallback_step),
+            mode=str(mode),
+        )
+        next_time = _pick_time_for_trace(picks_df, selected_gather, next_trace, fallback=float(current_time))
+        st.session_state.seismic_active_trace = int(next_trace)
+        st.session_state.seismic_active_time = float(next_time)
+        st.session_state.seismic_focus_view_pending = True
+
+    def _update_remaining_from_manual_pattern(
+        picks_df: Any,
+        selected_gather: Any,
+        processed_data: Dict[str, Any],
+        search_window_s: float,
+        max_time_s: float,
+        learning_method: str = "1D velocity model",
+    ) -> Tuple[Any, int, int, str]:
+        if picks_df is None or picks_df.empty:
+            return picks_df, 0, 0, "No picks are available yet."
+        picks_work = picks_df.copy(deep=True)
+        if "pick_source" not in picks_work.columns:
+            picks_work["pick_source"] = "auto"
+        if "auto_time_s" not in picks_work.columns and "time_s" in picks_work.columns:
+            picks_work["auto_time_s"] = picks_work["time_s"]
+
+        if "time_s" not in picks_work.columns:
+            return picks_work, 0, 0, "Pick table is missing the time_s column."
+        local_positions = _local_trace_positions(picks_work, selected_gather)
+        pick_times = pd.to_numeric(picks_work["time_s"], errors="coerce").to_numpy(dtype=float)
+        baseline_values = pd.to_numeric(picks_work.get("auto_time_s", picks_work["time_s"]), errors="coerce").to_numpy(dtype=float)
+        sources = picks_work["pick_source"].fillna("").astype(str).str.lower()
+        manual_mask = (
+            (sources == "manual").to_numpy()
+            & np.isfinite(local_positions)
+            & np.isfinite(pick_times)
+            & (pick_times > 0)
+        )
+        manual_count = int(manual_mask.sum())
+        if manual_count < 1:
+            return picks_work, manual_count, 0, "Save at least one anchor pick before updating the remaining traces."
+
+        trace_data = np.asarray(processed_data.get("raw_traces", selected_gather.traces), dtype=float)
+        if trace_data.shape != selected_gather.traces.shape:
+            trace_data = np.asarray(selected_gather.traces, dtype=float)
+        n_samples, n_traces = trace_data.shape
+        time_values = np.asarray(selected_gather.time, dtype=float)
+        if time_values.size != n_samples:
+            return picks_work, manual_count, 0, "Trace and time arrays do not have matching sample counts."
+
+        dt = float(np.nanmedian(np.diff(time_values))) if time_values.size > 1 else 0.001
+        if not np.isfinite(dt) or dt <= 0:
+            dt = 0.001
+        half_window = max(1, int(round(float(search_window_s) / dt)))
+        max_sample = int(np.clip(np.searchsorted(time_values, float(max_time_s), side="right") - 1, 0, n_samples - 1))
+
+        baseline_by_trace = np.full(n_traces, np.nan, dtype=float)
+        for position, baseline in zip(local_positions, baseline_values):
+            if np.isfinite(position) and np.isfinite(baseline) and baseline > 0:
+                trace_pos = int(np.clip(round(float(position)), 0, n_traces - 1))
+                baseline_by_trace[trace_pos] = float(baseline)
+        fallback_by_trace = np.full(n_traces, np.nan, dtype=float)
+        for position, pick_time in zip(local_positions, pick_times):
+            if np.isfinite(position) and np.isfinite(pick_time) and pick_time > 0:
+                trace_pos = int(np.clip(round(float(position)), 0, n_traces - 1))
+                fallback_by_trace[trace_pos] = float(pick_time)
+        missing_baseline = ~np.isfinite(baseline_by_trace)
+        baseline_by_trace[missing_baseline] = fallback_by_trace[missing_baseline]
+        known = np.where(np.isfinite(baseline_by_trace))[0]
+        if known.size == 0:
+            return picks_work, manual_count, 0, "No baseline auto-pick times are available for correction."
+        if known.size < n_traces:
+            baseline_by_trace = np.interp(np.arange(n_traces, dtype=float), known.astype(float), baseline_by_trace[known])
+
+        manual_x = local_positions[manual_mask].astype(float)
+        manual_t = pick_times[manual_mask].astype(float)
+        manual_trace_map: Dict[int, float] = {}
+        for trace_pos_f, pick_time in zip(manual_x, manual_t):
+            if np.isfinite(trace_pos_f) and np.isfinite(pick_time) and pick_time > 0:
+                manual_trace_map[int(np.clip(round(float(trace_pos_f)), 0, n_traces - 1))] = float(pick_time)
+        if not manual_trace_map:
+            return picks_work, manual_count, 0, "No valid anchor pick times are available for correction."
+
+        manual_trace_positions = np.asarray(sorted(manual_trace_map.keys()), dtype=float)
+        manual_pick_times = np.asarray([manual_trace_map[int(pos)] for pos in manual_trace_positions], dtype=float)
+        x_all = np.arange(n_traces, dtype=float)
+        lower_time_bounds = np.full(n_traces, float(time_values[0]), dtype=float)
+        upper_time_bounds = np.full(n_traces, float(time_values[max_sample]), dtype=float)
+
+        predicted_times: Optional[np.ndarray] = None
+        model_prediction_used = False
+        use_velocity_model = str(learning_method or "").strip().lower().startswith("1d")
+        if use_velocity_model:
+            try:
+                source_x_all, receiver_x_all = _gather_geometry_arrays(selected_gather)
+                source_names = sources.to_numpy()
+                hint_weight = 0.15 if manual_count < 2 else 0.04
+                fit_source_x: List[float] = []
+                fit_receiver_x: List[float] = []
+                fit_times: List[float] = []
+                fit_weights: List[float] = []
+                fit_anchor_mask: List[bool] = []
+                for trace_pos_f, pick_time, source_name in zip(local_positions, pick_times, source_names):
+                    if not (np.isfinite(trace_pos_f) and np.isfinite(pick_time) and pick_time > 0):
+                        continue
+                    trace_pos = int(np.clip(round(float(trace_pos_f)), 0, n_traces - 1))
+                    is_manual_pick = str(source_name).lower() == "manual"
+                    weight = 1.0 if is_manual_pick else hint_weight
+                    if weight <= 0:
+                        continue
+                    fit_source_x.append(float(source_x_all[trace_pos]))
+                    fit_receiver_x.append(float(receiver_x_all[trace_pos]))
+                    fit_times.append(float(pick_time))
+                    fit_weights.append(float(weight))
+                    fit_anchor_mask.append(bool(is_manual_pick))
+                if len(fit_times) < 2:
+                    raise ValueError("At least two travel-time points are needed for the velocity model.")
+                velocity_model = fit_velocity_traveltime_model(
+                    fit_source_x,
+                    fit_receiver_x,
+                    fit_times,
+                    weights=fit_weights,
+                    anchor_mask=fit_anchor_mask,
+                    max_segments=3,
+                    velocity_bounds=(100.0, 8000.0),
+                )
+                predicted_times = predict_velocity_traveltimes(velocity_model, source_x_all, receiver_x_all)
+                predicted_times = np.asarray(predicted_times, dtype=float)
+                if predicted_times.size != n_traces or int(np.isfinite(predicted_times).sum()) < 2:
+                    raise ValueError("Velocity model did not produce enough valid predictions.")
+                missing_pred = ~np.isfinite(predicted_times)
+                predicted_times[missing_pred] = baseline_by_trace[missing_pred]
+                model_margin = max(float(search_window_s), dt * 4.0)
+                lower_time_bounds = np.maximum(float(time_values[0]), predicted_times - model_margin)
+                upper_time_bounds = np.minimum(float(time_values[max_sample]), predicted_times + model_margin)
+                st.session_state.seismic_velocity_model = velocity_model
+                model_prediction_used = True
+            except Exception:  # noqa: BLE001
+                predicted_times = None
+                st.session_state.seismic_velocity_model = None
+        else:
+            st.session_state.seismic_velocity_model = None
+
+        if predicted_times is None:
+            if len(manual_trace_positions) == 1:
+                manual_trace = int(manual_trace_positions[0])
+                baseline_shift = float(manual_pick_times[0] - baseline_by_trace[manual_trace])
+                if not np.isfinite(baseline_shift):
+                    baseline_shift = 0.0
+                predicted_times = baseline_by_trace + baseline_shift
+            else:
+                predicted_times = np.interp(x_all, manual_trace_positions, manual_pick_times)
+                first_x, second_x = float(manual_trace_positions[0]), float(manual_trace_positions[1])
+                last_x, penultimate_x = float(manual_trace_positions[-1]), float(manual_trace_positions[-2])
+                first_t, second_t = float(manual_pick_times[0]), float(manual_pick_times[1])
+                last_t, penultimate_t = float(manual_pick_times[-1]), float(manual_pick_times[-2])
+                left_dx = max(abs(second_x - first_x), 1.0)
+                right_dx = max(abs(last_x - penultimate_x), 1.0)
+                left_of_anchors = x_all < first_x
+                right_of_anchors = x_all > last_x
+                predicted_times[left_of_anchors] = first_t + ((second_t - first_t) / left_dx) * (x_all[left_of_anchors] - first_x)
+                predicted_times[right_of_anchors] = last_t + ((last_t - penultimate_t) / right_dx) * (x_all[right_of_anchors] - last_x)
+
+                if len(manual_trace_positions) >= 3:
+                    inside_anchors = (x_all >= first_x) & (x_all <= last_x)
+                    try:
+                        from scipy.interpolate import PchipInterpolator
+
+                        pchip = PchipInterpolator(manual_trace_positions, manual_pick_times, extrapolate=False)
+                        curved_times = np.asarray(pchip(x_all[inside_anchors]), dtype=float)
+                        valid_curved = np.isfinite(curved_times)
+                        predicted_times[inside_anchors] = np.where(valid_curved, curved_times, predicted_times[inside_anchors])
+                    except Exception:  # noqa: BLE001
+                        pass
+
+                anchor_margin = max(float(search_window_s), dt * 4.0)
+                for trace_pos in range(n_traces):
+                    right_anchor = int(np.searchsorted(manual_trace_positions, float(trace_pos), side="left"))
+                    if 0 < right_anchor < len(manual_trace_positions):
+                        left_time = float(manual_pick_times[right_anchor - 1])
+                        right_time = float(manual_pick_times[right_anchor])
+                        lower = min(left_time, right_time) - anchor_margin
+                        upper = max(left_time, right_time) + anchor_margin
+                        lower_time_bounds[trace_pos] = max(float(time_values[0]), lower)
+                        upper_time_bounds[trace_pos] = min(float(time_values[max_sample]), upper)
+                        predicted_times[trace_pos] = float(np.clip(predicted_times[trace_pos], lower, upper))
+                    elif right_anchor == 0 and len(manual_pick_times) > 1:
+                        lower = min(first_t, second_t) - 2.0 * anchor_margin
+                        upper = max(first_t, second_t) + 2.0 * anchor_margin
+                        lower_time_bounds[trace_pos] = max(float(time_values[0]), lower)
+                        upper_time_bounds[trace_pos] = min(float(time_values[max_sample]), upper)
+                        predicted_times[trace_pos] = float(np.clip(predicted_times[trace_pos], lower, upper))
+                    elif len(manual_pick_times) > 1:
+                        lower = min(penultimate_t, last_t) - 2.0 * anchor_margin
+                        upper = max(penultimate_t, last_t) + 2.0 * anchor_margin
+                        lower_time_bounds[trace_pos] = max(float(time_values[0]), lower)
+                        upper_time_bounds[trace_pos] = min(float(time_values[max_sample]), upper)
+                        predicted_times[trace_pos] = float(np.clip(predicted_times[trace_pos], lower, upper))
+
+        for trace_pos, pick_time in manual_trace_map.items():
+            predicted_times[int(trace_pos)] = float(pick_time)
+        predicted_times = np.clip(predicted_times, float(time_values[0]), float(time_values[max_sample]))
+        if model_prediction_used and st.session_state.get("seismic_velocity_model") is not None:
+            st.session_state.seismic_velocity_model.predicted_times = predicted_times.copy()
+        manual_traces = set(manual_trace_map.keys())
+
+        def _nearest_first_break_sample(trace: np.ndarray, center: int, lo: int, hi: int) -> int:
+            window = np.asarray(trace[lo:hi], dtype=float)
+            finite = np.isfinite(window)
+            if not finite.any():
+                return int(center)
+            window_abs = np.abs(window)
+            gradient = np.abs(np.gradient(window)) if window.size > 1 else window_abs
+            amp_scale = float(np.nanpercentile(window_abs[finite], 90))
+            grad_scale = float(np.nanpercentile(gradient[finite], 90))
+            amp_scale = max(amp_scale, float(np.nanmedian(window_abs[finite])) * 2.0, 1e-12)
+            grad_scale = max(grad_scale, float(np.nanmedian(gradient[finite])) * 2.0, 1e-12)
+            onset = (0.75 * window_abs / amp_scale) + (0.25 * gradient / grad_scale)
+            sample_numbers = np.arange(lo, hi, dtype=float)
+            distance = np.abs(sample_numbers - float(center)) / max(float(half_window), 1.0)
+            scores = np.where(finite, onset - (0.65 * distance), -np.inf)
+            if window.size > 2:
+                scores[0] -= 0.75
+                scores[-1] -= 0.75
+            if not np.isfinite(scores).any():
+                return int(center)
+            local_idx = int(np.nanargmax(scores))
+            if window.size > 4 and local_idx in {0, window.size - 1}:
+                inner_scores = scores[1:-1]
+                if np.isfinite(inner_scores).any():
+                    local_idx = 1 + int(np.nanargmax(inner_scores))
+            return int(np.clip(lo + local_idx, 0, max_sample))
+
+        def _forward_mean(values: np.ndarray, window: int) -> np.ndarray:
+            window = max(1, int(window))
+            padded = np.pad(np.asarray(values, dtype=float), ((0, window - 1), (0, 0)), mode="edge")
+            cumulative = np.cumsum(np.vstack([np.zeros((1, padded.shape[1])), padded]), axis=0)
+            return (cumulative[window:] - cumulative[:-window]) / float(window)
+
+        def _backward_mean(values: np.ndarray, window: int) -> np.ndarray:
+            return np.flipud(_forward_mean(np.flipud(values), window))
+
+        def _normalize_columns(values: np.ndarray) -> np.ndarray:
+            values = np.asarray(values, dtype=float)
+            normalized = np.zeros_like(values, dtype=float)
+            for col in range(values.shape[1]):
+                column = values[:, col]
+                finite = np.isfinite(column)
+                if not finite.any():
+                    continue
+                low, high = np.nanpercentile(column[finite], [10, 95])
+                if not np.isfinite(high - low) or high <= low:
+                    low = float(np.nanmin(column[finite]))
+                    high = float(np.nanmax(column[finite]))
+                scale = max(high - low, 1e-12)
+                normalized[:, col] = np.clip((np.nan_to_num(column, nan=low) - low) / scale, 0.0, 1.0)
+            return normalized
+
+        def _first_break_reward_map() -> np.ndarray:
+            clean_traces = np.nan_to_num(trace_data[: max_sample + 1, :], nan=0.0, posinf=0.0, neginf=0.0)
+            abs_traces = np.abs(clean_traces)
+            energy = clean_traces**2
+            short_window = max(2, int(round(0.002 / dt)))
+            long_window = max(short_window * 3, int(round(0.010 / dt)))
+            future_energy = _forward_mean(energy, short_window)
+            past_energy = _backward_mean(energy, long_window)
+            energy_ratio = future_energy / (past_energy + np.nanmedian(past_energy) * 0.05 + 1e-12)
+            mer = energy_ratio * (abs_traces + np.nanmedian(abs_traces, axis=0, keepdims=True))
+            gradient = np.abs(np.gradient(clean_traces, axis=0))
+
+            aic_reward = np.zeros_like(clean_traces, dtype=float)
+            sample_axis = np.arange(clean_traces.shape[0], dtype=float)
+            aic_width = max(2.0, float(half_window) * 0.35)
+            for trace_pos in range(clean_traces.shape[1]):
+                trace = clean_traces[:, trace_pos]
+                if trace.size < 8 or not np.isfinite(trace).any():
+                    continue
+                trace = trace - float(np.nanmedian(trace))
+                csum = np.cumsum(trace)
+                csum2 = np.cumsum(trace**2)
+                n = trace.size
+                candidates = np.arange(2, n - 2, dtype=int)
+                if candidates.size == 0:
+                    continue
+                left_count = candidates.astype(float)
+                right_count = (n - candidates).astype(float)
+                left_mean = csum[candidates - 1] / left_count
+                right_sum = csum[-1] - csum[candidates - 1]
+                right_mean = right_sum / right_count
+                left_var = (csum2[candidates - 1] / left_count) - left_mean**2
+                right_var = ((csum2[-1] - csum2[candidates - 1]) / right_count) - right_mean**2
+                left_var = np.maximum(left_var, 1e-12)
+                right_var = np.maximum(right_var, 1e-12)
+                aic = left_count * np.log(left_var) + right_count * np.log(right_var)
+                if not np.isfinite(aic).any():
+                    continue
+                aic_sample = float(candidates[int(np.nanargmin(aic))])
+                aic_reward[:, trace_pos] = np.exp(-0.5 * ((sample_axis - aic_sample) / aic_width) ** 2)
+
+            reward = (
+                0.45 * _normalize_columns(mer)
+                + 0.25 * _normalize_columns(energy_ratio)
+                + 0.20 * _normalize_columns(gradient)
+                + 0.10 * aic_reward
+            )
+            return np.nan_to_num(reward, nan=0.0, posinf=0.0, neginf=0.0)
+
+        def _continuity_constrained_path_samples() -> Optional[np.ndarray]:
+            if manual_count < 2:
+                return None
+            reward = _first_break_reward_map()
+            n_states = max_sample + 1
+            center_samples = np.asarray(
+                np.clip(np.searchsorted(time_values, predicted_times), 0, max_sample),
+                dtype=int,
+            )
+            center_diffs = np.abs(np.diff(center_samples)).astype(float)
+            max_center_jump = float(np.nanpercentile(center_diffs, 95)) if center_diffs.size else 1.0
+            max_jump = int(np.clip(max(max_center_jump + 3.0, half_window * 0.75, 3.0), 3, max_sample))
+            center_sigma = max(float(half_window), float(max_jump), 2.0)
+            smoothness = 0.85
+            center_weight = 0.22
+            dp = np.full((n_traces, n_states), -np.inf, dtype=float)
+            back = np.full((n_traces, n_states), -1, dtype=int)
+
+            for trace_pos in range(n_traces):
+                lower_bound_idx = int(
+                    np.clip(np.searchsorted(time_values, float(lower_time_bounds[trace_pos]), side="left"), 0, max_sample)
+                )
+                upper_bound_idx = int(
+                    np.clip(np.searchsorted(time_values, float(upper_time_bounds[trace_pos]), side="right"), 1, max_sample + 1)
+                )
+                score = np.full(n_states, -np.inf, dtype=float)
+                samples = np.arange(lower_bound_idx, upper_bound_idx, dtype=int)
+                if samples.size:
+                    distance = (samples.astype(float) - float(center_samples[trace_pos])) / center_sigma
+                    score[samples] = reward[samples, trace_pos] - center_weight * distance**2
+                if trace_pos in manual_trace_map:
+                    anchor_sample = int(
+                        np.clip(np.searchsorted(time_values, float(manual_trace_map[trace_pos])), lower_bound_idx, upper_bound_idx - 1)
+                    )
+                    score[:] = -np.inf
+                    score[anchor_sample] = 5.0
+                if trace_pos == 0:
+                    dp[trace_pos, :] = score
+                    continue
+                previous = dp[trace_pos - 1, :]
+                for sample in np.where(np.isfinite(score))[0]:
+                    lo_prev = max(0, int(sample) - max_jump)
+                    hi_prev = min(n_states, int(sample) + max_jump + 1)
+                    previous_window = previous[lo_prev:hi_prev]
+                    if not np.isfinite(previous_window).any():
+                        finite_previous = np.where(np.isfinite(previous))[0]
+                        if not finite_previous.size:
+                            continue
+                        jumps = finite_previous.astype(float) - float(sample)
+                        transition = previous[finite_previous] - smoothness * (jumps / max(float(max_jump), 1.0)) ** 2
+                        best_local = int(np.nanargmax(transition))
+                        best_prev = int(finite_previous[best_local])
+                        best_value = float(transition[best_local])
+                    else:
+                        prev_samples = np.arange(lo_prev, hi_prev, dtype=float)
+                        jumps = prev_samples - float(sample)
+                        transition = previous_window - smoothness * (jumps / max(float(max_jump), 1.0)) ** 2
+                        best_local = int(np.nanargmax(transition))
+                        best_prev = int(lo_prev + best_local)
+                        best_value = float(transition[best_local])
+                    dp[trace_pos, sample] = score[sample] + best_value
+                    back[trace_pos, sample] = best_prev
+
+            if not np.isfinite(dp[-1, :]).any():
+                return None
+            path = np.full(n_traces, -1, dtype=int)
+            path[-1] = int(np.nanargmax(dp[-1, :]))
+            for trace_pos in range(n_traces - 1, 0, -1):
+                previous = int(back[trace_pos, path[trace_pos]])
+                if previous < 0:
+                    previous = int(center_samples[trace_pos - 1])
+                path[trace_pos - 1] = int(previous)
+            path = np.asarray(np.clip(path, 0, max_sample), dtype=int)
+            for trace_pos, pick_time in manual_trace_map.items():
+                path[int(trace_pos)] = int(np.clip(np.searchsorted(time_values, float(pick_time)), 0, max_sample))
+            return path
+
+        path_samples = None if model_prediction_used else _continuity_constrained_path_samples()
+
+        updated_count = 0
+        for trace_pos in range(n_traces):
+            if trace_pos in manual_traces:
+                continue
+            predicted = float(predicted_times[trace_pos])
+            if not np.isfinite(predicted):
+                continue
+            predicted = float(np.clip(predicted, float(time_values[0]), float(time_values[max_sample])))
+            if path_samples is not None:
+                sample_idx = int(path_samples[trace_pos])
+            else:
+                center = int(np.clip(np.searchsorted(time_values, predicted), 0, max_sample))
+                lo = int(max(0, center - half_window))
+                hi = int(min(max_sample + 1, center + half_window + 1))
+                lower_bound_idx = int(
+                    np.clip(np.searchsorted(time_values, float(lower_time_bounds[trace_pos]), side="left"), 0, max_sample)
+                )
+                upper_bound_idx = int(
+                    np.clip(np.searchsorted(time_values, float(upper_time_bounds[trace_pos]), side="right"), 1, max_sample + 1)
+                )
+                lo = max(lo, lower_bound_idx)
+                hi = min(hi, upper_bound_idx)
+                if hi <= lo:
+                    lo = int(np.clip(center, lower_bound_idx, max(upper_bound_idx - 1, lower_bound_idx)))
+                    hi = min(max_sample + 1, lo + 1)
+                sample_idx = _nearest_first_break_sample(trace_data[:, trace_pos], center, lo, hi)
+                if max_sample > 2:
+                    sample_idx = int(np.clip(sample_idx, 1, max_sample - 1))
+            picks_work = _update_pick_from_click(
+                picks_work,
+                selected_gather,
+                float(trace_pos),
+                float(time_values[sample_idx]),
+                "Update clicked trace",
+                pick_source="learned",
+            )
+            updated_count += 1
+
+        return picks_work, manual_count, updated_count, ""
+
+    repo_example = PARENT_DIR / "example" / "example" / "example_data.sgy"
+    default_path = str(repo_example) if repo_example.exists() else ""
+
+    def _load_raw_seismic_path(path: Path, max_traces_value: Optional[int]) -> Any:
+        if path.is_dir() or path.suffix.lower() == ".dat":
+            return read_geometrics_dat(str(path), max_traces=max_traces_value)
+        return read_segy(str(path), max_traces=max_traces_value)
+
+    source_col, settings_col = st.columns([2, 1])
+    with source_col:
+        segy_upload = st.file_uploader(
+            "Raw seismic file",
+            type=["sgy", "segy", "dat"],
+            help="Upload one SEG-Y file or one Geometrics DAT shot-gather file. For a Geometrics survey folder, use the local path box below.",
+        )
+        segy_path_text = st.text_input(
+            "Or use a local seismic file/folder path",
+            value=default_path,
+            help="Use a SEG-Y file, a Geometrics .dat file, or a folder containing Geometrics .dat shot gathers.",
+        )
+    with settings_col:
+        max_traces = st.number_input(
+            "Max traces to load",
+            min_value=1,
+            max_value=20000,
+            value=960,
+            step=96,
+            help="Use a smaller value for quick previews; increase for full picking.",
+        )
+        load_all = st.checkbox("Load all traces", value=False)
+        st.number_input(
+            "Receiver spacing (m)",
+            min_value=0.01,
+            step=0.5,
+            key="seismic_receiver_spacing",
+            help="Physical spacing between geophones; used as coordinate fallback when SEG-Y headers lack XY positions.",
+        )
+
+    if st.button("Load seismic data", type="primary", use_container_width=True):
+        try:
+            if segy_upload is not None:
+                temp_dir = Path(tempfile.mkdtemp(prefix="phgx_seismic_"))
+                segy_path = save_upload(segy_upload, temp_dir)
+            else:
+                segy_path = Path(segy_path_text).expanduser()
+            if not segy_path.exists():
+                st.error(f"Seismic file/folder not found: {segy_path}")
+                return
+            with st.spinner("Reading seismic headers and traces..."):
+                dataset = _load_raw_seismic_path(segy_path, max_traces_value=None if load_all else int(max_traces))
+            st.session_state.seismic_dataset = dataset
+            st.session_state.seismic_processed = None
+            st.session_state.seismic_picks_df = None
+            st.session_state.seismic_export_files = {}
+            st.session_state.seismic_srt_result = None
+            st.session_state.seismic_all_picks = {}
+            _reset_pick_edit_state()
+            st.success(f"Loaded {dataset.metadata.trace_count} traces from {Path(dataset.path).name}.")
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Could not read seismic input: {exc}")
+            return
+
+    dataset = st.session_state.get("seismic_dataset")
+    if dataset is None:
+        return
+
+    meta = dataset.metadata
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Traces loaded", meta.trace_count)
+    m2.metric("Samples/trace", meta.samples_per_trace)
+    m3.metric("dt (us)", meta.sample_interval_us)
+    m4.metric("Format code", meta.format_code)
+
+    records = dataset.field_records
+    _all_picks = st.session_state.get("seismic_all_picks") or {}
+    _n_picked = len(_all_picks)
+    _n_total_picks = sum(len(df) for df in _all_picks.values())
+    if _n_picked:
+        st.caption(f"{_n_picked}/{len(records)} gathers picked — {_n_total_picks} total first arrivals")
+    selected_record = st.selectbox("Shot gather", records, index=0, format_func=lambda x: f"Field record {x}")
+
+    # Sync session state when the user switches to a different shot gather.
+    _current_processed = st.session_state.get("seismic_processed")
+    if _current_processed is not None and int(_current_processed.get("field_record", -1)) != int(selected_record):
+        st.session_state.seismic_processed = None
+        _reset_pick_edit_state()
+    # Restore picks for the newly selected gather (if already picked).
+    if selected_record in _all_picks:
+        st.session_state.seismic_picks_df = _all_picks[selected_record].copy(deep=True)
+    elif st.session_state.get("seismic_processed") is None:
+        st.session_state.seismic_picks_df = None
+
+    gather = dataset.get_gather(selected_record)
+
+    control_col, plot_col, pick_col = st.columns([0.95, 2.15, 0.95])
+    with control_col:
+        st.markdown("#### Processing")
+        agc_window = st.number_input("AGC window (s)", min_value=0.0, max_value=1.0, value=0.05, step=0.005)
+        polarity = st.selectbox("Polarity", [1.0, -1.0], index=0, format_func=lambda v: "Normal" if v > 0 else "Reverse")
+        use_bandpass = st.checkbox("Bandpass filter", value=False)
+        if use_bandpass:
+            f1 = st.number_input("f1 (Hz)", min_value=0.1, value=25.0, step=5.0)
+            f2 = st.number_input("f2 (Hz)", min_value=0.1, value=50.0, step=5.0)
+            f3 = st.number_input("f3 (Hz)", min_value=0.1, value=500.0, step=25.0)
+            f4 = st.number_input("f4 (Hz)", min_value=0.1, value=1000.0, step=25.0)
+        else:
+            f1, f2, f3, f4 = 25.0, 50.0, 500.0, 1000.0
+
+        st.markdown("#### First Breaks")
+        threshold = st.slider("Amplitude threshold", min_value=0.01, max_value=0.90, value=0.20, step=0.01)
+        noise_multiplier = st.slider("Noise multiplier", min_value=0.0, max_value=20.0, value=5.0, step=0.5)
+        max_pick_time = st.number_input("Max pick time (s)", min_value=0.001, max_value=5.0, value=0.15, step=0.01)
+        st.markdown("#### Display")
+        display_style = st.selectbox(
+            "Trace display",
+            ["Traditional wiggle", "Amplitude image", "Image + wiggle"],
+            index=0,
+            help="Traditional wiggle makes individual channels easier to inspect; amplitude image preserves the dense color view.",
+        )
+        display_gain = st.slider("Display gain", min_value=0.25, max_value=6.0, value=2.0, step=0.25)
+        clip_percentile = st.slider("Clip percentile", min_value=80, max_value=100, value=95, step=1)
+        channel_guides = st.checkbox("Channel guide lines", value=True)
+        wiggle_step = int(st.number_input("Wiggle every N traces", min_value=1, max_value=48, value=1, step=1))
+        wiggle_fill = st.selectbox(
+            "Wiggle fill",
+            ["Positive amplitude", "Negative amplitude", "None"],
+            index=0,
+            help="Traditional variable-area display: fill one polarity side of each wiggle trace.",
+        )
+
+    def _process_current_gather(reset_edit_state: bool = True) -> None:
+        try:
+            traces = gather.traces.astype(float) * float(polarity)
+            if agc_window > 0:
+                traces = apply_agc(traces, dt=meta.sample_interval_s, window=float(agc_window))
+            if use_bandpass:
+                traces = bandpass_filter(traces, dt=meta.sample_interval_s, f1=f1, f2=f2, f3=f3, f4=f4)
+            processed_gather = SeismicShotGather(
+                field_record=gather.field_record,
+                trace_indices=gather.trace_indices,
+                traces=traces,
+                time=gather.time,
+                channels=gather.channels,
+                offsets=gather.offsets,
+                headers=gather.headers,
+            )
+            picks = pick_first_breaks(
+                processed_gather,
+                threshold=float(threshold),
+                noise_multiplier=float(noise_multiplier),
+                max_time=float(max_pick_time),
+            )
+            st.session_state.seismic_processed = {
+                "field_record": selected_record,
+                "traces": normalize_traces(traces),
+                "raw_traces": traces,
+                "time": gather.time,
+                "channels": gather.channels,
+                "trace_indices": gather.trace_indices,
+            }
+            st.session_state.seismic_picks_df = pd.DataFrame([pick.to_dict() for pick in picks])
+            if not st.session_state.seismic_picks_df.empty:
+                st.session_state.seismic_picks_df["pick_source"] = "auto"
+                st.session_state.seismic_picks_df["auto_time_s"] = st.session_state.seismic_picks_df["time_s"]
+            # Persist picks for this gather so they survive gather switches.
+            _gather_all_picks = st.session_state.get("seismic_all_picks") or {}
+            _gather_all_picks[selected_record] = st.session_state.seismic_picks_df.copy(deep=True)
+            st.session_state.seismic_all_picks = _gather_all_picks
+            st.session_state.seismic_export_files = {}
+            st.session_state.seismic_srt_result = None
+            st.session_state.seismic_velocity_model = None
+            if reset_edit_state:
+                _reset_pick_edit_state()
+            else:
+                st.session_state.seismic_pick_redo = []
+                st.session_state.seismic_active_trace = None
+                st.session_state.seismic_active_time = None
+                st.session_state.seismic_last_click_signature = ""
+                st.session_state.seismic_velocity_model = None
+            st.success(f"Picked {len(picks)} first arrivals for field record {selected_record}.")
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Processing failed: {exc}")
+
+    _proc_col, _auto_col = st.columns(2)
+    with _proc_col:
+        if st.button("Process gather and pick first breaks", type="primary", use_container_width=True):
+            _process_current_gather()
+    with _auto_col:
+        if st.button("Auto-pick all gathers", use_container_width=True,
+                     help="Apply current picking settings to every shot gather in the dataset."):
+            _auto_all = st.session_state.get("seismic_all_picks") or {}
+            _auto_prog = st.progress(0.0, text="Auto-picking gathers…")
+            _auto_total = len(dataset.field_records)
+            _auto_n_picks = 0
+            for _auto_i, _auto_rec in enumerate(dataset.field_records):
+                try:
+                    _auto_g = dataset.get_gather(_auto_rec)
+                    _auto_tr = _auto_g.traces.astype(float) * float(polarity)
+                    if agc_window > 0:
+                        _auto_tr = apply_agc(_auto_tr, dt=meta.sample_interval_s, window=float(agc_window))
+                    if use_bandpass:
+                        _auto_tr = bandpass_filter(_auto_tr, dt=meta.sample_interval_s, f1=f1, f2=f2, f3=f3, f4=f4)
+                    _auto_sg = SeismicShotGather(
+                        field_record=_auto_g.field_record,
+                        trace_indices=_auto_g.trace_indices,
+                        traces=_auto_tr,
+                        time=_auto_g.time,
+                        channels=_auto_g.channels,
+                        offsets=_auto_g.offsets,
+                        headers=_auto_g.headers,
+                    )
+                    _auto_picks = pick_first_breaks(
+                        _auto_sg,
+                        threshold=float(threshold),
+                        noise_multiplier=float(noise_multiplier),
+                        max_time=float(max_pick_time),
+                    )
+                    _auto_df = pd.DataFrame([p.to_dict() for p in _auto_picks])
+                    if not _auto_df.empty:
+                        _auto_df["pick_source"] = "auto"
+                        _auto_df["auto_time_s"] = _auto_df["time_s"]
+                    _auto_all[_auto_rec] = _auto_df
+                    _auto_n_picks += len(_auto_picks)
+                except Exception:  # noqa: BLE001
+                    pass
+                _auto_prog.progress(
+                    (_auto_i + 1) / max(1, _auto_total),
+                    text=f"Auto-picking: {_auto_i + 1}/{_auto_total} gathers…",
+                )
+            st.session_state.seismic_all_picks = _auto_all
+            if selected_record in _auto_all:
+                st.session_state.seismic_picks_df = _auto_all[selected_record].copy(deep=True)
+            st.session_state.seismic_export_files = {}
+            st.session_state.seismic_velocity_model = None
+            st.success(f"Auto-picked {_auto_total} gathers — {_auto_n_picks} total first arrivals.")
+
+    processed = st.session_state.get("seismic_processed")
+    picks_df = st.session_state.get("seismic_picks_df")
+
+    if processed is not None:
+        active_text = "None"
+        if st.session_state.get("seismic_active_trace") is not None:
+            active_text = (
+                f"Trace {int(st.session_state.seismic_active_trace)} at "
+                f"{float(st.session_state.seismic_active_time or 0.0):.5f} s"
+            )
+        st.caption(f"Active pick: {active_text}")
+        tool_cols = st.columns(5)
+        if tool_cols[0].button("Auto re-pick", use_container_width=True):
+            _push_pick_history()
+            _process_current_gather(reset_edit_state=False)
+        if tool_cols[1].button("Undo", use_container_width=True, disabled=not st.session_state.get("seismic_pick_history")):
+            current = st.session_state.seismic_picks_df
+            previous = st.session_state.seismic_pick_history.pop()
+            redo = list(st.session_state.get("seismic_pick_redo") or [])
+            if current is not None:
+                redo.append(current.copy(deep=True))
+            st.session_state.seismic_pick_redo = redo[-30:]
+            st.session_state.seismic_picks_df = previous
+            _sync_picks_for_record(selected_record, st.session_state.seismic_picks_df)
+            st.session_state.seismic_export_files = {}
+            st.session_state.seismic_velocity_model = None
+            _bump_manual_picker_version()
+            st.rerun()
+        if tool_cols[2].button("Redo", use_container_width=True, disabled=not st.session_state.get("seismic_pick_redo")):
+            current = st.session_state.seismic_picks_df
+            next_df = st.session_state.seismic_pick_redo.pop()
+            history = list(st.session_state.get("seismic_pick_history") or [])
+            if current is not None:
+                history.append(current.copy(deep=True))
+            st.session_state.seismic_pick_history = history[-30:]
+            st.session_state.seismic_picks_df = next_df
+            _sync_picks_for_record(selected_record, st.session_state.seismic_picks_df)
+            st.session_state.seismic_export_files = {}
+            st.session_state.seismic_velocity_model = None
+            _bump_manual_picker_version()
+            st.rerun()
+        if tool_cols[3].button("Delete active", use_container_width=True):
+            _delete_active_pick(gather)
+        if tool_cols[4].button("Clear picks", use_container_width=True, disabled=picks_df is None or picks_df.empty):
+            _push_pick_history()
+            st.session_state.seismic_picks_df = pd.DataFrame(columns=list(picks_df.columns))
+            _sync_picks_for_record(selected_record, st.session_state.seismic_picks_df)
+            st.session_state.seismic_export_files = {}
+            st.session_state.seismic_velocity_model = None
+            _bump_manual_picker_version()
+            st.rerun()
+
+    manual_trace: Optional[int] = None
+    manual_time: Optional[float] = None
+    with pick_col:
+        if processed is not None:
+            st.markdown("#### Pick")
+            manual_picks_df = st.session_state.get("seismic_picks_df")
+            manual_count = _manual_pick_count(manual_picks_df)
+            nonmanual_count = _nonmanual_pick_count(manual_picks_df)
+            dt_step = float(meta.sample_interval_s)
+            if not np.isfinite(dt_step) or dt_step <= 0:
+                dt_step = 0.001
+            n_traces = int(gather.traces.shape[1])
+
+            st.markdown("##### Review workflow")
+            st.caption(
+                "Let the app choose anchor traces first; review those suggestions, then fine-tune remaining picks only where needed."
+            )
+            anchor_target = int(min(n_traces, max(4, min(12, round(n_traces / 12)))))
+            anchor_traces, pending_anchor_traces, confirmed_anchor_count = _anchor_review_status(manual_picks_df, gather)
+            anchor_cols = st.columns(2)
+            choose_anchor_label = "Auto choose anchors" if not anchor_traces else "Refresh anchors"
+            if anchor_cols[0].button(
+                choose_anchor_label,
+                type="primary" if not anchor_traces else "secondary",
+                use_container_width=True,
+                disabled=manual_picks_df is None,
+                key=f"seismic_auto_choose_anchors_{selected_record}",
+                help="Select representative and uncertain traces for quick manual review.",
+            ):
+                suggested_anchors = _suggest_anchor_review_traces(
+                    manual_picks_df,
+                    gather,
+                    processed,
+                    target_count=anchor_target,
+                )
+                st.session_state.seismic_anchor_review_traces = suggested_anchors
+                manual_positions = _manual_trace_positions(manual_picks_df, gather)
+                positive_candidates = [
+                    trace
+                    for trace in suggested_anchors
+                    if trace not in manual_positions
+                    and _pick_time_for_trace(manual_picks_df, gather, int(trace), fallback=float("nan")) > dt_step * 2.0
+                ]
+                next_trace = next(
+                    iter(positive_candidates),
+                    next((trace for trace in suggested_anchors if trace not in manual_positions), suggested_anchors[0]),
+                )
+                st.session_state.seismic_active_trace = int(next_trace)
+                st.session_state.seismic_active_time = _pick_time_for_trace(
+                    manual_picks_df,
+                    gather,
+                    int(next_trace),
+                    fallback=float(st.session_state.get("seismic_active_time") or 0.0),
+                )
+                st.session_state.seismic_focus_view_pending = True
+                _bump_manual_picker_version()
+                st.rerun()
+            if anchor_cols[1].button(
+                "Next suggested anchor",
+                use_container_width=True,
+                disabled=not pending_anchor_traces,
+                key=f"seismic_next_anchor_{selected_record}",
+                help="Move to the next app-selected anchor trace that still needs confirmation.",
+            ):
+                next_trace = _next_review_trace(
+                    manual_picks_df,
+                    gather,
+                    current_trace=int(st.session_state.get("seismic_active_trace") or 0),
+                    step=1,
+                    mode="Next non-manual",
+                )
+                st.session_state.seismic_active_trace = int(next_trace)
+                st.session_state.seismic_active_time = _pick_time_for_trace(
+                    manual_picks_df,
+                    gather,
+                    int(next_trace),
+                    fallback=float(st.session_state.get("seismic_active_time") or 0.0),
+                )
+                st.session_state.seismic_focus_view_pending = True
+                _bump_manual_picker_version()
+                st.rerun()
+            if anchor_traces:
+                st.progress(confirmed_anchor_count / max(1, len(anchor_traces)))
+                st.caption(
+                    f"Suggested anchors: {confirmed_anchor_count}/{len(anchor_traces)} confirmed; "
+                    f"{len(pending_anchor_traces)} left. Remaining auto/learned picks: {nonmanual_count}."
+                )
+            else:
+                st.caption(f"No suggested anchors yet. Remaining auto picks: {nonmanual_count}.")
+
+            st.checkbox(
+                "Jump after saving a pick",
+                key="seismic_auto_advance_after_save",
+                help="After accepting or saving a pick, jump to the next suggested anchor first, then to remaining unconfirmed traces.",
+            )
+            st.checkbox(
+                "Update later picks after each saved anchor",
+                key="seismic_update_after_save",
+                help="Suggested anchors update automatically after saving an anchor; this also updates the remaining auto/learned traces.",
+            )
+            advance_modes = ["Next non-manual", "Step forward", "Next trace"]
+            advance_mode_labels = {
+                "Next non-manual": "Suggested anchors first (recommended)",
+                "Step forward": "Every N traces",
+                "Next trace": "Immediate next trace",
+            }
+            if st.session_state.get("seismic_advance_mode") not in advance_modes:
+                st.session_state.seismic_advance_mode = advance_modes[0]
+            with st.expander("Advanced review order", expanded=False):
+                advance_mode = st.selectbox(
+                    "After save, review",
+                    advance_modes,
+                    key="seismic_advance_mode",
+                    format_func=lambda value: advance_mode_labels.get(value, value),
+                    help="Recommended mode follows suggested anchors first, then skips picks already saved as manual anchors.",
+                )
+                if advance_mode == "Step forward":
+                    advance_step = int(
+                        st.number_input(
+                            "Review every N traces",
+                            min_value=1,
+                            max_value=max(1, n_traces),
+                            step=1,
+                            key="seismic_advance_trace_step",
+                            help="Example: 5 reviews trace 0, 5, 10, and so on.",
+                        )
+                    )
+                else:
+                    advance_step = int(st.session_state.get("seismic_advance_trace_step") or 1)
+                    st.session_state.seismic_advance_trace_step = int(np.clip(advance_step, 1, max(1, n_traces)))
+
+            st.markdown("##### Pick time")
+            trace_default = int(st.session_state.get("seismic_active_trace") or 0)
+            trace_default = int(np.clip(trace_default, 0, max(0, n_traces - 1)))
+            manual_version = int(st.session_state.get("seismic_manual_picker_version") or 0)
+            manual_trace = int(
+                st.number_input(
+                    "Trace/channel",
+                    min_value=0,
+                    max_value=max(0, n_traces - 1),
+                    value=trace_default,
+                    step=1,
+                    key=f"seismic_manual_trace_{selected_record}_{manual_version}",
+                    help="Trace index on the displayed gather.",
+                    on_change=_activate_pick_focus_view,
+                )
+            )
+            fallback_time = float(min(max_pick_time, gather.time[min(len(gather.time) - 1, max(1, len(gather.time) // 5))]))
+            existing_time = _pick_time_for_trace(manual_picks_df, gather, manual_trace, fallback=fallback_time)
+            manual_time = float(
+                st.slider(
+                    "Travel time bar (s)",
+                    min_value=0.0,
+                    max_value=float(max_pick_time),
+                    value=float(np.clip(existing_time, 0.0, float(max_pick_time))),
+                    step=dt_step,
+                    format="%.5f",
+                    key=f"seismic_manual_time_bar_{selected_record}_{manual_trace}_{manual_version}",
+                    help="Move this bar while checking the highlighted pick on the plot.",
+                    on_change=_activate_pick_focus_view,
+                )
+            )
+            manual_time = float(
+                st.number_input(
+                    "Exact travel time (s)",
+                    min_value=0.0,
+                    max_value=float(max_pick_time),
+                    value=manual_time,
+                    step=dt_step,
+                    format="%.6f",
+                    key=f"seismic_manual_time_exact_{selected_record}_{manual_trace}_{manual_version}_{manual_time:.6f}",
+                    on_change=_activate_pick_focus_view,
+                )
+            )
+            if st.session_state.get("seismic_focus_view_pending"):
+                st.session_state.seismic_focus_view_active = True
+                st.session_state.seismic_focus_view_pending = False
+            keep_local_view = st.checkbox(
+                "Keep local view",
+                key="seismic_focus_view_active",
+                help="Lock the plot around the selected trace/time while adjusting picks.",
+            )
+            if keep_local_view:
+                if int(st.session_state.get("seismic_focus_trace_halfwidth") or 0) < 4:
+                    st.session_state.seismic_focus_trace_halfwidth = 18
+                if float(st.session_state.get("seismic_focus_time_halfwidth") or 0.0) <= dt_step * 2:
+                    st.session_state.seismic_focus_time_halfwidth = min(0.025, max(float(max_pick_time), dt_step))
+                view_cols = st.columns(2)
+                trace_window_value = int(
+                    view_cols[0].number_input(
+                        "Trace window",
+                        min_value=4,
+                        max_value=max(4, n_traces),
+                        value=int(st.session_state.get("seismic_focus_trace_halfwidth") or 18),
+                        step=1,
+                        key=f"seismic_focus_trace_halfwidth_input_{selected_record}",
+                        help="Half-width in traces around the selected channel.",
+                    )
+                )
+                time_window_value = float(
+                    view_cols[1].number_input(
+                        "Time window (s)",
+                        min_value=dt_step,
+                        max_value=max(float(max_pick_time), dt_step),
+                        value=float(st.session_state.get("seismic_focus_time_halfwidth") or 0.025),
+                        step=dt_step,
+                        format="%.4f",
+                        key=f"seismic_focus_time_halfwidth_input_{selected_record}",
+                        help="Half-window in seconds around the selected travel time.",
+                    )
+                )
+                st.session_state.seismic_focus_trace_halfwidth = trace_window_value
+                st.session_state.seismic_focus_time_halfwidth = time_window_value
+            learn_window = float(st.session_state.get("seismic_learn_window") or 0.008)
+            if not np.isfinite(learn_window) or learn_window <= 0:
+                learn_window = min(0.008, max(float(max_pick_time), dt_step))
+            learning_methods = ["1D velocity model", "Continuity/waveform"]
+            if st.session_state.get("seismic_learning_method") not in learning_methods:
+                st.session_state.seismic_learning_method = learning_methods[0]
+            with st.expander("Learning settings", expanded=False):
+                learning_method = st.selectbox(
+                    "Auto update method",
+                    learning_methods,
+                    key="seismic_learning_method",
+                    help="The default fits a piecewise-linear apparent-velocity model in source-receiver offset space.",
+                )
+                learn_window = float(
+                    st.number_input(
+                        "Local correction half-window (s)",
+                        min_value=dt_step,
+                        max_value=max(float(max_pick_time), dt_step),
+                        step=dt_step,
+                        format="%.6f",
+                        key="seismic_learn_window",
+                        help="For the velocity model, waveform search is limited to this window around the model prediction.",
+                    )
+                )
+                if learning_method == "1D velocity model":
+                    st.caption(
+                        "Default: estimate straight slope segments from manual anchors in offset space; each slope is treated as one apparent-velocity layer."
+                    )
+                else:
+                    st.caption("Fallback: use the older continuity-constrained waveform path in trace-index space.")
+            velocity_model = st.session_state.get("seismic_velocity_model")
+            if learning_method == "1D velocity model" and velocity_model is not None and getattr(velocity_model, "segments", None):
+                rms_ms = float(getattr(velocity_model, "residual_rms_s", np.nan)) * 1000.0
+                model_rows = []
+                for segment in velocity_model.segments:
+                    model_rows.append(
+                        {
+                            "Layer": int(segment.segment_index),
+                            "Branch": str(segment.branch_id),
+                            "Offset range (m)": f"{segment.x_min:.1f}-{segment.x_max:.1f}",
+                            "v_app (m/s)": f"{segment.apparent_velocity_m_s:.0f}",
+                            "t0 (ms)": f"{segment.intercept_s * 1000.0:.2f}",
+                            "z approx. (m)": (
+                                f"{segment.depth_estimate_m:.1f}"
+                                if segment.depth_estimate_m is not None and np.isfinite(segment.depth_estimate_m)
+                                else ""
+                            ),
+                        }
+                    )
+                st.caption(
+                    f"Current 1D model: {len(velocity_model.segments)} estimated slope/layer segment"
+                    f"{'' if len(velocity_model.segments) == 1 else 's'}; manual anchors exact"
+                    + (f"; RMS {rms_ms:.2f} ms" if np.isfinite(rms_ms) else "")
+                )
+                st.dataframe(pd.DataFrame(model_rows), use_container_width=True, hide_index=True)
+                if any(getattr(segment, "depth_estimate_m", None) is not None for segment in velocity_model.segments):
+                    st.caption("Depth values are approximate intercept-time guidance, not final geology.")
+            auto_learn_after_manual = bool(st.session_state.get("seismic_update_after_save"))
+
+            st.markdown("##### Save")
+            st.caption("The green preview marker is stored only after saving it as a manual pick.")
+
+            def _save_current_panel_pick(force_next: bool = False) -> None:
+                if not np.isfinite(float(manual_time)) or float(manual_time) <= 0:
+                    st.warning("Choose a positive first-arrival travel time before saving this anchor.")
+                    return
+                _push_pick_history()
+                current_trace = int(manual_trace)
+                current_is_review_anchor = current_trace in set(_valid_anchor_review_traces(gather))
+                updated_df = _update_pick_from_click(
+                    st.session_state.get("seismic_picks_df"),
+                    gather,
+                    float(current_trace),
+                    float(manual_time),
+                    "Update clicked trace",
+                    pick_source="manual",
+                )
+                should_update_suggestions = auto_learn_after_manual or current_is_review_anchor
+                if should_update_suggestions:
+                    learned_df, learned_manual_count, learned_count, learn_error = _update_remaining_from_manual_pattern(
+                        updated_df,
+                        gather,
+                        processed,
+                        search_window_s=learn_window,
+                        max_time_s=float(max_pick_time),
+                        learning_method=str(st.session_state.get("seismic_learning_method") or "1D velocity model"),
+                    )
+                    if learn_error:
+                        st.warning(learn_error)
+                    elif learned_count > 0:
+                        updated_df = learned_df
+                else:
+                    st.session_state.seismic_velocity_model = None
+                st.session_state.seismic_picks_df = updated_df
+                _sync_picks_for_record(selected_record, updated_df)
+                _advance_trace_after_save(
+                    updated_df,
+                    gather,
+                    current_trace,
+                    float(manual_time),
+                    fallback_step=int(advance_step),
+                    mode=str(advance_mode),
+                    force=force_next or current_is_review_anchor,
+                )
+                st.session_state.seismic_export_files = {}
+                _bump_manual_picker_version()
+
+            if st.button(
+                "Save pick",
+                type="primary",
+                use_container_width=True,
+                key=f"seismic_save_manual_{selected_record}",
+                help="Save the selected trace/time as a manual first-arrival pick.",
+            ):
+                _save_current_panel_pick(force_next=False)
+                st.rerun()
+
+            fast_cols = st.columns(2)
+            if fast_cols[0].button(
+                "Accept current & next",
+                use_container_width=True,
+                disabled=manual_picks_df is None,
+                key=f"seismic_accept_current_{selected_record}",
+                help="Save the current trace/time and jump to the next review trace.",
+            ):
+                _save_current_panel_pick(force_next=True)
+                st.rerun()
+            if fast_cols[1].button(
+                "Skip without saving",
+                use_container_width=True,
+                disabled=manual_picks_df is None,
+                key=f"seismic_next_review_{selected_record}",
+                help="Move to the next review trace without changing the current pick.",
+            ):
+                next_trace = _next_review_trace(
+                    manual_picks_df,
+                    gather,
+                    current_trace=int(manual_trace),
+                    step=int(advance_step),
+                    mode=str(advance_mode),
+                )
+                st.session_state.seismic_active_trace = int(next_trace)
+                st.session_state.seismic_active_time = _pick_time_for_trace(
+                    manual_picks_df,
+                    gather,
+                    int(next_trace),
+                    fallback=float(manual_time),
+                )
+                st.session_state.seismic_focus_view_pending = True
+                _bump_manual_picker_version()
+                st.rerun()
+
+            if st.button(
+                "Delete trace pick",
+                use_container_width=True,
+                disabled=manual_picks_df is None,
+                key=f"seismic_delete_trace_pick_{selected_record}",
+            ):
+                _push_pick_history()
+                updated_df = _update_pick_from_click(
+                    st.session_state.get("seismic_picks_df"),
+                    gather,
+                    float(manual_trace),
+                    float(manual_time),
+                    "Delete clicked trace",
+                )
+                st.session_state.seismic_picks_df = updated_df
+                _sync_picks_for_record(selected_record, updated_df)
+                st.session_state.seismic_export_files = {}
+                st.session_state.seismic_velocity_model = None
+                _bump_manual_picker_version()
+                st.rerun()
+            if st.button(
+                "Learn/update remaining",
+                use_container_width=True,
+                disabled=manual_count < 1 or manual_picks_df is None or manual_picks_df.empty,
+                help="Fit the manual anchors and update only auto/learned traces. With one anchor, weak auto hints stabilize the first model.",
+                key=f"seismic_learn_remaining_{selected_record}",
+            ):
+                _push_pick_history()
+                learned_df, learned_manual_count, learned_count, learn_error = _update_remaining_from_manual_pattern(
+                    manual_picks_df,
+                    gather,
+                    processed,
+                    search_window_s=learn_window,
+                    max_time_s=float(max_pick_time),
+                    learning_method=str(st.session_state.get("seismic_learning_method") or "1D velocity model"),
+                )
+                if learn_error:
+                    st.warning(learn_error)
+                else:
+                    st.session_state.seismic_picks_df = learned_df
+                    _sync_picks_for_record(selected_record, learned_df)
+                    st.session_state.seismic_export_files = {}
+                    _bump_manual_picker_version()
+                    st.success(f"Updated {learned_count} non-manual picks from {learned_manual_count} manual anchors.")
+                    st.rerun()
+            st.caption(f"Manual anchors: {manual_count}; remaining auto/learned picks: {nonmanual_count}")
+
+    with plot_col:
+        if processed is not None:
+            traces = np.asarray(processed["traces"], dtype=float)
+            time = np.asarray(processed["time"], dtype=float)
+            stop = int(np.searchsorted(time, max_pick_time, side="right"))
+            stop = max(2, min(stop, len(time)))
+            raw_display = traces[:stop, :]
+            display = raw_display * float(display_gain)
+            finite_abs = np.abs(raw_display[np.isfinite(raw_display)])
+            clip = float(np.percentile(finite_abs, clip_percentile)) if finite_abs.size else 1.0
+            if not np.isfinite(clip) or clip <= 0:
+                clip = 1.0
+            plot_x = np.arange(traces.shape[1], dtype=float)
+            plot_step = max(1, int(np.ceil(stop / 450)))
+            plot_time = time[:stop:plot_step]
+            plot_raw = raw_display[::plot_step, :]
+            plot_display = display[::plot_step, :]
+
+            fig = go.Figure()
+            draw_image = display_style in {"Amplitude image", "Image + wiggle"}
+            draw_wiggles = display_style in {"Traditional wiggle", "Image + wiggle"}
+
+            if draw_image:
+                fig.add_trace(
+                    go.Heatmap(
+                        z=np.clip(plot_display, -clip, clip),
+                        x=plot_x,
+                        y=plot_time,
+                        colorscale=[
+                            [0.0, "#08306b"],
+                            [0.48, "#f7fbff"],
+                            [0.5, "#ffffff"],
+                            [0.52, "#fff5f0"],
+                            [1.0, "#99000d"],
+                        ],
+                        zmin=-clip,
+                        zmax=clip,
+                        showscale=False,
+                        hovertemplate="Trace %{x:.0f}<br>Time %{y:.5f} s<br>Amp %{z:.3g}<extra></extra>",
+                    )
+                )
+
+            if channel_guides:
+                guide_x: List[float] = []
+                guide_y: List[float] = []
+                guide_stride = 1 if traces.shape[1] <= 120 else max(1, traces.shape[1] // 120)
+                for trace_pos in range(0, traces.shape[1], guide_stride):
+                    guide_x.extend([float(trace_pos), float(trace_pos), np.nan])
+                    guide_y.extend([0.0, float(plot_time[-1]), np.nan])
+                fig.add_trace(
+                    go.Scattergl(
+                        x=guide_x,
+                        y=guide_y,
+                        mode="lines",
+                        line={"color": "rgba(35,35,35,0.18)", "width": 0.6},
+                        hoverinfo="skip",
+                        showlegend=False,
+                        name="Channel guides",
+                    )
+                )
+
+            if draw_wiggles:
+                wiggle_ref = float(np.percentile(finite_abs, 95)) if finite_abs.size else 1.0
+                trace_scale = 0.46 * float(display_gain) / max(wiggle_ref, 1e-12)
+                fill_x: List[float] = []
+                fill_y: List[float] = []
+                wiggle_x: List[float] = []
+                wiggle_y: List[float] = []
+                wiggle_stride = max(1, int(wiggle_step))
+                for trace_pos in range(0, traces.shape[1], wiggle_stride):
+                    x_vals = trace_pos + np.clip(plot_raw[:, trace_pos] * trace_scale, -0.48, 0.48)
+                    if wiggle_fill != "None":
+                        if wiggle_fill == "Positive amplitude":
+                            fill_side = np.maximum(x_vals, float(trace_pos))
+                        else:
+                            fill_side = np.minimum(x_vals, float(trace_pos))
+                        baseline = np.full_like(fill_side, float(trace_pos), dtype=float)
+                        fill_x.extend(fill_side.astype(float).tolist())
+                        fill_y.extend(plot_time.astype(float).tolist())
+                        fill_x.extend(baseline[::-1].astype(float).tolist())
+                        fill_y.extend(plot_time[::-1].astype(float).tolist())
+                        fill_x.append(np.nan)
+                        fill_y.append(np.nan)
+                    wiggle_x.extend(x_vals.astype(float).tolist())
+                    wiggle_y.extend(plot_time.astype(float).tolist())
+                    wiggle_x.append(np.nan)
+                    wiggle_y.append(np.nan)
+                if wiggle_fill != "None" and fill_x:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=fill_x,
+                            y=fill_y,
+                            mode="lines",
+                            fill="toself",
+                            fillcolor="rgba(0,0,0,0.55)",
+                            line={"color": "rgba(0,0,0,0)", "width": 0},
+                            hoverinfo="skip",
+                            showlegend=False,
+                            name="Variable-area fill",
+                        )
+                    )
+                fig.add_trace(
+                    go.Scattergl(
+                        x=wiggle_x,
+                        y=wiggle_y,
+                        mode="lines",
+                        line={"color": "rgba(0,0,0,0.86)", "width": 1.1},
+                        hoverinfo="skip",
+                        showlegend=False,
+                        name="Wiggle traces",
+                    )
+                )
+                if not draw_image:
+                    fig.add_trace(
+                        go.Heatmap(
+                            z=plot_raw,
+                            x=plot_x,
+                            y=plot_time,
+                            colorscale=[
+                                [0.0, "rgba(255,255,255,0)"],
+                                [1.0, "rgba(255,255,255,0)"],
+                            ],
+                            showscale=False,
+                            hovertemplate=(
+                                "Trace %{x:.0f}<br>"
+                                "Time %{y:.5f} s<br>"
+                                "Amp %{z:.3g}<extra></extra>"
+                            ),
+                            name="Trace/time hover",
+                            showlegend=False,
+                            hoverongaps=False,
+                        )
+                    )
+
+            velocity_model = st.session_state.get("seismic_velocity_model")
+            model_times = getattr(velocity_model, "predicted_times", None)
+            if model_times is not None:
+                model_times_arr = np.asarray(model_times, dtype=float)
+                if model_times_arr.size == traces.shape[1]:
+                    model_mask = (
+                        np.isfinite(model_times_arr)
+                        & (model_times_arr >= float(plot_time[0]))
+                        & (model_times_arr <= float(plot_time[-1]))
+                    )
+                    if model_mask.any():
+                        fig.add_trace(
+                            go.Scattergl(
+                                x=plot_x[model_mask],
+                                y=model_times_arr[model_mask],
+                                mode="lines",
+                                line={"color": "#7b3294", "width": 3, "dash": "dash"},
+                                name="1D velocity model",
+                                hovertemplate="Trace %{x:.0f}<br>Model %{y:.5f} s<extra></extra>",
+                            )
+                        )
+
+            plot_picks_df = picks_df
+            if plot_picks_df is not None and not plot_picks_df.empty:
+                plot_picks_df = plot_picks_df.copy(deep=True)
+                pick_x = _local_trace_positions(plot_picks_df, gather)
+                if manual_trace is not None and manual_time is not None:
+                    selected_matches = np.where(pick_x == int(manual_trace))[0]
+                    if selected_matches.size:
+                        selected_index = plot_picks_df.index[int(selected_matches[0])]
+                        plot_picks_df.loc[selected_index, "time_s"] = float(manual_time)
+                        plot_picks_df.loc[selected_index, "pick_source"] = "manual"
+                        plot_picks_df.loc[selected_index, "preview_only"] = True
+                    else:
+                        sample_idx = int(
+                            np.clip(np.searchsorted(gather.time, float(manual_time)), 0, len(gather.time) - 1)
+                        )
+                        preview_row = _pick_row_for_click(
+                            gather,
+                            int(manual_trace),
+                            sample_idx,
+                            pick_source="manual",
+                        )
+                        preview_row["preview_only"] = True
+                        plot_picks_df = pd.concat([plot_picks_df, pd.DataFrame([preview_row])], ignore_index=True)
+                    pick_x = _local_trace_positions(plot_picks_df, gather)
+                anchor_set = set(_valid_anchor_review_traces(gather))
+                if anchor_set:
+                    if "pick_source" not in plot_picks_df.columns:
+                        plot_picks_df["pick_source"] = "auto"
+                    source_series = plot_picks_df["pick_source"].fillna("auto").astype(str).str.lower()
+                    anchor_mask = np.asarray(
+                        [np.isfinite(value) and int(value) in anchor_set for value in pick_x],
+                        dtype=bool,
+                    ) & (source_series.to_numpy() != "manual")
+                    if anchor_mask.any():
+                        plot_picks_df.loc[anchor_mask, "pick_source"] = "anchor"
+                valid = np.isfinite(pick_x) & np.isfinite(plot_picks_df["time_s"].astype(float).to_numpy())
+                if "pick_source" in plot_picks_df.columns:
+                    pick_sources = plot_picks_df["pick_source"].fillna("auto").astype(str).str.lower().to_numpy()
+                else:
+                    pick_sources = np.full(len(plot_picks_df), "auto", dtype=object)
+                pick_styles = [
+                    ("manual", "Manual picks", "#00843d", "circle", 13),
+                    ("anchor", "Suggested anchors", "#ff9f1c", "star", 12),
+                    ("learned", "Learned picks", "#fdae61", "diamond", 9),
+                    ("auto", "Auto picks", "#d7191c", "x", 9),
+                ]
+                for source_name, trace_name, color, symbol, size in pick_styles:
+                    source_mask = valid & (pick_sources == source_name)
+                    if not source_mask.any():
+                        continue
+                    fig.add_trace(
+                        go.Scatter(
+                            x=pick_x[source_mask],
+                            y=plot_picks_df.loc[source_mask, "time_s"].astype(float),
+                            mode="markers",
+                            marker={"color": color, "size": size, "symbol": symbol, "line": {"width": 2}},
+                            name=trace_name,
+                            hovertemplate=(
+                                "Trace %{x:.0f}<br>Pick %{y:.5f} s"
+                                f"<br>Source {source_name}<extra></extra>"
+                            ),
+                        )
+                    )
+                other_mask = valid & ~np.isin(pick_sources, ["manual", "anchor", "learned", "auto"])
+                if other_mask.any():
+                    fig.add_trace(
+                        go.Scatter(
+                            x=pick_x[other_mask],
+                            y=plot_picks_df.loc[other_mask, "time_s"].astype(float),
+                            mode="markers",
+                            marker={"color": "#7b3294", "size": 9, "symbol": "x", "line": {"width": 2}},
+                            name="Other picks",
+                            hovertemplate="Trace %{x:.0f}<br>Pick %{y:.5f} s<extra></extra>",
+                        )
+                    )
+            if manual_trace is not None and manual_time is not None:
+                fig.add_trace(
+                    go.Scattergl(
+                        x=[float(manual_trace), float(manual_trace)],
+                        y=[0.0, float(plot_time[-1])],
+                        mode="lines",
+                        line={"color": "rgba(0,132,61,0.70)", "width": 2, "dash": "dash"},
+                        hoverinfo="skip",
+                        showlegend=False,
+                        name="Selected trace",
+                    )
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=[float(manual_trace)],
+                        y=[float(manual_time)],
+                        mode="markers+text",
+                        marker={
+                            "color": "#00843d",
+                            "size": 18,
+                            "symbol": "circle",
+                            "line": {"color": "#ffffff", "width": 3},
+                        },
+                        text=["preview"],
+                        textposition="top center",
+                        textfont={"color": "#00843d", "size": 11},
+                        name="Selected manual time",
+                        hovertemplate="Selected trace %{x:.0f}<br>Time %{y:.5f} s<extra></extra>",
+                    )
+                )
+                fig.add_trace(
+                    go.Scattergl(
+                        x=[
+                            max(-0.5, float(manual_trace) - 2.5),
+                            min(float(traces.shape[1] - 0.5), float(manual_trace) + 2.5),
+                        ],
+                        y=[float(manual_time), float(manual_time)],
+                        mode="lines",
+                        line={"color": "rgba(0,132,61,0.60)", "width": 2, "dash": "dot"},
+                        hoverinfo="skip",
+                        showlegend=False,
+                        name="Selected time guide",
+                    )
+                )
+            fig.update_layout(
+                height=560,
+                margin={"l": 55, "r": 15, "t": 35, "b": 45},
+                xaxis_title="Trace",
+                yaxis_title="Time (s)",
+                title=f"Field record {processed['field_record']} - {display_style}",
+                dragmode="pan",
+                hovermode="closest",
+                # Keep user pan/zoom while the pick preview moves during slider edits.
+                # Changing gather or display mode should still reset to a sensible full view.
+                uirevision=f"seismic-{processed['field_record']}-{display_style}",
+            )
+            axis_revision = f"seismic-axis-{processed['field_record']}-{display_style}"
+            if (
+                st.session_state.get("seismic_focus_view_active")
+                and manual_trace is not None
+                and manual_time is not None
+            ):
+                trace_halfwidth = int(st.session_state.get("seismic_focus_trace_halfwidth") or 18)
+                time_halfwidth = float(st.session_state.get("seismic_focus_time_halfwidth") or 0.025)
+                x_min = max(-0.5, float(manual_trace) - float(trace_halfwidth))
+                x_max = min(float(traces.shape[1]) - 0.5, float(manual_trace) + float(trace_halfwidth))
+                y_min = max(0.0, float(manual_time) - time_halfwidth)
+                y_max = min(float(plot_time[-1]), float(manual_time) + time_halfwidth)
+                if y_max <= y_min:
+                    y_max = min(float(plot_time[-1]), y_min + max(time_halfwidth, float(meta.sample_interval_s)))
+                fig.update_xaxes(range=[x_min, x_max], uirevision=axis_revision)
+                fig.update_yaxes(range=[y_max, y_min], autorange=False, uirevision=axis_revision)
+            else:
+                fig.update_xaxes(uirevision=axis_revision)
+                fig.update_yaxes(autorange="reversed", uirevision=axis_revision)
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True,
+                key=f"seismic_display_plot_{processed['field_record']}",
+                config={
+                    "displayModeBar": True,
+                    "displaylogo": False,
+                    "scrollZoom": True,
+                },
+            )
+        else:
+            st.info("Load a SEG-Y file or Geometrics DAT survey, select a gather, then run processing to preview picks.")
+
+    if picks_df is not None and not picks_df.empty:
+        st.markdown("#### Review Picks")
+        disabled_pick_columns = [
+            "source_id",
+            "receiver_id",
+            "field_record",
+            "trace_number",
+            "trace_index",
+            "amplitude",
+            "auto_time_s",
+        ]
+        if "pick_source" in picks_df.columns:
+            disabled_pick_columns.append("pick_source")
+        edited_df = st.data_editor(
+            picks_df,
+            use_container_width=True,
+            num_rows="dynamic",
+            disabled=disabled_pick_columns,
+        )
+        if not edited_df.equals(picks_df):
+            edited_df = edited_df.copy(deep=True)
+            if "pick_source" not in edited_df.columns:
+                edited_df["pick_source"] = "auto"
+            common_index = edited_df.index.intersection(picks_df.index)
+            if "time_s" in edited_df.columns and "time_s" in picks_df.columns and len(common_index):
+                old_times = pd.to_numeric(picks_df.loc[common_index, "time_s"], errors="coerce")
+                new_times = pd.to_numeric(edited_df.loc[common_index, "time_s"], errors="coerce")
+                changed_rows = common_index[~np.isclose(old_times, new_times, equal_nan=True)]
+                if len(changed_rows):
+                    edited_df.loc[changed_rows, "pick_source"] = "manual"
+            st.session_state.seismic_export_files = {}
+            st.session_state.seismic_velocity_model = None
+            _bump_manual_picker_version()
+        st.session_state.seismic_picks_df = edited_df
+        # Keep all-gathers dict in sync with manual edits.
+        _sync_picks_for_record(selected_record, edited_df)
+
+        export_col, run_col = st.columns(2)
+        with export_col:
+            if st.button("Export picks and travel-time data", use_container_width=True):
+                try:
+                    out_dir = Path(sidebar_state["output_dir"]).expanduser() / "seismic_processing"
+                    out_dir.mkdir(parents=True, exist_ok=True)
+                    # Merge picks from all gathers; sync current (possibly hand-edited) gather first.
+                    _export_all = dict(st.session_state.get("seismic_all_picks") or {})
+                    if not edited_df.empty:
+                        _export_all[selected_record] = edited_df.copy(deep=True)
+                        st.session_state.seismic_all_picks = _export_all
+                    all_df = pd.concat(list(_export_all.values()), ignore_index=True) if _export_all else edited_df
+                    rows = all_df.to_dict(orient="records")
+                    _recv_spacing = float(st.session_state.get("seismic_receiver_spacing") or 1.0)
+                    picks_csv = export_first_breaks(rows, str(out_dir / "first_break_picks.csv"))
+                    traveltime_file = first_breaks_to_traveltime(
+                        rows, str(out_dir / "seismic_traveltime.dat"), receiver_spacing=_recv_spacing
+                    )
+                    st.session_state.seismic_export_files = {
+                        "picks_csv": picks_csv,
+                        "traveltime_file": traveltime_file,
+                    }
+                    st.success(
+                        f"Exported {len(rows)} picks from {len(_export_all)} gather(s) to {traveltime_file}."
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    st.error(f"Export failed: {exc}")
+
+        export_files = st.session_state.get("seismic_export_files") or {}
+        if export_files:
+            with st.expander("Exported files", expanded=True):
+                for label, file_path in export_files.items():
+                    path = Path(file_path)
+                    if path.exists():
+                        with path.open("rb") as f:
+                            st.download_button(
+                                label=f"Download {label.replace('_', ' ')}",
+                                data=f,
+                                file_name=path.name,
+                                mime="application/octet-stream",
+                            )
+                    st.code(str(path))
+
+        with run_col:
+            with st.expander("SRT inversion parameters", expanded=False):
+                st.number_input("Lambda (λ)", min_value=0.1, step=5.0,
+                    value=float(st.session_state.get("seismic_srt_lam") or 50.0),
+                    key="seismic_srt_lam",
+                    help="Regularization strength; higher = smoother model.")
+                st.number_input("vTop (m/s)", min_value=10.0, step=100.0,
+                    value=float(st.session_state.get("seismic_srt_vtop") or 500.0),
+                    key="seismic_srt_vtop")
+                st.number_input("vBottom (m/s)", min_value=100.0, step=500.0,
+                    value=float(st.session_state.get("seismic_srt_vbottom") or 5000.0),
+                    key="seismic_srt_vbottom")
+                st.number_input("paraDepth (m)", min_value=1.0, step=5.0,
+                    value=float(st.session_state.get("seismic_srt_paradepth") or 30.0),
+                    key="seismic_srt_paradepth")
+                st.number_input("Velocity threshold (m/s)", min_value=10.0, step=100.0,
+                    value=float(st.session_state.get("seismic_srt_vel_threshold") or 1200.0),
+                    key="seismic_srt_vel_threshold",
+                    help="Interface delineation threshold applied after inversion.")
+            if st.button("Run SRT inversion from exported picks", use_container_width=True):
+                traveltime_file = (st.session_state.get("seismic_export_files") or {}).get("traveltime_file")
+                if not traveltime_file:
+                    st.warning("Export travel-time data before launching SRT.")
+                elif not AGENTS_AVAILABLE:
+                    st.error("Agents are not available in this environment.")
+                else:
+                    try:
+                        from PyHydroGeophysX.agents import SeismicAgent
+
+                        _srt_lam = float(st.session_state.get("seismic_srt_lam") or 50.0)
+                        _srt_vtop = float(st.session_state.get("seismic_srt_vtop") or 500.0)
+                        _srt_vbot = float(st.session_state.get("seismic_srt_vbottom") or 5000.0)
+                        _srt_depth = float(st.session_state.get("seismic_srt_paradepth") or 30.0)
+                        _srt_vthresh = float(st.session_state.get("seismic_srt_vel_threshold") or 1200.0)
+                        srt_output = Path(sidebar_state["output_dir"]).expanduser() / "seismic_processing" / "srt"
+                        with st.spinner("Running SRT inversion..."):
+                            result = SeismicAgent(
+                                api_key=st.session_state.api_key or None,
+                                model=st.session_state.llm_model or None,
+                                llm_provider=st.session_state.llm_provider,
+                            ).execute(
+                                {
+                                    "seismic_file": traveltime_file,
+                                    "output_dir": str(srt_output),
+                                    "velocity_threshold": _srt_vthresh,
+                                    "velocity_thresholds": [_srt_vthresh],
+                                    "inversion_params": {
+                                        "lam": _srt_lam,
+                                        "zWeight": 0.2,
+                                        "vTop": _srt_vtop,
+                                        "vBottom": _srt_vbot,
+                                        "paraDepth": _srt_depth,
+                                        "limits": [300.0, _srt_vbot],
+                                    },
+                                }
+                            )
+                        st.session_state.seismic_srt_result = result
+                    except Exception as exc:  # noqa: BLE001
+                        st.error(f"SRT inversion failed: {exc}")
+
+    srt_result = st.session_state.get("seismic_srt_result")
+    if srt_result:
+        status = srt_result.get("status") if hasattr(srt_result, "get") else None
+        if status == "success":
+            st.success("SRT inversion completed.")
+            vis = srt_result.get("visualization_file")
+            if vis and Path(vis).exists():
+                st.image(str(vis), caption="Seismic velocity model", use_container_width=True)
+        else:
+            st.error(f"SRT inversion did not complete: {srt_result.get('error', 'Unknown error')}")
+
+
+def _render_processing_llm_control(
+    module_key: str,
+    module_name: str,
+    capabilities: str,
+    default_request: str,
+) -> None:
+    """Render a reusable natural-language control panel for processing modules."""
+
+    with st.expander("LLM language control", expanded=False):
+        if st.session_state.get("context_agent") is None:
+            st.info("Enter an API key in the sidebar and click Initialize to enable language control.")
+        enabled = st.checkbox(
+            "Enable language control for this module",
+            key=f"{module_key}_llm_enabled",
+            disabled=st.session_state.get("context_agent") is None,
+        )
+        request_text = st.text_area(
+            "Processing instruction",
+            value=default_request,
+            height=90,
+            key=f"{module_key}_llm_request",
+            help="Describe the data-processing action you want. The LLM will suggest module settings and a review plan.",
+        )
+        if st.button(
+            "Generate module guidance",
+            key=f"{module_key}_llm_generate",
+            use_container_width=True,
+            disabled=not enabled or st.session_state.get("context_agent") is None or not request_text.strip(),
+        ):
+            prompt = f"""You are controlling the {module_name} module in PyHydroGeophysX.
+
+Available module capabilities:
+{capabilities}
+
+User instruction:
+{request_text}
+
+Respond concisely with:
+1. Recommended processing workflow.
+2. Suggested parameter values.
+3. Checks or warnings before running.
+4. Which GUI controls the user should adjust next.
+
+Do not invent that a computation has already run. If a capability is not implemented in the GUI yet, say it should be treated as a planned step."""
+            try:
+                st.session_state[f"{module_key}_llm_response"] = st.session_state.context_agent.query_llm(prompt)
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"LLM control failed: {exc}")
+
+        response = st.session_state.get(f"{module_key}_llm_response")
+        if response:
+            st.markdown("##### LLM guidance")
+            st.markdown(str(response))
+
+
+def _render_processing_module_shell(
+    module_key: str,
+    module_name: str,
+    data_types: List[str],
+    workflow_steps: List[str],
+    output_products: List[str],
+) -> None:
+    """Render a compact processing-module scaffold for methods not yet fully wired."""
+
+    st.subheader(module_name)
+    st.caption("Module scaffold for local data QC, format conversion, processing setup, and LLM-assisted workflow planning.")
+
+    _render_processing_llm_control(
+        module_key=module_key,
+        module_name=module_name,
+        capabilities=(
+            f"Accepted data types planned for this module: {', '.join(data_types)}. "
+            f"Workflow steps: {', '.join(workflow_steps)}. "
+            f"Outputs: {', '.join(output_products)}."
+        ),
+        default_request=f"Help me prepare a {module_name} workflow for QC, preprocessing, inversion setup, and export.",
+    )
+
+    setup_col, plan_col = st.columns([1, 1])
+    with setup_col:
+        st.markdown("##### Input")
+        st.file_uploader(
+            f"{module_name} file",
+            type=None,
+            key=f"{module_key}_processing_upload",
+            help="Upload support will be connected to the corresponding processing backend as it is added.",
+        )
+        st.text_input(
+            "Or use a local file/folder path",
+            key=f"{module_key}_processing_path",
+            help="Local path on this computer; useful for larger field datasets.",
+        )
+        st.multiselect(
+            "Expected data products",
+            output_products,
+            default=output_products[: min(2, len(output_products))],
+            key=f"{module_key}_processing_outputs",
+        )
+
+    with plan_col:
+        st.markdown("##### Processing steps")
+        selected_steps = st.multiselect(
+            "Steps to include",
+            workflow_steps,
+            default=workflow_steps,
+            key=f"{module_key}_processing_steps",
+        )
+        st.selectbox(
+            "Run mode",
+            ["Plan only", "QC preview", "Full processing"],
+            key=f"{module_key}_processing_run_mode",
+            help="Only Seismic currently has a complete run path in this tab; other methods are structured for backend connection.",
+        )
+        if st.button("Build processing plan", key=f"{module_key}_build_plan", use_container_width=True):
+            st.session_state[f"{module_key}_processing_plan"] = {
+                "module": module_name,
+                "input_path": st.session_state.get(f"{module_key}_processing_path", ""),
+                "steps": selected_steps,
+                "outputs": st.session_state.get(f"{module_key}_processing_outputs", []),
+                "run_mode": st.session_state.get(f"{module_key}_processing_run_mode", "Plan only"),
+            }
+
+    plan = st.session_state.get(f"{module_key}_processing_plan")
+    if plan:
+        with st.expander("Current module plan", expanded=True):
+            st.json(plan)
+            st.caption("This module plan is ready for backend wiring or LLM-assisted refinement.")
+
+
+def _ert_candidate_files(input_path: Path) -> List[Path]:
+    """Return likely ERT data files from a local file or folder."""
+
+    if input_path.is_file():
+        return [input_path]
+    if not input_path.exists() or not input_path.is_dir():
+        return []
+
+    suffixes = {".data", ".dat", ".ohm", ".txt", ".csv"}
+    candidates: List[Path] = []
+    for path in input_path.iterdir():
+        if not path.is_file() or path.suffix.lower() not in suffixes:
+            continue
+        lower_name = path.name.lower()
+        if lower_name in {"electrodes.dat", "electrode.dat"} or "electrode" in lower_name:
+            continue
+        candidates.append(path)
+
+    def _sort_key(path: Path) -> Tuple[int, str]:
+        if path.suffix.lower() == ".data":
+            return (0, path.name.lower())
+        if path.suffix.lower() == ".ohm":
+            return (1, path.name.lower())
+        return (2, path.name.lower())
+
+    return sorted(candidates, key=_sort_key)
+
+
+def _ert_electrodes_dataframe(ert: Any) -> "pd.DataFrame":
+    """Convert a StandardERT electrode list to a DataFrame."""
+
+    import pandas as pd
+
+    rows = [
+        {
+            "id": int(e.id),
+            "x": float(e.x),
+            "y": float(getattr(e, "y", 0.0) or 0.0),
+            "z": float(getattr(e, "z", 0.0) or 0.0),
+        }
+        for e in (ert.electrodes or [])
+    ]
+    return pd.DataFrame(rows, columns=["id", "x", "y", "z"])
+
+
+def _ert_observations_dataframe(ert: Any) -> "pd.DataFrame":
+    """Convert a StandardERT observation list to a flat DataFrame."""
+
+    import pandas as pd
+
+    rows = []
+    for obs in ert.observations or []:
+        rows.append(
+            {
+                "A": int(obs.quad.A),
+                "B": int(obs.quad.B),
+                "M": int(obs.quad.M),
+                "N": int(obs.quad.N),
+                "value": obs.app_res,
+                "dV": obs.dV,
+                "I": obs.I,
+                "rel_err": obs.rel_err,
+                "K": obs.K,
+                "fid": obs.fid,
+            }
+        )
+    return pd.DataFrame(rows, columns=["A", "B", "M", "N", "value", "dV", "I", "rel_err", "K", "fid"])
+
+
+def _ert_merge_reciprocal_columns(obs_df: "pd.DataFrame", reciprocal_df: "pd.DataFrame") -> "pd.DataFrame":
+    """Add reciprocal QC columns to an observation table."""
+
+    if obs_df.empty or reciprocal_df is None or reciprocal_df.empty:
+        return obs_df
+    obs_out = obs_df.copy()
+    obs_out["observation_index"] = obs_out.index.astype(int)
+    keep_cols = [
+        "observation_index",
+        "reciprocal_group",
+        "reciprocal_pair_count",
+        "reciprocal_error_percent",
+        "reciprocal_mean_value",
+        "reciprocal_partner_value",
+    ]
+    available_cols = [col for col in keep_cols if col in reciprocal_df.columns]
+    if "observation_index" not in available_cols:
+        return obs_df
+    return obs_out.merge(reciprocal_df[available_cols], on="observation_index", how="left")
+
+
+def _ert_value_label(ert: Any) -> str:
+    """Return a clear display label for the main ERT value column."""
+
+    source = str((ert.metadata or {}).get("app_res_source") or "").lower()
+    if "resistance" in source:
+        return "Resistance (ohm)"
+    return "Apparent resistivity (ohm m)"
+
+
+def _ert_profile_axis(electrodes_df: "pd.DataFrame") -> str:
+    """Infer whether y or z carries elevation/topography for display."""
+
+    if electrodes_df.empty:
+        return "z"
+    y_span = float(electrodes_df["y"].max() - electrodes_df["y"].min())
+    z_span = float(electrodes_df["z"].max() - electrodes_df["z"].min())
+    return "y" if y_span >= z_span else "z"
+
+
+def _ert_pseudosection_dataframe(ert: Any, obs_df: "pd.DataFrame") -> "pd.DataFrame":
+    """Build a lightweight pseudosection table for QC visualization."""
+
+    import numpy as np
+    import pandas as pd
+
+    elec_df = _ert_electrodes_dataframe(ert)
+    if elec_df.empty or obs_df.empty:
+        return pd.DataFrame(columns=["mid_x", "pseudo_depth", "value", "A", "B", "M", "N"])
+    x_by_id = dict(zip(elec_df["id"].astype(int), elec_df["x"].astype(float)))
+    rows = []
+    for _, row in obs_df.iterrows():
+        ids = [int(row[col]) for col in ("A", "B", "M", "N")]
+        xs = [x_by_id.get(eid, np.nan) for eid in ids]
+        if not np.isfinite(xs).all():
+            continue
+        array_span = float(np.nanmax(xs) - np.nanmin(xs))
+        rows.append(
+            {
+                "mid_x": float(np.nanmean(xs)),
+                "pseudo_depth": max(array_span * 0.19, 0.01),
+                "value": row["value"],
+                "A": ids[0],
+                "B": ids[1],
+                "M": ids[2],
+                "N": ids[3],
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _ert_filtered_dataset(ert: Any, keep_mask: "pd.Series") -> Any:
+    """Return a copy of StandardERT with only observations matching keep_mask."""
+
+    import copy
+
+    cleaned = copy.deepcopy(ert)
+    cleaned.observations = [
+        obs for obs, keep in zip(ert.observations or [], keep_mask.tolist()) if bool(keep)
+    ]
+    metadata = dict(cleaned.metadata or {})
+    metadata["gui_qc_original_observations"] = len(ert.observations or [])
+    metadata["gui_qc_kept_observations"] = len(cleaned.observations or [])
+    cleaned.metadata = metadata
+    return cleaned
+
+
+def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
+    """Render a usable local ERT QC, preview, and export workflow."""
+
+    import numpy as np
+    import pandas as pd
+    import plotly.graph_objects as go
+
+    st.subheader("ERT field data QC and export")
+    st.caption(
+        "Load DAS-1/Syscal/ABEM/ResIPy-style field files, inspect electrode geometry and apparent values, "
+        "apply light QC, then export inversion-ready PyGIMLi/BERT data."
+    )
+
+    _render_processing_llm_control(
+        module_key="ert_processing",
+        module_name="ERT Processing",
+        capabilities=(
+            "Load ERT field data with optional electrode coordinate file; preview electrodes and a QC pseudosection; "
+            "filter values and relative errors; write QC artifacts; export PyGIMLi/BERT inversion input; "
+            "optionally launch a standard ERT inversion."
+        ),
+        default_request="Help me load this ERT dataset, check electrode geometry, filter bad measurements, and export inversion-ready data.",
+    )
+
+    default_ert_dir = CURRENT_DIR / "data" / "ERT" / "DAS"
+    if "ert_processing_input_path" not in st.session_state:
+        st.session_state.ert_processing_input_path = str(default_ert_dir)
+    if "ert_processing_instrument" not in st.session_state:
+        st.session_state.ert_processing_instrument = "DAS-1"
+
+    output_root = Path(sidebar_state.get("output_dir", "results")).expanduser() / "ert_processing"
+    output_root.mkdir(parents=True, exist_ok=True)
+
+    input_col, settings_col = st.columns([1.2, 0.8])
+    with input_col:
+        st.markdown("##### Input")
+        raw_path = st.text_input(
+            "Local ERT file or folder",
+            key="ert_processing_input_path",
+            help="Folder paths are scanned for .Data/.dat/.ohm/.txt/.csv files. The bundled DAS example is prefilled.",
+        ).strip().strip('"')
+        input_path = Path(raw_path).expanduser()
+        if not input_path.is_absolute():
+            input_path = (PARENT_DIR / input_path).resolve()
+
+        uploaded_file = st.file_uploader(
+            "Or upload one ERT data file",
+            type=None,
+            key="ert_processing_upload",
+            help="For large field folders, the local path box is usually faster.",
+        )
+        if uploaded_file is not None:
+            upload_dir = output_root / "uploads"
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            upload_path = upload_dir / uploaded_file.name
+            upload_path.write_bytes(uploaded_file.getbuffer())
+            input_path = upload_path
+            st.caption(f"Uploaded file staged at {upload_path}")
+
+        candidates = _ert_candidate_files(input_path)
+        if candidates:
+            labels = [str(path.name if input_path.is_dir() else path) for path in candidates]
+            selected_label = st.selectbox(
+                "ERT survey file",
+                labels,
+                key="ert_processing_selected_file_label",
+            )
+            selected_file = candidates[labels.index(selected_label)]
+        else:
+            selected_file = input_path if input_path.is_file() else None
+            st.warning("No ERT data files found at this path yet.")
+
+        electrode_default = ""
+        if selected_file is not None:
+            possible_electrode = selected_file.parent / "electrodes.dat"
+            if possible_electrode.exists():
+                electrode_default = str(possible_electrode)
+        if "ert_processing_electrode_path" not in st.session_state:
+            st.session_state.ert_processing_electrode_path = electrode_default
+        electrode_path_text = st.text_input(
+            "Electrode coordinate file (optional)",
+            key="ert_processing_electrode_path",
+            help="For DAS examples this is usually electrodes.dat with x y z columns.",
+        ).strip().strip('"')
+        electrode_path = Path(electrode_path_text).expanduser() if electrode_path_text else None
+        if electrode_path is not None and not electrode_path.is_absolute():
+            electrode_path = (PARENT_DIR / electrode_path).resolve()
+
+    with settings_col:
+        st.markdown("##### Loader")
+        instrument_options = [
+            "DAS-1",
+            "Syscal",
+            "ABEM-Lund",
+            "BERT",
+            "ResInv",
+            "Protocol DC",
+            "Protocol IP",
+            "PRIME/RESIMGR",
+            "Sting",
+            "ARES",
+            "E4D",
+            "Custom",
+        ]
+        instrument = st.selectbox(
+            "Instrument / file type",
+            instrument_options,
+            key="ert_processing_instrument",
+            help="Use DAS-1 for the bundled Snowy Range .Data files.",
+        )
+        spacing = st.number_input(
+            "Fallback electrode spacing (m)",
+            min_value=0.0,
+            value=float(st.session_state.get("ert_processing_spacing") or 0.0),
+            step=0.5,
+            key="ert_processing_spacing",
+            help="Only used when the data file and electrode file do not provide geometry.",
+        )
+        project_dir = output_root / "resipy_project"
+        st.caption(f"Project/output folder: {output_root}")
+
+        load_disabled = selected_file is None or not Path(selected_file).exists()
+        if st.button("Load ERT data", type="primary", use_container_width=True, disabled=load_disabled):
+            try:
+                from PyHydroGeophysX.data_processing.ert_data_agent import load_ert_resipy
+
+                project_dir.mkdir(parents=True, exist_ok=True)
+                electrode_arg = str(electrode_path) if electrode_path and electrode_path.exists() else None
+                with st.spinner("Loading and standardizing ERT data..."):
+                    ert = load_ert_resipy(
+                        project_dir=str(project_dir),
+                        data_file=str(selected_file),
+                        instrument=instrument,
+                        spacing=float(spacing) if float(spacing) > 0 else None,
+                        electrode_file=electrode_arg,
+                    )
+                st.session_state.ert_processing_dataset = ert
+                st.session_state.ert_processing_loaded_file = str(selected_file)
+                st.session_state.ert_processing_artifacts = {}
+                st.session_state.ert_processing_export_file = ""
+                st.session_state.ert_processing_export_files = {}
+                for key in (
+                    "ert_processing_min_value",
+                    "ert_processing_max_value",
+                    "ert_processing_max_rel_err_pct",
+                    "ert_processing_max_recip_error_pct",
+                    "ert_processing_use_recip_filter",
+                    "ert_processing_keep_unpaired",
+                ):
+                    st.session_state.pop(key, None)
+                st.success(f"Loaded {len(ert.observations or [])} measurements and {len(ert.electrodes or [])} electrodes.")
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"ERT load failed: {exc}")
+
+    ert = st.session_state.get("ert_processing_dataset")
+    if ert is None:
+        with st.expander("Bundled DAS example files", expanded=True):
+            st.write("Use the prefilled DAS folder, select `20171105_1418.Data`, keep `DAS-1`, and click **Load ERT data**.")
+            if default_ert_dir.exists():
+                st.dataframe(
+                    pd.DataFrame(
+                        [{"file": path.name, "size_kb": round(path.stat().st_size / 1024, 1)} for path in _ert_candidate_files(default_ert_dir)]
+                    ),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+        return
+
+    electrodes_df = _ert_electrodes_dataframe(ert)
+    obs_df = _ert_observations_dataframe(ert)
+    try:
+        from PyHydroGeophysX.data_processing.ert_data_agent import calculate_reciprocal_errors
+
+        reciprocal_df = calculate_reciprocal_errors(ert)
+    except Exception as exc:  # noqa: BLE001
+        reciprocal_df = pd.DataFrame()
+        st.warning(f"Reciprocal-error calculation failed: {exc}")
+    obs_df = _ert_merge_reciprocal_columns(obs_df, reciprocal_df)
+    value_label = _ert_value_label(ert)
+    values = pd.to_numeric(obs_df["value"], errors="coerce") if not obs_df.empty else pd.Series(dtype=float)
+    finite_values = values[np.isfinite(values)]
+    positive_values = finite_values[finite_values > 0]
+    default_min = float(max(positive_values.quantile(0.005) * 0.5, 0.0)) if not positive_values.empty else 0.0
+    default_max = float(positive_values.quantile(0.995) * 2.0) if not positive_values.empty else 1.0
+    if not np.isfinite(default_max) or default_max <= default_min:
+        default_max = max(default_min + 1.0, float(finite_values.max()) if not finite_values.empty else 1.0)
+
+    st.session_state.setdefault("ert_processing_min_value", default_min)
+    st.session_state.setdefault("ert_processing_max_value", default_max)
+    st.session_state.setdefault("ert_processing_max_rel_err_pct", 20.0)
+    st.session_state.setdefault("ert_processing_use_recip_filter", bool(not reciprocal_df.empty))
+    st.session_state.setdefault("ert_processing_max_recip_error_pct", 5.0)
+    st.session_state.setdefault("ert_processing_keep_unpaired", True)
+
+    meta = ert.metadata or {}
+    recip_errors = (
+        pd.to_numeric(reciprocal_df.get("reciprocal_error_percent"), errors="coerce")
+        if not reciprocal_df.empty and "reciprocal_error_percent" in reciprocal_df.columns
+        else pd.Series(dtype=float)
+    )
+    finite_recip = recip_errors[np.isfinite(recip_errors)]
+    paired_count = int(finite_recip.size)
+    metric_cols = st.columns(6)
+    metric_cols[0].metric("Electrodes", f"{len(electrodes_df):,}")
+    metric_cols[1].metric("Measurements", f"{len(obs_df):,}")
+    metric_cols[2].metric("Reciprocal paired", f"{paired_count:,}")
+    metric_cols[3].metric("Median recip. err", f"{float(finite_recip.median()):.2f}%" if not finite_recip.empty else "n/a")
+    metric_cols[4].metric("Min value", f"{float(finite_values.min()):.3g}" if not finite_values.empty else "n/a")
+    metric_cols[5].metric("Max value", f"{float(finite_values.max()):.3g}" if not finite_values.empty else "n/a")
+    st.caption(
+        f"Loaded file: {st.session_state.get('ert_processing_loaded_file', '')} | "
+        f"Loader: {meta.get('loader', 'unknown')} | Value source: {meta.get('app_res_source', 'unknown')}"
+    )
+
+    qc_col, preview_col = st.columns([0.72, 1.28])
+    with qc_col:
+        st.markdown("##### QC filter")
+        min_value = st.number_input(
+            f"Minimum {value_label}",
+            min_value=0.0,
+            step=max(default_max / 100.0, 0.1),
+            key="ert_processing_min_value",
+        )
+        max_value = st.number_input(
+            f"Maximum {value_label}",
+            min_value=0.0,
+            step=max(default_max / 100.0, 0.1),
+            key="ert_processing_max_value",
+        )
+        max_rel_err_pct = st.slider(
+            "Maximum relative error (%)",
+            min_value=0.0,
+            max_value=100.0,
+            step=1.0,
+            key="ert_processing_max_rel_err_pct",
+        )
+        use_recip_filter = st.checkbox(
+            "Filter by reciprocal error",
+            key="ert_processing_use_recip_filter",
+            help="Uses normal/reciprocal ABMN pairs to remove inconsistent measurements.",
+        )
+        max_recip_error_pct = st.slider(
+            "Maximum reciprocal error (%)",
+            min_value=0.0,
+            max_value=50.0,
+            step=0.5,
+            key="ert_processing_max_recip_error_pct",
+            disabled=not use_recip_filter or reciprocal_df.empty,
+        )
+        keep_unpaired = st.checkbox(
+            "Keep measurements without reciprocal pair",
+            key="ert_processing_keep_unpaired",
+            disabled=not use_recip_filter or reciprocal_df.empty,
+            help="If enabled, measurements with no reciprocal partner remain in the export.",
+        )
+        rel_err = pd.to_numeric(obs_df["rel_err"], errors="coerce") if "rel_err" in obs_df else pd.Series(np.nan, index=obs_df.index)
+        keep_mask = values.notna() & np.isfinite(values) & (values >= float(min_value)) & (values <= float(max_value))
+        if len(rel_err) == len(keep_mask):
+            keep_mask &= rel_err.isna() | (rel_err <= float(max_rel_err_pct) / 100.0)
+        if use_recip_filter and "reciprocal_error_percent" in obs_df.columns:
+            recip_series = pd.to_numeric(obs_df["reciprocal_error_percent"], errors="coerce")
+            recip_ok = recip_series <= float(max_recip_error_pct)
+            if bool(keep_unpaired):
+                recip_ok = recip_ok | recip_series.isna()
+            keep_mask &= recip_ok
+        cleaned_ert = _ert_filtered_dataset(ert, keep_mask)
+        st.session_state.ert_processing_cleaned_dataset = cleaned_ert
+        st.metric("Kept after QC", f"{int(keep_mask.sum()):,}", delta=f"{int(keep_mask.sum()) - len(obs_df):,}")
+
+        export_strategy = st.selectbox(
+            "Export strategy",
+            ["legacy", "default"],
+            key="ert_processing_export_strategy",
+            help="legacy is predictable for field QC; default tries the reciprocal-paired ResIPy export first.",
+        )
+        export_option_map = {
+            "PyGIMLi/BERT inversion file (.dat)": "pygimli_bert",
+            "Standard JSON": "standard_json",
+            "Observations CSV": "observations_csv",
+            "Electrodes CSV": "electrodes_csv",
+            "Observations Parquet": "observations_parquet",
+            "Reciprocal QC CSV": "reciprocal_csv",
+            "ResIPy project folder path": "resipy_project",
+        }
+        selected_export_labels = st.multiselect(
+            "Export data formats",
+            options=list(export_option_map.keys()),
+            default=[
+                "PyGIMLi/BERT inversion file (.dat)",
+                "Standard JSON",
+                "Observations CSV",
+                "Electrodes CSV",
+                "Reciprocal QC CSV",
+            ],
+            key="ert_processing_export_formats",
+        )
+        export_cols = st.columns(2)
+        with export_cols[0]:
+            if st.button("Run QC artifacts", use_container_width=True):
+                try:
+                    from PyHydroGeophysX.data_processing.ert_data_agent import qc_and_visualize
+
+                    qc_dir = output_root / "qc"
+                    with st.spinner("Writing QC plots and standardized tables..."):
+                        st.session_state.ert_processing_artifacts = qc_and_visualize(cleaned_ert, outdir=str(qc_dir))
+                    st.success("QC artifacts written.")
+                except Exception as exc:  # noqa: BLE001
+                    st.error(f"QC artifact generation failed: {exc}")
+        with export_cols[1]:
+            if st.button("Export selected formats", use_container_width=True):
+                try:
+                    from PyHydroGeophysX.data_processing.ert_data_agent import export_ert_dataset
+
+                    export_dir = output_root / "export"
+                    selected_formats = [export_option_map[label] for label in selected_export_labels]
+                    if not selected_formats:
+                        st.warning("Select at least one export format.")
+                    else:
+                        with st.spinner("Exporting selected ERT data formats..."):
+                            export_files = export_ert_dataset(
+                                cleaned_ert,
+                                outdir=str(export_dir),
+                                formats=selected_formats,
+                                export_strategy=str(export_strategy),
+                            )
+                        st.session_state.ert_processing_export_files = export_files
+                        st.session_state.ert_processing_export_file = export_files.get("pygimli_bert", "")
+                        st.success(f"Exported {len(export_files)} ERT output(s).")
+                except Exception as exc:  # noqa: BLE001
+                    st.error(f"Export failed: {exc}")
+
+        artifacts = st.session_state.get("ert_processing_artifacts") or {}
+        export_files = dict(st.session_state.get("ert_processing_export_files") or {})
+        legacy_export_file = st.session_state.get("ert_processing_export_file") or ""
+        if legacy_export_file and "pygimli_bert" not in export_files:
+            export_files["pygimli_bert"] = legacy_export_file
+        if artifacts or export_files:
+            with st.expander("Outputs", expanded=True):
+                for label, path_text in artifacts.items():
+                    path = Path(path_text)
+                    if path.exists() and path.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+                        st.image(str(path), caption=label, use_container_width=True)
+                    elif path.exists():
+                        with path.open("rb") as f:
+                            st.download_button(label=f"Download {label}", data=f, file_name=path.name)
+                        st.code(str(path))
+                for label, path_text in export_files.items():
+                    path = Path(path_text)
+                    if path_text and path.exists() and path.is_file():
+                        with path.open("rb") as f:
+                            st.download_button(
+                                label=f"Download {label.replace('_', ' ')}",
+                                data=f,
+                                file_name=path.name,
+                            )
+                        st.code(str(path))
+                    else:
+                        st.markdown(f"**{label.replace('_', ' ').title()}**")
+                        st.code(str(path_text))
+
+        with st.expander("Optional ERT inversion", expanded=False):
+            st.number_input("Lambda", min_value=0.1, value=20.0, step=5.0, key="ert_processing_lambda")
+            st.number_input("Max iterations", min_value=1, value=6, step=1, key="ert_processing_max_iterations")
+            st.number_input("Relative error", min_value=0.001, value=0.05, step=0.01, key="ert_processing_relative_error")
+            if st.button("Run standard ERT inversion", use_container_width=True, disabled=not AGENTS_AVAILABLE):
+                try:
+                    from PyHydroGeophysX.agents import ERTInversionAgent
+
+                    inversion_dir = output_root / "inversion"
+                    with st.spinner("Running ERT inversion..."):
+                        result = ERTInversionAgent(
+                            api_key=st.session_state.api_key or None,
+                            model=st.session_state.llm_model or None,
+                            llm_provider=st.session_state.llm_provider,
+                        ).execute(
+                            {
+                                "ert_data": cleaned_ert,
+                                "output_dir": str(inversion_dir),
+                                "export_strategy": str(export_strategy),
+                                "inversion_params": {
+                                    "lambda": float(st.session_state.ert_processing_lambda),
+                                    "max_iterations": int(st.session_state.ert_processing_max_iterations),
+                                    "relativeError": float(st.session_state.ert_processing_relative_error),
+                                    "export_strategy": str(export_strategy),
+                                },
+                            }
+                        )
+                    st.session_state.ert_processing_inversion_result = result
+                    st.success("ERT inversion completed.")
+                except Exception as exc:  # noqa: BLE001
+                    st.error(f"ERT inversion failed: {exc}")
+            if not AGENTS_AVAILABLE:
+                st.info("Agent layer is not available in this environment.")
+
+            inv_result = st.session_state.get("ert_processing_inversion_result") or {}
+            if inv_result:
+                if inv_result.get("status") == "success":
+                    st.json(
+                        {
+                            "chi2": inv_result.get("chi2"),
+                            "iterations": inv_result.get("iterations"),
+                            "output_dir": inv_result.get("output_dir"),
+                        }
+                    )
+                else:
+                    st.error(inv_result.get("error", "Inversion did not complete."))
+
+    with preview_col:
+        st.markdown("##### Preview")
+        view_tab, reciprocal_tab, table_tab = st.tabs(["Plots", "Reciprocal QC", "Tables"])
+        with view_tab:
+            axis_col = _ert_profile_axis(electrodes_df)
+            fig_elec = go.Figure()
+            if not electrodes_df.empty:
+                fig_elec.add_trace(
+                    go.Scatter(
+                        x=electrodes_df["x"],
+                        y=electrodes_df[axis_col],
+                        mode="lines+markers",
+                        marker={"size": 7, "color": "#1f77b4"},
+                        line={"color": "#3a3a3a", "width": 1},
+                        hovertemplate="Electrode %{text}<br>x=%{x:.3f}<br>elev=%{y:.3f}<extra></extra>",
+                        text=electrodes_df["id"].astype(str),
+                        name="Electrodes",
+                    )
+                )
+            fig_elec.update_layout(
+                title="Electrode geometry",
+                height=230,
+                margin={"l": 45, "r": 15, "t": 40, "b": 35},
+                xaxis_title="Profile x (m)",
+                yaxis_title=f"{axis_col} coordinate",
+            )
+            st.plotly_chart(fig_elec, use_container_width=True, key="ert_processing_electrode_plot")
+
+            plot_df = obs_df.loc[keep_mask].copy()
+            pseudo_df = _ert_pseudosection_dataframe(ert, plot_df)
+            fig_pseudo = go.Figure()
+            if not pseudo_df.empty:
+                color_vals = pd.to_numeric(pseudo_df["value"], errors="coerce")
+                if (color_vals > 0).any():
+                    color_vals = np.log10(np.clip(color_vals.astype(float), 1e-12, None))
+                    colorbar_title = f"log10 {value_label}"
+                else:
+                    colorbar_title = value_label
+                fig_pseudo.add_trace(
+                    go.Scattergl(
+                        x=pseudo_df["mid_x"],
+                        y=pseudo_df["pseudo_depth"],
+                        mode="markers",
+                        marker={
+                            "size": 7,
+                            "color": color_vals,
+                            "colorscale": "Turbo",
+                            "showscale": True,
+                            "colorbar": {"title": colorbar_title},
+                        },
+                        text=(
+                            "A="
+                            + pseudo_df["A"].astype(str)
+                            + " B="
+                            + pseudo_df["B"].astype(str)
+                            + " M="
+                            + pseudo_df["M"].astype(str)
+                            + " N="
+                            + pseudo_df["N"].astype(str)
+                        ),
+                        hovertemplate="%{text}<br>x=%{x:.2f}<br>pseudo-depth=%{y:.2f}<extra></extra>",
+                        name="Measurements",
+                    )
+                )
+            fig_pseudo.update_layout(
+                title="QC pseudosection",
+                height=360,
+                margin={"l": 55, "r": 15, "t": 40, "b": 45},
+                xaxis_title="Profile midpoint x (m)",
+                yaxis_title="Pseudo-depth (m)",
+            )
+            fig_pseudo.update_yaxes(autorange="reversed")
+            st.plotly_chart(fig_pseudo, use_container_width=True, key="ert_processing_pseudosection_plot")
+
+            hist_vals = finite_values[(finite_values > 0) & keep_mask]
+            if not hist_vals.empty:
+                fig_hist = go.Figure(
+                    go.Histogram(x=np.log10(hist_vals.astype(float)), nbinsx=45, marker_color="#4C72B0")
+                )
+                fig_hist.update_layout(
+                    title=f"Distribution of kept {value_label}",
+                    height=240,
+                    margin={"l": 45, "r": 15, "t": 40, "b": 40},
+                    xaxis_title=f"log10 {value_label}",
+                    yaxis_title="Count",
+                )
+                st.plotly_chart(fig_hist, use_container_width=True, key="ert_processing_histogram_plot")
+
+        with reciprocal_tab:
+            st.markdown("###### Reciprocal error diagnostics")
+            if reciprocal_df.empty or "reciprocal_error_percent" not in obs_df.columns:
+                st.info("No reciprocal pairs were found for this dataset.")
+            else:
+                recip_series = pd.to_numeric(obs_df["reciprocal_error_percent"], errors="coerce")
+                finite_recip_all = recip_series[np.isfinite(recip_series)]
+                recip_cols = st.columns(4)
+                recip_cols[0].metric("Paired measurements", f"{int(finite_recip_all.size):,}")
+                recip_cols[1].metric(
+                    "Median error",
+                    f"{float(finite_recip_all.median()):.2f}%" if not finite_recip_all.empty else "n/a",
+                )
+                recip_cols[2].metric(
+                    "95th percentile",
+                    f"{float(finite_recip_all.quantile(0.95)):.2f}%" if not finite_recip_all.empty else "n/a",
+                )
+                recip_cols[3].metric(
+                    "Removed by recip. filter",
+                    f"{int((~keep_mask & recip_series.notna()).sum()):,}",
+                )
+
+                if not finite_recip_all.empty:
+                    fig_recip_hist = go.Figure(
+                        go.Histogram(
+                            x=finite_recip_all,
+                            nbinsx=50,
+                            marker_color="#8c510a",
+                            name="Reciprocal error",
+                        )
+                    )
+                    fig_recip_hist.add_vline(
+                        x=float(max_recip_error_pct),
+                        line_width=2,
+                        line_dash="dash",
+                        line_color="#d7191c",
+                        annotation_text="QC threshold",
+                    )
+                    fig_recip_hist.update_layout(
+                        title="Reciprocal error distribution",
+                        height=260,
+                        margin={"l": 45, "r": 15, "t": 40, "b": 40},
+                        xaxis_title="Reciprocal error (%)",
+                        yaxis_title="Count",
+                    )
+                    st.plotly_chart(fig_recip_hist, use_container_width=True, key="ert_processing_recip_histogram")
+
+                    recip_plot_df = obs_df.loc[recip_series.notna()].copy()
+                    recip_plot_df["value"] = recip_series.loc[recip_plot_df.index].astype(float)
+                    recip_pseudo_df = _ert_pseudosection_dataframe(ert, recip_plot_df)
+                    fig_recip_pseudo = go.Figure()
+                    if not recip_pseudo_df.empty:
+                        fig_recip_pseudo.add_trace(
+                            go.Scattergl(
+                                x=recip_pseudo_df["mid_x"],
+                                y=recip_pseudo_df["pseudo_depth"],
+                                mode="markers",
+                                marker={
+                                    "size": 7,
+                                    "color": recip_pseudo_df["value"],
+                                    "colorscale": "YlOrRd",
+                                    "showscale": True,
+                                    "colorbar": {"title": "Recip. error (%)"},
+                                },
+                                text=(
+                                    "A="
+                                    + recip_pseudo_df["A"].astype(str)
+                                    + " B="
+                                    + recip_pseudo_df["B"].astype(str)
+                                    + " M="
+                                    + recip_pseudo_df["M"].astype(str)
+                                    + " N="
+                                    + recip_pseudo_df["N"].astype(str)
+                                ),
+                                hovertemplate="%{text}<br>x=%{x:.2f}<br>pseudo-depth=%{y:.2f}<br>recip=%{marker.color:.2f}%<extra></extra>",
+                                name="Reciprocal error",
+                            )
+                        )
+                    fig_recip_pseudo.update_layout(
+                        title="Reciprocal-error pseudosection",
+                        height=340,
+                        margin={"l": 55, "r": 15, "t": 40, "b": 45},
+                        xaxis_title="Profile midpoint x (m)",
+                        yaxis_title="Pseudo-depth (m)",
+                    )
+                    fig_recip_pseudo.update_yaxes(autorange="reversed")
+                    st.plotly_chart(fig_recip_pseudo, use_container_width=True, key="ert_processing_recip_pseudosection")
+
+                reciprocal_display = obs_df.copy()
+                reciprocal_display["kept_after_current_qc"] = keep_mask.to_numpy()
+                reciprocal_display = reciprocal_display[
+                    [
+                        col
+                        for col in [
+                            "A",
+                            "B",
+                            "M",
+                            "N",
+                            "value",
+                            "reciprocal_error_percent",
+                            "reciprocal_pair_count",
+                            "reciprocal_mean_value",
+                            "reciprocal_partner_value",
+                            "kept_after_current_qc",
+                            "fid",
+                        ]
+                        if col in reciprocal_display.columns
+                    ]
+                ]
+                reciprocal_display = reciprocal_display.rename(columns={"value": value_label})
+                st.dataframe(reciprocal_display.head(500), use_container_width=True, hide_index=True)
+
+        with table_tab:
+            st.markdown("Electrodes")
+            st.dataframe(electrodes_df, use_container_width=True, hide_index=True)
+            st.markdown("Measurements after current QC")
+            display_obs = obs_df.loc[keep_mask].copy()
+            display_obs = display_obs.rename(columns={"value": value_label})
+            st.dataframe(display_obs.head(500), use_container_width=True, hide_index=True)
+
+
+def _mesh3d_topography_function(config: Dict[str, Any]):
+    """Build a topography function from Mesh 3D GUI settings."""
+
+    import numpy as np
+
+    topo_type = config.get("topography_type", "Flat")
+    if topo_type == "Flat":
+        z_flat = float(config.get("z_flat", 0.0))
+        return lambda x, y: float(z_flat)
+
+    if topo_type == "Linear tilt":
+        z_base = float(config.get("z_base", 0.0))
+        tilt_x = float(config.get("tilt_x", 0.0))
+        tilt_y = float(config.get("tilt_y", 0.0))
+        return lambda x, y: z_base + tilt_x * float(x) + tilt_y * float(y)
+
+    if topo_type == "Gaussian hill":
+        z_base = float(config.get("hill_base", 0.0))
+        amp = float(config.get("hill_amp", 5.0))
+        sigma = max(float(config.get("hill_sigma", 10.0)), 1.0e-9)
+        cx = float(config.get("hill_cx", 0.0))
+        cy = float(config.get("hill_cy", 0.0))
+        return lambda x, y: z_base + amp * np.exp(
+            -((float(x) - cx) ** 2 + (float(y) - cy) ** 2) / (2.0 * sigma**2)
+        )
+
+    expr = str(config.get("topography_expr", "0.0"))
+    allowed = {
+        "np": np,
+        "sin": np.sin,
+        "cos": np.cos,
+        "exp": np.exp,
+        "sqrt": np.sqrt,
+        "abs": abs,
+        "pi": np.pi,
+    }
+
+    def _custom_topography(x, y):
+        try:
+            return float(eval(expr, {"__builtins__": {}}, {**allowed, "x": x, "y": y}))  # noqa: S307
+        except Exception:
+            return 0.0
+
+    return _custom_topography
+
+
+def _mesh3d_build_electrodes(config: Dict[str, Any]):
+    """Create a Mesh3DCreator and electrode table from Mesh 3D GUI settings."""
+
+    import numpy as np
+    import pandas as pd
+
+    from PyHydroGeophysX.core.mesh_3d import Mesh3DCreator
+
+    creator = Mesh3DCreator(
+        mesh_directory=str(config["output_dir"]),
+        elec_refinement=float(config["electrode_refinement"]),
+        node_refinement=float(config["boundary_refinement"]),
+        attractor_distance=float(config["attractor_distance"]),
+    )
+    array_type = config["array_type"]
+    mesh_type = config["mesh_type"]
+
+    if array_type == "Surface grid":
+        electrodes = creator.create_surface_electrode_array(
+            nx=int(config["nx"]),
+            ny=int(config["ny"]),
+            dx=float(config["dx"]),
+            dy=float(config["dy"]),
+            x_offset=float(config["x_offset"]),
+            y_offset=float(config["y_offset"]),
+            z=0.0,
+        )
+        if mesh_type == "Surface with topography":
+            topo_func = _mesh3d_topography_function(config)
+            electrodes["z"] = [
+                topo_func(x_val, y_val) for x_val, y_val in zip(electrodes["x"], electrodes["y"])
+            ]
+    elif array_type == "Single borehole":
+        z_values = np.linspace(float(config["z_start"]), float(config["z_end"]), int(config["n_bh_elec"]))
+        electrodes = creator.create_borehole_electrode_array(
+            float(config["bh_x"]),
+            float(config["bh_y"]),
+            z_values,
+        )
+    elif array_type == "Crosshole":
+        z_values = np.linspace(float(config["z_start"]), float(config["z_end"]), int(config["n_bh_elec"]))
+        electrodes = creator.create_crosshole_electrode_array(
+            list(config["boreholes"]),
+            z_values,
+        )
+    else:
+        surface = creator.create_surface_electrode_array(
+            nx=int(config["n_surface_elec"]),
+            ny=1,
+            dx=float(config["surface_dx"]),
+            dy=1.0,
+            x_offset=float(config["surface_x0"]),
+            y_offset=float(config["surface_y"]),
+            z=float(config["surface_z"]),
+        )
+        z_values = np.linspace(float(config["z_start"]), float(config["z_end"]), int(config["n_bh_elec"]))
+        borehole = creator.create_borehole_electrode_array(
+            float(config["bh_x"]),
+            float(config["bh_y"]),
+            z_values,
+            electrode_start_number=len(surface) + 1,
+        )
+        electrodes = pd.concat([surface, borehole], ignore_index=True)
+        electrodes["n"] = np.arange(1, len(electrodes) + 1, dtype=int)
+
+    return creator, electrodes
+
+
+def _mesh3d_axis_with_points(
+    lower: float,
+    upper: float,
+    spacing: float,
+    required_points: Any,
+) -> "np.ndarray":
+    """Create a float axis that includes domain limits and electrode coordinates."""
+
+    import numpy as np
+
+    lower = float(lower)
+    upper = float(upper)
+    if upper < lower:
+        lower, upper = upper, lower
+    if np.isclose(lower, upper):
+        pad = max(abs(lower) * 0.05, float(spacing), 1.0)
+        lower -= pad
+        upper += pad
+
+    spacing = max(float(spacing), 1.0e-6)
+    intervals = max(1, int(np.ceil((upper - lower) / spacing)))
+    base = np.linspace(lower, upper, intervals + 1, dtype=float)
+    points = np.asarray(required_points, dtype=float).ravel()
+    points = points[np.isfinite(points)]
+    points = points[(points >= lower - 1.0e-9) & (points <= upper + 1.0e-9)]
+    axis = np.unique(np.round(np.concatenate([base, points, [lower, upper]]), 8)).astype(float)
+    axis.sort()
+    if axis.size < 2:
+        axis = np.asarray([lower, upper], dtype=float)
+    return axis
+
+
+def _mesh3d_structured_bounds(electrodes_df: Any, config: Dict[str, Any]) -> Dict[str, float]:
+    """Estimate a structured 3D mesh domain for box and borehole-style surveys."""
+
+    import numpy as np
+
+    xs = np.asarray(electrodes_df["x"], dtype=float)
+    ys = np.asarray(electrodes_df["y"], dtype=float)
+    zs = np.asarray(electrodes_df["z"], dtype=float)
+    array_type = config.get("array_type", "Surface grid")
+    mesh_type = config.get("mesh_type", "Surface with topography")
+
+    if mesh_type == "Box mesh":
+        x_min = min(0.0, float(np.nanmin(xs)))
+        x_max = max(float(config.get("box_length", 50.0)), float(np.nanmax(xs)))
+        y_min = min(0.0, float(np.nanmin(ys)))
+        y_max = max(float(config.get("box_width", 30.0)), float(np.nanmax(ys)))
+        z_top = max(0.0, float(np.nanmax(zs)))
+        z_bottom = min(-float(config.get("box_height", 25.0)), float(np.nanmin(zs)))
+    elif array_type != "Surface grid":
+        lateral_padding = float(config.get("borehole_lateral_padding", 10.0))
+        top_padding = float(config.get("borehole_top_padding", 2.0))
+        bottom_padding = float(config.get("borehole_bottom_padding", 5.0))
+        x_min = float(np.nanmin(xs)) - lateral_padding
+        x_max = float(np.nanmax(xs)) + lateral_padding
+        y_min = float(np.nanmin(ys)) - lateral_padding
+        y_max = float(np.nanmax(ys)) + lateral_padding
+        z_top = max(0.0, float(np.nanmax(zs)) + top_padding)
+        z_bottom = float(np.nanmin(zs)) - bottom_padding
+    else:
+        spacing = max(float(config.get("dx", 5.0)), float(config.get("dy", 5.0)), 1.0)
+        extension = max(float(config.get("boundary_extension", 1.4)) - 1.0, 0.1)
+        x_pad = max(spacing, (float(np.nanmax(xs)) - float(np.nanmin(xs))) * extension * 0.5)
+        y_pad = max(spacing, (float(np.nanmax(ys)) - float(np.nanmin(ys))) * extension * 0.5)
+        x_min = float(np.nanmin(xs)) - x_pad
+        x_max = float(np.nanmax(xs)) + x_pad
+        y_min = float(np.nanmin(ys)) - y_pad
+        y_max = float(np.nanmax(ys)) + y_pad
+        z_top = float(np.nanmax(zs))
+        z_bottom = float(np.nanmin(zs)) - float(config.get("para_depth", 20.0))
+
+    min_span = max(float(config.get("borehole_horizontal_cell", config.get("boundary_refinement", 2.0))), 1.0)
+    if (x_max - x_min) < min_span:
+        center = 0.5 * (x_min + x_max)
+        x_min = center - 0.5 * min_span
+        x_max = center + 0.5 * min_span
+    if (y_max - y_min) < min_span:
+        center = 0.5 * (y_min + y_max)
+        y_min = center - 0.5 * min_span
+        y_max = center + 0.5 * min_span
+    if not z_bottom < z_top:
+        z_bottom = z_top - float(config.get("para_depth", 20.0))
+
+    return {
+        "x_min": float(x_min),
+        "x_max": float(x_max),
+        "y_min": float(y_min),
+        "y_max": float(y_max),
+        "z_bottom": float(z_bottom),
+        "z_top": float(z_top),
+    }
+
+
+def _mesh3d_create_structured_mesh(electrodes_df: Any, config: Dict[str, Any]) -> Any:
+    """Create a Gmsh-free PyGIMLi structured 3D mesh for box/borehole layouts."""
+
+    import numpy as np
+    import pygimli as pg
+
+    bounds = _mesh3d_structured_bounds(electrodes_df, config)
+    if config.get("array_type") == "Surface grid":
+        xy_spacing = float(config.get("boundary_refinement", 2.0))
+        z_spacing = float(config.get("dz_fine", 0.5))
+    else:
+        xy_spacing = float(config.get("borehole_horizontal_cell", 2.0))
+        z_spacing = float(config.get("borehole_vertical_cell", 1.0))
+
+    x_axis = _mesh3d_axis_with_points(
+        bounds["x_min"],
+        bounds["x_max"],
+        xy_spacing,
+        electrodes_df["x"],
+    )
+    y_axis = _mesh3d_axis_with_points(
+        bounds["y_min"],
+        bounds["y_max"],
+        xy_spacing,
+        electrodes_df["y"],
+    )
+    z_axis = _mesh3d_axis_with_points(
+        bounds["z_bottom"],
+        bounds["z_top"],
+        z_spacing,
+        electrodes_df["z"],
+    )
+
+    mesh = pg.createGrid(x=x_axis.astype(float), y=y_axis.astype(float), z=z_axis.astype(float), marker=2)
+    para_depth = float(config.get("para_depth", abs(bounds["z_top"] - bounds["z_bottom"])))
+    for cell in mesh.cells():
+        depth = bounds["z_top"] - float(cell.center().z())
+        cell.setMarker(1 if depth > para_depth else 2)
+    return mesh
+
+
+def _mesh3d_electrode_figure(config: Dict[str, Any], electrodes_df: Any):
+    """Create an interactive 3D electrode/topography preview."""
+
+    import numpy as np
+    import plotly.graph_objects as go
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter3d(
+            x=electrodes_df["x"],
+            y=electrodes_df["y"],
+            z=electrodes_df["z"],
+            mode="markers+text",
+            marker={"size": 5, "color": "#d7191c", "symbol": "circle"},
+            text=electrodes_df["n"].astype(str),
+            textposition="top center",
+            hovertemplate=(
+                "Electrode %{text}<br>x=%{x:.2f} m<br>y=%{y:.2f} m<br>z=%{z:.2f} m<extra></extra>"
+            ),
+            name="Electrodes",
+        )
+    )
+
+    if config["mesh_type"] == "Surface with topography" and config["array_type"] == "Surface grid":
+        topo_func = _mesh3d_topography_function(config)
+        spacing = max(float(config["dx"]), float(config["dy"]), 1.0)
+        margin = spacing * 2.0
+        x_grid = np.linspace(float(electrodes_df["x"].min()) - margin, float(electrodes_df["x"].max()) + margin, 45)
+        y_grid = np.linspace(float(electrodes_df["y"].min()) - margin, float(electrodes_df["y"].max()) + margin, 45)
+        x_mesh, y_mesh = np.meshgrid(x_grid, y_grid)
+        z_mesh = np.vectorize(topo_func)(x_mesh, y_mesh)
+        fig.add_trace(
+            go.Surface(
+                x=x_mesh,
+                y=y_mesh,
+                z=z_mesh,
+                colorscale="earth",
+                opacity=0.35,
+                showscale=False,
+                name="Topography",
+            )
+        )
+
+    fig.update_layout(
+        title=f"Electrode preview ({len(electrodes_df)} electrodes)",
+        height=520,
+        margin={"l": 0, "r": 0, "t": 45, "b": 0},
+        scene={
+            "xaxis_title": "X (m)",
+            "yaxis_title": "Y (m)",
+            "zaxis_title": "Z (m)",
+            "aspectmode": "data",
+        },
+        legend={"x": 0.01, "y": 0.99},
+    )
+    return fig
+
+
+def _mesh3d_mesh_summary(mesh: Any) -> Dict[str, Any]:
+    """Extract robust mesh summary metrics for display."""
+
+    summary: Dict[str, Any] = {}
+    for label, method_name in [
+        ("Cells", "cellCount"),
+        ("Nodes", "nodeCount"),
+        ("Boundaries", "boundaryCount"),
+        ("Dimension", "dim"),
+    ]:
+        try:
+            summary[label] = getattr(mesh, method_name)()
+        except Exception:
+            continue
+    return summary
+
+
+def _mesh3d_save_outputs(
+    mesh: Any,
+    electrodes_df: Any,
+    output_dir: Path,
+    mesh_name: str,
+    selected_formats: List[str],
+) -> Dict[str, str]:
+    """Save generated Mesh 3D outputs requested by the GUI."""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    outputs: Dict[str, str] = {}
+
+    if "BMS mesh (.bms)" in selected_formats:
+        path = output_dir / f"{mesh_name}.bms"
+        mesh.save(str(path))
+        outputs["bms"] = str(path)
+
+    if "VTK mesh (.vtk)" in selected_formats:
+        path = output_dir / f"{mesh_name}.vtk"
+        mesh.exportVTK(str(path))
+        outputs["vtk"] = str(path)
+
+    if "Electrode CSV" in selected_formats:
+        path = output_dir / f"{mesh_name}_electrodes.csv"
+        electrodes_df.to_csv(path, index=False)
+        outputs["electrodes_csv"] = str(path)
+
+    return outputs
+
+
+def render_mesh3d_processing_tab(sidebar_state: Dict[str, Any]) -> None:
+    """Render the integrated local 3D mesh builder workflow."""
+
+    import numpy as np
+    import pandas as pd
+
+    st.subheader("3D mesh builder")
+    st.caption(
+        "Build electrode arrays, preview topography, generate 3D PyGIMLi meshes, and export BMS/VTK/CSV files for ERT modeling."
+    )
+
+    _render_processing_llm_control(
+        module_key="mesh3d_processing",
+        module_name="3D Mesh Processing",
+        capabilities=(
+            "Create surface-grid, single-borehole, crosshole, and surface-to-borehole electrode arrays; "
+            "preview topography and electrode geometry; generate PyGIMLi prism meshes or Gmsh-free structured 3D meshes; "
+            "export PyGIMLi BMS, ParaView VTK, and electrode CSV files."
+        ),
+        default_request="Help me design a 3D ERT mesh, choose electrode spacing and refinement, and export BMS/VTK files.",
+    )
+
+    try:
+        from PyHydroGeophysX.core.mesh_3d import Mesh3DCreator  # noqa: F401
+
+        mesh3d_available = True
+        mesh3d_error = ""
+    except Exception as exc:  # noqa: BLE001
+        mesh3d_available = False
+        mesh3d_error = str(exc)
+
+    try:
+        import plotly.graph_objects as go  # noqa: F401
+
+        plotly_available = True
+    except Exception:
+        plotly_available = False
+
+    if not mesh3d_available:
+        st.error(
+            "The Mesh3D backend could not be imported. Install PyGIMLi/Gmsh dependencies or use the standalone app after fixing imports."
+        )
+        st.code(mesh3d_error)
+        return
+
+    output_base = Path(sidebar_state.get("output_dir", "results/streamlit_workflow")).expanduser() / "mesh3d"
+    if not output_base.is_absolute():
+        output_base = (PARENT_DIR / output_base).resolve()
+    output_base.mkdir(parents=True, exist_ok=True)
+
+    control_col, workspace_col = st.columns([0.9, 1.35])
+
+    with control_col:
+        st.markdown("##### Geometry")
+        mesh_type = st.radio(
+            "Mesh type",
+            ["Surface with topography", "Box mesh"],
+            key="mesh3d_mesh_type",
+            help="Surface/topography uses PyGIMLi prism extrusion for surface arrays. Box and borehole layouts use a Gmsh-free PyGIMLi structured mesh.",
+        )
+        array_type = st.selectbox(
+            "Electrode array",
+            ["Surface grid", "Single borehole", "Crosshole", "Surface-to-borehole"],
+            key="mesh3d_array_type",
+        )
+
+        config: Dict[str, Any] = {
+            "mesh_type": mesh_type,
+            "array_type": array_type,
+        }
+
+        if array_type == "Surface grid":
+            c1, c2 = st.columns(2)
+            with c1:
+                config["nx"] = int(st.number_input("nx", 2, 200, 10, key="mesh3d_nx"))
+                config["dx"] = float(st.number_input("dx (m)", 0.1, 1000.0, 5.0, step=0.5, key="mesh3d_dx"))
+                config["x_offset"] = float(st.number_input("x offset (m)", value=0.0, step=1.0, key="mesh3d_x_offset"))
+            with c2:
+                config["ny"] = int(st.number_input("ny", 2, 200, 6, key="mesh3d_ny"))
+                config["dy"] = float(st.number_input("dy (m)", 0.1, 1000.0, 5.0, step=0.5, key="mesh3d_dy"))
+                config["y_offset"] = float(st.number_input("y offset (m)", value=0.0, step=1.0, key="mesh3d_y_offset"))
+        elif array_type == "Single borehole":
+            c1, c2 = st.columns(2)
+            with c1:
+                config["bh_x"] = float(st.number_input("Borehole x (m)", value=0.0, key="mesh3d_bh_x"))
+                config["z_start"] = float(st.number_input("Top z (m)", value=0.0, key="mesh3d_z_start"))
+            with c2:
+                config["bh_y"] = float(st.number_input("Borehole y (m)", value=0.0, key="mesh3d_bh_y"))
+                config["z_end"] = float(st.number_input("Bottom z (m)", value=-20.0, key="mesh3d_z_end"))
+            config["n_bh_elec"] = int(st.number_input("Electrodes", 2, 200, 12, key="mesh3d_n_bh_elec"))
+        elif array_type == "Crosshole":
+            n_boreholes = int(st.number_input("Boreholes", 2, 8, 2, key="mesh3d_n_boreholes"))
+            boreholes = []
+            for idx in range(n_boreholes):
+                c1, c2 = st.columns(2)
+                with c1:
+                    bh_x = float(st.number_input(f"BH {idx + 1} x", value=float(idx * 10.0), key=f"mesh3d_cross_x_{idx}"))
+                with c2:
+                    bh_y = float(st.number_input(f"BH {idx + 1} y", value=0.0, key=f"mesh3d_cross_y_{idx}"))
+                boreholes.append((bh_x, bh_y))
+            c1, c2 = st.columns(2)
+            with c1:
+                config["z_start"] = float(st.number_input("Top z (m)", value=0.0, key="mesh3d_cross_z_start"))
+            with c2:
+                config["z_end"] = float(st.number_input("Bottom z (m)", value=-20.0, key="mesh3d_cross_z_end"))
+            config["n_bh_elec"] = int(st.number_input("Electrodes per borehole", 2, 200, 12, key="mesh3d_cross_n_elec"))
+            config["boreholes"] = boreholes
+        else:
+            st.caption("Surface-to-borehole layout combines a surface electrode line with one downhole string.")
+            c1, c2 = st.columns(2)
+            with c1:
+                config["n_surface_elec"] = int(st.number_input("Surface electrodes", 2, 300, 24, key="mesh3d_s2b_surface_n"))
+                config["surface_dx"] = float(st.number_input("Surface spacing dx (m)", 0.1, 1000.0, 2.0, step=0.5, key="mesh3d_s2b_surface_dx"))
+                config["surface_x0"] = float(st.number_input("Surface start x (m)", value=0.0, step=1.0, key="mesh3d_s2b_surface_x0"))
+                config["surface_z"] = float(st.number_input("Surface z (m)", value=0.0, step=1.0, key="mesh3d_s2b_surface_z"))
+            with c2:
+                config["surface_y"] = float(st.number_input("Surface y (m)", value=0.0, step=1.0, key="mesh3d_s2b_surface_y"))
+                config["bh_x"] = float(st.number_input("Borehole x (m)", value=20.0, step=1.0, key="mesh3d_s2b_bh_x"))
+                config["bh_y"] = float(st.number_input("Borehole y (m)", value=0.0, step=1.0, key="mesh3d_s2b_bh_y"))
+                config["n_bh_elec"] = int(st.number_input("Borehole electrodes", 2, 300, 16, key="mesh3d_s2b_bh_n"))
+            c1, c2 = st.columns(2)
+            with c1:
+                config["z_start"] = float(st.number_input("Borehole top z (m)", value=0.0, key="mesh3d_s2b_z_start"))
+            with c2:
+                config["z_end"] = float(st.number_input("Borehole bottom z (m)", value=-30.0, key="mesh3d_s2b_z_end"))
+
+        if mesh_type == "Surface with topography" and array_type == "Surface grid":
+            st.markdown("##### Topography")
+            topo_type = st.selectbox(
+                "Topography",
+                ["Flat", "Linear tilt", "Gaussian hill", "Custom expression"],
+                key="mesh3d_topography_type",
+            )
+            config["topography_type"] = topo_type
+            if topo_type == "Flat":
+                config["z_flat"] = float(st.number_input("Surface elevation (m)", value=0.0, step=1.0, key="mesh3d_z_flat"))
+            elif topo_type == "Linear tilt":
+                config["z_base"] = float(st.number_input("Base elevation (m)", value=100.0, step=1.0, key="mesh3d_z_base"))
+                c1, c2 = st.columns(2)
+                with c1:
+                    config["tilt_x"] = float(st.slider("x slope", -1.0, 1.0, 0.05, 0.01, key="mesh3d_tilt_x"))
+                with c2:
+                    config["tilt_y"] = float(st.slider("y slope", -1.0, 1.0, 0.0, 0.01, key="mesh3d_tilt_y"))
+            elif topo_type == "Gaussian hill":
+                c1, c2 = st.columns(2)
+                with c1:
+                    config["hill_base"] = float(st.number_input("Base z (m)", value=0.0, step=1.0, key="mesh3d_hill_base"))
+                    config["hill_amp"] = float(st.number_input("Amplitude (m)", value=5.0, step=0.5, key="mesh3d_hill_amp"))
+                    config["hill_sigma"] = float(st.number_input("Width sigma (m)", value=10.0, step=1.0, key="mesh3d_hill_sigma"))
+                with c2:
+                    config["hill_cx"] = float(st.number_input("Center x (m)", value=25.0, step=1.0, key="mesh3d_hill_cx"))
+                    config["hill_cy"] = float(st.number_input("Center y (m)", value=15.0, step=1.0, key="mesh3d_hill_cy"))
+            else:
+                config["topography_expr"] = st.text_input(
+                    "z = f(x, y)",
+                    value="0.1*x - 0.05*y + 100",
+                    key="mesh3d_topography_expr",
+                    help="Allowed names: x, y, np, sin, cos, exp, sqrt, abs, pi.",
+                )
+        elif mesh_type == "Box mesh":
+            st.markdown("##### Box dimensions")
+            config["box_length"] = float(st.number_input("Length x (m)", 1.0, 5000.0, 50.0, step=1.0, key="mesh3d_box_length"))
+            config["box_width"] = float(st.number_input("Width y (m)", 1.0, 5000.0, 30.0, step=1.0, key="mesh3d_box_width"))
+            config["box_height"] = float(st.number_input("Depth z (m)", 1.0, 1000.0, 25.0, step=1.0, key="mesh3d_box_height"))
+        else:
+            config["topography_type"] = "Flat"
+            config["z_flat"] = 0.0
+            st.info("Borehole and crosshole layouts use a structured 3D survey volume instead of a surface-topography prism.")
+
+        st.markdown("##### Mesh parameters")
+        c1, c2 = st.columns(2)
+        with c1:
+            config["electrode_refinement"] = float(
+                st.number_input("Electrode refinement (m)", 0.01, 50.0, 0.5, step=0.1, key="mesh3d_elec_refine")
+            )
+            config["attractor_distance"] = float(
+                st.number_input("Attractor distance (m)", 0.1, 200.0, 5.0, step=0.5, key="mesh3d_attractor_dist")
+            )
+        with c2:
+            config["boundary_refinement"] = float(
+                st.number_input("Boundary refinement (m)", 0.1, 100.0, 2.0, step=0.5, key="mesh3d_boundary_refine")
+            )
+            config["para_depth"] = float(
+                st.number_input("Investigation depth (m)", 1.0, 500.0, 20.0, step=1.0, key="mesh3d_para_depth")
+            )
+        config["dz_fine"] = float(st.number_input("Fine layer dz (m)", 0.05, 10.0, 0.5, step=0.1, key="mesh3d_dz_fine"))
+        config["dz_coarse"] = float(st.number_input("Coarse layer dz (m)", 0.5, 50.0, 2.0, step=0.5, key="mesh3d_dz_coarse"))
+        config["boundary_extension"] = float(
+            st.slider("Boundary extension factor", 1.0, 3.0, 1.4, 0.1, key="mesh3d_boundary_extension")
+        )
+
+        if array_type != "Surface grid":
+            st.markdown("##### Borehole survey domain")
+            c1, c2 = st.columns(2)
+            with c1:
+                config["borehole_lateral_padding"] = float(
+                    st.number_input("Lateral padding (m)", 1.0, 500.0, 10.0, step=1.0, key="mesh3d_bh_lateral_padding")
+                )
+                config["borehole_horizontal_cell"] = float(
+                    st.number_input("Horizontal cell size (m)", 0.1, 100.0, 2.0, step=0.5, key="mesh3d_bh_horizontal_cell")
+                )
+            with c2:
+                config["borehole_bottom_padding"] = float(
+                    st.number_input("Bottom padding (m)", 0.0, 500.0, 5.0, step=1.0, key="mesh3d_bh_bottom_padding")
+                )
+                config["borehole_vertical_cell"] = float(
+                    st.number_input("Vertical cell size (m)", 0.1, 100.0, 1.0, step=0.5, key="mesh3d_bh_vertical_cell")
+                )
+            config["borehole_top_padding"] = float(
+                st.number_input("Top padding above highest electrode (m)", 0.0, 100.0, 2.0, step=0.5, key="mesh3d_bh_top_padding")
+            )
+
+        st.markdown("##### Output")
+        mesh_name_input = st.text_input("Mesh name", value="my_3d_mesh", key="mesh3d_mesh_name")
+        safe_mesh_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", mesh_name_input.strip()) or "mesh3d"
+        output_text = st.text_input("Output directory", value=str(output_base), key="mesh3d_output_dir").strip().strip('"')
+        output_dir = Path(output_text).expanduser()
+        if not output_dir.is_absolute():
+            output_dir = (PARENT_DIR / output_dir).resolve()
+        config["output_dir"] = output_dir
+        selected_formats = st.multiselect(
+            "Export formats",
+            ["BMS mesh (.bms)", "VTK mesh (.vtk)", "Electrode CSV"],
+            default=["BMS mesh (.bms)", "VTK mesh (.vtk)", "Electrode CSV"],
+            key="mesh3d_export_formats",
+        )
+
+    with workspace_col:
+        preview_tab, generate_tab, export_tab = st.tabs(["Electrode preview", "Generate mesh", "Export"])
+        try:
+            _, electrodes_df = _mesh3d_build_electrodes(config)
+            preview_error = ""
+        except Exception as exc:  # noqa: BLE001
+            electrodes_df = pd.DataFrame()
+            preview_error = str(exc)
+
+        with preview_tab:
+            if preview_error:
+                st.error(f"Could not build electrode preview: {preview_error}")
+            elif electrodes_df.empty:
+                st.info("Adjust the geometry controls to preview electrode positions.")
+            else:
+                metric_cols = st.columns(4)
+                metric_cols[0].metric("Electrodes", f"{len(electrodes_df):,}")
+                metric_cols[1].metric("X range", f"{electrodes_df['x'].min():.1f} to {electrodes_df['x'].max():.1f} m")
+                metric_cols[2].metric("Y range", f"{electrodes_df['y'].min():.1f} to {electrodes_df['y'].max():.1f} m")
+                metric_cols[3].metric("Z range", f"{electrodes_df['z'].min():.2f} to {electrodes_df['z'].max():.2f} m")
+                if plotly_available:
+                    st.plotly_chart(
+                        _mesh3d_electrode_figure(config, electrodes_df),
+                        use_container_width=True,
+                        key="mesh3d_electrode_preview",
+                    )
+                else:
+                    st.info("Install plotly for interactive 3D electrode preview.")
+                with st.expander("Electrode table", expanded=False):
+                    st.dataframe(electrodes_df, use_container_width=True, hide_index=True)
+                    st.download_button(
+                        "Download preview electrodes CSV",
+                        data=electrodes_df.to_csv(index=False).encode("utf-8"),
+                        file_name=f"{safe_mesh_name}_electrodes_preview.csv",
+                        mime="text/csv",
+                        key="mesh3d_preview_electrodes_download",
+                    )
+
+        with generate_tab:
+            st.markdown("##### Generation summary")
+            summary_rows = [
+                ("Mesh type", mesh_type),
+                ("Electrode array", array_type),
+                ("Output directory", str(output_dir)),
+                ("Mesh name", safe_mesh_name),
+                ("Formats", ", ".join(selected_formats) if selected_formats else "None"),
+            ]
+            if mesh_type == "Surface with topography":
+                summary_rows.extend(
+                    [
+                        ("Topography", config.get("topography_type", "Structured borehole volume")),
+                        ("Investigation depth (m)", config["para_depth"]),
+                        ("Fine dz / coarse dz (m)", f"{config['dz_fine']} / {config['dz_coarse']}"),
+                    ]
+                )
+            else:
+                summary_rows.extend(
+                    [
+                        ("Length x (m)", config["box_length"]),
+                        ("Width y (m)", config["box_width"]),
+                        ("Depth z (m)", config["box_height"]),
+                    ]
+                )
+            summary_df = pd.DataFrame(
+                [(parameter, str(value)) for parameter, value in summary_rows],
+                columns=["Parameter", "Value"],
+            )
+            st.dataframe(summary_df, hide_index=True, use_container_width=True)
+
+            if mesh_type == "Box mesh":
+                st.info("Box mesh generation now uses a Gmsh-free PyGIMLi structured grid by default.")
+            if array_type != "Surface grid":
+                st.info("Borehole-style surveys are meshed as structured 3D volumes so downhole electrodes stay inside the domain.")
+
+            if st.button("Generate 3D mesh", type="primary", key="mesh3d_generate_button", use_container_width=True):
+                with st.spinner("Generating 3D mesh..."):
+                    try:
+                        creator, generated_electrodes = _mesh3d_build_electrodes(config)
+                        if mesh_type == "Surface with topography" and array_type == "Surface grid":
+                            mesh = creator.create_3d_mesh_with_topography(
+                                electrode_positions=generated_electrodes,
+                                topography_func=_mesh3d_topography_function(config),
+                                para_depth=float(config["para_depth"]),
+                                dz_fine=float(config["dz_fine"]),
+                                dz_coarse=float(config["dz_coarse"]),
+                                boundary_extension=float(config["boundary_extension"]),
+                                use_prism_mesh=True,
+                            )
+                            generator_label = "PyGIMLi topography prism"
+                        else:
+                            mesh = _mesh3d_create_structured_mesh(generated_electrodes, config)
+                            generator_label = "PyGIMLi structured grid"
+                        outputs = _mesh3d_save_outputs(
+                            mesh,
+                            generated_electrodes,
+                            output_dir=output_dir,
+                            mesh_name=safe_mesh_name,
+                            selected_formats=selected_formats,
+                        )
+                        st.session_state.mesh3d_processing_result = {
+                            "mesh": mesh,
+                            "electrodes": generated_electrodes,
+                            "outputs": outputs,
+                            "output_dir": str(output_dir),
+                            "mesh_name": safe_mesh_name,
+                            "generator": generator_label,
+                        }
+                        st.success(f"3D mesh generated successfully with {generator_label}.")
+                    except Exception as exc:  # noqa: BLE001
+                        st.error(f"Mesh generation failed: {exc}")
+
+            result = st.session_state.get("mesh3d_processing_result")
+            if result:
+                mesh = result.get("mesh")
+                mesh_summary = _mesh3d_mesh_summary(mesh)
+                if mesh_summary:
+                    stat_cols = st.columns(len(mesh_summary))
+                    for col, (label, value) in zip(stat_cols, mesh_summary.items()):
+                        col.metric(label, f"{value:,}" if isinstance(value, int) else value)
+
+                if plotly_available:
+                    try:
+                        import plotly.graph_objects as go
+
+                        positions = np.asarray([[node.x(), node.y(), node.z()] for node in mesh.nodes()], dtype=float)
+                        step = max(1, int(len(positions) / 3500))
+                        display_nodes = positions[::step]
+                        fig_nodes = go.Figure(
+                            go.Scatter3d(
+                                x=display_nodes[:, 0],
+                                y=display_nodes[:, 1],
+                                z=display_nodes[:, 2],
+                                mode="markers",
+                                marker={"size": 1.6, "color": display_nodes[:, 2], "colorscale": "Viridis"},
+                                name="Mesh nodes",
+                            )
+                        )
+                        fig_nodes.update_layout(
+                            title="Generated mesh nodes (subsampled)",
+                            height=480,
+                            margin={"l": 0, "r": 0, "t": 45, "b": 0},
+                            scene={
+                                "xaxis_title": "X (m)",
+                                "yaxis_title": "Y (m)",
+                                "zaxis_title": "Z (m)",
+                                "aspectmode": "data",
+                            },
+                        )
+                        st.plotly_chart(fig_nodes, use_container_width=True, key="mesh3d_generated_mesh_preview")
+                    except Exception:
+                        st.info("Mesh node preview is unavailable for this mesh object.")
+
+        with export_tab:
+            result = st.session_state.get("mesh3d_processing_result")
+            if not result:
+                st.info("Generate a 3D mesh first to enable output downloads.")
+            else:
+                st.success(f"Generated mesh folder: {result.get('output_dir')}")
+                outputs = result.get("outputs", {})
+                if not outputs:
+                    st.warning("No output format was selected when the mesh was generated.")
+                for output_key, path_text in outputs.items():
+                    path = Path(path_text)
+                    label = output_key.replace("_", " ").upper()
+                    if path.exists() and path.is_file():
+                        st.download_button(
+                            f"Download {label}",
+                            data=path.read_bytes(),
+                            file_name=path.name,
+                            key=f"mesh3d_download_{output_key}",
+                            use_container_width=True,
+                        )
+                        st.code(str(path))
+                    else:
+                        st.code(str(path))
+                with st.expander("Standalone Mesh 3D app", expanded=False):
+                    st.markdown("The original standalone app is still available:")
+                    st.code("python -m PyHydroGeophysX.gui_mesh3d")
+                    st.code("streamlit run examples/app_mesh3d.py")
+
+
+def render_geophysical_data_processing_tab(sidebar_state: Dict[str, Any]) -> None:
+    """Render a unified data-processing workspace for geophysical methods."""
+
+    st.subheader("Geophysical Data Processing")
+    st.caption(
+        "Local tools for field-data QC, preprocessing, picking/conversion, inversion setup, and method-specific exports."
+    )
+
+    seismic_tab, ert_tab, mesh3d_tab, em_tab, gravmag_tab = st.tabs(
+        ["Seismic", "ERT", "Mesh 3D", "EM", "Gravity / Magnetics"]
+    )
+
+    with seismic_tab:
+        _render_processing_llm_control(
+            module_key="seismic_processing",
+            module_name="Seismic Processing",
+            capabilities=(
+                "Read SEG-Y and Geometrics DAT gathers; apply AGC, normalization, polarity flip, bandpass filtering, "
+                "traditional wiggle/image display, manual and assisted first-arrival picking, 1D velocity-model guidance, "
+                "travel-time export, and SRT inversion launch."
+            ),
+            default_request="Help me process this seismic refraction dataset, pick reliable first arrivals, and export SRT travel times.",
+        )
+        st.markdown("---")
+        render_seismic_processing_tab(sidebar_state)
+
+    with ert_tab:
+        render_ert_processing_tab(sidebar_state)
+
+    with mesh3d_tab:
+        render_mesh3d_processing_tab(sidebar_state)
+
+    with em_tab:
+        _render_processing_module_shell(
+            module_key="em_processing",
+            module_name="EM Processing",
+            data_types=["TDEM soundings", "FDEM profiles", "instrument CSV/TXT exports"],
+            workflow_steps=[
+                "Format detection",
+                "Time-gate / frequency check",
+                "Noise-floor screening",
+                "Drift / background correction",
+                "1D inversion setup",
+                "Export processed curves",
+            ],
+            output_products=[
+                "QC report",
+                "Processed EM curves",
+                "1D inversion input",
+                "Conductivity-depth summary",
+            ],
+        )
+
+    with gravmag_tab:
+        _render_processing_module_shell(
+            module_key="gravmag_processing",
+            module_name="Gravity / Magnetic Processing",
+            data_types=["gravity station tables", "magnetometer profiles", "CSV/TXT grids"],
+            workflow_steps=[
+                "Coordinate and elevation check",
+                "Diurnal / drift correction",
+                "Regional trend removal",
+                "Filtering / gridding",
+                "Anomaly map preparation",
+                "Export processed grid",
+            ],
+            output_products=[
+                "QC report",
+                "Corrected station table",
+                "Anomaly map",
+                "Processed grid",
+            ],
+        )
 
 
 def render_cloud_tips() -> None:
@@ -6224,24 +10629,14 @@ def main() -> None:
     init_session_state()
     render_header()
     
-    # Check for missing dependencies
+    # Check for missing dependencies — show a banner but keep rendering
+    # (demo mode, hydro tab, tutorial, concepts all work without agents)
     if not AGENTS_AVAILABLE:
-        st.error(f"""
-        ⚠️ **Missing Dependencies**
-        
-        Some required packages are not installed: `{IMPORT_ERROR}`
-        
-        Please install the required dependencies:
-        ```bash
-        pip install pygimli SimPEG openai
-        ```
-        
-        Or use conda for pygimli:
-        ```bash
-        conda install -c gimli pygimli
-        ```
-        """)
-        st.stop()
+        st.error(
+            f"⚠️ **Missing Dependencies** — some packages could not be imported: `{IMPORT_ERROR}`.  \n"
+            "Workflow execution is disabled, but **Demo mode**, the Hydro tab, and all other tabs still work.  \n"
+            "To enable full workflow execution install: `pip install pygimli SimPEG openai`"
+        )
     
     if not PYGIMLI_AVAILABLE:
         st.warning("""
@@ -6255,8 +10650,9 @@ def main() -> None:
     
     sidebar_state = render_sidebar()
 
-    tab_workflow, tab_hydro_multi, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs([
+    tab_workflow, tab_processing, tab_hydro_multi, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs([
         "🚀 Run Workflow",
+        "Geophysical Data Processing",
         "🌊 Hydro → Geophysics",
         "📖 Step-by-Step Tutorials",
         "🔬 Learn Hydrogeophysics & Ask AI",
@@ -6266,6 +10662,9 @@ def main() -> None:
 
     with tab_workflow:
         render_workflow_tab(sidebar_state)
+
+    with tab_processing:
+        render_geophysical_data_processing_tab(sidebar_state)
 
     with tab_hydro_multi:
         render_hydro_multigeophys_tab()

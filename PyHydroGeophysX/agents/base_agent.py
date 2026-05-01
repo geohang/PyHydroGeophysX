@@ -6,11 +6,239 @@ Provides the foundation for all specialized agents in the workflow.
 
 import json
 import os
+import time
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Tuple
 
 import numpy as np
+
+
+AGENT_RESULT_FIELDS: Tuple[str, ...] = (
+    "status",
+    "summary",
+    "data",
+    "warnings",
+    "next_suggested_action",
+    "llm_interpretation",
+    "elapsed_seconds",
+    "cost_estimate_usd",
+    "error",
+    "error_fix_hint",
+)
+
+
+@dataclass
+class AgentResult:
+    """Standard user-facing result returned by agent workflows.
+
+    Parameters
+    ----------
+    status : {"success", "failed", "needs_review"}
+        Execution state for the agent or workflow.
+    summary : str
+        One-sentence human-readable summary. This is always populated.
+    data : dict
+        Numerical, object, or artifact outputs.
+    warnings : list of str, optional
+        Non-fatal issues the user should review.
+    next_suggested_action : str, optional
+        Suggested next step for the user.
+    llm_interpretation : str, optional
+        AI-generated interpretation. UIs should label this before rendering.
+    elapsed_seconds : float, optional
+        Wall-clock runtime.
+    cost_estimate_usd : float, optional
+        Approximate LLM cost associated with this result.
+    error : str, optional
+        Error message when ``status="failed"``.
+    error_fix_hint : str, optional
+        Plain-language fix hint for the user.
+
+    Returns
+    -------
+    AgentResult
+        Dict-like result object. Existing code can continue to call
+        ``result["status"]`` or ``result.get("artifact_key")``.
+
+    Raises
+    ------
+    KeyError
+        Raised by ``__getitem__`` when a key is not present.
+
+    Examples
+    --------
+    >>> result = AgentResult(status="success", summary="Loaded data.", data={"n": 2})
+    >>> result["status"]
+    'success'
+    >>> result.get("n")
+    2
+    """
+
+    status: Literal["success", "failed", "needs_review"]
+    summary: str
+    data: Dict[str, Any]
+    warnings: List[str] = field(default_factory=list)
+    next_suggested_action: Optional[str] = None
+    llm_interpretation: Optional[str] = None
+    elapsed_seconds: float = 0.0
+    cost_estimate_usd: Optional[float] = None
+    error: Optional[str] = None
+    error_fix_hint: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if self.status == "needs_improvement":
+            self.status = "needs_review"  # type: ignore[assignment]
+        if not self.summary:
+            if self.error:
+                self.summary = self.error
+            elif self.status == "success":
+                self.summary = "Agent completed successfully."
+            elif self.status == "needs_review":
+                self.summary = "Agent needs user review before continuing."
+            else:
+                self.summary = "Agent failed."
+        if self.data is None:
+            self.data = {}
+
+    @classmethod
+    def from_dict(
+        cls,
+        payload: Dict[str, Any],
+        default_summary: str = "Agent completed.",
+    ) -> "AgentResult":
+        """Create an ``AgentResult`` from a legacy dictionary.
+
+        Parameters
+        ----------
+        payload : dict
+            Legacy result dictionary.
+        default_summary : str, optional
+            Summary to use if the dictionary does not provide one.
+
+        Returns
+        -------
+        AgentResult
+            Normalized result object.
+
+        Raises
+        ------
+        TypeError
+            If ``payload`` is not a dictionary.
+
+        Examples
+        --------
+        >>> AgentResult.from_dict({"status": "success", "value": 1}).get("value")
+        1
+        """
+        if not isinstance(payload, dict):
+            raise TypeError("payload must be a dictionary")
+
+        status = payload.get("status", "success")
+        if status == "needs_improvement":
+            status = "needs_review"
+        if status not in {"success", "failed", "needs_review"}:
+            status = "needs_review"
+
+        embedded_data = payload.get("data", {})
+        data = dict(embedded_data) if isinstance(embedded_data, dict) else {}
+        for key, value in payload.items():
+            if key not in AGENT_RESULT_FIELDS and key != "interpretation":
+                data[key] = value
+        warnings_value = payload.get("warnings", [])
+        if isinstance(warnings_value, str):
+            warnings_list = [warnings_value]
+        else:
+            warnings_list = list(warnings_value or [])
+
+        return cls(
+            status=status,
+            summary=payload.get("summary")
+            or payload.get("message")
+            or payload.get("error")
+            or default_summary,
+            data=data,
+            warnings=warnings_list,
+            next_suggested_action=payload.get("next_suggested_action"),
+            llm_interpretation=payload.get("llm_interpretation")
+            or payload.get("interpretation")
+            or payload.get("insights"),
+            elapsed_seconds=float(payload.get("elapsed_seconds", 0.0) or 0.0),
+            cost_estimate_usd=payload.get("cost_estimate_usd"),
+            error=payload.get("error"),
+            error_fix_hint=payload.get("error_fix_hint"),
+        )
+
+    def to_dict(self, include_data_keys: bool = True) -> Dict[str, Any]:
+        """Return a dictionary representation.
+
+        Parameters
+        ----------
+        include_data_keys : bool, optional
+            If True, merge ``data`` into the top level for legacy callers.
+
+        Returns
+        -------
+        dict
+            Serialized result.
+
+        Raises
+        ------
+        None
+
+        Examples
+        --------
+        >>> AgentResult("success", "ok", {"x": 1}).to_dict()["x"]
+        1
+        """
+        output = {
+            "status": self.status,
+            "summary": self.summary,
+            "data": self.data,
+            "warnings": self.warnings,
+            "next_suggested_action": self.next_suggested_action,
+            "llm_interpretation": self.llm_interpretation,
+            "elapsed_seconds": self.elapsed_seconds,
+            "cost_estimate_usd": self.cost_estimate_usd,
+            "error": self.error,
+            "error_fix_hint": self.error_fix_hint,
+        }
+        if include_data_keys:
+            for key, value in self.data.items():
+                output.setdefault(key, value)
+        return output
+
+    def __getitem__(self, key: str) -> Any:
+        if key in AGENT_RESULT_FIELDS:
+            return getattr(self, key)
+        if key in self.data:
+            return self.data[key]
+        raise KeyError(key)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def keys(self) -> Iterable[str]:
+        return self.to_dict(include_data_keys=True).keys()
+
+    def values(self) -> Iterable[Any]:
+        return self.to_dict(include_data_keys=True).values()
+
+    def items(self) -> Iterable[Tuple[str, Any]]:
+        return self.to_dict(include_data_keys=True).items()
+
+    def __iter__(self):
+        return iter(self.keys())
+
+    def __len__(self) -> int:
+        return len(list(self.keys()))
+
+    def __contains__(self, key: object) -> bool:
+        return isinstance(key, str) and key in set(self.keys())
 
 
 # ---------------------------------------------------------------------------
@@ -55,7 +283,43 @@ class BaseAgent(ABC):
         
         self.context = {}
         self.results = {}
+        self.llm_usage_ledger: List[Dict[str, Any]] = []
+        self._agent_md_augmented: bool = False
         
+    @staticmethod
+    def _load_agent_md_for_name(name: str) -> Optional[str]:
+        """Load the body of the corresponding .agent.md file for this agent.
+
+        Looks for ``.github/agents/{name}.agent.md`` relative to the repository
+        root (two directories above this file). Strips YAML frontmatter and
+        returns the Markdown body as a plain string, or ``None`` if the file
+        does not exist or cannot be read.
+
+        Parameters
+        ----------
+        name : str
+            Agent name as registered in ``super().__init__``, e.g. ``"ert_inversion"``.
+
+        Returns
+        -------
+        str or None
+            Parsed body text, or ``None`` when the file is absent.
+        """
+        try:
+            repo_root = Path(__file__).resolve().parent.parent.parent
+            md_path = repo_root / ".github" / "agents" / f"{name}.agent.md"
+            if not md_path.exists():
+                return None
+            text = md_path.read_text(encoding="utf-8")
+            # Strip YAML frontmatter block (--- ... ---)
+            if text.startswith("---"):
+                end = text.find("\n---", 3)
+                if end != -1:
+                    text = text[end + 4:].lstrip("\n")
+            return text.strip() or None
+        except Exception:
+            return None
+
     @abstractmethod
     def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -84,6 +348,18 @@ class BaseAgent(ABC):
         Returns:
             LLM response as string
         """
+        # One-time lazy augmentation: append .agent.md structured instructions
+        # to self.system_message the first time query_llm is called.
+        if not self._agent_md_augmented:
+            self._agent_md_augmented = True
+            _md_body = self._load_agent_md_for_name(self.name)
+            if _md_body and getattr(self, 'system_message', None):
+                self.system_message = (
+                    self.system_message.rstrip()
+                    + "\n\n---\n\n"
+                    + _md_body
+                )
+
         if not self.api_key:
             raise ValueError(
                 f"{self.llm_provider.upper()} API key not found. Set the appropriate "
@@ -107,7 +383,120 @@ class BaseAgent(ABC):
             )
         except Exception as e:
             raise RuntimeError(f"Error querying {self.llm_provider} LLM: {str(e)}")
+
+    def _record_llm_usage(
+        self,
+        prompt: str,
+        completion: str,
+        prompt_tokens: Optional[int] = None,
+        completion_tokens: Optional[int] = None,
+    ) -> None:
+        """Append one LLM usage record to this agent's ledger.
+
+        Parameters
+        ----------
+        prompt : str
+            Prompt text sent to the provider.
+        completion : str
+            Text returned by the provider.
+        prompt_tokens : int, optional
+            Provider-reported prompt token count. If missing, an estimate is used.
+        completion_tokens : int, optional
+            Provider-reported completion token count. If missing, an estimate is used.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        None
+
+        Examples
+        --------
+        >>> agent = BaseAgent.__new__(BaseAgent)
+        >>> agent.llm_usage_ledger = []
+        >>> agent.llm_provider = "openai"
+        >>> agent.model = "gpt-4o-mini"
+        >>> agent._record_llm_usage("hi", "hello")
+        >>> len(agent.llm_usage_ledger)
+        1
+        """
+        from ._pricing import estimate_llm_cost_usd, estimate_tokens
+
+        prompt_count = prompt_tokens if prompt_tokens is not None else estimate_tokens(prompt)
+        completion_count = (
+            completion_tokens
+            if completion_tokens is not None
+            else estimate_tokens(completion)
+        )
+        self.llm_usage_ledger.append(
+            {
+                "agent": getattr(self, "name", self.__class__.__name__),
+                "provider": self.llm_provider,
+                "model": self.model,
+                "prompt_tokens": int(prompt_count),
+                "completion_tokens": int(completion_count),
+                "total_tokens": int(prompt_count) + int(completion_count),
+                "cost_estimate_usd": estimate_llm_cost_usd(
+                    self.llm_provider,
+                    self.model,
+                    int(prompt_count),
+                    int(completion_count),
+                ),
+                "timestamp": time.time(),
+            }
+        )
     
+    # ------------------------------------------------------------------
+    # Internal LLM retry helper
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _retry_llm_call(fn: Callable, max_retries: int = 3) -> Any:
+        """Call *fn* with exponential back-off on transient / rate-limit errors.
+
+        Parameters
+        ----------
+        fn : callable
+            Zero-argument callable that performs the LLM API call.
+        max_retries : int
+            Maximum number of attempts (default 3).
+
+        Returns
+        -------
+        Any
+            Return value of *fn* on success.
+
+        Raises
+        ------
+        Exception
+            Re-raises the last exception if all retries are exhausted.
+        """
+        _RATE_LIMIT_PATTERNS = (
+            "rate limit", "rate_limit", "resource exhausted",
+            "quota", "too many requests", "429",
+        )
+
+        for attempt in range(max_retries):
+            try:
+                return fn()
+            except Exception as exc:
+                err_lower = str(exc).lower()
+                is_transient = any(p in err_lower for p in _RATE_LIMIT_PATTERNS)
+                if not is_transient:
+                    # Non-recoverable error – propagate immediately
+                    raise
+                if attempt < max_retries - 1:
+                    wait = 2 ** attempt  # 1 s, 2 s, 4 s …
+                    print(
+                        f"[LLM retry {attempt + 1}/{max_retries}] "
+                        f"Rate-limit hit – waiting {wait}s … ({exc})"
+                    )
+                    time.sleep(wait)
+                else:
+                    raise
+
     def _query_openai(self, prompt: str, system_message: str, 
                       temperature: float, max_tokens: int) -> str:
         """Query OpenAI GPT API."""
@@ -119,14 +508,25 @@ class BaseAgent(ABC):
             messages.append({"role": "system", "content": system_message})
         messages.append({"role": "user", "content": prompt})
         
-        response = client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens
+        def _call():
+            return client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        response = self._retry_llm_call(_call)
+
+        completion = response.choices[0].message.content
+        usage = getattr(response, "usage", None)
+        self._record_llm_usage(
+            prompt,
+            completion,
+            prompt_tokens=getattr(usage, "prompt_tokens", None),
+            completion_tokens=getattr(usage, "completion_tokens", None),
         )
-        
-        return response.choices[0].message.content
+        return completion
     
     def _query_gemini(self, prompt: str, system_message: str,
                       temperature: float, max_tokens: int) -> str:
@@ -141,15 +541,26 @@ class BaseAgent(ABC):
         if system_message:
             full_prompt = f"{system_message}\n\n{prompt}"
         
-        response = model.generate_content(
-            full_prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=temperature,
-                max_output_tokens=max_tokens
+        def _call():
+            return model.generate_content(
+                full_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=temperature,
+                    max_output_tokens=max_tokens,
+                ),
             )
+
+        response = self._retry_llm_call(_call)
+
+        completion = response.text
+        usage = getattr(response, "usage_metadata", None)
+        self._record_llm_usage(
+            full_prompt,
+            completion,
+            prompt_tokens=getattr(usage, "prompt_token_count", None),
+            completion_tokens=getattr(usage, "candidates_token_count", None),
         )
-        
-        return response.text
+        return completion
     
     def _query_claude(self, prompt: str, system_message: str,
                       temperature: float, max_tokens: int) -> str:
@@ -157,17 +568,26 @@ class BaseAgent(ABC):
         import anthropic
         client = anthropic.Anthropic(api_key=self.api_key)
         
-        message = client.messages.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_message if system_message else "",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
+        def _call():
+            return client.messages.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=system_message if system_message else "",
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+        message = self._retry_llm_call(_call)
+
+        completion = message.content[0].text
+        usage = getattr(message, "usage", None)
+        self._record_llm_usage(
+            prompt,
+            completion,
+            prompt_tokens=getattr(usage, "input_tokens", None),
+            completion_tokens=getattr(usage, "output_tokens", None),
         )
-        
-        return message.content[0].text
+        return completion
     
     def _get_package_name(self) -> str:
         """Get the package name for the current LLM provider."""
@@ -177,6 +597,100 @@ class BaseAgent(ABC):
             "claude": "anthropic"
         }
         return packages.get(self.llm_provider, "unknown")
+
+    def validate_input_file(
+        self,
+        file_path: Any,
+        supported_extensions: Iterable[str],
+        field_name: str = "data_file",
+        max_size_mb: Optional[float] = None,
+    ) -> Optional[AgentResult]:
+        """Validate a user-provided input file before processing.
+
+        Parameters
+        ----------
+        file_path : Any
+            Path-like value to validate.
+        supported_extensions : iterable of str
+            Allowed file extensions, including the leading dot.
+        field_name : str, optional
+            Name of the field being validated.
+        max_size_mb : float, optional
+            Optional file-size limit in megabytes.
+
+        Returns
+        -------
+        AgentResult or None
+            Failure result if validation fails; otherwise None.
+
+        Raises
+        ------
+        None
+
+        Examples
+        --------
+        >>> BaseAgent.__dict__["validate_input_file"]
+        <function BaseAgent.validate_input_file at ...
+        """
+        allowed = {str(ext).lower() for ext in supported_extensions}
+        if not file_path:
+            return AgentResult(
+                status="failed",
+                summary=f"Missing required input: {field_name}.",
+                data={},
+                error=f"{field_name} is required.",
+                error_fix_hint=(
+                    f"Provide a path for {field_name}. See: "
+                    "https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#data-file-not-found"
+                ),
+            )
+
+        path = Path(str(file_path)).expanduser()
+        if not path.is_absolute():
+            path = (Path.cwd() / path).resolve()
+        else:
+            path = path.resolve()
+
+        if not path.exists():
+            return AgentResult(
+                status="failed",
+                summary=f"Input file for {field_name} was not found.",
+                data={"attempted_path": str(path)},
+                error=f"File not found: {path}",
+                error_fix_hint=(
+                    f"Check that {field_name} points to an existing file. Tried: {path}. See: "
+                    "https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#data-file-not-found"
+                ),
+            )
+
+        if path.suffix.lower() not in allowed:
+            return AgentResult(
+                status="failed",
+                summary=f"Input file for {field_name} has an unsupported extension.",
+                data={"attempted_path": str(path), "supported_extensions": sorted(allowed)},
+                error=f"Unsupported file extension: {path.suffix}",
+                error_fix_hint=(
+                    f"Use one of these extensions for {field_name}: "
+                    f"{', '.join(sorted(allowed))}. See: "
+                    "https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#data-file-not-found"
+                ),
+            )
+
+        if max_size_mb is not None:
+            size_mb = path.stat().st_size / (1024 * 1024)
+            if size_mb > max_size_mb:
+                return AgentResult(
+                    status="failed",
+                    summary=f"Input file for {field_name} is too large for this mode.",
+                    data={"attempted_path": str(path), "size_mb": size_mb},
+                    error=f"File is {size_mb:.1f} MB, above the {max_size_mb:.1f} MB limit.",
+                    error_fix_hint=(
+                        "Run this workflow locally or reduce the file size before using the hosted app. See: "
+                        "https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#streamlit-upload-size-exceeded"
+                    ),
+                )
+
+        return None
     
     def update_context(self, key: str, value: Any):
         """Update agent's context with new information."""
@@ -187,24 +701,79 @@ class BaseAgent(ABC):
         return self.context.get(key, default)
     
     def save_results(self, output_dir: str):
-        """
-        Save agent results to file.
-        
-        Args:
-            output_dir: Directory to save results
+        """Save agent results to disk, preserving numpy arrays and PyGIMLi meshes.
+
+        - numpy arrays  → ``{agent}_{key}.npy``
+        - PyGIMLi meshes → ``{agent}_{key}.bms``
+        - Everything else → ``{agent}_results.json`` (metadata)
+
+        Parameters
+        ----------
+        output_dir : str
+            Target directory; created if absent.
+
+        Returns
+        -------
+        str
+            Path to the JSON metadata file.
         """
         os.makedirs(output_dir, exist_ok=True)
-        
-        # Save context and results as JSON
-        output_file = os.path.join(output_dir, f"{self.name}_results.json")
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump({
-                'agent': self.name,
-                'context': {k: str(v) for k, v in self.context.items()},
-                'results': {k: str(v) for k, v in self.results.items()}
-            }, f, indent=2)
-        
-        return output_file
+
+        metadata: Dict[str, Any] = {
+            "agent": self.name,
+            "context": {},
+            "results": {},
+        }
+
+        def _safe_value(key: str, value: Any, *, prefix: str) -> Any:
+            """Serialise one value; save heavy objects to sidecar files."""
+            if value is None:
+                return None
+
+            # numpy array → .npy sidecar
+            if isinstance(value, np.ndarray):
+                npy_path = os.path.join(output_dir, f"{prefix}_{key}.npy")
+                np.save(npy_path, value)
+                return {"__type__": "numpy_array", "file": os.path.basename(npy_path), "shape": list(value.shape), "dtype": str(value.dtype)}
+
+            # PyGIMLi mesh → .bms sidecar (duck-typed check to avoid hard import)
+            if hasattr(value, "cellCount") and hasattr(value, "save"):
+                bms_path = os.path.join(output_dir, f"{prefix}_{key}.bms")
+                try:
+                    value.save(bms_path)
+                    return {"__type__": "pygimli_mesh", "file": os.path.basename(bms_path), "cells": value.cellCount(), "nodes": value.nodeCount()}
+                except Exception:
+                    return str(value)
+
+            # pandas DataFrame → .csv sidecar
+            try:
+                import pandas as _pd
+                if isinstance(value, _pd.DataFrame):
+                    csv_path = os.path.join(output_dir, f"{prefix}_{key}.csv")
+                    value.to_csv(csv_path, index=False)
+                    return {"__type__": "dataframe", "file": os.path.basename(csv_path), "shape": list(value.shape)}
+            except ImportError:
+                pass
+
+            # Plain JSON-serialisable types
+            if isinstance(value, (str, int, float, bool, list, dict)):
+                return value
+
+            # Fallback: convert to string with a warning annotation
+            return {"__type__": "non_serialisable", "repr": str(value)[:200]}
+
+        for k, v in self.context.items():
+            metadata["context"][k] = _safe_value(k, v, prefix=f"{self.name}_ctx")
+
+        results_source = self.results if isinstance(self.results, dict) else {}
+        for k, v in results_source.items():
+            metadata["results"][k] = _safe_value(k, v, prefix=f"{self.name}")
+
+        json_path = os.path.join(output_dir, f"{self.name}_results.json")
+        with open(json_path, "w", encoding="utf-8") as fh:
+            json.dump(metadata, fh, indent=2)
+
+        return json_path
     
     @staticmethod
     def run_unified_agent_workflow(workflow_config, api_key, llm_model, llm_provider, output_dir, progress_callback=None):
@@ -231,92 +800,30 @@ class BaseAgent(ABC):
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # 1. Infer workflow type from configuration keys
-        # More specific detection: check for unique indicators of each workflow
+        # 1. Normalise key names ------------------------------------------------
         config_keys = set(workflow_config.keys())
         print(f'\nDetecting workflow type from config keys: {config_keys}')
-        
-        # Normalize key names: ContextInputAgent may use 'data_file' or 'ert_file'
+
         if 'data_file' in workflow_config and 'ert_file' not in workflow_config:
             workflow_config['ert_file'] = workflow_config['data_file']
-            print(f"  → Normalized 'data_file' to 'ert_file'")
+            print("  → Normalized 'data_file' to 'ert_file'")
 
-        # Detect workflow type with priority order
-        user_request_lower = workflow_config.get('user_request', '').lower()
+        if (
+            workflow_config.get("seismic_file")
+            and Path(str(workflow_config.get("seismic_file"))).suffix.lower() in {".sgy", ".segy"}
+        ):
+            workflow_config["raw_seismic_file"] = workflow_config.pop("seismic_file")
+            workflow_config["raw_seismic_processing"] = True
+            print("  -> Normalized raw SEG-Y seismic_file to raw_seismic_file")
 
-        # Precompute intent flags
-        mentions_ert = ('ert' in user_request_lower) or bool(workflow_config.get('ert_file'))
-        mentions_seismic = ('seismic' in user_request_lower) or bool(workflow_config.get('seismic_file'))
-        mentions_tdem = ('tdem' in user_request_lower) or bool(workflow_config.get('tdem_file'))
-        inversion_keywords = ['invert', 'inversion', 'tomography', 'forward']
-        mentions_inversion = any(kw in user_request_lower for kw in inversion_keywords)
-
-        hydro_keywords = ['modflow', 'parflow', 'par flow', 'hydrological model', 'watercontent', 'saturation', 'porosity']
-        mentions_hydro = any(kw in user_request_lower for kw in hydro_keywords) or bool(workflow_config.get('hydro_model'))
-        hydro_only = mentions_hydro and not (mentions_ert or mentions_seismic or mentions_tdem or mentions_inversion)
-
-        processing_keywords = ['data processing', 'quality control', 'qc', 'preprocess', 'export', 'resipy']
-        ert_processing = bool(workflow_config.get('ert_data_processing')) or (
-            bool(workflow_config.get('ert_file')) and
-            any(kw in user_request_lower for kw in processing_keywords) and
-            not any(kw in user_request_lower for kw in inversion_keywords)
-        )
-        
-        # TDEM: check for TDEM-specific keys
-        if (workflow_config.get('tdem_file') or 
-            workflow_config.get('tdem_data') or
-            'tdem' in user_request_lower or
-            'tem ' in user_request_lower or
-            'electromagnetic' in user_request_lower):
-            workflow_type = 'tdem'
-        
-        # Seismic: check for seismic-specific keys (standalone seismic refraction)
-        elif (workflow_config.get('seismic_file') and not workflow_config.get('ert_file') or
-              workflow_config.get('seismic_only', False) or
-              ('seismic' in user_request_lower and 'ert' not in user_request_lower and 
-               'resistivity' not in user_request_lower and 'fusion' not in user_request_lower) or
-              'srt inversion' in user_request_lower or
-              'seismic refraction' in user_request_lower or
-              'travel time' in user_request_lower):
-            workflow_type = 'seismic'
-            
-        # Hydrological model output loading (MODFLOW/ParFlow) takes priority over time-lapse
-        elif workflow_config.get('hydro_model') in ['modflow', 'parflow', 'both'] or hydro_only:
-            workflow_type = 'model_output'
-
-        # Time-lapse: check for time-lapse specific keys (explicit file lists/params only)
-        elif (not hydro_only and (
-            'timelapse_files' in config_keys or 
-            'time_lapse_files' in config_keys or
-            'timelapse_params' in config_keys or
-            workflow_config.get('inversion_mode') == 'time-lapse')):
-            workflow_type = 'time_lapse'
-            
-        # Data fusion: check for fusion-specific indicators WITH actual values
-        # Note: ContextInputAgent may add 'fusion_pattern' or 'methods' keys even for ERT-only requests
-        # We need to check if they have meaningful (non-None, non-empty) values
-        elif (workflow_config.get('velocity_threshold') or  # Has velocity threshold
-              (workflow_config.get('ert_file') and workflow_config.get('seismic_file')) or  # Has both files
-              (workflow_config.get('fusion_pattern') and 
-               workflow_config.get('fusion_pattern') not in [None, 'None', '']) or  # Has valid fusion pattern
-              (workflow_config.get('methods') and 
-               len(workflow_config.get('methods', [])) > 1 and  # Has multiple methods
-               'seismic' in workflow_config.get('methods', []))):  # Including seismic
-            workflow_type = 'data_fusion'
-
-        # ERT data processing (QC/export without inversion)
-        elif ert_processing:
-            workflow_type = 'ert_data_process'
-
-            
-        # Direct ERT: single ERT file without real fusion indicators
-        elif workflow_config.get('ert_file'):
-            workflow_type = 'direct_ert'
-            
-        else:
-            # Could not determine workflow type - check if this is an out-of-scope request
-            workflow_type = 'custom'
-            print("  → No standard workflow detected, will attempt custom code generation")
+        # 2. Delegate to WorkflowOrchestratorAgent for the authoritative decision
+        from .workflow_orchestrator_agent import WorkflowOrchestratorAgent as _WOA
+        _orch = _WOA.__new__(_WOA)
+        _orch.name = "workflow_orchestrator"
+        _orch.context = {}
+        _orch.results = {}
+        _orch.execution_log = []
+        workflow_type = _orch._detect_workflow_type(workflow_config)
 
         print(f'\n===== WORKFLOW TYPE: {workflow_type.upper()} =====')
         execution_plan = None
@@ -697,7 +1204,9 @@ class BaseAgent(ABC):
                         'method': 'cgls'
                     }),
                     'auto_adjust': True,  # Automatically adjust and re-run if needed
-                    'max_attempts': 2,    # Maximum 3 attempts to improve
+                    'max_attempts': workflow_config.get('max_attempts', 3),
+                    'quality_threshold': workflow_config.get('quality_threshold', 70),
+                    'progress_callback': progress_callback,
                     'project_dir': workflow_config.get('project_dir', 'data/ERT/E4D'),
                     'instrument': workflow_config.get('instrument', 'E4D')
                 }
@@ -1038,10 +1547,8 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
             from .ert_inversion_agent import ERTInversionAgent
             from .ert_loader_agent import ERTLoaderAgent
             from .inversion_evaluation_agent import InversionEvaluationAgent
-            from .petrophysics_agent import PetrophysicsAgent
             ert_loader = ERTLoaderAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
             ert_inversion = ERTInversionAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
-            petrophysics_agent = PetrophysicsAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
             eval_agent = InversionEvaluationAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
 
             # Detect if user wants water content conversion
@@ -1187,7 +1694,9 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
                 eval_input = {
                     'inversion_results': inversion_results,
                     'ert_data': ert_data,
-                    'quality_threshold': 0.7
+                    'quality_threshold': workflow_config.get('quality_threshold', 70),
+                    'max_attempts': workflow_config.get('max_attempts', 3),
+                    'progress_callback': progress_callback,
                 }
                 evaluation_results = eval_agent.execute(eval_input)
 
@@ -1215,6 +1724,9 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
                 ]
                 interpretation = "ERT inversion completed. Resistivity model generated without water content conversion."
             else:
+                from .petrophysics_agent import PetrophysicsAgent
+                petrophysics_agent = PetrophysicsAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
+
                 # Convert to water content
                 update_progress("Converting to water content", 0.65, "Running Monte Carlo petrophysics")
                 
@@ -1551,21 +2063,42 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
             update_progress("Starting seismic workflow", 0.15, "Configuring seismic refraction tomography")
             print('Running seismic refraction tomography workflow...')
             
+            raw_seismic_file = workflow_config.get('raw_seismic_file')
+
             # Set execution plan for seismic workflow
-            execution_plan = [
-                {'step': 'Load Seismic Data', 'agent': 'SeismicAgent', 
-                 'description': 'Load travel time data from .dat file', 
-                 'outputs': ['seismic_data']},
-                {'step': 'Run SRT Inversion', 'agent': 'SeismicAgent', 
-                 'description': 'Invert for P-wave velocity model using PyGIMLI', 
-                 'outputs': ['velocity_model', 'mesh', 'coverage']},
-                {'step': 'Extract Interfaces', 'agent': 'SeismicAgent', 
-                 'description': 'Extract geological interfaces from velocity thresholds', 
-                 'outputs': ['interface_coords']},
-                {'step': 'Generate Visualization', 'agent': 'SeismicAgent', 
-                 'description': 'Create velocity tomogram and interface plots', 
-                 'outputs': ['visualization_files', 'interpretation']},
-            ]
+            if raw_seismic_file:
+                execution_plan = [
+                    {'step': 'Read Raw SEG-Y', 'agent': 'RawSeismicProcessor',
+                     'description': 'Read SEG-Y headers and organize shot gathers',
+                     'outputs': ['segy_metadata', 'shot_gathers']},
+                    {'step': 'Pick First Breaks', 'agent': 'RawSeismicProcessor',
+                     'description': 'Apply preprocessing and assisted first-break picking',
+                     'outputs': ['first_break_picks']},
+                    {'step': 'Export Travel-Time Data', 'agent': 'RawSeismicProcessor',
+                     'description': 'Convert first breaks to PyGIMLi travel-time format',
+                     'outputs': ['traveltime_file']},
+                    {'step': 'Run SRT Inversion', 'agent': 'SeismicAgent',
+                     'description': 'Invert for P-wave velocity model using PyGIMLI',
+                     'outputs': ['velocity_model', 'mesh', 'coverage']},
+                    {'step': 'Generate Visualization', 'agent': 'SeismicAgent',
+                     'description': 'Create velocity tomogram and interface plots',
+                     'outputs': ['visualization_files', 'interpretation']},
+                ]
+            else:
+                execution_plan = [
+                    {'step': 'Load Seismic Data', 'agent': 'SeismicAgent', 
+                     'description': 'Load travel time data from .dat file', 
+                     'outputs': ['seismic_data']},
+                    {'step': 'Run SRT Inversion', 'agent': 'SeismicAgent', 
+                     'description': 'Invert for P-wave velocity model using PyGIMLI', 
+                     'outputs': ['velocity_model', 'mesh', 'coverage']},
+                    {'step': 'Extract Interfaces', 'agent': 'SeismicAgent', 
+                     'description': 'Extract geological interfaces from velocity thresholds', 
+                     'outputs': ['interface_coords']},
+                    {'step': 'Generate Visualization', 'agent': 'SeismicAgent', 
+                     'description': 'Create velocity tomogram and interface plots', 
+                     'outputs': ['visualization_files', 'interpretation']},
+                ]
             
             interpretation = (
                 "Seismic refraction tomography (SRT) workflow inverts travel time data to "
@@ -1574,10 +2107,10 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
             )
             
             # Get seismic file
-            seismic_file = workflow_config.get('seismic_file')
+            seismic_file = raw_seismic_file or workflow_config.get('seismic_file')
             if not seismic_file:
                 raise ValueError('No seismic file specified in configuration. '
-                               'Please provide seismic_file path.')
+                               'Please provide seismic_file or raw_seismic_file path.')
             
             # Normalize seismic file path
             seismic_file_path = Path(seismic_file)
@@ -1631,14 +2164,20 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
             # Prepare seismic input
             seismic_input = {
                 'seismic_file': seismic_file,
+                'raw_seismic_file': str(seismic_file_path) if raw_seismic_file else None,
                 'velocity_threshold': velocity_thresholds[0] if velocity_thresholds else 1200,
                 'velocity_thresholds': velocity_thresholds,
                 'inversion_params': inversion_params,
                 'extract_interfaces': workflow_config.get('extract_interfaces', True),
-                'output_dir': str(output_dir / 'seismic')
+                'output_dir': str(output_dir / 'seismic'),
+                'raw_max_traces': workflow_config.get('raw_max_traces'),
+                'first_break_params': workflow_config.get('first_break_params', {}),
             }
             
-            update_progress("Running seismic inversion", 0.30, "Loading data and inverting velocity model")
+            if raw_seismic_file:
+                update_progress("Processing raw SEG-Y", 0.30, "Picking first breaks and exporting travel-time data")
+            else:
+                update_progress("Running seismic inversion", 0.30, "Loading data and inverting velocity model")
             
             # Execute seismic workflow
             results = seismic_agent.execute(seismic_input)
@@ -1878,5 +2417,19 @@ The following Python code was generated to address your request:
         
         else:
             raise ValueError('Unknown workflow type!')
+
+        llm_usage_ledger = []
+        seen_agent_ids = set()
+        for value in list(locals().values()):
+            if hasattr(value, "llm_usage_ledger") and id(value) not in seen_agent_ids:
+                seen_agent_ids.add(id(value))
+                llm_usage_ledger.extend(getattr(value, "llm_usage_ledger", []) or [])
+        total_llm_cost = sum(
+            float(item.get("cost_estimate_usd") or 0.0)
+            for item in llm_usage_ledger
+        )
+        if isinstance(results, dict):
+            results["llm_usage_ledger"] = llm_usage_ledger
+            results["total_llm_cost_estimate_usd"] = total_llm_cost
 
         return results, execution_plan, interpretation, report_files
