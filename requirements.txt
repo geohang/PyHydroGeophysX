@@ -10,7 +10,7 @@ tqdm>=4.62
 streamlit>=1.35,<2.0
 plotly>=5.18,<7.0
 streamlit-plotly-events>=0.0.6
-weasyprint>=60.0
+pyarrow>=14.0
 
 # Geophysics engines — install via: pip install "pyhydrogeophysx[geophysics]"
 # pygimli>=1.5.5,<2.0   (recommended: conda install -c gimli pygimli)

@@ -2098,7 +2098,12 @@ The workflows in this app focus on the methods below.
 </body>
 </html>
 """
-        components.html(html_sim, height=450)
+        if hasattr(st, "iframe"):
+            from urllib.parse import quote
+
+            st.iframe(f"data:text/html;charset=utf-8,{quote(html_sim)}", height=450)
+        else:
+            components.html(html_sim, height=450)
         st.caption("Interactive visualization showing geophysical survey physics. Click tabs to explore different methods.")
 
     # LLM-powered explanation section
