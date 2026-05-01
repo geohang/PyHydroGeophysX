@@ -15,15 +15,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.9", "3.11"]
+        python-version: ["3.11", "3.12"]
         experimental: [false]
-        include:
-          - os: ubuntu-latest
-            python-version: "3.12"
-            experimental: true
-          - os: macos-latest
-            python-version: "3.12"
-            experimental: true
 
     steps:
       - uses: actions/checkout@v4
@@ -45,8 +38,7 @@ jobs:
             tqdm
             pytest
             pytest-cov
-            pygimli>=1.5.5
-          cache-environment: true
+            pygimli=1.5.5
 
       - name: Install package (editable, no heavy optional deps)
         shell: bash -el {0}
