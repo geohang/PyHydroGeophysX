@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.9", "3.10"]
         experimental: [false]
 
     steps:
@@ -26,11 +26,15 @@ jobs:
         with:
           environment-name: test-env
           init-shell: bash
+          condarc: |
+            channel_priority: strict
+            remote_connect_timeout_secs: 30
+            remote_read_timeout_secs: 120
           create-args: >-
             -c gimli
             -c conda-forge
             python=${{ matrix.python-version }}
-            numpy
+            numpy=1.21.*
             scipy>=1.8,<3.0
             matplotlib
             pandas
