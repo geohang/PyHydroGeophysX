@@ -1238,7 +1238,15 @@ def _load_ert_embedded_parsers(
         rel = np.where(np.isfinite(rel) & (rel > 0), rel, np.nan)
         return np.clip(rel, 0.01, 0.50)
 
-    source_rel = _normalize_source_error(df[err_col], observations['rhoa']) if err_col else None
+    # Reciprocal filtering preserves the original parser row index but can
+    # remove rows. Align source error columns to the retained observations so
+    # fallback error estimates have the same length as reciprocal estimates.
+    source_error_series = df[err_col].reindex(observations.index) if err_col else None
+    source_rel = (
+        _normalize_source_error(source_error_series, observations['rhoa'])
+        if source_error_series is not None
+        else None
+    )
 
     if 'reciprocalErrRel' in observations.columns:
         recip_rel = pd.to_numeric(observations['reciprocalErrRel'], errors='coerce').to_numpy(dtype=float)
