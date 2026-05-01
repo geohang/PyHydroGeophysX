@@ -67,10 +67,14 @@ except Exception as e:
 
 # Check SimPEG availability
 try:
-    import SimPEG
-    print(f"[PyHydroGeophysX] SimPEG loaded successfully (version {SimPEG.__version__})")
+    import simpeg as _simpeg
+    print(f"[PyHydroGeophysX] SimPEG loaded successfully (version {_simpeg.__version__})")
 except Exception as e:
-    print(f"[PyHydroGeophysX] SimPEG not available: {e}")
+    try:
+        import SimPEG as _simpeg
+        print(f"[PyHydroGeophysX] SimPEG loaded successfully (version {_simpeg.__version__})")
+    except Exception as fallback_error:
+        print(f"[PyHydroGeophysX] SimPEG not available: {fallback_error or e}")
 
 
 # =============================================================================

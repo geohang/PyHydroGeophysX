@@ -81,7 +81,7 @@ pip install -e ".[geophysics]"
 | `geophysics` | pygimli, simpeg, flopy, pftools |
 | `agents` | openai, google-generativeai, anthropic |
 | `climate` | pydaymet, pandas, xarray |
-| `webapp` | streamlit, plotly, streamlit-plotly-events |
+| `webapp` | streamlit, pandas, plotly, streamlit-plotly-events, weasyprint |
 | `gpu` | cupy-cuda11x |
 | `dev` | pytest, pytest-cov, black, flake8 |
 | `all` | all of the above |

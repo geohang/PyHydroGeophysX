@@ -34,11 +34,13 @@ except ImportError as e:
     ContextInputAgent = None
 
 # Check for pygimli availability
+PYGIMLI_IMPORT_ERROR = ""
 try:
     import pygimli
     PYGIMLI_AVAILABLE = True
-except ImportError:
+except Exception as e:  # noqa: BLE001
     PYGIMLI_AVAILABLE = False
+    PYGIMLI_IMPORT_ERROR = str(e)
 
 # Data access abstraction — import directly from the module file to avoid
 # triggering the heavy PyHydroGeophysX.__init__ (SimPEG, pygimli, etc.)
@@ -9130,13 +9132,23 @@ def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
 
     import numpy as np
     import pandas as pd
-    import plotly.graph_objects as go
 
     st.subheader("ERT field data QC and export")
     st.caption(
         "Load DAS-1/Syscal/ABEM/ResIPy-style field files, inspect electrode geometry and apparent values, "
         "apply light QC, then export inversion-ready PyGIMLi/BERT data."
     )
+
+    try:
+        import plotly.graph_objects as go
+    except Exception as exc:  # noqa: BLE001
+        st.error(
+            "Plotly is required for the ERT QC preview in this tab. "
+            "Install the web app dependencies with `pip install -r requirements.txt` "
+            "or `pip install \"pyhydrogeophysx[webapp]\"`."
+        )
+        st.code(str(exc))
+        return
 
     _render_processing_llm_control(
         module_key="ert_processing",
@@ -10639,13 +10651,15 @@ def main() -> None:
         )
     
     if not PYGIMLI_AVAILABLE:
-        st.warning("""
+        pygimli_detail = f"\n\nImport error: `{PYGIMLI_IMPORT_ERROR}`" if PYGIMLI_IMPORT_ERROR else ""
+        st.warning(f"""
         ⚠️ **PyGIMLi Not Available**
         
         ERT inversion and some geophysical functions require PyGIMLi.
         Install with: `conda install -c gimli pygimli` or `pip install pygimli`
         
         You can still use TDEM workflows with SimPEG if available.
+        {pygimli_detail}
         """)
     
     sidebar_state = render_sidebar()

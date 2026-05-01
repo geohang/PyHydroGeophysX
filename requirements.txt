@@ -5,6 +5,13 @@ matplotlib>=3.5,<4.0
 joblib>=1.2
 tqdm>=4.62
 
+# Streamlit demo app dependencies
+streamlit>=1.35,<2.0
+pandas>=1.3
+plotly>=5.18,<7.0
+streamlit-plotly-events>=0.0.6
+weasyprint>=60.0
+
 # Geophysics engines — install via: pip install "pyhydrogeophysx[geophysics]"
 # pygimli>=1.5.5,<2.0   (recommended: conda install -c gimli pygimli)
 # simpeg>=0.24,<1.0

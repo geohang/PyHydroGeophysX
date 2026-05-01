@@ -12,10 +12,14 @@ PYGIMLI_AVAILABLE = False
 SIMPEG_AVAILABLE = False
 
 try:
-    import SimPEG as _simpeg
+    import simpeg as _simpeg
     SIMPEG_AVAILABLE = True
 except ImportError:
-    pass
+    try:
+        import SimPEG as _simpeg
+        SIMPEG_AVAILABLE = True
+    except ImportError:
+        pass
 
 # Core utilities - interpolation (no pygimli dependency)
 try:
