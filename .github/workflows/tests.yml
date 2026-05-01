@@ -40,6 +40,7 @@ jobs:
             numpy
             scipy>=1.8,<3.0
             matplotlib
+            pandas
             joblib
             tqdm
             pytest
