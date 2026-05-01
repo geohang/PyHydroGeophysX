@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.9", "3.10"]
+        python-version: ["3.10", "3.11"]
         experimental: [false]
 
     steps:
@@ -34,7 +34,7 @@ jobs:
             -c gimli
             -c conda-forge
             python=${{ matrix.python-version }}
-            numpy=1.21.*
+            numpy>=2.2,<2.3
             scipy>=1.8,<3.0
             matplotlib
             pandas
