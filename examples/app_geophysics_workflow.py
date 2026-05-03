@@ -10613,29 +10613,6 @@ def render_cloud_tips() -> None:
     )
 
 
-def render_support_section() -> None:
-    """Render the support/donate section."""
-    st.markdown(
-        """
-<div class="phgx-support-card">
-    <div class="phgx-free-badge">🎉 FREE & OPEN SOURCE</div>
-    <div class="phgx-support-title">Support PyHydroGeophysX Development</div>
-    <div class="phgx-support-text">
-        This app is developed for <strong>free usage</strong> by the research community.<br>
-        If you find it useful, consider supporting better Cloud Services!
-    </div>
-    <a href="https://venmo.com/Hang-Chen-35" target="_blank" class="phgx-venmo-btn">
-        💙 Donate via Venmo @Hang-Chen-35
-    </a>
-    <div class="phgx-support-text" style="margin-top: 1rem; font-size: 0.85rem;">
-        <strong>Need a GPT API key to try?</strong><br>
-        Email me at <a href="mailto:hang-chen-1@uiowa.edu" class="phgx-email-link">hang-chen-1@uiowa.edu</a>
-    </div>
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
 
 def main() -> None:
     """Run the Streamlit application entrypoint.
@@ -10700,10 +10677,6 @@ def main() -> None:
     with tab_author:
         render_author_tab()
     
-    # Render support section in sidebar
-    with st.sidebar:
-        render_support_section()
-
 if __name__ == "__main__":
     main()
 
