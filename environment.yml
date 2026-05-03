@@ -1,13 +1,14 @@
 name: pyhydrogeophysx
 channels:
-  - gimli
   - conda-forge
   - nodefaults
+# NOTE: PyGIMLi (pygimli/pgcore) cannot be installed via conda on Streamlit Cloud
+# Linux because pgcore has no Python ≥3.12 Linux builds, and Streamlit Cloud's
+# conda now requires conda-anaconda-tos >=0.2.2 (Python 3.13 only).
+# For local development with PyGIMLi use:
+#   conda create -n pyhydrogeophysx -c gimli -c conda-forge pygimli=1.5.5 python=3.11
 dependencies:
   - python=3.11
-  # Keep the conda solve small: PyGIMLi/pgcore need conda binary deps.
-  - numpy>=2.2,<2.3
-  - pygimli=1.5.5
   - pip
   - pip:
       # Web app and pure-Python/scientific packages install faster as wheels.
