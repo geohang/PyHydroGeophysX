@@ -1,4 +1,4 @@
-﻿"""
+"""
 PyHydroGeophysX Streamlit Web Application
 =========================================
 
@@ -42,7 +42,7 @@ except Exception as e:  # noqa: BLE001
     PYGIMLI_AVAILABLE = False
     PYGIMLI_IMPORT_ERROR = str(e)
 
-# Data access abstraction â€” import directly from the module file to avoid
+# Data access abstraction — import directly from the module file to avoid
 # triggering the heavy PyHydroGeophysX.__init__ (SimPEG, pygimli, etc.)
 DATA_ACCESS_AVAILABLE = False
 _DATA_ACCESS_ERROR = ""
@@ -953,8 +953,8 @@ def render_header() -> None:
     st.markdown(
         '<div class="phgx-author-line">'
         '<span class="phgx-version-badge">v1.0</span>'
-        '<span class="phgx-author-text">Developed by <a href="https://sites.google.com/view/hangchen" target="_blank">Hang Chen</a> Â· University of Iowa</span>'
-        '<a href="https://www.youtube.com/watch?v=d4lgs_hQqDo" target="_blank" style="margin-left: 1rem; background: #ff0000; color: white; padding: 0.3rem 0.8rem; border-radius: 0.4rem; font-size: 0.85rem; font-weight: 600; text-decoration: none;">â–¶ Video Tutorial</a>'
+        '<span class="phgx-author-text">Developed by <a href="https://sites.google.com/view/hangchen" target="_blank">Hang Chen</a> · University of Iowa</span>'
+        '<a href="https://www.youtube.com/watch?v=d4lgs_hQqDo" target="_blank" style="margin-left: 1rem; background: #ff0000; color: white; padding: 0.3rem 0.8rem; border-radius: 0.4rem; font-size: 0.85rem; font-weight: 600; text-decoration: none;">▶ Video Tutorial</a>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -1066,7 +1066,7 @@ You can use any of the following providers:
 - Set up **usage limits** in your provider's dashboard to avoid unexpected charges
         """)
 
-        st.info("ðŸ’¡ **Tip:** OpenAI's `gpt-4o-mini` offers the best balance of cost and performance for most hydrogeophysics workflows.")
+        st.info("💡 **Tip:** OpenAI's `gpt-4o-mini` offers the best balance of cost and performance for most hydrogeophysics workflows.")
 
     st.markdown("---")
 
@@ -1108,8 +1108,8 @@ Convert saturation to water content, then to resistivity with rho_sat=541 and n=
         st.markdown("""
 **What happens:**
 - The system reads the PFB files directly (no `parflow` package needed!)
-- Saturation Ã— Porosity â†’ Water content
-- Water content â†’ Resistivity (or velocity) using petrophysical models
+- Saturation × Porosity → Water content
+- Water content → Resistivity (or velocity) using petrophysical models
 - Generates plots and reports
 """)
 
@@ -1127,14 +1127,14 @@ Convert water content to resistivity using rho_sat=541 and n=1.24.""", language=
 
         st.markdown("""
 **Petrophysical Parameters:**
-- `rho_sat`: Saturated resistivity (Î©Â·m) - typically 50-1000 depending on pore water salinity
+- `rho_sat`: Saturated resistivity (Ω·m) - typically 50-1000 depending on pore water salinity
 - `n`: Saturation exponent (dimensionless) - typically 1.2-2.5
 - `porosity`: Can be uploaded as a file or specified as a constant value
 """)
 
-        st.success("âœ… **New Feature:** ParFlow .pfb files can now be read without installing the `parflow` Python package!")
+        st.success("✅ **New Feature:** ParFlow .pfb files can now be read without installing the `parflow` Python package!")
 
-        st.info("ðŸ’¡ **Tip:** Use the **'ParFlow'** or **'MODFLOW'** example buttons above to auto-fill a working request.")
+        st.info("💡 **Tip:** Use the **'ParFlow'** or **'MODFLOW'** example buttons above to auto-fill a working request.")
 
     # ERT Example Tutorial
     st.markdown("### Example 1: Standard ERT Inversion")
@@ -1202,7 +1202,7 @@ INVERSION SETTINGS:
 - Spatial Regularization (lambda): 15
 
 CLIMATE DATA INTEGRATION:
-- Site Coordinates: 38.92584Â°N, -106.97998Â°W
+- Site Coordinates: 38.92584°N, -106.97998°W
 - Date Range: March 2022 to June 2022
 - Variables: precipitation, temperature, solar radiation""", language="text")
         st.markdown("""
@@ -1243,8 +1243,8 @@ CLIMATE DATA INTEGRATION:
 
 3. Finally, convert to water content using layer-specific petrophysical parameters.
    Use Monte Carlo uncertainty analysis with 100 realizations.
-   - Regolith layer: rho_sat (50-250 Î©m), n (1.3-2.2), porosity (0.25-0.5)
-   - Fractured bedrock layer: rho_sat (165-350 Î©m), n (2.0-2.2), porosity (0.2-0.3)""", language="text")
+   - Regolith layer: rho_sat (50-250 Ωm), n (1.3-2.2), porosity (0.25-0.5)
+   - Fractured bedrock layer: rho_sat (165-350 Ωm), n (2.0-2.2), porosity (0.2-0.3)""", language="text")
         st.markdown("""
 4. **Click "Run workflow"** - the system will:
    - Run seismic velocity inversion
@@ -1414,7 +1414,7 @@ The workflows in this app focus on the methods below.
     ert: {
       title: "Electrical Resistivity Tomography (ERT)",
       text: "Current injected at A flows to B through the subsurface. The sensitivity pattern (red shading) shows where the measurement is most sensitive - forming a 'banana' shape between electrodes. Potential difference measured at M-N relates to subsurface resistivity.",
-      layers: ["Soil (200 Î©m)", "Saturated (80 Î©m)", "Bedrock (1000 Î©m)"]
+      layers: ["Soil (200 Ωm)", "Saturated (80 Ωm)", "Bedrock (1000 Ωm)"]
     },
     seismic: {
       title: "Seismic Refraction Tomography (SRT)",
@@ -1424,7 +1424,7 @@ The workflows in this app focus on the methods below.
     tdem: {
       title: "Time-Domain Electromagnetics (TDEM)",
       text: "After Tx current shutoff, the decaying magnetic field induces eddy currents that form 'smoke rings' expanding outward and downward. Conductive layers (low resistivity) sustain currents longer, producing stronger late-time response.",
-      layers: ["Resistive (500 Î©m)", "Conductive (20 Î©m)", "Resistive (800 Î©m)"]
+      layers: ["Resistive (500 Ωm)", "Conductive (20 Ωm)", "Resistive (800 Ωm)"]
     }
   };
 
@@ -1543,7 +1543,7 @@ The workflows in this app focus on the methods below.
     const mX = bX + separation;
     const nX = mX + dipoleSpacing;
 
-    // Calculate geometric factor K for dipole-dipole: K = Ï€ * n * (n+1) * (n+2) * a
+    // Calculate geometric factor K for dipole-dipole: K = π * n * (n+1) * (n+2) * a
     const geoFactor = Math.PI * nLevel * (nLevel + 1) * (nLevel + 2) * (dipoleSpacing / 100);
 
     // Subsurface resistivity (two-layer model)
@@ -1635,7 +1635,7 @@ The workflows in this app focus on the methods below.
     ctx.fillStyle = "#1e40af";
     ctx.font = "bold 10px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Î”V=" + voltage.toFixed(1) + "mV", vmX, electrodeY - 39);
+    ctx.fillText("ΔV=" + voltage.toFixed(1) + "mV", vmX, electrodeY - 39);
 
     // n-level indicator
     ctx.fillStyle = "#7c3aed";
@@ -1646,13 +1646,13 @@ The workflows in this app focus on the methods below.
     // Apparent resistivity indicator
     ctx.fillStyle = "#065f46";
     ctx.font = "10px sans-serif";
-    ctx.fillText("Ïâ‚ = " + apparentRho.toFixed(0) + " Î©m", w - 75, electrodeY - 40);
+    ctx.fillText("ρₐ = " + apparentRho.toFixed(0) + " Ωm", w - 75, electrodeY - 40);
 
     // Layer resistivities label
     ctx.fillStyle = "#666";
     ctx.font = "9px sans-serif";
-    ctx.fillText("Ïâ‚=" + rho1 + "Î©m", 5, h * 0.26);
-    ctx.fillText("Ïâ‚‚=" + rho2 + "Î©m", 5, h * 0.48);
+    ctx.fillText("ρ₁=" + rho1 + "Ωm", 5, h * 0.26);
+    ctx.fillText("ρ₂=" + rho2 + "Ωm", 5, h * 0.48);
 
     info.textContent = "Dipole-Dipole array (n=" + nLevel + "): As n increases, M-N moves away from A-B, probing deeper. Voltage decreases with distance.";
   }
@@ -1712,7 +1712,7 @@ The workflows in this app focus on the methods below.
       if (waveRadius > 40 && waveRadius < 150) {
         ctx.fillStyle = "#dc2626";
         ctx.font = "9px sans-serif";
-        ctx.fillText("Direct (Vâ‚)", sourceX + waveRadius * 0.7, groundY - 10);
+        ctx.fillText("Direct (V₁)", sourceX + waveRadius * 0.7, groundY - 10);
       }
     }
 
@@ -1756,7 +1756,7 @@ The workflows in this app focus on the methods below.
         if (headwaveDist > 50 && headwaveDist < 180) {
           ctx.fillStyle = "#f59e0b";
           ctx.font = "9px sans-serif";
-          ctx.fillText("Head wave (Vâ‚‚)", critX + headwaveDist * 0.5, interface1 - 5);
+          ctx.fillText("Head wave (V₂)", critX + headwaveDist * 0.5, interface1 - 5);
         }
       }
     }
@@ -1786,7 +1786,7 @@ The workflows in this app focus on the methods below.
         if (headwaveDist2 > 40 && headwaveDist2 < 150) {
           ctx.fillStyle = "#8b5cf6";
           ctx.font = "9px sans-serif";
-          ctx.fillText("Head wave (Vâ‚ƒ)", critX2 + headwaveDist2 * 0.4, interface2 - 5);
+          ctx.fillText("Head wave (V₃)", critX2 + headwaveDist2 * 0.4, interface2 - 5);
         }
       }
     }
@@ -1859,7 +1859,7 @@ The workflows in this app focus on the methods below.
     ctx.font = "7px sans-serif";
     ctx.fillText("Xc", plotX + 5 + crossover1 * xScale - 5, plotY + plotH - 8);
 
-    info.textContent = "Seismic refraction: Snell's law at interfaces. Head waves travel at Vâ‚‚, Vâ‚ƒ. Crossover distance Xc where refracted arrives first.";
+    info.textContent = "Seismic refraction: Snell's law at interfaces. Head waves travel at V₂, V₃. Crossover distance Xc where refracted arrives first.";
   }
 
   function drawTDEM(groundY) {
@@ -2074,7 +2074,7 @@ The workflows in this app focus on the methods below.
       ctx.fill();
     }
 
-    info.textContent = "TDEM: After Tx off, eddy currents diffuse as 'smoke rings'. Conductive layers slow decay rate â†’ detectable in late-time response.";
+    info.textContent = "TDEM: After Tx off, eddy currents diffuse as 'smoke rings'. Conductive layers slow decay rate → detectable in late-time response.";
   }
 
   function animate() {
@@ -2108,7 +2108,7 @@ The workflows in this app focus on the methods below.
 
     # LLM-powered explanation section
     st.markdown("---")
-    st.markdown("### ðŸ¤– Ask AI About Hydrogeophysics")
+    st.markdown("### 🤖 Ask AI About Hydrogeophysics")
     st.markdown(
         """
 <div class="phgx-card">
@@ -2158,7 +2158,7 @@ The workflows in this app focus on the methods below.
     )
 
     col_ask, col_clear = st.columns([3, 1])
-    ask_clicked = col_ask.button("ðŸ” Ask AI", type="primary", width="stretch")
+    ask_clicked = col_ask.button("🔍 Ask AI", type="primary", width="stretch")
     clear_clicked = col_clear.button("Clear History", width="stretch")
 
     if clear_clicked:
@@ -2227,7 +2227,7 @@ Layer petrophysics: regolith (rho_sat 50-250), bedrock (rho_sat 200-500)'''
 
 ### Key Parameters:
 - **lambda (regularization)**: Controls smoothness (typical: 10-50, higher=smoother)
-- **rho_sat**: Saturated resistivity in Archie's Law (Î©m)
+- **rho_sat**: Saturated resistivity in Archie's Law (Ωm)
 - **porosity**: Rock/soil porosity (0-1)
 - **n**: Archie's saturation exponent (typically 1.3-2.5)
 - **velocity_threshold**: For seismic layer extraction (m/s)
@@ -2408,24 +2408,24 @@ def render_author_tab() -> None:
                 University of Iowa | Affiliated Faculty, Lawrence Berkeley National Laboratory
             </div>
             <div class="profile-contact">
-                ðŸ“§ hchen117@uiowa.edu &nbsp;|&nbsp; ðŸ“ 23 Trowbridge Hall, Iowa City, IA
+                📧 hchen117@uiowa.edu &nbsp;|&nbsp; 📍 23 Trowbridge Hall, Iowa City, IA
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with col_contact:
-        st.markdown("[ðŸŒ **Visit Full Website**](https://sites.google.com/view/hangchen)")
-        st.markdown("[ðŸ’» **GitHub**](https://github.com/geohang)")
+        st.markdown("[🌐 **Visit Full Website**](https://sites.google.com/view/hangchen)")
+        st.markdown("[💻 **GitHub**](https://github.com/geohang)")
 
     st.markdown("---")
 
     # Sub-tabs inside the Author tab
     sub_tab3, sub_tab1, sub_tab4, sub_tab5, sub_tab6 = st.tabs([
-        "ðŸ”¬ Research",
-        "ðŸ  Lab & People",
-        "ðŸ“„ Publications",
-        "ðŸ“š Teaching",
-        "ðŸ’» Open Source"
+        "🔬 Research",
+        "🏠 Lab & People",
+        "📄 Publications",
+        "📚 Teaching",
+        "💻 Open Source"
     ])
 
     # --- Lab & People Tab ---
@@ -2485,7 +2485,7 @@ def render_author_tab() -> None:
             </div>
             """, unsafe_allow_html=True)
 
-        st.info("ðŸŽ“ **Interested in joining?** Visit [Opportunities](https://sites.google.com/view/hangchen/opportunities) for current openings.")
+        st.info("🎓 **Interested in joining?** Visit [Opportunities](https://sites.google.com/view/hangchen/opportunities) for current openings.")
 
     # --- Research Tab ---
     with sub_tab3:
@@ -2496,21 +2496,21 @@ def render_author_tab() -> None:
         st.markdown("#### Research Methods")
         st.markdown("""
         <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
-            <div class="link-card-title">ðŸ“¡ 1. Advanced 4D Geophysical Imaging</div>
+            <div class="link-card-title">📡 1. Advanced 4D Geophysical Imaging</div>
             <div class="link-card-desc">Joint inversion, structurally-constrained inversion, temporal constraint integration</div>
         </a>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
-            <div class="link-card-title">ðŸ’§ 2. Integrated Hydrological Modeling</div>
+            <div class="link-card-title">💧 2. Integrated Hydrological Modeling</div>
             <div class="link-card-desc">Geophysics-informed hydrologic modeling, subsurface parameterization</div>
         </a>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
-            <div class="link-card-title">ðŸ¤– 3. AI-driven Solutions</div>
+            <div class="link-card-title">🤖 3. AI-driven Solutions</div>
             <div class="link-card-desc">Deep learning inversion, AI agents, pattern recognition, automated workflows</div>
         </a>
         """, unsafe_allow_html=True)
@@ -2519,35 +2519,35 @@ def render_author_tab() -> None:
         st.markdown("#### Research Applications")
         st.markdown("""
         <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
-            <div class="link-card-title">ðŸŒŠ 1. Integrated Watershed Analysis & Management</div>
+            <div class="link-card-title">🌊 1. Integrated Watershed Analysis & Management</div>
             <div class="link-card-desc">Surface-groundwater interactions, climate impacts, sustainable water management</div>
         </a>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
-            <div class="link-card-title">ðŸ”ï¸ 2. Critical Zone Ecosystem Dynamics</div>
+            <div class="link-card-title">🏔️ 2. Critical Zone Ecosystem Dynamics</div>
             <div class="link-card-desc">Rock-soil-plant-atmosphere interactions, ecosystem resilience, bedrock hydrology</div>
         </a>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
-            <div class="link-card-title">â˜¢ï¸ 3. Environmental Monitoring & Protection</div>
+            <div class="link-card-title">☢️ 3. Environmental Monitoring & Protection</div>
             <div class="link-card-desc">Nuclear waste disposal monitoring, 4D THM process characterization</div>
         </a>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
-            <div class="link-card-title">â›ï¸ 4. Critical Mineral & Resource Characterization</div>
+            <div class="link-card-title">⛏️ 4. Critical Mineral & Resource Characterization</div>
             <div class="link-card-desc">Electromagnetic methods for mineral deposits, geothermal resource assessment</div>
         </a>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <a href="https://sites.google.com/view/hangchen/research_1" target="_blank" class="link-card">
-            <div class="link-card-title">âš¡ 5. Geological Hydrogen Exploration</div>
+            <div class="link-card-title">⚡ 5. Geological Hydrogen Exploration</div>
             <div class="link-card-desc">Natural hydrogen accumulation identification using integrated geophysical methods</div>
         </a>
         """, unsafe_allow_html=True)
@@ -2568,7 +2568,7 @@ def render_author_tab() -> None:
             st.markdown(f"**{year}** | {title} - *{journal}*")
 
         st.markdown("---")
-        st.markdown("[ðŸ“„ **View All Publications â†’**](https://sites.google.com/view/hangchen/publications)")
+        st.markdown("[📄 **View All Publications →**](https://sites.google.com/view/hangchen/publications)")
 
     # --- Teaching Tab ---
     with sub_tab5:
@@ -2577,19 +2577,19 @@ def render_author_tab() -> None:
 
         st.markdown("""
         <a href="https://sites.google.com/view/hangchen/teaching" target="_blank" class="link-card">
-            <div class="link-card-title">ðŸ“– Courses at University of Iowa</div>
+            <div class="link-card-title">📖 Courses at University of Iowa</div>
             <div class="link-card-desc">Hydrogeophysics, Environmental Geophysics, Data Analysis in Geosciences</div>
         </a>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <a href="https://sites.google.com/view/hangchen/teaching" target="_blank" class="link-card">
-            <div class="link-card-title">ðŸŽ“ Student Mentoring</div>
+            <div class="link-card-title">🎓 Student Mentoring</div>
             <div class="link-card-desc">Graduate and undergraduate research opportunities available</div>
         </a>
         """, unsafe_allow_html=True)
 
-        st.markdown("[ðŸ“š **View Teaching Page â†’**](https://sites.google.com/view/hangchen/teaching)")
+        st.markdown("[📚 **View Teaching Page →**](https://sites.google.com/view/hangchen/teaching)")
 
     # --- Open Source Tab ---
     with sub_tab6:
@@ -2598,12 +2598,12 @@ def render_author_tab() -> None:
 
         st.markdown("""
         <a href="https://github.com/geohang/PyHydroGeophysX" target="_blank" class="link-card">
-            <div class="link-card-title">ðŸ PyHydroGeophysX</div>
+            <div class="link-card-title">🐍 PyHydroGeophysX</div>
             <div class="link-card-desc">AI-powered hydrogeophysics workflow platform - ERT, Seismic, TDEM inversion with LLM agents</div>
         </a>
         """, unsafe_allow_html=True)
 
-        st.markdown("[ðŸ’» **View All Open Source Projects â†’**](https://sites.google.com/view/hangchen/open-source-codes)")
+        st.markdown("[💻 **View All Open Source Projects →**](https://sites.google.com/view/hangchen/open-source-codes)")
 
         st.markdown("---")
         st.markdown("### Acknowledgments")
@@ -2627,7 +2627,7 @@ def render_local_deployment_tab() -> None:
         """
 # PyHydroGeophysX - Quick Start Guide
 
-## ðŸš€ Get Started in 3 Steps
+## 🚀 Get Started in 3 Steps
 
 ### Step 0: Download the GitHub Repository
 ```bash
@@ -2648,7 +2648,7 @@ Or use the launcher scripts:
 In the sidebar:
 1. Select LLM provider (OpenAI recommended)
 2. Enter your API key
-3. Click "ðŸš€ Initialize System"
+3. Click "🚀 Initialize System"
 
 ### Step 3: Run Your First Workflow
 1. Choose a workflow example or describe your data
@@ -2664,8 +2664,8 @@ def analyze_user_intent(user_request: str) -> Dict[str, Any]:
     Returns a dict with keys:
       - ``clarity``: "clear" | "ambiguous" | "vague"
       - ``detected_type``: detected workflow type string (may be empty)
-      - ``clarifications``: list of {type, question, key, options} dicts â€” questions to ask
-      - ``suggestions``: list of {key, label, description, enrichment} dicts â€” selectable options
+      - ``clarifications``: list of {type, question, key, options} dicts — questions to ask
+      - ``suggestions``: list of {key, label, description, enrichment} dicts — selectable options
     """
     if not st.session_state.context_agent:
         return {"clarity": "clear", "detected_type": "", "clarifications": [], "suggestions": []}
@@ -2680,7 +2680,7 @@ Analyze this request and respond with a JSON object ONLY (no markdown, no extra 
 
 Determine:
 1. How clear the request is: "clear" (all info present), "ambiguous" (multiple interpretations), or "vague" (too little info).
-2. The most likely workflow type from: ["ERT Inversion", "Time-Lapse ERT", "Seismic SRT", "Data Fusion (Seismic+ERT)", "TDEM Inversion", "MODFLOW Output", "ParFlow Output", "Hydroâ†’Geophysics", "Monte Carlo", "Unknown"].
+2. The most likely workflow type from: ["ERT Inversion", "Time-Lapse ERT", "Seismic SRT", "Data Fusion (Seismic+ERT)", "TDEM Inversion", "MODFLOW Output", "ParFlow Output", "Hydro→Geophysics", "Monte Carlo", "Unknown"].
 3. If ambiguous or vague, generate up to 3 clarifying questions. Each question has:
    - "type": "choice" (user picks one of preset options) or "text" (free text answer)
    - "question": the question string
@@ -2740,9 +2740,9 @@ def render_clarification_panel() -> bool:
     items = st.session_state.clarification_items
     suggestions = st.session_state.intent_suggestions
 
-    # â”€â”€ Workflow suggestions (ambiguous) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Workflow suggestions (ambiguous) ──────────────────────────────────────
     if suggestions:
-        st.markdown("#### I detected several possible workflows â€” which one do you want?")
+        st.markdown("#### I detected several possible workflows — which one do you want?")
         cols = st.columns(min(len(suggestions), 4))
         for i, sug in enumerate(suggestions):
             col = cols[i % len(cols)]
@@ -2769,7 +2769,7 @@ def render_clarification_panel() -> bool:
                 f"Selected: **{next((s['label'] for s in suggestions if s['key'] == st.session_state.intent_selected), '')}**"
             )
 
-    # â”€â”€ Clarifying questions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Clarifying questions ──────────────────────────────────────────────────
     if items:
         st.markdown("#### A few quick questions to refine your request:")
         answers = dict(st.session_state.clarification_answers)
@@ -2842,7 +2842,7 @@ def render_demo_walkthrough() -> None:
     """Render the short first-visit walkthrough."""
     st.markdown("### How it works")
 
-    with st.expander("Step 1 â€” What you'll upload", expanded=False):
+    with st.expander("Step 1 — What you'll upload", expanded=False):
         st.markdown(
             """
 - **ERT**: `.dat`, `.ohm`, or Syscal/DAS-1/ABEM exported files
@@ -2850,11 +2850,11 @@ def render_demo_walkthrough() -> None:
 - **TDEM**: time-domain EM sounding files
 - **Hydrologic model output**: NetCDF or CSV files from ParFlow / MODFLOW
 
-In **Demo mode** no upload is needed â€” bundled cached results are shown instead.
+In **Demo mode** no upload is needed — bundled cached results are shown instead.
 """
         )
 
-    with st.expander("Step 2 â€” What the agents do", expanded=False):
+    with st.expander("Step 2 — What the agents do", expanded=False):
         st.markdown(
             """
 1. **Context agent** parses your natural-language request and identifies the workflow type
@@ -2864,10 +2864,10 @@ In **Demo mode** no upload is needed â€” bundled cached results are shown i
 """
         )
 
-    with st.expander("Step 3 â€” What you'll get", expanded=False):
+    with st.expander("Step 3 — What you'll get", expanded=False):
         st.markdown(
             """
-- **Numerical metrics** (resistivity range, velocity range, water content, RMS misfit, â€¦)
+- **Numerical metrics** (resistivity range, velocity range, water content, RMS misfit, …)
 - **Inverted model figures** (2-D cross-sections, time-lapse panels, joint fusion maps)
 - **AI-generated interpretation** clearly labelled as model output, not ground truth
 """
@@ -3014,7 +3014,7 @@ def render_workflow_tab(sidebar_state: Dict[str, Any]) -> None:
 
     if not AGENTS_AVAILABLE:
         st.warning(
-            f"âš ï¸ Workflow execution is disabled â€” required packages are not installed (`{IMPORT_ERROR}`).  \n"
+            f"⚠️ Workflow execution is disabled — required packages are not installed (`{IMPORT_ERROR}`).  \n"
             "You can still use **Demo mode** (enable in the sidebar) or the **No-LLM Quick** buttons below "
             "(configuration will be built, but the run step requires the agents to be installed)."
         )
@@ -3029,7 +3029,7 @@ def render_workflow_tab(sidebar_state: Dict[str, Any]) -> None:
         placeholder="Example: Run a time-lapse ERT inversion on four surveys...",
     )
     if request_text != prev_request:
-        # User edited the text â€” reset clarification so agent re-analyzes
+        # User edited the text — reset clarification so agent re-analyzes
         st.session_state.clarification_state = "idle"
         st.session_state.clarification_items = []
         st.session_state.clarification_answers = {}
@@ -3079,13 +3079,13 @@ def render_workflow_tab(sidebar_state: Dict[str, Any]) -> None:
 
     st.markdown("---")
 
-    # â”€â”€ Interactive clarification panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Interactive clarification panel ──────────────────────────────────────
     # Only shown when using the LLM (Auto mode) and LLM is available.
     quick_mode = st.session_state.quick_run_mode
     clr_state = st.session_state.clarification_state
 
     if quick_mode == "Auto (LLM)" and st.session_state.context_agent and request_text.strip():
-        # "Check my request" button â€” runs intent analysis
+        # "Check my request" button — runs intent analysis
         col_analyze, col_reset = st.columns([3, 1])
         with col_analyze:
             analyze_clicked = st.button(
@@ -3136,7 +3136,7 @@ def render_workflow_tab(sidebar_state: Dict[str, Any]) -> None:
             if ready and (st.session_state.intent_suggestions or st.session_state.clarification_items):
                 st.session_state.clarification_state = "answered"
 
-    # â”€â”€ Run button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Run button ────────────────────────────────────────────────────────────
     preview_clicked = st.button("Preview configuration", type="secondary", width="stretch")
 
     if preview_clicked:
@@ -3315,7 +3315,7 @@ def _detect_hydro_data_format(path: Path) -> str:
     if not path.exists() or not path.is_dir():
         return "unknown"
 
-    # Pre-processed .npy check (highest priority â€“ explicit standard format)
+    # Pre-processed .npy check (highest priority – explicit standard format)
     if _has_hydro_required_files(path):
         return "npy"
 
@@ -3325,7 +3325,7 @@ def _detect_hydro_data_format(path: Path) -> str:
     if "WaterContent" in entries or "mfsim.nam" in entries:
         return "modflow"
 
-    # ParFlow indicators â€“ look for *.pfb files
+    # ParFlow indicators – look for *.pfb files
     pfb_files = list(path.glob("*.pfb"))
     if pfb_files:
         return "parflow"
@@ -3429,11 +3429,11 @@ def _convert_modflow_to_npy(
     else:
         idomain = np.loadtxt(str(id_path))
 
-    # Water content â†’ 4D (nt, nlay, nrows, ncols)
+    # Water content → 4D (nt, nlay, nrows, ncols)
     wc_proc = MODFLOWWaterContent(model_directory=str(modflow_path), idomain=idomain)
     water_content = wc_proc.load_time_range(start_idx=0, end_idx=None, nlay=nlay)
 
-    # Porosity â†’ 3D (nlay, nrows, ncols)
+    # Porosity → 3D (nlay, nrows, ncols)
     # flopy may not be installed; handle gracefully
     porosity = None
     try:
@@ -3482,11 +3482,11 @@ def _convert_parflow_to_npy(
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
-    # Saturation â†’ 4D (nt, nz, ny, nx)  â€” treated as water content proxy
+    # Saturation → 4D (nt, nz, ny, nx)  — treated as water content proxy
     sat_proc = ParflowSaturation(model_directory=str(pf_path), run_name=run_name)
     saturation = sat_proc.load_time_range(start_idx=0, end_idx=None)
 
-    # Porosity â†’ 3D (nz, ny, nx)
+    # Porosity → 3D (nz, ny, nx)
     por_proc = ParflowPorosity(model_directory=str(pf_path), run_name=run_name)
     porosity = por_proc.load_porosity()
 
@@ -3499,7 +3499,7 @@ def _convert_parflow_to_npy(
     except FileNotFoundError:
         pass  # no mask file, proceed without
 
-    # Water content = saturation Ã— porosity
+    # Water content = saturation × porosity
     water_content = saturation * porosity[np.newaxis, :, :, :]
 
     # Top/bot: uniform layers based on grid shape
@@ -3718,7 +3718,7 @@ def _render_surface_picker(data_dir: Path) -> None:
     if zero_masked and zero_note:
         st.info(zero_note)
 
-    # Pick counter: 0 â†’ next pick = P1, 1 â†’ next pick = P2
+    # Pick counter: 0 → next pick = P1, 1 → next pick = P2
     if "hydro_pick_next" not in st.session_state:
         st.session_state.hydro_pick_next = 0
 
@@ -3733,7 +3733,7 @@ def _render_surface_picker(data_dir: Path) -> None:
     max_x = max(0, top.shape[1] - 1)
     max_y = max(0, top.shape[0] - 1)
 
-    # Read current points â€” only treat as set if user explicitly picked them
+    # Read current points — only treat as set if user explicitly picked them
     has_p1 = st.session_state.hydro_user_picked_p1
     has_p2 = st.session_state.hydro_user_picked_p2
 
@@ -3742,14 +3742,14 @@ def _render_surface_picker(data_dir: Path) -> None:
     p2x = float(np.clip(st.session_state.get("hydro_point2_x", 0), 0, max_x))
     p2y = float(np.clip(st.session_state.get("hydro_point2_y", 0), 0, max_y))
 
-    # Status message â€” guide the user step by step
+    # Status message — guide the user step by step
     next_pick = st.session_state.hydro_pick_next
     if not has_p1 and not has_p2:
-        st.info("ðŸ–±ï¸ **Step 1/2:** Use *box select* or *lasso* on the map to pick **P1** (start of profile).")
+        st.info("🖱️ **Step 1/2:** Use *box select* or *lasso* on the map to pick **P1** (start of profile).")
     elif has_p1 and not has_p2:
-        st.info(f"âœ… P1 = ({p1x:.0f}, {p1y:.0f}).  ðŸ–±ï¸ **Step 2/2:** Now pick **P2** (end of profile).")
+        st.info(f"✅ P1 = ({p1x:.0f}, {p1y:.0f}).  🖱️ **Step 2/2:** Now pick **P2** (end of profile).")
     else:
-        st.success(f"âœ… Profile set:  **P1** ({p1x:.0f}, {p1y:.0f})  â†’  **P2** ({p2x:.0f}, {p2y:.0f})")
+        st.success(f"✅ Profile set:  **P1** ({p1x:.0f}, {p1y:.0f})  →  **P2** ({p2x:.0f}, {p2y:.0f})")
 
     # --- Build plotly figure ---
     picked_points: List[List[float]] = []
@@ -3850,9 +3850,9 @@ def _render_surface_picker(data_dir: Path) -> None:
         fig.update_yaxes(range=[max_y + 0.5, -0.5], autorange=False)
 
         # Render chart + capture selection
-        # Prefer native Streamlit on_select (Streamlit â‰¥ 1.35) over the
+        # Prefer native Streamlit on_select (Streamlit ≥ 1.35) over the
         # third-party streamlit-plotly-events which is broken with
-        # Streamlit â‰¥ 1.37 / Plotly â‰¥ 6.x (renders a blank iframe).
+        # Streamlit ≥ 1.37 / Plotly ≥ 6.x (renders a blank iframe).
         if "on_select" in inspect.signature(st.plotly_chart).parameters:
             render_backend = "streamlit_plotly_on_select"
             event = st.plotly_chart(
@@ -3921,9 +3921,9 @@ def _render_surface_picker(data_dir: Path) -> None:
             st.session_state.hydro_pick_next = 0
         st.rerun()
 
-    # Clear button â€” only shown after user has picked at least one point
+    # Clear button — only shown after user has picked at least one point
     if has_p1 or has_p2:
-        if st.button("ðŸ—‘ï¸ Clear picks & restart", key="hydro_clear_picked_points"):
+        if st.button("🗑️ Clear picks & restart", key="hydro_clear_picked_points"):
             st.session_state.hydro_pick_next = 0
             st.session_state.hydro_user_picked_p1 = False
             st.session_state.hydro_user_picked_p2 = False
@@ -5081,7 +5081,7 @@ def _detect_hydro_structure(root_path: str) -> Dict[str, Any]:
         summary["valid"] = pf_info["num_satur_files"] > 0 and pf_info["has_porosity"]
         if summary["valid"]:
             summary["grid_info"] = (
-                f"ParFlow run '{pf_info['run_name']}' â€“ "
+                f"ParFlow run '{pf_info['run_name']}' – "
                 f"{pf_info['num_satur_files']} saturation files"
             )
         else:
@@ -5094,9 +5094,9 @@ def _detect_hydro_structure(root_path: str) -> Dict[str, Any]:
     else:
         summary["error"] = (
             "Could not detect data format. Expected one of:\n"
-            "â€¢ Pre-processed: Watercontent.npy, Porosity.npy, top.txt, bot.npy\n"
-            "â€¢ MODFLOW: WaterContent binary + mfsim.nam / .nam files\n"
-            "â€¢ ParFlow: *.out.satur.*.pfb + porosity.pfb files"
+            "• Pre-processed: Watercontent.npy, Porosity.npy, top.txt, bot.npy\n"
+            "• MODFLOW: WaterContent binary + mfsim.nam / .nam files\n"
+            "• ParFlow: *.out.satur.*.pfb + porosity.pfb files"
         )
 
     return summary
@@ -5365,7 +5365,7 @@ def _render_data_step() -> None:
             elif eff_fmt == "parflow":
                 _render_parflow_config(resolved_path)
             else:
-                # npy or unknown â€” original discovery flow
+                # npy or unknown — original discovery flow
                 candidates = _discover_hydro_data_dirs(manual_path)
                 if candidates:
                     detected_pick = st.selectbox(
@@ -5426,7 +5426,7 @@ def _render_modflow_config(data_dir: Path) -> None:
         st.session_state.hydro_mf_idomain = idomain_file
         st.session_state.hydro_mf_model_name = model_name
         st.session_state.hydro_mf_nlay = nlay
-        with st.spinner("Reading MODFLOW binary files and converting to .npy â€¦"):
+        with st.spinner("Reading MODFLOW binary files and converting to .npy …"):
             try:
                 out_dir = _convert_modflow_to_npy(
                     modflow_dir=str(data_dir),
@@ -5470,7 +5470,7 @@ def _render_parflow_config(data_dir: Path) -> None:
     if st.button("Load & convert ParFlow data", key="hydro_load_parflow",
                   width="stretch", type="primary"):
         st.session_state.hydro_pf_run_name = run_name
-        with st.spinner("Reading ParFlow .pfb files and converting to .npy â€¦"):
+        with st.spinner("Reading ParFlow .pfb files and converting to .npy …"):
             try:
                 out_dir = _convert_parflow_to_npy(
                     parflow_dir=str(data_dir),
@@ -5543,7 +5543,7 @@ def _render_method_step() -> None:
     """Step 2 - Select methods, then show per-method setup + rock physics."""
     st.markdown("##### Select Geophysical Methods")
 
-    # Quick-preset buttons â€” write to persisted key so selection survives step navigation
+    # Quick-preset buttons — write to persisted key so selection survives step navigation
     p1, p2, p3, p4 = st.columns(4)
     if p1.button("Select All", key="hydro_btn_all3", width="stretch"):
         st.session_state.hydro_methods_persisted = HYDRO_RESPONSE_METHODS.copy()
@@ -5559,7 +5559,7 @@ def _render_method_step() -> None:
         st.rerun()
 
     # Use default= from persisted key; capture return value and sync back.
-    # Do NOT rely on key= alone â€” Streamlit cleans up widget keys when the
+    # Do NOT rely on key= alone — Streamlit cleans up widget keys when the
     # widget is not rendered (e.g. user navigates to another step).
     _current_default = list(st.session_state.get("hydro_methods_persisted", HYDRO_RESPONSE_METHODS))
     selected_methods = st.multiselect(
@@ -5592,10 +5592,10 @@ def _render_method_step() -> None:
 
     st.markdown("---")
 
-    # Build one tab per selected method (skip Profile â€“ it's just sampling)
+    # Build one tab per selected method (skip Profile – it's just sampling)
     tab_methods = [m for m in methods if m != "Profile"]
     if not tab_methods:
-        # Only Profile selected â€“ show sampling settings inline
+        # Only Profile selected – show sampling settings inline
         st.number_input("Profile points", min_value=50, max_value=2000, step=10, key="hydro_num_points")
         st.number_input("Random seed", min_value=0, step=1, key="hydro_seed")
         return
@@ -5649,7 +5649,7 @@ def _hd(key: str, fallback: Any = 0.0) -> Any:
 
 def _render_resistivity_rock_physics() -> None:
     """Shared resistivity rock-physics inputs (Archie's Law), used by ERT/TDEM/FDEM."""
-    st.markdown("**Rock Physics â€” Resistivity Model (Archie's Law)**")
+    st.markdown("**Rock Physics — Resistivity Model (Archie's Law)**")
     st.caption("Layer-wise: rho_sat (saturated resistivity), n (cementation exponent), sigma_s (surface conductivity).")
     rp1, rp2, rp3 = st.columns(3)
     with rp1:
@@ -5715,26 +5715,26 @@ def _render_srt_tab() -> None:
     with s2:
         st.number_input("Absolute noise", min_value=0.0, step=0.0001, format="%.6f", value=float(_hd("hydro_srt_noise_abs", 1e-5)), key="hydro_srt_noise_abs")
 
-    st.markdown("**Rock Physics â€” Velocity Model**")
-    st.caption("Layer-wise elastic parameters: bulk/shear modulus (GPa), mineral density (kg/mÂ³), depth factor or aspect ratio.")
+    st.markdown("**Rock Physics — Velocity Model**")
+    st.caption("Layer-wise elastic parameters: bulk/shear modulus (GPa), mineral density (kg/m³), depth factor or aspect ratio.")
     sv1, sv2, sv3 = st.columns(3)
     with sv1:
         st.markdown("*Top layer*")
         st.number_input("Bulk mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_top_bulk_modulus", 30.0)), key="hydro_top_bulk_modulus")
         st.number_input("Shear mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_top_shear_modulus", 20.0)), key="hydro_top_shear_modulus")
-        st.number_input("Density (kg/mÂ³)", min_value=500.0, step=10.0, value=float(_hd("hydro_top_mineral_density", 2650.0)), key="hydro_top_mineral_density")
+        st.number_input("Density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_top_mineral_density", 2650.0)), key="hydro_top_mineral_density")
         st.number_input("Depth factor", min_value=0.1, step=0.1, value=float(_hd("hydro_top_depth", 1.0)), key="hydro_top_depth")
     with sv2:
         st.markdown("*Middle layer*")
         st.number_input("Bulk mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_mid_bulk_modulus", 50.0)), key="hydro_mid_bulk_modulus")
         st.number_input("Shear mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_mid_shear_modulus", 35.0)), key="hydro_mid_shear_modulus")
-        st.number_input("Density (kg/mÂ³)", min_value=500.0, step=10.0, value=float(_hd("hydro_mid_mineral_density", 2670.0)), key="hydro_mid_mineral_density")
+        st.number_input("Density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_mid_mineral_density", 2670.0)), key="hydro_mid_mineral_density")
         st.number_input("Aspect ratio", min_value=0.001, max_value=1.0, step=0.01, value=float(_hd("hydro_mid_aspect_ratio", 0.05)), key="hydro_mid_aspect_ratio")
     with sv3:
         st.markdown("*Bottom layer*")
         st.number_input("Bulk mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_bot_bulk_modulus", 55.0)), key="hydro_bot_bulk_modulus")
         st.number_input("Shear mod. (GPa)", min_value=1.0, step=1.0, value=float(_hd("hydro_bot_shear_modulus", 50.0)), key="hydro_bot_shear_modulus")
-        st.number_input("Density (kg/mÂ³)", min_value=500.0, step=10.0, value=float(_hd("hydro_bot_mineral_density", 2680.0)), key="hydro_bot_mineral_density")
+        st.number_input("Density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_bot_mineral_density", 2680.0)), key="hydro_bot_mineral_density")
         st.number_input("Aspect ratio", min_value=0.001, max_value=1.0, step=0.01, value=float(_hd("hydro_bot_aspect_ratio", 0.03)), key="hydro_bot_aspect_ratio")
 
 
@@ -5765,25 +5765,25 @@ def _render_gravity_tab() -> None:
     st.markdown("**Noise**")
     st.number_input("Gravity noise level", min_value=0.0, step=0.005, format="%.4f", value=float(_hd("hydro_gravity_noise_level", 0.02)), key="hydro_gravity_noise_level")
 
-    st.markdown("**Rock Physics â€” Density Model**")
+    st.markdown("**Rock Physics — Density Model**")
     st.caption("Layer-wise density parameters for gravity forward modeling.")
     gd1, gd2, gd3 = st.columns(3)
     with gd1:
         st.markdown("*Top layer*")
-        st.number_input("Grain density (kg/mÂ³)", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_density_top", 2650.0)), key="hydro_grav_density_top")
+        st.number_input("Grain density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_density_top", 2650.0)), key="hydro_grav_density_top")
         st.number_input("Pore-fluid density", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_fluid_density_top", 1000.0)), key="hydro_grav_fluid_density_top")
     with gd2:
         st.markdown("*Middle layer*")
-        st.number_input("Grain density (kg/mÂ³)", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_density_mid", 2670.0)), key="hydro_grav_density_mid")
+        st.number_input("Grain density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_density_mid", 2670.0)), key="hydro_grav_density_mid")
         st.number_input("Pore-fluid density", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_fluid_density_mid", 1000.0)), key="hydro_grav_fluid_density_mid")
     with gd3:
         st.markdown("*Bottom layer*")
-        st.number_input("Grain density (kg/mÂ³)", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_density_bot", 2680.0)), key="hydro_grav_density_bot")
+        st.number_input("Grain density (kg/m³)", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_density_bot", 2680.0)), key="hydro_grav_density_bot")
         st.number_input("Pore-fluid density", min_value=500.0, step=10.0, value=float(_hd("hydro_grav_fluid_density_bot", 1000.0)), key="hydro_grav_fluid_density_bot")
 
 
 def _render_advanced_settings(methods: Optional[List[str]] = None) -> None:
-    """Legacy wrapper â€” kept for any remaining callers."""
+    """Legacy wrapper — kept for any remaining callers."""
     pass
 
 
@@ -5892,7 +5892,7 @@ def _render_profile_step() -> None:
     st.markdown("---")
     st.caption("Or enter coordinates manually:")
 
-    # Manual coordinate inputs â€” use notebook defaults when points are missing
+    # Manual coordinate inputs — use notebook defaults when points are missing
     default_p1x = _as_float_or(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point1_x"), 115.0)
     default_p1y = _as_float_or(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point1_y"), 70.0)
     default_p2x = _as_float_or(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_point2_x"), 95.0)
@@ -5943,7 +5943,7 @@ def _render_profile_step() -> None:
             st.session_state.hydro_snapshot_index = int(HYDRO_NOTEBOOK_DEFAULTS.get("hydro_snapshot_index", 5))
             st.rerun()
 
-    # Persist manual inputs â†’ session_state.
+    # Persist manual inputs → session_state.
     # Only mark as user-picked if the number_input value was actually changed
     # from the default (to avoid auto-marking on every rerun).
     _prev_p1x = st.session_state.get("hydro_point1_x")
@@ -6602,7 +6602,7 @@ def run_workflow(
 
     if BaseAgent is None:
         st.error(
-            "âš ï¸ Cannot run workflow: the agents module is not available.  \n"
+            "⚠️ Cannot run workflow: the agents module is not available.  \n"
             f"Missing package: `{IMPORT_ERROR}`.  \n"
             "Install with `pip install pygimli SimPEG openai` and restart the app."
         )
@@ -7753,7 +7753,7 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
     _n_picked = len(_all_picks)
     _n_total_picks = sum(len(df) for df in _all_picks.values())
     if _n_picked:
-        st.caption(f"{_n_picked}/{len(records)} gathers picked â€” {_n_total_picks} total first arrivals")
+        st.caption(f"{_n_picked}/{len(records)} gathers picked — {_n_total_picks} total first arrivals")
     selected_record = st.selectbox("Shot gather", records, index=0, format_func=lambda x: f"Field record {x}")
 
     # Sync session state when the user switches to a different shot gather.
@@ -7866,7 +7866,7 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
         if st.button("Auto-pick all gathers", width="stretch",
                      help="Apply current picking settings to every shot gather in the dataset."):
             _auto_all = st.session_state.get("seismic_all_picks") or {}
-            _auto_prog = st.progress(0.0, text="Auto-picking gathersâ€¦")
+            _auto_prog = st.progress(0.0, text="Auto-picking gathers…")
             _auto_total = len(dataset.field_records)
             _auto_n_picks = 0
             for _auto_i, _auto_rec in enumerate(dataset.field_records):
@@ -7902,14 +7902,14 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                     pass
                 _auto_prog.progress(
                     (_auto_i + 1) / max(1, _auto_total),
-                    text=f"Auto-picking: {_auto_i + 1}/{_auto_total} gathersâ€¦",
+                    text=f"Auto-picking: {_auto_i + 1}/{_auto_total} gathers…",
                 )
             st.session_state.seismic_all_picks = _auto_all
             if selected_record in _auto_all:
                 st.session_state.seismic_picks_df = _auto_all[selected_record].copy(deep=True)
             st.session_state.seismic_export_files = {}
             st.session_state.seismic_velocity_model = None
-            st.success(f"Auto-picked {_auto_total} gathers â€” {_auto_n_picks} total first arrivals.")
+            st.success(f"Auto-picked {_auto_total} gathers — {_auto_n_picks} total first arrivals.")
 
     processed = st.session_state.get("seismic_processed")
     picks_df = st.session_state.get("seismic_picks_df")
@@ -8777,7 +8777,7 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
 
         with run_col:
             with st.expander("SRT inversion parameters", expanded=False):
-                st.number_input("Lambda (Î»)", min_value=0.1, step=5.0,
+                st.number_input("Lambda (λ)", min_value=0.1, step=5.0,
                     value=float(st.session_state.get("seismic_srt_lam") or 50.0),
                     key="seismic_srt_lam",
                     help="Regularization strength; higher = smoother model.")
@@ -10618,14 +10618,14 @@ def render_support_section() -> None:
     st.markdown(
         """
 <div class="phgx-support-card">
-    <div class="phgx-free-badge">ðŸŽ‰ FREE & OPEN SOURCE</div>
+    <div class="phgx-free-badge">🎉 FREE & OPEN SOURCE</div>
     <div class="phgx-support-title">Support PyHydroGeophysX Development</div>
     <div class="phgx-support-text">
         This app is developed for <strong>free usage</strong> by the research community.<br>
         If you find it useful, consider supporting better Cloud Services!
     </div>
     <a href="https://venmo.com/Hang-Chen-35" target="_blank" class="phgx-venmo-btn">
-        ðŸ’™ Donate via Venmo @Hang-Chen-35
+        💙 Donate via Venmo @Hang-Chen-35
     </a>
     <div class="phgx-support-text" style="margin-top: 1rem; font-size: 0.85rem;">
         <strong>Need a GPT API key to try?</strong><br>
@@ -10646,11 +10646,11 @@ def main() -> None:
     init_session_state()
     render_header()
     
-    # Check for missing dependencies â€” show a banner but keep rendering
+    # Check for missing dependencies — show a banner but keep rendering
     # (demo mode, hydro tab, tutorial, concepts all work without agents)
     if not AGENTS_AVAILABLE:
         st.error(
-            f"âš ï¸ **Missing Dependencies** â€” some packages could not be imported: `{IMPORT_ERROR}`.  \n"
+            f"⚠️ **Missing Dependencies** — some packages could not be imported: `{IMPORT_ERROR}`.  \n"
             "Workflow execution is disabled, but **Demo mode**, the Hydro tab, and all other tabs still work.  \n"
             "To enable full workflow execution install: `pip install pygimli SimPEG openai`"
         )
@@ -10658,7 +10658,7 @@ def main() -> None:
     if not PYGIMLI_AVAILABLE:
         pygimli_detail = f"\n\nImport error: `{PYGIMLI_IMPORT_ERROR}`" if PYGIMLI_IMPORT_ERROR else ""
         st.warning(f"""
-        âš ï¸ **PyGIMLi Not Available**
+        ⚠️ **PyGIMLi Not Available**
         
         ERT inversion and some geophysical functions require PyGIMLi.
         Install with: `conda install -c gimli pygimli` or `pip install pygimli`
@@ -10670,13 +10670,13 @@ def main() -> None:
     sidebar_state = render_sidebar()
 
     tab_workflow, tab_processing, tab_hydro_multi, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs([
-        "ðŸš€ Run Workflow",
+        "🚀 Run Workflow",
         "Geophysical Data Processing",
-        "ðŸŒŠ Hydro â†’ Geophysics",
-        "ðŸ“– Step-by-Step Tutorials",
-        "ðŸ”¬ Learn Hydrogeophysics & Ask AI",
-        "ðŸ’» Local Deployment",
-        "ðŸ‘¤ About Author",
+        "🌊 Hydro → Geophysics",
+        "📖 Step-by-Step Tutorials",
+        "🔬 Learn Hydrogeophysics & Ask AI",
+        "💻 Local Deployment",
+        "👤 About Author",
     ])
 
     with tab_workflow:
