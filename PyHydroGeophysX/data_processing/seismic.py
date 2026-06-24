@@ -1,9 +1,11 @@
 """Raw seismic data processing helpers.
 
-This module provides a lightweight SEG-Y path for local workflows that do not
-have ObsPy or segyio installed.  It is intentionally conservative: the built-in
-reader supports the common big-endian SEG-Y layout used by the bundled example
-and falls back to ObsPy when available for broader format coverage.
+SEG-Y reading prefers a robust third-party library and degrades gracefully so
+local workflows keep working with no extra installs. The reader order is:
+``segyio`` (broadest coverage: endianness, sample-format codes, byte locations,
+SEG-Y rev 1/2), then ``ObsPy``, then a small built-in big-endian reader that
+handles the common SEG-Y layout used by the bundled example. Install ``segyio``
+(``pip install segyio``) for the most reliable reads of arbitrary field data.
 """
 
 from __future__ import annotations
@@ -771,6 +773,75 @@ def _read_segy_obspy(file: str, max_traces: Optional[int] = None) -> SeismicData
     )
 
 
+def _read_segy_segyio(file: str, max_traces: Optional[int] = None) -> SeismicDataset:
+    """Read a SEG-Y file with ``segyio`` (robust to endianness, sample format,
+    header byte locations, and SEG-Y rev 1/2). Opened with ``ignore_geometry``
+    so arbitrary shot gathers (no regular inline/crossline grid) read cleanly.
+    """
+    import segyio
+
+    # Standard SEG-Y trace-header byte positions (1-indexed); segyio.Field
+    # accepts these integer keys directly.
+    b_fieldrec, b_traceno, b_esp = 9, 13, 17
+    b_offset, b_recv_elev, b_src_elev = 37, 41, 45
+    b_elev_scale, b_coord_scale = 69, 71
+    b_sx, b_sy, b_gx, b_gy = 73, 77, 81, 85
+
+    with segyio.open(file, "r", ignore_geometry=True) as f:
+        f.mmap()
+        n_total = int(f.tracecount)
+        n = n_total if max_traces is None else min(int(max_traces), n_total)
+        n_samples = int(np.asarray(f.samples).size)
+        dt_us = int(f.bin[segyio.BinField.Interval]) or 0
+        format_code = int(f.format)
+        sample_ms = np.asarray(f.samples, dtype=float)
+        data = np.zeros((n_samples, n), dtype=np.float32)
+        headers: List[SeismicTraceHeader] = []
+        for i in range(n):
+            data[:, i] = np.asarray(f.trace[i], dtype=np.float32)
+            h = f.header[i]
+            coord_scale = _scalar_multiplier(int(h[b_coord_scale] or 1))
+            elev_scale = _scalar_multiplier(int(h[b_elev_scale] or 1))
+            sx = float(h[b_sx]) * coord_scale
+            sy = float(h[b_sy]) * coord_scale
+            gx = float(h[b_gx]) * coord_scale
+            gy = float(h[b_gy]) * coord_scale
+            sz = float(h[b_src_elev]) * elev_scale
+            gz = float(h[b_recv_elev]) * elev_scale
+            offset = float(h[b_offset]) * coord_scale
+            if not np.isfinite(offset) or offset == 0.0:
+                offset = math.hypot(gx - sx, gy - sy)
+            headers.append(
+                SeismicTraceHeader(
+                    field_record=int(h[b_fieldrec]),
+                    trace_number=int(h[b_traceno]),
+                    energy_source_point=int(h[b_esp]),
+                    source_x=sx, source_y=sy, source_z=sz,
+                    receiver_x=gx, receiver_y=gy, receiver_z=gz,
+                    offset=offset,
+                )
+            )
+
+    if dt_us <= 0 and sample_ms.size > 1:
+        dt_us = int(round(abs(sample_ms[1] - sample_ms[0]) * 1000.0))  # ms -> us
+    dt_s = dt_us * 1e-6 if dt_us > 0 else 1.0
+    time = np.arange(n_samples, dtype=float) * dt_s
+    _infer_missing_field_records(headers)
+    return SeismicDataset(
+        path=str(Path(file)),
+        traces=data,
+        time=time,
+        headers=headers,
+        metadata=SegyMetadata(
+            sample_interval_us=int(dt_us if dt_us > 0 else 0),
+            samples_per_trace=n_samples,
+            format_code=format_code,
+            trace_count=len(headers),
+            file_size_bytes=int(Path(file).stat().st_size),
+        ),
+    )
+
+
 def read_segy(
     file: str,
     max_traces: Optional[int] = None,
@@ -779,6 +850,10 @@ def read_segy(
 ) -> SeismicDataset:
     """Read a SEG-Y file into traces, headers, and metadata.
 
+    Reader order is ``segyio`` -> ``ObsPy`` -> built-in: the most robust library
+    available is used, and the built-in conservative reader is the final fallback
+    so reads keep working with no third-party SEG-Y dependency installed.
+
     Parameters
     ----------
     file : str
@@ -786,9 +861,9 @@ def read_segy(
     max_traces : int, optional
         Maximum number of traces to read. Useful for responsive GUI previews.
     load_traces : bool, optional
-        If False, parse headers but skip sample arrays.
+        If False, parse headers but skip sample arrays (built-in reader only).
     prefer_obspy : bool, optional
-        Use ObsPy when installed. The built-in reader is used otherwise.
+        When True (default), try ObsPy if ``segyio`` is unavailable or fails.
 
     Returns
     -------
@@ -796,15 +871,25 @@ def read_segy(
         Parsed seismic dataset.
     """
 
-    if prefer_obspy and load_traces:
+    if load_traces:
+        # 1) segyio: broadest, most reliable coverage when installed.
         try:
-            return _read_segy_obspy(file, max_traces=max_traces)
+            return _read_segy_segyio(file, max_traces=max_traces)
         except ImportError:
             pass
         except Exception:
-            # Fall back to the simple reader for the bundled example and other
-            # classic big-endian SEG-Y files.
             pass
+        # 2) ObsPy: broader format support than the built-in reader.
+        if prefer_obspy:
+            try:
+                return _read_segy_obspy(file, max_traces=max_traces)
+            except ImportError:
+                pass
+            except Exception:
+                # Fall back to the simple reader for the bundled example and
+                # other classic big-endian SEG-Y files.
+                pass
+    # 3) Built-in conservative big-endian reader (no third-party deps).
     return _read_segy_builtin(file, max_traces=max_traces, load_traces=load_traces)
 
 
