@@ -1,0 +1,17 @@
+# Desktop (Qt) workbench dependencies for PyHydroGeophysX.
+# Install into the same Python environment that runs the package / Streamlit app:
+#     pip install -r requirements-desktop.txt
+#
+# These power PyHydroGeophysX.qt_apps (the professional desktop workbench).
+
+PySide6>=6.5
+pyqtgraph>=0.13
+qtawesome>=1.2
+numpy>=1.21
+pandas>=1.3.0
+
+# Optional extras (enable the Mesh 3D viewer and gravity/EM gridding):
+# pyvista>=0.40
+# pyvistaqt>=0.10
+# vtk>=9.2
+# scipy>=1.8

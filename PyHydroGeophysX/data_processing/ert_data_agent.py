@@ -104,9 +104,11 @@ def _geom_fac(C1, C2, P1, P2):
     return k
 
 
-def _bertParser(fname):
+def _bertParser_legacy(fname):
     """
-    Parse BERT/Unified Data Format (.ohm, .dat files).
+    Legacy BERT/Unified parser (CSV / positional fallback for plain files).
+    ``_bertParser`` prefers ``_unified_ert_parser`` and only falls back here when a
+    file is not the count-prefixed unified/E4D format.
     Modified from ResIPy project (GPL-3.0).
     Original authors: Guillaume Blanchy, Jimmy Boyd, et al.
     """
@@ -218,6 +220,180 @@ def _bertParser(fname):
         df['ip'] = np.nan
 
     return elec, df
+
+
+def _is_index_column(col0) -> bool:
+    """True if ``col0`` is a 1..n or 0..n-1 integer sequence (a row-index column)."""
+    a = np.asarray(col0, dtype=float)
+    if a.size == 0 or not np.all(np.isfinite(a)):
+        return False
+    if not np.allclose(a, np.round(a)):
+        return False
+    r = np.round(a).astype(int)
+    n = a.size
+    return np.array_equal(r, np.arange(1, n + 1)) or np.array_equal(r, np.arange(0, n))
+
+
+def _parse_elec_rows(rows, names):
+    """Return an (N, 3) x/y/z electrode array from unified-format electrode rows."""
+    w = min(len(r) for r in rows)
+    arr = np.array([r[:w] for r in rows], dtype=float)
+    lownames = [str(s).lower() for s in names] if names else None
+    if lownames and 'x' in lownames:
+        # Header names the columns explicitly (no leading index column).
+        def pick(key, default_idx):
+            if key in lownames and lownames.index(key) < w:
+                return arr[:, lownames.index(key)]
+            return arr[:, default_idx] if default_idx < w else np.zeros(len(arr))
+        x = pick('x', 0)
+        y = pick('y', 1)
+        z = pick('z', 2) if 'z' in lownames else np.zeros(len(arr))
+        return np.column_stack([x, y, z]).astype(float)
+    # No usable header: detect an optional leading electrode-index column.
+    offset = 1 if (w >= 4 and _is_index_column(arr[:, 0])) else 0
+    body = arr[:, offset:]
+    bw = body.shape[1]
+    x = body[:, 0]
+    y = body[:, 1] if bw > 1 else np.zeros(len(arr))
+    z = body[:, 2] if bw > 2 else np.zeros(len(arr))
+    return np.column_stack([x, y, z]).astype(float)
+
+
+def _parse_data_rows(rows, names):
+    """Return a DataFrame (a,b,m,n + rhoa/resist/dev/...) from unified data rows."""
+    w = min(len(r) for r in rows)
+    arr = np.array([r[:w] for r in rows], dtype=float)
+    lownames = [str(s).lower() for s in names] if names else None
+    if lownames and all(k in lownames for k in ('a', 'b', 'm', 'n')):
+        col = {k: arr[:, lownames.index(k)] for k in lownames if lownames.index(k) < w}
+        out = {'a': col['a'], 'b': col['b'], 'm': col['m'], 'n': col['n']}
+        for k in ('rhoa', 'app', 'app_res'):
+            if k in col:
+                out['rhoa'] = col[k]
+                break
+        for k in ('r', 'resist', 'resistance'):
+            if k in col:
+                out['resist'] = col[k]
+                break
+        for k in ('err', 'dev', 'std', 'error'):
+            if k in col:
+                out['dev'] = col[k]
+                break
+        for k in ('u', 'i', 'ip'):
+            if k in col:
+                out[k] = col[k]
+        if 'rhoa' in out or 'resist' in out:
+            df = pd.DataFrame(out)
+            if 'ip' not in df.columns:
+                df['ip'] = np.nan
+            return df
+    # Positional layout: detect an optional leading measurement-index column.
+    offset = 1 if (w >= 6 and _is_index_column(arr[:, 0])) else 0
+    body = arr[:, offset:]
+    bw = body.shape[1]
+    if bw < 4:
+        raise ValueError("unified ERT parser: data rows need at least a, b, m, n")
+    out = {'a': body[:, 0], 'b': body[:, 1], 'm': body[:, 2], 'n': body[:, 3]}
+    if bw >= 5:
+        out['resist'] = body[:, 4]
+    if bw >= 6:
+        out['dev'] = body[:, 5]
+    df = pd.DataFrame(out)
+    df['ip'] = np.nan
+    return df
+
+
+def _unified_ert_parser(fname):
+    """Parse the pyGIMLi / BERT / E4D unified ERT format (no resipy required).
+
+    Handles count-prefixed blocks (n_electrodes / electrode rows / n_data / data
+    rows), optional ``# token`` header lines, optional leading index columns, and
+    electrode rows of 2-5 columns. Returns ``(elec, df)`` like the other embedded
+    parsers, with real electrode coordinates (including topography) and correctly
+    named value columns, so apparent-resistivity vs resistance is detected right.
+    """
+    with open(fname, "r", encoding="utf-8", errors="ignore") as fh:
+        raw = fh.read().splitlines()
+
+    num_re = re.compile(r'[-+]?\d*\.\d+(?:[eE][-+]?\d+)?|[-+]?\d+')
+    seq = []  # ("header", [names]) | ("nums", [floats])
+    for ln in raw:
+        s = ln.strip()
+        if not s or s[0] in "!*":
+            continue
+        if s[0] == '#':
+            names = [t for t in re.split(r'[\s,]+', s[1:].strip()) if t]
+            if names:
+                seq.append(("header", names))
+            continue
+        body = s.split('#')[0].split('!')[0]
+        nums = num_re.findall(body)
+        if nums:
+            seq.append(("nums", [float(x) for x in nums]))
+    if not seq:
+        raise ValueError("unified ERT parser: no numeric content found")
+
+    idx = 0
+
+    def next_count():
+        nonlocal idx
+        while idx < len(seq) and seq[idx][0] != "nums":
+            idx += 1
+        if idx >= len(seq):
+            return None
+        val = int(round(seq[idx][1][0]))
+        idx += 1
+        return val
+
+    def maybe_header():
+        nonlocal idx
+        if idx < len(seq) and seq[idx][0] == "header":
+            h = seq[idx][1]
+            idx += 1
+            return h
+        return None
+
+    def take_rows(count):
+        nonlocal idx
+        rows = []
+        limit = count if (count and count > 0) else len(seq)
+        while idx < len(seq) and len(rows) < limit:
+            if seq[idx][0] == "nums":
+                rows.append(seq[idx][1])
+            idx += 1
+        return rows
+
+    n_elec = next_count()
+    if not n_elec or n_elec <= 0:
+        raise ValueError("unified ERT parser: missing/invalid electrode count")
+    elec_header = maybe_header()
+    elec_rows = take_rows(n_elec)
+    if len(elec_rows) < n_elec:
+        raise ValueError(f"unified ERT parser: found {len(elec_rows)}/{n_elec} electrode rows")
+    elec = _parse_elec_rows(elec_rows, elec_header)
+
+    n_data = next_count()
+    if n_data is None:
+        raise ValueError("unified ERT parser: missing data block")
+    data_header = maybe_header()
+    data_rows = take_rows(n_data)
+    if not data_rows:
+        raise ValueError("unified ERT parser: no measurement rows")
+    df = _parse_data_rows(data_rows, data_header)
+    return elec, df
+
+
+def _bertParser(fname):
+    """BERT / E4D / unified ERT parser.
+
+    Tries the robust :func:`_unified_ert_parser` first (count-prefixed blocks with
+    topography and header-aware columns) and falls back to the legacy CSV /
+    positional reader for plain files.
+    """
+    try:
+        return _unified_ert_parser(fname)
+    except Exception:
+        return _bertParser_legacy(fname)
 
 
 def _syscalParser(fname):

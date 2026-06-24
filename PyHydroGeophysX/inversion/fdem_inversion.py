@@ -348,8 +348,8 @@ class FDEMInversion:
         opt = optimization.ProjectedGNCG(
             maxIter=int(self.parameters["max_iterations"]),
             maxIterLS=20,
-            cg_maxiter=int(self.parameters["cg_maxiter"]),
-            cg_rtol=1e-3,
+            maxIterCG=int(self.parameters["cg_maxiter"]),
+            tolCG=1e-3,
         )
 
         lower_bound = max(float(self.parameters["lower_bound"]), 1e-12)

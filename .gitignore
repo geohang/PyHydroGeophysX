@@ -25,6 +25,8 @@ MANIFEST
 # PyInstaller
 *.manifest
 *.spec
+# ...but keep the hand-authored desktop workbench build spec
+!packaging/pyinstaller_workbench.spec
 
 # Unit test / coverage reports
 htmlcov/

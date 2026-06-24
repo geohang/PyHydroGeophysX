@@ -1,0 +1,18 @@
+{
+  "app_key": "full_workbench",
+  "initial_module": "seismic",
+  "project_root": "C:\\Users\\hchen117\\OneDrive - University of Iowa\\Documents\\GitHub\\PyHydroGeophysX",
+  "streamlit_app_dir": "C:\\Users\\hchen117\\OneDrive - University of Iowa\\Documents\\GitHub\\PyHydroGeophysX\\examples",
+  "output_dir": "C:\\Users\\hchen117\\OneDrive - University of Iowa\\Documents\\GitHub\\PyHydroGeophysX\\examples\\results\\streamlit_workflow",
+  "hydro_data_dir": "C:\\Users\\hchen117\\OneDrive - University of Iowa\\Documents\\GitHub\\PyHydroGeophysX\\examples\\data",
+  "hydro_output_dir": "C:\\Users\\hchen117\\OneDrive - University of Iowa\\Documents\\GitHub\\PyHydroGeophysX\\examples\\results\\hydro_to_multigeophys",
+  "workflow_config": null,
+  "data_files": {},
+  "round_trip": true,
+  "workflow_result": null,
+  "selected_demo": "ERT demo",
+  "demo_mode": false,
+  "created_time": "2026-06-24T21:47:18Z",
+  "python_executable": "C:\\Users\\hchen117\\.conda\\envs\\pg\\python.exe",
+  "cwd": "C:\\Users\\hchen117\\OneDrive - University of Iowa\\Documents\\GitHub\\PyHydroGeophysX\\examples"
+}

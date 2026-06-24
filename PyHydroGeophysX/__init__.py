@@ -7,6 +7,15 @@ and inversion, specializing in electrical resistivity tomography (ERT) and seism
 
 __version__ = '0.3.0'
 
+# This package ships a PySide6 desktop GUI (``qt_apps``). Make qtpy-based optional
+# dependencies (e.g. pyvistaqt) bind to PySide6 rather than a PyQt5 install, which
+# would clash with the GUI widgets ("QtInteractor cannot be converted to
+# PyQt5.QtCore.QObject"). This must run before importing anything that pulls in
+# qtpy -- some scientific dependencies below do so at import time. ``setdefault``
+# respects an explicit user override.
+import os as _os
+_os.environ.setdefault("QT_API", "pyside6")
+
 # Track available features
 PYGIMLI_AVAILABLE = False
 SIMPEG_AVAILABLE = False

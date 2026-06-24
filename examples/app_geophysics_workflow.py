@@ -6,11 +6,15 @@ Natural-language interface for geophysical workflows.
 Usage: streamlit run app_geophysics_workflow.py
 """
 
+import importlib.util
 import json
 import os
+import platform
 import re
+import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -22,6 +26,11 @@ CURRENT_DIR = Path(__file__).parent
 PARENT_DIR = CURRENT_DIR.parent
 if str(PARENT_DIR) not in sys.path:
     sys.path.insert(0, str(PARENT_DIR))
+
+CTRL_PLOT_CLICK_COMPONENT = components.declare_component(
+    "phgx_ctrl_plot_click",
+    path=str(CURRENT_DIR / "streamlit_components" / "ctrl_plot_click"),
+)
 
 IMPORT_ERROR = ""
 try:
@@ -96,6 +105,386 @@ def _is_streamlit_cloud() -> bool:
     if "/home/appuser" in home:
         return True
     return any(cloud_indicators)
+
+
+# ---------------------------------------------------------------------------
+# Streamlit <-> Qt desktop workbench bridge (Streamlit side)
+# ---------------------------------------------------------------------------
+QT_DOWNLOAD_LINKS = {
+    "windows": os.environ.get("PHGX_QT_DOWNLOAD_WINDOWS", "https://github.com/geohang/PyHydroGeophysX/releases/latest"),
+    "macos": os.environ.get("PHGX_QT_DOWNLOAD_MACOS", "https://github.com/geohang/PyHydroGeophysX/releases/latest"),
+    "linux": os.environ.get("PHGX_QT_DOWNLOAD_LINUX", "https://github.com/geohang/PyHydroGeophysX/releases/latest"),
+    "source": os.environ.get("PHGX_QT_DOWNLOAD_SOURCE", "https://github.com/geohang/PyHydroGeophysX"),
+}
+
+
+def _project_root() -> Path:
+    """Repository root (parent of examples/); used as the Qt launch cwd."""
+    return PARENT_DIR
+
+
+def _streamlit_app_dir() -> Path:
+    """Directory holding this Streamlit app (examples/)."""
+    return CURRENT_DIR
+
+
+def _qt_bridge_dir() -> Path:
+    """Directory holding the Streamlit<->Qt context and result JSON files."""
+    base = _resolve_user_path(st.session_state.get("output_dir", "results/streamlit_workflow"))
+    bridge = base / "qt_bridge"
+    bridge.mkdir(parents=True, exist_ok=True)
+    return bridge
+
+
+def _is_headless_runtime() -> bool:
+    """True when we must not try to open a Qt window (cloud/headless server)."""
+    if os.environ.get("PHGX_FORCE_REMOTE_MODE") == "1":
+        return True
+    if _is_streamlit_cloud():
+        return True
+    if sys.platform.startswith("linux"):
+        if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+            return True
+    return False
+
+
+def _can_launch_qt_locally() -> Tuple[bool, str]:
+    """Decide whether a local Qt launch is possible. Returns (ok, reason)."""
+    if os.environ.get("PHGX_FORCE_REMOTE_MODE") == "1":
+        return False, "PHGX_FORCE_REMOTE_MODE=1 forces remote/download mode."
+    if _is_headless_runtime():
+        return False, "Running on a headless/cloud server (no local display)."
+    if os.environ.get("PHGX_ENABLE_LOCAL_QT") == "1":
+        # Explicit opt-in still requires PySide6 to be importable.
+        if importlib.util.find_spec("PySide6") is None:
+            return False, "PHGX_ENABLE_LOCAL_QT=1 set but PySide6 is not installed."
+        return True, "local (forced via PHGX_ENABLE_LOCAL_QT)"
+    # Light presence check only -- do NOT import PySide6 during Streamlit startup.
+    if importlib.util.find_spec("PySide6") is None:
+        return False, "PySide6 is not installed. Install desktop dependencies (see below)."
+    return True, "local"
+
+
+def _pid_alive(pid: int) -> bool:
+    """Cross-platform best-effort check whether a process id is still running."""
+    if not pid or pid <= 0:
+        return False
+    try:
+        if os.name == "nt":
+            import ctypes
+
+            process_query = 0x1000  # PROCESS_QUERY_LIMITED_INFORMATION
+            still_active = 259
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(process_query, False, int(pid))
+            if not handle:
+                return False
+            try:
+                code = ctypes.c_ulong()
+                if kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+                    return code.value == still_active
+                return True
+            finally:
+                kernel32.CloseHandle(handle)
+        else:
+            os.kill(int(pid), 0)
+            return True
+    except Exception:
+        return False
+
+
+def _collect_data_files(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Pull the data-file fields out of a workflow config for the Qt handoff."""
+    keys = [
+        "data_file", "ert_file", "time_lapse_files", "timelapse_files",
+        "seismic_file", "raw_seismic_file", "tdem_file", "electrode_file",
+        "modflow_dir", "parflow_dir",
+    ]
+    return {k: cfg[k] for k in keys if cfg.get(k)}
+
+
+def _write_qt_context(app_key: str, sidebar_state: Dict[str, Any], initial_module: str = "") -> Path:
+    """Write the bridge context JSON that the Qt app reads on startup."""
+    ss = st.session_state
+    context = {
+        "app_key": app_key or "full_workbench",
+        "initial_module": initial_module,
+        "project_root": str(_project_root()),
+        "streamlit_app_dir": str(_streamlit_app_dir()),
+        "output_dir": str(_resolve_user_path(sidebar_state.get("output_dir", "results/streamlit_workflow"))),
+        "hydro_data_dir": str(_resolve_user_path(ss.get("hydro_data_dir", "data"))),
+        "hydro_output_dir": str(_resolve_user_path(ss.get("hydro_output_dir", "results/hydro_to_multigeophys"))),
+        "workflow_config": ss.get("workflow_config", {}),
+        "data_files": _collect_data_files(ss.get("workflow_config") or {}),
+        "round_trip": True,
+        "workflow_result": ss.get("workflow_result", {}),
+        "selected_demo": ss.get("selected_demo", ""),
+        "demo_mode": sidebar_state.get("demo_mode", False),
+        "created_time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "python_executable": sys.executable,
+        "cwd": str(Path.cwd()),
+    }
+    context_path = _qt_bridge_dir() / "full_workbench_context.json"
+    with context_path.open("w", encoding="utf-8") as handle:
+        json.dump(context, handle, indent=2, default=str)
+    return context_path
+
+
+def _launch_qt_app(context_path: Path, initial_module: str = "") -> Tuple[int, bool]:
+    """Spawn the Qt workbench as a separate process. Returns (pid, started_ok)."""
+    cmd = [
+        sys.executable,
+        "-m",
+        "PyHydroGeophysX.qt_apps.launcher",
+        "--context",
+        str(context_path),
+        "--module",
+        initial_module or "home",
+    ]
+    # The workbench is a PySide6 app; force qtpy-based deps (pyvistaqt) to PySide6
+    # so they do not bind to a PyQt5 install in the subprocess.
+    env = dict(os.environ)
+    env.setdefault("QT_API", "pyside6")
+    try:
+        proc = subprocess.Popen(cmd, cwd=str(_project_root()), env=env)
+        return proc.pid, True
+    except Exception as exc:  # noqa: BLE001
+        st.error(f"Could not launch the Qt workbench: {exc}")
+        return -1, False
+
+
+def _read_qt_result() -> Optional[Dict[str, Any]]:
+    """Read the Qt result JSON if the desktop app has written one."""
+    result_path = _qt_bridge_dir() / "full_workbench_result.json"
+    if not result_path.exists():
+        return None
+    try:
+        with result_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except Exception:
+        return None
+
+
+# Detected web workflow type -> the Qt module to open at.
+_WORKFLOW_TYPE_TO_QT_MODULE: Dict[str, str] = {
+    "ERT Data Processing": "ert",
+    "Direct ERT Inversion": "ert",
+    "ERT Inversion + Petrophysics": "ert",
+    "Time-Lapse ERT": "ert",
+    "Data Fusion (Seismic + ERT)": "ert",
+    "Hydrological Model Output": "hydro_geophysics",
+    "TDEM Inversion": "em",
+    "Raw Seismic Processing + SRT": "seismic",
+    "Seismic Refraction Tomography": "seismic",
+    "Unknown": "home",
+}
+
+_QT_MODULES = ["home", "ert", "seismic", "hydro_geophysics", "mesh3d", "em", "gravmag",
+               "geo_hydrology", "seismic3d"]
+
+
+def _qt_module_for_config(config: Dict[str, Any]) -> str:
+    """Map the current web workflow config to the best Qt module to open at."""
+    if not config:
+        return "home"
+    return _WORKFLOW_TYPE_TO_QT_MODULE.get(_detect_workflow_type(config), "home")
+
+
+def _launch_qt_at(sidebar_state: Dict[str, Any], module: str) -> None:
+    """Write the current project context and launch the Qt workbench at ``module``."""
+    ctx = _write_qt_context("full_workbench", sidebar_state, module)
+    pid, ok = _launch_qt_app(ctx, module)
+    if ok:
+        st.session_state["qt_pid"] = pid
+        st.success(f"Launched Qt workbench (PID {pid}) at '{module}'.")
+
+
+def _qt_result_artifacts(res: Dict[str, Any]) -> List[str]:
+    """Collect artifact file paths from one Qt module result (de-duplicated)."""
+    out: List[str] = []
+    for key in ("figure_paths", "data_paths", "config_path", "resistivity_vtk",
+                "velocity_vtk", "vtk", "data_file", "outputs"):
+        v = res.get(key)
+        if isinstance(v, str) and v:
+            out.append(v)
+        elif isinstance(v, list):
+            out.extend(str(x) for x in v if x)
+        elif isinstance(v, dict):
+            out.extend(str(x) for x in v.values() if isinstance(x, str) and x)
+    seen: set = set()
+    return [a for a in out if not (a in seen or seen.add(a))]
+
+
+def _render_one_qt_module_result(res: Dict[str, Any]) -> None:
+    """Render one Qt module result: metrics, figures, and artifact paths."""
+    metric_map = [("chi2", "χ²"), ("mesh_cells", "Mesh cells"), ("nodes", "Nodes"),
+                  ("num_traveltimes", "Travel times"), ("n_measurements", "Measurements"),
+                  ("num_picks", "Picks"), ("n_realizations", "Realizations")]
+    metrics = [(lbl, res[k]) for k, lbl in metric_map if isinstance(res.get(k), (int, float))]
+    if metrics:
+        cols = st.columns(min(4, len(metrics)))
+        for i, (lbl, val) in enumerate(metrics):
+            cols[i % len(cols)].metric(lbl, f"{val:.3g}" if isinstance(val, float) else val)
+    for fig in res.get("figure_paths", []) or []:
+        if fig and Path(str(fig)).exists():
+            st.image(str(fig), use_container_width=True)
+    artifacts = _qt_result_artifacts(res)
+    if artifacts:
+        st.caption("Artifacts:")
+        for a in artifacts:
+            st.code(a, language="text")
+    if isinstance(res.get("ert3d_forward"), dict):
+        st.markdown("*3D ERT forward:*")
+        _render_one_qt_module_result(res["ert3d_forward"])
+
+
+def _render_qt_results(result: Optional[Dict[str, Any]]) -> None:
+    """Render the full Qt result payload (status + per-module cards)."""
+    if not result:
+        st.caption("No Qt results yet. Launch the workbench, run a module, and outputs appear here automatically.")
+        return
+    st.caption(
+        f"Status: **{result.get('status', '?')}** · last module: "
+        f"`{result.get('selected_module', '?')}` · {result.get('created_time', '')}"
+    )
+    mod_results = result.get("module_results") or {}
+    if not mod_results:
+        st.caption("Workbench connected — no module results saved yet (use *Save Result* in Qt).")
+        return
+    for mod, res in mod_results.items():
+        if not isinstance(res, dict):
+            continue
+        with st.container(border=True):
+            st.markdown(f"**{mod}** — {res.get('status', '')}")
+            _render_one_qt_module_result(res)
+
+
+@st.fragment(run_every="3s")
+def _qt_live_results() -> None:
+    """Poll the Qt result file and render it live (no manual refresh)."""
+    result = _read_qt_result()
+    st.session_state["qt_last_result"] = result
+    _render_qt_results(result)
+
+
+def _render_qt_downloads(result: Dict[str, Any]) -> None:
+    """Offer download buttons for the artifacts in an imported Qt result."""
+    mod_results = result.get("module_results") or {}
+    any_file = False
+    for mod, res in mod_results.items():
+        if not isinstance(res, dict):
+            continue
+        for path in _qt_result_artifacts(res):
+            p = Path(str(path))
+            if p.exists() and p.is_file():
+                any_file = True
+                try:
+                    st.download_button(f"⬇ {p.name}", p.read_bytes(), file_name=p.name,
+                                       key=f"qtdl_{mod}_{p.name}")
+                except Exception:  # noqa: BLE001
+                    st.caption(f"`{p}`")
+    if not any_file:
+        st.caption("No downloadable files in the imported result.")
+
+
+def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
+    """The web↔Qt desktop hub: pre-load the project into Qt and auto-sync results back."""
+    st.subheader("🖥️ Professional Workbench")
+    st.markdown(
+        "This web app is the **agent, report, and deployment portal**. For hands-on mouse work "
+        "(data processing, profile picking, geometry editing, forward modeling) open the **Qt "
+        "desktop workbench**. The web hands your current project to Qt, and Qt's results sync "
+        "back here automatically."
+    )
+
+    can_launch, reason = _can_launch_qt_locally()
+
+    if can_launch:
+        cfg = st.session_state.get("workflow_config") or {}
+        auto_module = _qt_module_for_config(cfg)
+        st.success("Local desktop mode — open the Qt workbench with your current project.")
+        primary_label = "🚀 Open in Qt with current project"
+        if cfg:
+            primary_label += f"  (→ {auto_module})"
+        if st.button(primary_label, type="primary", use_container_width=True, key="qt_open_current"):
+            _launch_qt_at(sidebar_state, auto_module)
+
+        c1, c2, c3 = st.columns(3)
+        if c1.button("📈 Seismic / SRT", use_container_width=True, key="qt_open_seismic"):
+            _launch_qt_at(sidebar_state, "seismic")
+        if c2.button("⚡ ERT", use_container_width=True, key="qt_open_ert"):
+            _launch_qt_at(sidebar_state, "ert")
+        if c3.button("🌊 Hydro → Geophysics", use_container_width=True, key="qt_open_hydro"):
+            _launch_qt_at(sidebar_state, "hydro_geophysics")
+
+        with st.expander("Open a specific module"):
+            module = st.selectbox("Module", _QT_MODULES, key="qt_module_pick")
+            if st.button("Open module", key="qt_open_specific"):
+                _launch_qt_at(sidebar_state, module)
+
+        pid = st.session_state.get("qt_pid")
+        if pid:
+            alive = _pid_alive(int(pid))
+            st.caption(f"Qt workbench PID {pid}: {'🟢 running' if alive else '⚪ not running'}")
+    else:
+        st.info(f"Remote / download mode: {reason}")
+        st.markdown(
+            "A remote Streamlit server cannot open a Qt window in your browser. Download and run "
+            "the desktop workbench locally against the same project, or install the desktop "
+            "dependencies and run it from source."
+        )
+        st.markdown(
+            f"- **Windows**: [{QT_DOWNLOAD_LINKS['windows']}]({QT_DOWNLOAD_LINKS['windows']})\n"
+            f"- **macOS**: [{QT_DOWNLOAD_LINKS['macos']}]({QT_DOWNLOAD_LINKS['macos']})\n"
+            f"- **Linux**: [{QT_DOWNLOAD_LINKS['linux']}]({QT_DOWNLOAD_LINKS['linux']})\n"
+            f"- **Source**: [{QT_DOWNLOAD_LINKS['source']}]({QT_DOWNLOAD_LINKS['source']})"
+        )
+        st.code(
+            "pip install -r requirements-desktop.txt\n"
+            "python -m PyHydroGeophysX.qt_apps.launcher",
+            language="bash",
+        )
+
+    st.markdown("---")
+    st.markdown("#### 🔗 Results from Qt (synced back automatically)")
+    live = st.toggle("Live updates", value=True, key="qt_live_toggle",
+                     help="Poll the Qt result file every few seconds and update this panel.")
+    if live:
+        _qt_live_results()
+    else:
+        if st.button("🔄 Refresh", key="qt_refresh"):
+            st.session_state["qt_last_result"] = _read_qt_result()
+        _render_qt_results(st.session_state.get("qt_last_result") or _read_qt_result())
+
+    last = st.session_state.get("qt_last_result")
+    if last and last.get("module_results"):
+        st.markdown("---")
+        if st.button("⬇️ Bring these Qt results into the web", key="qt_bring_in"):
+            st.session_state["qt_results"] = last
+            st.success("Imported. The artifacts below are now downloadable in the web app.")
+        if st.session_state.get("qt_results"):
+            with st.expander("Imported Qt artifacts (downloads)", expanded=True):
+                _render_qt_downloads(st.session_state["qt_results"])
+
+    with st.expander("Bridge files (advanced)"):
+        bridge = _qt_bridge_dir()
+        st.caption(f"Context JSON: `{bridge / 'full_workbench_context.json'}`")
+        st.caption(f"Result JSON: `{bridge / 'full_workbench_result.json'}`")
+
+    # Legacy in-browser workbenches are retired from the main UI; reachable only when
+    # PHGX_SHOW_LEGACY_WORKBENCHES=1 so the code path is not lost.
+    if os.getenv("PHGX_SHOW_LEGACY_WORKBENCHES") == "1":
+        with st.expander("Legacy in-browser workbenches (deprecated)"):
+            choice = st.radio(
+                "Show legacy workbench",
+                ["None", "Geophysical Data Processing", "Hydro → Geophysics"],
+                horizontal=True,
+                key="legacy_workbench_choice",
+            )
+            if choice == "Geophysical Data Processing":
+                render_geophysical_data_processing_tab(sidebar_state)
+            elif choice == "Hydro → Geophysics":
+                render_hydro_multigeophys_tab()
 
 st.set_page_config(
     page_title="PyHydroGeophysX - Geophysical Workflows",
@@ -515,6 +904,73 @@ div[data-testid="stMetricDelta"] {
 .hydro-result-card-body {
     padding: 0.8rem;
 }
+
+/* ===== Author / SHIP Lab page ===== */
+.ship-header {
+    background: linear-gradient(135deg, #0f4c75 0%, #3d6cb9 50%, #2d9c5b 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+.ship-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+.ship-subtitle { font-size: 1rem; opacity: 0.9; line-height: 1.6; }
+.profile-card {
+    background: #f8fafc;
+    border: 1px solid #e1e5ec;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+.profile-name { font-size: 1.4rem; font-weight: 700; color: #1b262c; }
+.profile-title { font-size: 1rem; color: #475569; margin-bottom: 0.5rem; }
+.profile-contact { font-size: 0.9rem; color: #64748b; }
+.news-item {
+    padding: 1rem;
+    border-left: 4px solid #3d6cb9;
+    background: #f8fafc;
+    margin-bottom: 0.8rem;
+    border-radius: 0 0.5rem 0.5rem 0;
+}
+.news-date { font-size: 0.8rem; color: #64748b; font-weight: 600; }
+.news-content { font-size: 0.95rem; color: #334155; margin-top: 0.3rem; }
+.link-card {
+    display: block;
+    padding: 1.2rem;
+    background: white;
+    border: 1px solid #e1e5ec;
+    border-radius: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    margin-bottom: 0.8rem;
+    transition: all 0.2s ease;
+}
+.link-card:hover {
+    border-color: #3d6cb9;
+    box-shadow: 0 4px 12px rgba(61, 108, 185, 0.15);
+    transform: translateY(-2px);
+}
+.link-card-title { font-size: 1.1rem; font-weight: 600; color: #0f4c75; margin-bottom: 0.3rem; }
+.link-card-desc { font-size: 0.85rem; color: #64748b; }
+.member-card {
+    background: white;
+    border: 1px solid #e1e5ec;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+}
+.member-role {
+    font-size: 0.75rem;
+    color: white;
+    background: #3d6cb9;
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+.member-name { font-weight: 600; color: #1b262c; }
+.member-info { font-size: 0.85rem; color: #64748b; }
 """
 
 st.markdown(f"<style>{CUSTOM_CSS}</style>", unsafe_allow_html=True)
@@ -816,6 +1272,7 @@ def init_session_state() -> None:
         "seismic_active_trace": None,
         "seismic_active_time": None,
         "seismic_last_click_signature": "",
+        "seismic_pick_feedback": None,
         "seismic_manual_picker_version": 0,
         "seismic_focus_view_active": False,
         "seismic_focus_view_pending": False,
@@ -830,6 +1287,10 @@ def init_session_state() -> None:
         "seismic_update_after_save": True,
         "seismic_picker_ui_version": 1,
         "seismic_anchor_review_traces": [],
+        "seismic_click_pick_mode": False,
+        "seismic_line_pick_mode": False,
+        "seismic_line_anchor_trace": None,
+        "seismic_line_anchor_time": None,
         "seismic_export_files": {},
         "seismic_srt_result": None,
         "seismic_all_picks": {},
@@ -945,16 +1406,13 @@ def render_header() -> None:
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<div class="phgx-author-text" style="margin-top:-0.2rem; margin-bottom:0.45rem;">'
-        f'Paper reference: <a href="{AQUAH_PAPER_URL}" target="_blank">{AQUAH_PAPER_TITLE}</a>'
-        "</div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
         '<div class="phgx-author-line">'
         '<span class="phgx-version-badge">v1.0</span>'
-        '<span class="phgx-author-text">Developed by <a href="https://sites.google.com/view/hangchen" target="_blank">Hang Chen</a> · University of Iowa</span>'
-        '<a href="https://www.youtube.com/watch?v=d4lgs_hQqDo" target="_blank" style="margin-left: 1rem; background: #ff0000; color: white; padding: 0.3rem 0.8rem; border-radius: 0.4rem; font-size: 0.85rem; font-weight: 600; text-decoration: none;">▶ Video Tutorial</a>'
+        '<span class="phgx-author-text">'
+        'Developed by <a href="https://sites.google.com/view/hangchen" target="_blank">Hang Chen</a> · University of Iowa'
+        f' · <a href="{AQUAH_PAPER_URL}" target="_blank">Paper</a>'
+        ' · <a href="https://www.youtube.com/watch?v=d4lgs_hQqDo" target="_blank">▶ Video tutorial</a>'
+        '</span>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -991,6 +1449,14 @@ def render_tutorial_tab() -> None:
         None.
     """
     st.subheader("Tutorial")
+    st.markdown(
+        "**New here?** Three ways to work:\n"
+        "- **Workflow → One-click** — describe your task in plain language and run it.\n"
+        "- **Workflow → AQUAH chat** — converse step by step; AQUAH builds the config and runs it.\n"
+        "- **Professional Workbench** — open the Qt desktop for hands-on picking / editing; results sync back to the web.\n\n"
+        "First set a provider + API key in the sidebar **Setup**, then open the **Workflow** tab."
+    )
+    st.markdown("---")
 
     # Video Tutorial
     st.markdown("### Video Tutorials")
@@ -1003,18 +1469,35 @@ def render_tutorial_tab() -> None:
         st.video("https://www.youtube.com/watch?v=1SuqL_JhiwI")
 
     st.markdown("---")
+    st.markdown("### How to use this app")
     st.markdown(
         """
 <div class="phgx-card">
-    <div class="phgx-subtitle">Run a workflow in six steps</div>
-    <ol>
-        <li>Initialize the context agent in the sidebar (provider, model, API key).</li>
-        <li>Pick sample files from GitHub or upload your own measurements.</li>
-        <li>Describe the workflow in plain language with file names and parameters.</li>
-        <li>Use the example buttons to auto-fill, then edit the request to match your data.</li>
-        <li>Click "Run workflow" and watch the progress and execution plan.</li>
-        <li>Download the report files and review the interpretation summary.</li>
-    </ol>
+    <div class="phgx-subtitle">1 · Set up (once)</div>
+    <ul>
+        <li>In the sidebar <b>🔧 Setup</b>, choose a provider (OpenAI or Claude), enter your API key, and click <b>Initialize</b>.</li>
+        <li>No key? Turn on <b>Demo mode</b> in the sidebar to explore bundled cached results.</li>
+    </ul>
+</div>
+<div class="phgx-card" style="margin-top:0.8rem;">
+    <div class="phgx-subtitle">2 · Run a workflow — pick a mode (🚀 Run Workflow tab)</div>
+    <ul>
+        <li><b>One-click</b>: describe your task in plain language (or click an example), upload data if needed, preview the auto-built configuration, then run. Watch the execution plan and download the report.</li>
+        <li><b>AQUAH chat</b>: converse step by step. AQUAH builds the configuration with you and runs the same engine when ready; results show in the Results panel.</li>
+    </ul>
+</div>
+<div class="phgx-card" style="margin-top:0.8rem;">
+    <div class="phgx-subtitle">3 · Hands-on editing (🖥️ Professional Workbench tab)</div>
+    <ul>
+        <li><b>Open in Qt with current project</b> launches the desktop workbench (local runs only) for profile picking, mesh / geometry editing, and forward modeling.</li>
+        <li>Qt results sync back automatically — view figures and metrics, then bring the artifacts into the web.</li>
+    </ul>
+</div>
+<div class="phgx-card" style="margin-top:0.8rem;">
+    <div class="phgx-subtitle">Learn &amp; Ask AI</div>
+    <ul>
+        <li>The <b>🔬 Learn Hydrogeophysics &amp; Ask AI</b> tab explains the methods, has an interactive survey animation, and answers questions grounded in the real PyHydroGeophysX API.</li>
+    </ul>
 </div>
 """,
         unsafe_allow_html=True,
@@ -1313,6 +1796,62 @@ Regularization lambda: 15""",
             st.code(ref["bibtex"], language="bibtex")
 
 
+@st.cache_data(show_spinner=False)
+def _pyhydro_api_reference() -> str:
+    """Introspect the installed PyHydroGeophysX package for a compact, accurate API
+    reference. Injected into the Ask-AI prompt so answers use the real package
+    (exact import paths, class and method names) instead of invented APIs.
+    """
+    import inspect
+    import pkgutil
+
+    out: List[str] = []
+    try:
+        import PyHydroGeophysX as _P
+    except Exception as exc:  # noqa: BLE001
+        return f"(PyHydroGeophysX is not importable in this environment: {exc})"
+    out.append(f"Version: {getattr(_P, '__version__', 'unknown')}")
+
+    def _sig(obj: Any, label: str, drop_self: bool = False) -> str:
+        try:
+            s = inspect.signature(obj)
+            if drop_self:
+                params = list(s.parameters.values())
+                if params and params[0].name == "self":
+                    s = s.replace(parameters=params[1:])
+            return f"- `{label}{s}`"
+        except Exception:  # noqa: BLE001
+            return f"- `{label}(...)`"
+
+    try:
+        from PyHydroGeophysX.agents import AgentCoordinator, BaseAgent, ContextInputAgent
+        out.append("\nMain entry points:")
+        out.append(_sig(BaseAgent.run_unified_agent_workflow, "BaseAgent.run_unified_agent_workflow"))
+        out.append(_sig(ContextInputAgent.__init__, "ContextInputAgent", drop_self=True))
+        out.append(_sig(ContextInputAgent.parse_request, "ContextInputAgent.parse_request", drop_self=True))
+        out.append(_sig(ContextInputAgent.preview_config, "ContextInputAgent.preview_config", drop_self=True))
+        out.append(_sig(AgentCoordinator.execute_workflow, "AgentCoordinator.execute_workflow", drop_self=True))
+    except Exception as exc:  # noqa: BLE001
+        out.append(f"(agents entry points unavailable: {exc})")
+
+    try:
+        from PyHydroGeophysX import agents as _agents
+        names = sorted(n for n in getattr(_agents, "__all__", []) if n.endswith("Agent"))
+        if names:
+            out.append("\nAgent classes (import from PyHydroGeophysX.agents): " + ", ".join(names))
+    except Exception:  # noqa: BLE001
+        pass
+
+    try:
+        subs = sorted(m.name for m in pkgutil.iter_modules(_P.__path__) if not m.name.startswith("_"))
+        if subs:
+            out.append("\nSubpackages/modules (PyHydroGeophysX.*): " + ", ".join(subs))
+    except Exception:  # noqa: BLE001
+        pass
+
+    return "\n".join(out)
+
+
 def render_concepts_tab() -> None:
     """Render the hydrogeophysics concepts overview tab.
 
@@ -1326,6 +1865,28 @@ Hydrogeophysics links geophysical measurements to subsurface water, structure, a
 The workflows in this app focus on the methods below.
 """
     )
+
+    st.markdown("#### 🎓 Course: Environmental Geophysics")
+    st.markdown(
+        """
+<a href="https://sites.google.com/view/enviromentalgeophysics/home" target="_blank" class="link-card">
+    <div class="link-card-title">🌎 Environmental Geophysics — course website</div>
+    <div class="link-card-desc">Lectures, materials, and resources for learning hydrogeophysics · University of Iowa (Hang Chen)</div>
+</a>
+""",
+        unsafe_allow_html=True,
+    )
+    with st.expander("📺 Open the course site here", expanded=False):
+        components.iframe(
+            "https://sites.google.com/view/enviromentalgeophysics/home",
+            height=600,
+            scrolling=True,
+        )
+        st.caption(
+            "If the page does not load above (some sites block embedding), open it in a new tab: "
+            "[Environmental Geophysics](https://sites.google.com/view/enviromentalgeophysics/home)."
+        )
+    st.markdown("---")
 
     col_a, col_b = st.columns([3, 2])
     with col_a:
@@ -1431,6 +1992,7 @@ The workflows in this app focus on the methods below.
   let mode = "ert";
   let t = 0;
   let lastWidth = 0;
+  let LW = 0, LH = 0;
 
   // Layer model with resistivity/velocity
   const geoModel = {
@@ -1442,13 +2004,19 @@ The workflows in this app focus on the methods below.
   };
 
   function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const width = Math.max(320, container.clientWidth - 28);
     const height = 300;
     if (width !== lastWidth) {
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
       lastWidth = width;
     }
+    LW = width;
+    LH = height;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   function setMode(next) {
@@ -1462,7 +2030,7 @@ The workflows in this app focus on the methods below.
   buttons.forEach(btn => btn.addEventListener("click", () => setMode(btn.dataset.mode)));
 
   function drawGround(groundY) {
-    const w = canvas.width, h = canvas.height;
+    const w = LW, h = LH;
 
     // Sky
     ctx.fillStyle = "#e3f2fd";
@@ -1522,7 +2090,7 @@ The workflows in this app focus on the methods below.
   }
 
   function drawERT(groundY) {
-    const w = canvas.width, h = canvas.height;
+    const w = LW, h = LH;
     const electrodeY = groundY;
 
     // Animated dipole-dipole array - electrodes move through different n-levels
@@ -1658,7 +2226,7 @@ The workflows in this app focus on the methods below.
   }
 
   function drawSeismic(groundY) {
-    const w = canvas.width, h = canvas.height;
+    const w = LW, h = LH;
     const sourceX = 40;
     const nGeophones = 12;
 
@@ -1863,7 +2431,7 @@ The workflows in this app focus on the methods below.
   }
 
   function drawTDEM(groundY) {
-    const w = canvas.width, h = canvas.height;
+    const w = LW, h = LH;
     const loopCenterX = w * 0.4;
     const loopRadius = 50;
 
@@ -2079,8 +2647,8 @@ The workflows in this app focus on the methods below.
 
   function animate() {
     resize();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const groundY = canvas.height * 0.18;
+    ctx.clearRect(0, 0, LW, LH);
+    const groundY = LH * 0.18;
     drawGround(groundY);
 
     if (mode === "ert") drawERT(groundY);
@@ -2172,72 +2740,40 @@ The workflows in this app focus on the methods below.
         else:
             with st.spinner("Thinking..."):
                 try:
-                    # Build context-aware prompt for hydrogeophysics
-                    system_context = """You are a helpful hydrogeophysics expert assistant for PyHydroGeophysX.
-You help users understand geophysical concepts, Python code for geophysical analysis,
-and best practices for ERT, seismic, TDEM, and petrophysical workflows.
+                    # Ground the assistant in the REAL installed package API so it
+                    # answers with correct import paths, class and method names.
+                    api_ref = _pyhydro_api_reference()
+                    system_context = f"""You are the documentation assistant for PyHydroGeophysX, a Python hydrogeophysics package by Hang Chen (University of Iowa). Answer the user's hydrogeophysics question, and when code helps, show how to do it with THIS package.
 
-## PyHydroGeophysX Library Overview
-PyHydroGeophysX is an AI-powered hydrogeophysics workflow system. When users ask for code examples,
-ALWAYS show how to use PyHydroGeophysX agents first, then optionally show lower-level PyGIMLi code.
+STRICT GROUNDING RULES:
+- Use ONLY the real PyHydroGeophysX API in the reference below. Use the exact import paths, class names, and method names shown there.
+- Do NOT invent classes, methods, or arguments. If the package does not appear to provide something, say so plainly and point to the closest real entry point (or to the underlying PyGIMLi / SimPEG / ResIPy engines).
+- Prefer the high-level workflow: ContextInputAgent (natural language -> config) then BaseAgent.run_unified_agent_workflow(...). Show lower-level PyGIMLi only when it adds value.
+- Keep the physics correct and concise; give typical parameter ranges with units.
 
-### Key PyHydroGeophysX Components:
-1. **ContextInputAgent** - Parses natural language requests into workflow configurations
-2. **BaseAgent.run_unified_agent_workflow()** - Main entry point for all workflows
-3. **ERTAgent** - Handles ERT inversion using ResIPy/PyGIMLi
-4. **SeismicAgent** - Handles seismic refraction tomography
-5. **PetrophysicsAgent** - Converts resistivity to water content using Archie's Law
-6. **TimeLapseAgent** - Handles multi-timestep ERT with temporal regularization
-7. **DataFusionAgent** - Integrates seismic + ERT with structure constraints
-8. **ClimateAgent** - Fetches and integrates meteorological data from DayMet
+## Real PyHydroGeophysX API (introspected from the installed package)
+{api_ref}
 
-### Example PyHydroGeophysX Usage Patterns:
-
-**Standard ERT Workflow:**
+## Verified usage pattern
 ```python
 from PyHydroGeophysX.agents import BaseAgent, ContextInputAgent
 
-# Initialize context agent
-context_agent = ContextInputAgent(api_key=api_key, model='gpt-4o-mini', llm_provider='openai')
-
-# Define workflow in natural language
-user_request = '''Run ERT inversion on data.ohm with electrode file electrodes.dat.
-Use regularization lambda=20 and convert to water content with rho_sat=500, porosity=0.35, n=1.5'''
-
-# Parse and execute
-config = context_agent.parse_request(user_request)
+context_agent = ContextInputAgent(api_key=api_key, model="gpt-4.1", llm_provider="openai")
+config = context_agent.parse_request(
+    "Run ERT inversion on data.ohm with electrodes electrodes.dat, lambda=20, "
+    "convert to water content with rho_sat=500, porosity=0.35, n=1.5"
+)
 results, plan, interpretation, files = BaseAgent.run_unified_agent_workflow(
-    config, api_key, 'gpt-4o-mini', 'openai', output_dir
+    config, api_key, "gpt-4.1", "openai", output_dir
 )
 ```
 
-**Time-Lapse ERT:**
-```python
-user_request = '''Run time-lapse ERT on files: baseline.ohm, time1.ohm, time2.ohm
-Temporal regularization: 10, Spatial lambda: 15
-Fetch climate data for coordinates 38.9N, -107.0W from March to June 2022'''
-```
-
-**Data Fusion (Seismic + ERT):**
-```python
-user_request = '''Use seismic data srt_data.dat with velocity threshold 1000 m/s
-to constrain ERT inversion of ert_data.dat.
-Layer petrophysics: regolith (rho_sat 50-250), bedrock (rho_sat 200-500)'''
-```
-
-### Key Parameters:
-- **lambda (regularization)**: Controls smoothness (typical: 10-50, higher=smoother)
-- **rho_sat**: Saturated resistivity in Archie's Law (Ωm)
-- **porosity**: Rock/soil porosity (0-1)
-- **n**: Archie's saturation exponent (typically 1.3-2.5)
-- **velocity_threshold**: For seismic layer extraction (m/s)
-
-When providing code examples:
-1. FIRST show PyHydroGeophysX natural language approach
-2. THEN optionally show equivalent PyGIMLi/low-level code if relevant
-3. Use NumPy and matplotlib for data manipulation and plotting
-4. Be concise but thorough. Use bullet points for clarity when appropriate.
-5. If asked about specific parameters, provide typical ranges and explain the physical meaning."""
+## Key parameters (units)
+- lambda (regularization): smoothness, typical 10-50 (higher = smoother)
+- rho_sat: saturated resistivity in Archie's Law (Ohm-m)
+- porosity: 0-1 ; n: Archie saturation exponent, typically 1.3-2.5
+- velocity_threshold: seismic layer extraction (m/s)
+"""
 
                     full_prompt = f"{system_context}\n\nUser question: {user_question}"
 
@@ -2273,117 +2809,7 @@ def render_author_tab() -> None:
     Returns:
         None.
     """
-    # Custom CSS for author page
-    st.markdown("""
-    <style>
-    .ship-header {
-        background: linear-gradient(135deg, #0f4c75 0%, #3d6cb9 50%, #2d9c5b 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 1rem;
-        margin-bottom: 1.5rem;
-        text-align: center;
-    }
-    .ship-title {
-        font-size: 1.8rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-    .ship-subtitle {
-        font-size: 1rem;
-        opacity: 0.9;
-        line-height: 1.6;
-    }
-    .profile-card {
-        background: #f8fafc;
-        border: 1px solid #e1e5ec;
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-    }
-    .profile-name {
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: #1b262c;
-    }
-    .profile-title {
-        font-size: 1rem;
-        color: #475569;
-        margin-bottom: 0.5rem;
-    }
-    .profile-contact {
-        font-size: 0.9rem;
-        color: #64748b;
-    }
-    .news-item {
-        padding: 1rem;
-        border-left: 4px solid #3d6cb9;
-        background: #f8fafc;
-        margin-bottom: 0.8rem;
-        border-radius: 0 0.5rem 0.5rem 0;
-    }
-    .news-date {
-        font-size: 0.8rem;
-        color: #64748b;
-        font-weight: 600;
-    }
-    .news-content {
-        font-size: 0.95rem;
-        color: #334155;
-        margin-top: 0.3rem;
-    }
-    .link-card {
-        display: block;
-        padding: 1.2rem;
-        background: white;
-        border: 1px solid #e1e5ec;
-        border-radius: 0.75rem;
-        text-decoration: none;
-        color: inherit;
-        margin-bottom: 0.8rem;
-        transition: all 0.2s ease;
-    }
-    .link-card:hover {
-        border-color: #3d6cb9;
-        box-shadow: 0 4px 12px rgba(61, 108, 185, 0.15);
-        transform: translateY(-2px);
-    }
-    .link-card-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #0f4c75;
-        margin-bottom: 0.3rem;
-    }
-    .link-card-desc {
-        font-size: 0.85rem;
-        color: #64748b;
-    }
-    .member-card {
-        background: white;
-        border: 1px solid #e1e5ec;
-        border-radius: 0.75rem;
-        padding: 1rem;
-        margin-bottom: 0.8rem;
-    }
-    .member-role {
-        font-size: 0.75rem;
-        color: white;
-        background: #3d6cb9;
-        padding: 0.2rem 0.6rem;
-        border-radius: 1rem;
-        display: inline-block;
-        margin-bottom: 0.5rem;
-    }
-    .member-name {
-        font-weight: 600;
-        color: #1b262c;
-    }
-    .member-info {
-        font-size: 0.85rem;
-        color: #64748b;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # Author-page CSS lives in the central CUSTOM_CSS block.
 
     # SHIP Lab Header
     st.markdown("""
@@ -2416,76 +2842,15 @@ def render_author_tab() -> None:
     with col_contact:
         st.markdown("[🌐 **Visit Full Website**](https://sites.google.com/view/hangchen)")
         st.markdown("[💻 **GitHub**](https://github.com/geohang)")
+        st.markdown("[🌎 **Environmental Geophysics (course)**](https://sites.google.com/view/enviromentalgeophysics/home)")
 
     st.markdown("---")
 
     # Sub-tabs inside the Author tab
-    sub_tab3, sub_tab1, sub_tab4, sub_tab5, sub_tab6 = st.tabs([
+    sub_tab3, sub_tab6 = st.tabs([
         "🔬 Research",
-        "🏠 Lab & People",
-        "📄 Publications",
-        "📚 Teaching",
         "💻 Open Source"
     ])
-
-    # --- Lab & People Tab ---
-    with sub_tab1:
-        st.markdown("### SHIP Lab Members")
-        st.markdown("*For full details, visit [SHIP Lab & People](https://sites.google.com/view/hangchen)*")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown("""
-            <div class="member-card">
-                <div class="member-role">Principal Investigator</div>
-                <div class="member-name">Hang Chen</div>
-                <div class="member-info">Assistant Professor, University of Iowa</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown("""
-            <div class="member-card">
-                <div class="member-role">PhD Student</div>
-                <div class="member-name">Chen Xiong</div>
-                <div class="member-info">Hydrogeophysics Research</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown("""
-            <div class="member-card">
-                <div class="member-role" style="background: #f59e0b;">Undergraduate</div>
-                <div class="member-name">Cameron Roach</div>
-                <div class="member-info">Gravity and Magnetic data joint inversion for geological hydrogen exploration</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col2:
-            st.markdown("""
-            <div class="member-card">
-                <div class="member-role">Master's Student</div>
-                <div class="member-name">Weiyu Guo</div>
-                <div class="member-info">Geophysical Modeling</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown("""
-            <div class="member-card">
-                <div class="member-role" style="background: #f59e0b;">Undergraduate</div>
-                <div class="member-name">Jax Waller</div>
-                <div class="member-info">Processing airborne electromagnetic data</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown("""
-            <div class="member-card">
-                <div class="member-role" style="background: #2d9c5b;">Open Position</div>
-                <div class="member-name">Postdoc Opening</div>
-                <div class="member-info">Contact for opportunities!</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.info("🎓 **Interested in joining?** Visit [Opportunities](https://sites.google.com/view/hangchen/opportunities) for current openings.")
 
     # --- Research Tab ---
     with sub_tab3:
@@ -2552,45 +2917,6 @@ def render_author_tab() -> None:
         </a>
         """, unsafe_allow_html=True)
 
-    # --- Publications Tab ---
-    with sub_tab4:
-        st.markdown("### Selected Publications")
-        st.markdown("*For complete list, visit [Publications](https://sites.google.com/view/hangchen/publications)*")
-
-        pubs_preview = [
-            ("2025", "Development of an ERT-based framework for bentonite buffers monitoring - Part I & II", "JGR: Solid Earth"),
-            ("2024", "Electrical resistivity changes during heating experiments in salt formations", "Geophysical Research Letters"),
-            ("2024", "Influence of subsurface critical zone structure on hydrological partitioning", "Geophysical Research Letters"),
-            ("2023", "Geophysics-informed hydrologic modeling of a mountain headwater catchment", "Water Resources Research"),
-        ]
-
-        for year, title, journal in pubs_preview:
-            st.markdown(f"**{year}** | {title} - *{journal}*")
-
-        st.markdown("---")
-        st.markdown("[📄 **View All Publications →**](https://sites.google.com/view/hangchen/publications)")
-
-    # --- Teaching Tab ---
-    with sub_tab5:
-        st.markdown("### Teaching")
-        st.markdown("*For course materials, visit [Teaching](https://sites.google.com/view/hangchen/teaching)*")
-
-        st.markdown("""
-        <a href="https://sites.google.com/view/hangchen/teaching" target="_blank" class="link-card">
-            <div class="link-card-title">📖 Courses at University of Iowa</div>
-            <div class="link-card-desc">Hydrogeophysics, Environmental Geophysics, Data Analysis in Geosciences</div>
-        </a>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <a href="https://sites.google.com/view/hangchen/teaching" target="_blank" class="link-card">
-            <div class="link-card-title">🎓 Student Mentoring</div>
-            <div class="link-card-desc">Graduate and undergraduate research opportunities available</div>
-        </a>
-        """, unsafe_allow_html=True)
-
-        st.markdown("[📚 **View Teaching Page →**](https://sites.google.com/view/hangchen/teaching)")
-
     # --- Open Source Tab ---
     with sub_tab6:
         st.markdown("### Open Source Projects")
@@ -2622,39 +2948,42 @@ def render_local_deployment_tab() -> None:
     Returns:
         None.
     """
-    st.subheader("Local Deployment")
+    st.subheader("🚀 Run locally")
     st.markdown(
-        """
-# PyHydroGeophysX - Quick Start Guide
+        "Run this same web interface on your own machine for full compute (large datasets, live "
+        "inversions) and to use the **Qt desktop workbench** with the web↔desktop round-trip."
+    )
 
-## 🚀 Get Started in 3 Steps
+    st.markdown("#### 1 · Get the code")
+    st.code("git clone https://github.com/geohang/PyHydroGeophysX.git\ncd PyHydroGeophysX", language="bash")
 
-### Step 0: Download the GitHub Repository
-```bash
-git clone https://github.com/geohang/PyHydroGeophysX.git
-cd PyHydroGeophysX
-```
+    st.markdown("#### 2 · Install")
+    st.markdown("Core (web app + agents):")
+    st.code("pip install -e .\npip install streamlit openai anthropic", language="bash")
+    st.markdown("Desktop workbench (optional — enables the Qt round-trip):")
+    st.code("pip install -r requirements-desktop.txt", language="bash")
 
-### Step 1: Launch the Web App
-```bash
-cd examples
-streamlit run app_geophysics_workflow.py
-```
-Or use the launcher scripts:
-- **Windows**: `start_webapp.bat`
-- **Linux/Mac**: `./start_webapp.sh`
+    st.markdown("#### 3 · Launch the web app")
+    st.code("cd examples\nstreamlit run app_geophysics_workflow.py", language="bash")
+    st.caption("Or use the bundled launchers: `start_webapp.bat` (Windows) / `./start_webapp.sh` (Linux/Mac).")
 
-### Step 2: Configure API Key
-In the sidebar:
-1. Select LLM provider (OpenAI recommended)
-2. Enter your API key
-3. Click "🚀 Initialize System"
+    st.markdown("#### 4 · Add your API key")
+    st.markdown(
+        "In the sidebar **Setup** section pick a provider (OpenAI or Claude), paste your key, and "
+        "click **Initialize**. Or set an environment variable before launching:"
+    )
+    st.code(
+        '# Windows (PowerShell)\n$env:OPENAI_API_KEY = "sk-..."\n'
+        '# macOS / Linux\nexport OPENAI_API_KEY="sk-..."',
+        language="bash",
+    )
+    st.caption("Claude uses `ANTHROPIC_API_KEY`. Keys are read from the environment if set.")
 
-### Step 3: Run Your First Workflow
-1. Choose a workflow example or describe your data
-2. Upload files if needed
-3. Click **Run workflow** and review the report outputs
-"""
+    st.markdown("#### 5 · Two ways to work")
+    st.markdown(
+        "- **Workflow tab** — *One-click* (describe + run) or *AQUAH chat* (converse step by step).\n"
+        "- **Professional Workbench tab** — open the **Qt desktop** for hands-on picking / editing; "
+        "results sync back to the web automatically."
     )
 
 
@@ -3010,6 +3339,29 @@ def render_workflow_tab(sidebar_state: Dict[str, Any]) -> None:
     st.subheader("Describe your workflow")
     if sidebar_state.get("demo_mode"):
         render_demo_mode_panel()
+        return
+
+    # Mode selector: keep the existing one-click flow, and offer the conversational
+    # AQUAH agent as an alternative. Both drive the same workflow engine.
+    workflow_mode = st.radio(
+        "Mode",
+        ["🚀 One-click", "💬 AQUAH chat"],
+        horizontal=True,
+        key="workflow_mode",
+        help="One-click: describe the workflow and run it in one go. AQUAH chat: converse "
+             "step by step — AQUAH builds the configuration and runs the same engine.",
+    )
+    st.caption(
+        "**One-click** — describe the workflow and run it in one go.  ·  "
+        "**AQUAH chat** — converse step by step; AQUAH builds the config and runs the same engine."
+    )
+    if workflow_mode == "💬 AQUAH chat":
+        try:
+            from aquah_web import render_aquah_chat
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"AQUAH chat is unavailable: {exc}")
+            return
+        render_aquah_chat(sidebar_state)
         return
 
     if not AGENTS_AVAILABLE:
@@ -6279,8 +6631,8 @@ def render_sidebar() -> Dict[str, Any]:
     st.session_state.demo_mode = demo_mode
     if demo_mode:
         st.sidebar.info("Demo mode uses bundled cached outputs and makes no LLM calls.")
-    st.sidebar.metric("Estimated LLM cost", f"${float(st.session_state.llm_cost_estimate_usd):.4f}")
 
+    st.sidebar.markdown("**🔧 Setup**")
     provider = st.sidebar.selectbox(
         "LLM provider",
         options=["openai", "gemini", "claude"],
@@ -6360,10 +6712,12 @@ def render_sidebar() -> Dict[str, Any]:
                 st.sidebar.exception(exc)
 
     st.sidebar.markdown("---")
+    st.sidebar.markdown("**📊 Session**")
+    st.sidebar.metric("Estimated LLM cost", f"${float(st.session_state.llm_cost_estimate_usd):.4f}")
     if st.session_state.context_agent:
-        st.sidebar.success("System status: ready")
+        st.sidebar.success("Status: ready ✓")
     else:
-        st.sidebar.warning("System status: not initialized")
+        st.sidebar.warning("Status: not initialized")
 
     return {"provider": provider, "model": model, "api_key": api_key, "output_dir": output_dir, "demo_mode": demo_mode}
 
@@ -6826,14 +7180,27 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
         st.error(f"Seismic processing tools are not available: {exc}")
         return
 
+    def _clear_line_pick_anchor() -> None:
+        st.session_state.seismic_line_anchor_trace = None
+        st.session_state.seismic_line_anchor_time = None
+
+    def _set_pick_feedback(message: str, level: str = "success", record: Optional[Any] = None) -> None:
+        st.session_state.seismic_pick_feedback = {
+            "message": str(message),
+            "level": str(level or "success"),
+            "record": record,
+        }
+
     def _reset_pick_edit_state() -> None:
         st.session_state.seismic_pick_history = []
         st.session_state.seismic_pick_redo = []
         st.session_state.seismic_active_trace = None
         st.session_state.seismic_active_time = None
         st.session_state.seismic_last_click_signature = ""
+        st.session_state.seismic_pick_feedback = None
         st.session_state.seismic_anchor_review_traces = []
         st.session_state.seismic_velocity_model = None
+        _clear_line_pick_anchor()
 
     def _push_pick_history() -> None:
         picks = st.session_state.get("seismic_picks_df")
@@ -6962,6 +7329,23 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
             "pick_source": pick_source,
         }
 
+    def _nearest_sample_index(selected_gather: Any, time_value: float) -> int:
+        time_values = np.asarray(selected_gather.time, dtype=float)
+        if time_values.size == 0:
+            return 0
+        value = float(time_value)
+        if not np.isfinite(value):
+            return 0
+        right = int(np.searchsorted(time_values, value, side="left"))
+        if right <= 0:
+            return 0
+        if right >= time_values.size:
+            return int(time_values.size - 1)
+        left = right - 1
+        if abs(float(time_values[right]) - value) < abs(value - float(time_values[left])):
+            return right
+        return left
+
     def _update_pick_from_click(
         picks_df: Any,
         selected_gather: Any,
@@ -6971,7 +7355,7 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
         pick_source: str = "manual",
     ) -> Any:
         trace_pos = int(np.clip(round(float(x_value)), 0, selected_gather.traces.shape[1] - 1))
-        sample_idx = int(np.clip(np.searchsorted(selected_gather.time, float(y_value)), 0, len(selected_gather.time) - 1))
+        sample_idx = _nearest_sample_index(selected_gather, float(y_value))
         st.session_state.seismic_active_trace = trace_pos
         st.session_state.seismic_active_time = float(selected_gather.time[sample_idx])
 
@@ -7025,6 +7409,7 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
         _sync_picks_for_record(selected_gather.field_record, st.session_state.seismic_picks_df)
         st.session_state.seismic_export_files = {}
         st.session_state.seismic_velocity_model = None
+        _set_pick_feedback(f"Deleted active pick on trace {int(trace_pos)}.", level="info", record=selected_gather.field_record)
         _bump_manual_picker_version()
         st.rerun()
 
@@ -7675,6 +8060,183 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
 
         return picks_work, manual_count, updated_count, ""
 
+    def _line_pick_points(
+        selected_gather: Any,
+        trace0: int,
+        time0: float,
+        trace1: int,
+        time1: float,
+        max_time_s: float,
+    ) -> List[Tuple[int, float]]:
+        n_traces = int(selected_gather.traces.shape[1])
+        if n_traces <= 0:
+            return []
+        trace0 = int(np.clip(trace0, 0, n_traces - 1))
+        trace1 = int(np.clip(trace1, 0, n_traces - 1))
+        min_time_s = float(selected_gather.time[0])
+        upper_time_s = float(min(max_time_s, float(selected_gather.time[-1])))
+        time0 = float(np.clip(time0, min_time_s, upper_time_s))
+        time1 = float(np.clip(time1, min_time_s, upper_time_s))
+        if trace0 == trace1:
+            return [(trace1, time1)]
+        trace_min = min(trace0, trace1)
+        trace_max = max(trace0, trace1)
+        trace_span = float(trace1 - trace0)
+        points: List[Tuple[int, float]] = []
+        for trace_pos in range(trace_min, trace_max + 1):
+            frac = (float(trace_pos) - float(trace0)) / trace_span
+            pick_time = time0 + frac * (time1 - time0)
+            points.append((trace_pos, float(np.clip(pick_time, min_time_s, upper_time_s))))
+        return points
+
+    def _extract_plot_click_pick(
+        point: Dict[str, Any],
+        selected_gather: Any,
+        max_time_s: float,
+    ) -> Tuple[Optional[int], Optional[float]]:
+        try:
+            click_x = float(point.get("x"))
+            click_y = float(point.get("y"))
+        except (TypeError, ValueError):
+            return None, None
+        if not (np.isfinite(click_x) and np.isfinite(click_y)):
+            return None, None
+        n_traces = int(selected_gather.traces.shape[1])
+        trace_pos = int(np.clip(round(click_x), 0, n_traces - 1))
+        min_time_s = float(selected_gather.time[0])
+        upper_time_s = float(min(max_time_s, float(selected_gather.time[-1])))
+        pick_time = float(np.clip(click_y, min_time_s, upper_time_s))
+        return trace_pos, pick_time
+
+    def _render_ctrl_plot_click_overlay(
+        key: str,
+        height: int,
+        margins: Dict[str, float],
+        always_active: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        payload = CTRL_PLOT_CLICK_COMPONENT(
+            height=int(height),
+            margin_left=float(margins.get("l", 0.0)),
+            margin_right=float(margins.get("r", 0.0)),
+            margin_top=float(margins.get("t", 0.0)),
+            margin_bottom=float(margins.get("b", 0.0)),
+            always_active=bool(always_active),
+            key=key,
+            default=None,
+        )
+        if payload in (None, "", []):
+            return None
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except json.JSONDecodeError:
+                return None
+        return payload if isinstance(payload, dict) else None
+
+    def _pick_from_overlay_payload(
+        payload: Dict[str, Any],
+        selected_gather: Any,
+        x_range: Tuple[float, float],
+        y_range: Tuple[float, float],
+        plot_height: float,
+        plot_margins: Dict[str, float],
+        max_time_s: float,
+    ) -> Tuple[Optional[int], Optional[float], str]:
+        try:
+            pixel_x = float(payload.get("pixel_x"))
+            pixel_y = float(payload.get("pixel_y"))
+            width = float(payload.get("width"))
+            height = float(payload.get("height") or plot_height)
+        except (TypeError, ValueError):
+            return None, None, ""
+        if not (np.isfinite(pixel_x) and np.isfinite(pixel_y) and np.isfinite(width) and np.isfinite(height)):
+            return None, None, ""
+
+        margin_l = float(plot_margins.get("l", 0.0))
+        margin_r = float(plot_margins.get("r", 0.0))
+        margin_t = float(plot_margins.get("t", 0.0))
+        margin_b = float(plot_margins.get("b", 0.0))
+        inner_width = max(1.0, width - margin_l - margin_r)
+        inner_height = max(1.0, height - margin_t - margin_b)
+        x_frac = (pixel_x - margin_l) / inner_width
+        y_frac = (pixel_y - margin_t) / inner_height
+        if x_frac < -0.02 or x_frac > 1.02 or y_frac < -0.02 or y_frac > 1.02:
+            return None, None, ""
+        x_frac = float(np.clip(x_frac, 0.0, 1.0))
+        y_frac = float(np.clip(y_frac, 0.0, 1.0))
+        data_x = float(x_range[0]) + x_frac * (float(x_range[1]) - float(x_range[0]))
+        data_y = float(y_range[0]) + y_frac * (float(y_range[1]) - float(y_range[0]))
+        trace_pos, pick_time = _extract_plot_click_pick(
+            {"x": data_x, "y": data_y},
+            selected_gather,
+            max_time_s=float(max_time_s),
+        )
+        timestamp = payload.get("timestamp", "")
+        signature = f"overlay:{timestamp}:{data_x:.6f}:{data_y:.6f}"
+        return trace_pos, pick_time, signature
+
+    def _commit_manual_pick_batch(
+        pick_points: List[Tuple[int, float]],
+        selected_gather: Any,
+        selected_record_value: Any,
+        processed_data: Dict[str, Any],
+        max_time_s: float,
+        learn_window_s: float,
+        learning_method: str,
+        update_remaining: bool,
+    ) -> Tuple[Any, int, int, str]:
+        n_traces = int(selected_gather.traces.shape[1])
+        min_time_s = float(selected_gather.time[0])
+        upper_time_s = float(min(max_time_s, float(selected_gather.time[-1])))
+        valid_points: List[Tuple[int, float]] = []
+        for trace_pos, pick_time in pick_points:
+            try:
+                trace_int = int(np.clip(int(trace_pos), 0, n_traces - 1))
+                time_float = float(np.clip(float(pick_time), min_time_s, upper_time_s))
+            except (TypeError, ValueError):
+                continue
+            if np.isfinite(time_float) and time_float > min_time_s:
+                valid_points.append((trace_int, time_float))
+        if not valid_points:
+            return st.session_state.get("seismic_picks_df"), 0, 0, "No valid positive pick time was provided."
+
+        _push_pick_history()
+        updated_df = st.session_state.get("seismic_picks_df")
+        for trace_pos, pick_time in valid_points:
+            updated_df = _update_pick_from_click(
+                updated_df,
+                selected_gather,
+                float(trace_pos),
+                float(pick_time),
+                "Update clicked trace",
+                pick_source="manual",
+            )
+
+        learned_count = 0
+        learn_error = ""
+        if update_remaining:
+            learned_df, _, learned_count, learn_error = _update_remaining_from_manual_pattern(
+                updated_df,
+                selected_gather,
+                processed_data,
+                search_window_s=float(learn_window_s),
+                max_time_s=float(max_time_s),
+                learning_method=str(learning_method or "1D velocity model"),
+            )
+            if not learn_error:
+                updated_df = learned_df
+        else:
+            st.session_state.seismic_velocity_model = None
+
+        st.session_state.seismic_picks_df = updated_df
+        _sync_picks_for_record(selected_record_value, updated_df)
+        last_trace, last_time = valid_points[-1]
+        st.session_state.seismic_active_trace = int(last_trace)
+        st.session_state.seismic_active_time = float(last_time)
+        st.session_state.seismic_export_files = {}
+        _bump_manual_picker_version()
+        return updated_df, len(valid_points), int(learned_count), learn_error
+
     repo_example = PARENT_DIR / "example" / "example" / "example_data.sgy"
     default_path = str(repo_example) if repo_example.exists() else ""
 
@@ -7853,7 +8415,9 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                 st.session_state.seismic_active_trace = None
                 st.session_state.seismic_active_time = None
                 st.session_state.seismic_last_click_signature = ""
+                st.session_state.seismic_pick_feedback = None
                 st.session_state.seismic_velocity_model = None
+                _clear_line_pick_anchor()
             st.success(f"Picked {len(picks)} first arrivals for field record {selected_record}.")
         except Exception as exc:  # noqa: BLE001
             st.error(f"Processing failed: {exc}")
@@ -7937,6 +8501,7 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
             _sync_picks_for_record(selected_record, st.session_state.seismic_picks_df)
             st.session_state.seismic_export_files = {}
             st.session_state.seismic_velocity_model = None
+            _set_pick_feedback("Undid the last pick edit.", level="info", record=selected_record)
             _bump_manual_picker_version()
             st.rerun()
         if tool_cols[2].button("Redo", width="stretch", disabled=not st.session_state.get("seismic_pick_redo")):
@@ -7950,6 +8515,7 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
             _sync_picks_for_record(selected_record, st.session_state.seismic_picks_df)
             st.session_state.seismic_export_files = {}
             st.session_state.seismic_velocity_model = None
+            _set_pick_feedback("Redid the pick edit.", level="info", record=selected_record)
             _bump_manual_picker_version()
             st.rerun()
         if tool_cols[3].button("Delete active", width="stretch"):
@@ -7960,6 +8526,7 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
             _sync_picks_for_record(selected_record, st.session_state.seismic_picks_df)
             st.session_state.seismic_export_files = {}
             st.session_state.seismic_velocity_model = None
+            _set_pick_feedback("Cleared picks for this gather.", level="info", record=selected_record)
             _bump_manual_picker_version()
             st.rerun()
 
@@ -8093,6 +8660,60 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                 else:
                     advance_step = int(st.session_state.get("seismic_advance_trace_step") or 1)
                     st.session_state.seismic_advance_trace_step = int(np.clip(advance_step, 1, max(1, n_traces)))
+
+            feedback = st.session_state.get("seismic_pick_feedback")
+            if isinstance(feedback, dict) and feedback.get("record") == selected_record:
+                feedback_message = str(feedback.get("message") or "")
+                feedback_level = str(feedback.get("level") or "success").lower()
+                if feedback_message:
+                    if feedback_level == "warning":
+                        st.warning(feedback_message)
+                    elif feedback_level == "info":
+                        st.info(feedback_message)
+                    else:
+                        st.success(feedback_message)
+
+            st.markdown("##### Fast chart picking")
+            click_pick_mode = st.toggle(
+                "Click-to-pick mode",
+                key="seismic_click_pick_mode",
+                help=(
+                    "Click the seismic chart to save a manual first-arrival pick at the nearest trace/sample. "
+                    "Mouse-wheel zoom and the Plotly toolbar remain available for navigation."
+                ),
+            )
+            if click_pick_mode:
+                st.success("Click-to-pick is on. Click the chart to save a manual first arrival.")
+                line_pick_mode = st.toggle(
+                    "Line pick mode",
+                    key="seismic_line_pick_mode",
+                    help=(
+                        "Two-click straight-line interpolation. First click sets the line start; "
+                        "second click saves manual picks on every trace between the endpoints."
+                    ),
+                )
+                line_anchor_trace = st.session_state.get("seismic_line_anchor_trace")
+                line_anchor_time = st.session_state.get("seismic_line_anchor_time")
+                if line_pick_mode:
+                    if line_anchor_trace is not None and line_anchor_time is not None:
+                        st.warning(
+                            f"Line anchor set: trace **{line_anchor_trace}** / "
+                            f"**{float(line_anchor_time):.5f} s**\n\n"
+                            "Click the chart to set the end point and interpolate.",
+                        )
+                    else:
+                        st.info("Click the chart to set the line start anchor.")
+                    if st.button(
+                        "Clear line anchor",
+                        key=f"seismic_clear_line_anchor_{selected_record}",
+                        disabled=line_anchor_trace is None,
+                    ):
+                        _clear_line_pick_anchor()
+                        _set_pick_feedback("Line anchor cleared.", level="info", record=selected_record)
+                        st.rerun()
+            else:
+                st.session_state.seismic_line_pick_mode = False
+                _clear_line_pick_anchor()
 
             st.markdown("##### Pick time")
             trace_default = int(st.session_state.get("seismic_active_trace") or 0)
@@ -8236,41 +8857,44 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
             auto_learn_after_manual = bool(st.session_state.get("seismic_update_after_save"))
 
             st.markdown("##### Save")
-            st.caption("The green preview marker is stored only after saving it as a manual pick.")
+            if st.session_state.get("seismic_click_pick_mode"):
+                st.caption("Chart clicks save immediately; the green slider marker still needs Save pick.")
+            else:
+                st.caption("The green preview marker is stored only after saving it as a manual pick.")
 
             def _save_current_panel_pick(force_next: bool = False) -> None:
                 if not np.isfinite(float(manual_time)) or float(manual_time) <= 0:
                     st.warning("Choose a positive first-arrival travel time before saving this anchor.")
                     return
-                _push_pick_history()
                 current_trace = int(manual_trace)
                 current_is_review_anchor = current_trace in set(_valid_anchor_review_traces(gather))
-                updated_df = _update_pick_from_click(
-                    st.session_state.get("seismic_picks_df"),
-                    gather,
-                    float(current_trace),
-                    float(manual_time),
-                    "Update clicked trace",
-                    pick_source="manual",
-                )
                 should_update_suggestions = auto_learn_after_manual or current_is_review_anchor
-                if should_update_suggestions:
-                    learned_df, learned_manual_count, learned_count, learn_error = _update_remaining_from_manual_pattern(
-                        updated_df,
-                        gather,
-                        processed,
-                        search_window_s=learn_window,
-                        max_time_s=float(max_pick_time),
-                        learning_method=str(st.session_state.get("seismic_learning_method") or "1D velocity model"),
+                updated_df, saved_count, learned_count, learn_error = _commit_manual_pick_batch(
+                    [(current_trace, float(manual_time))],
+                    gather,
+                    selected_record,
+                    processed,
+                    max_time_s=float(max_pick_time),
+                    learn_window_s=float(learn_window),
+                    learning_method=str(st.session_state.get("seismic_learning_method") or "1D velocity model"),
+                    update_remaining=should_update_suggestions,
+                )
+                if learn_error:
+                    _set_pick_feedback(
+                        f"Saved trace {current_trace} at {float(manual_time):.5f} s. Auto update skipped: {learn_error}",
+                        level="warning",
+                        record=selected_record,
                     )
-                    if learn_error:
-                        st.warning(learn_error)
-                    elif learned_count > 0:
-                        updated_df = learned_df
-                else:
-                    st.session_state.seismic_velocity_model = None
-                st.session_state.seismic_picks_df = updated_df
-                _sync_picks_for_record(selected_record, updated_df)
+                elif saved_count and learned_count:
+                    _set_pick_feedback(
+                        f"Saved trace {current_trace} at {float(manual_time):.5f} s; updated {learned_count} remaining picks.",
+                        record=selected_record,
+                    )
+                elif saved_count:
+                    _set_pick_feedback(
+                        f"Saved trace {current_trace} at {float(manual_time):.5f} s.",
+                        record=selected_record,
+                    )
                 _advance_trace_after_save(
                     updated_df,
                     gather,
@@ -8280,8 +8904,6 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                     mode=str(advance_mode),
                     force=force_next or current_is_review_anchor,
                 )
-                st.session_state.seismic_export_files = {}
-                _bump_manual_picker_version()
 
             if st.button(
                 "Save pick",
@@ -8325,6 +8947,11 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                     fallback=float(manual_time),
                 )
                 st.session_state.seismic_focus_view_pending = True
+                _set_pick_feedback(
+                    f"Moved to trace {int(next_trace)} without saving.",
+                    level="info",
+                    record=selected_record,
+                )
                 _bump_manual_picker_version()
                 st.rerun()
 
@@ -8346,6 +8973,7 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                 _sync_picks_for_record(selected_record, updated_df)
                 st.session_state.seismic_export_files = {}
                 st.session_state.seismic_velocity_model = None
+                _set_pick_feedback(f"Deleted pick on trace {int(manual_trace)}.", level="info", record=selected_record)
                 _bump_manual_picker_version()
                 st.rerun()
             if st.button(
@@ -8370,8 +8998,11 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                     st.session_state.seismic_picks_df = learned_df
                     _sync_picks_for_record(selected_record, learned_df)
                     st.session_state.seismic_export_files = {}
+                    _set_pick_feedback(
+                        f"Updated {learned_count} non-manual picks from {learned_manual_count} manual anchors.",
+                        record=selected_record,
+                    )
                     _bump_manual_picker_version()
-                    st.success(f"Updated {learned_count} non-manual picks from {learned_manual_count} manual anchors.")
                     st.rerun()
             st.caption(f"Manual anchors: {manual_count}; remaining auto/learned picks: {nonmanual_count}")
 
@@ -8650,9 +9281,49 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                         name="Selected time guide",
                     )
                 )
+            # --- Line anchor marker (click-to-pick / line-pick mode) ---
+            _line_anchor_trace_val = st.session_state.get("seismic_line_anchor_trace")
+            _line_anchor_time_val = st.session_state.get("seismic_line_anchor_time")
+            if (
+                st.session_state.get("seismic_click_pick_mode")
+                and st.session_state.get("seismic_line_pick_mode")
+                and _line_anchor_trace_val is not None
+                and _line_anchor_time_val is not None
+            ):
+                _lat = float(_line_anchor_trace_val)
+                _lav = float(_line_anchor_time_val)
+                fig.add_trace(
+                    go.Scatter(
+                        x=[_lat],
+                        y=[_lav],
+                        mode="markers+text",
+                        marker={"color": "#e65100", "size": 16, "symbol": "diamond",
+                                "line": {"color": "#ffffff", "width": 2}},
+                        text=["line start"],
+                        textposition="top right",
+                        textfont={"color": "#e65100", "size": 10},
+                        name="Line anchor start",
+                        hovertemplate=f"Line start: trace {int(_lat)}<br>Time {_lav:.5f} s<extra></extra>",
+                        showlegend=False,
+                    )
+                )
+                fig.add_trace(
+                    go.Scattergl(
+                        x=[_lat, _lat],
+                        y=[0.0, float(plot_time[-1])],
+                        mode="lines",
+                        line={"color": "rgba(230,81,0,0.55)", "width": 1.5, "dash": "dot"},
+                        hoverinfo="skip",
+                        showlegend=False,
+                        name="Line anchor guide",
+                    )
+                )
+
+            plot_height_px = 560
+            plot_margins = {"l": 55, "r": 15, "t": 35, "b": 45}
             fig.update_layout(
-                height=560,
-                margin={"l": 55, "r": 15, "t": 35, "b": 45},
+                height=plot_height_px,
+                margin=plot_margins,
                 xaxis_title="Trace",
                 yaxis_title="Time (s)",
                 title=f"Field record {processed['field_record']} - {display_style}",
@@ -8663,6 +9334,8 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                 uirevision=f"seismic-{processed['field_record']}-{display_style}",
             )
             axis_revision = f"seismic-axis-{processed['field_record']}-{display_style}"
+            overlay_x_range = (-0.5, float(traces.shape[1]) - 0.5)
+            overlay_y_range = (0.0, float(plot_time[-1]))
             if (
                 st.session_state.get("seismic_focus_view_active")
                 and manual_trace is not None
@@ -8678,20 +9351,145 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                     y_max = min(float(plot_time[-1]), y_min + max(time_halfwidth, float(meta.sample_interval_s)))
                 fig.update_xaxes(range=[x_min, x_max], uirevision=axis_revision)
                 fig.update_yaxes(range=[y_max, y_min], autorange=False, uirevision=axis_revision)
+                overlay_x_range = (float(x_min), float(x_max))
+                overlay_y_range = (float(y_min), float(y_max))
             else:
                 fig.update_xaxes(uirevision=axis_revision)
                 fig.update_yaxes(autorange="reversed", uirevision=axis_revision)
 
+            _click_pick_active = bool(st.session_state.get("seismic_click_pick_mode"))
+            if _click_pick_active:
+                _lpm_active = bool(st.session_state.get("seismic_line_pick_mode"))
+                if _lpm_active:
+                    _la_tr = st.session_state.get("seismic_line_anchor_trace")
+                    if _la_tr is not None:
+                        st.success(
+                            f"Line pick is on with anchor at trace {_la_tr}. "
+                            "Click the end point to interpolate picks along the line."
+                        )
+                    else:
+                        st.success("Line pick is on. Click the chart to set the line start anchor.")
+                else:
+                    st.success(
+                        "Click-to-pick is on. Click anywhere on the chart to set a manual pick."
+                    )
+            else:
+                st.caption("Tip: hold Ctrl and click inside the seismic plot to save a manual pick.")
+
+            _plotly_cfg = {"displayModeBar": True, "displaylogo": False, "scrollZoom": True}
             st.plotly_chart(
                 fig,
                 width="stretch",
                 key=f"seismic_display_plot_{processed['field_record']}",
-                config={
-                    "displayModeBar": True,
-                    "displaylogo": False,
-                    "scrollZoom": True,
-                },
+                config=_plotly_cfg,
             )
+            _overlay_payload = _render_ctrl_plot_click_overlay(
+                key=f"seismic_ctrl_pick_overlay_{processed['field_record']}",
+                height=int(plot_height_px),
+                margins={k: float(v) for k, v in plot_margins.items()},
+                always_active=_click_pick_active,
+            )
+            if _overlay_payload:
+                _clicked_trace, _clicked_time, _overlay_sig = _pick_from_overlay_payload(
+                    _overlay_payload,
+                    gather,
+                    x_range=overlay_x_range,
+                    y_range=overlay_y_range,
+                    plot_height=float(plot_height_px),
+                    plot_margins={"l": 0.0, "r": 0.0, "t": 0.0, "b": 0.0},
+                    max_time_s=float(max_pick_time),
+                )
+                if (
+                    _clicked_trace is not None
+                    and _clicked_time is not None
+                    and np.isfinite(_clicked_time)
+                    and _overlay_sig != st.session_state.get("seismic_last_click_signature", "")
+                ):
+                    st.session_state.seismic_last_click_signature = _overlay_sig
+                    _lpm = bool(_click_pick_active and st.session_state.get("seismic_line_pick_mode"))
+                    _la_trace = st.session_state.get("seismic_line_anchor_trace")
+                    _la_time = st.session_state.get("seismic_line_anchor_time")
+                    if _lpm:
+                        if _la_trace is None:
+                            st.session_state.seismic_line_anchor_trace = _clicked_trace
+                            st.session_state.seismic_line_anchor_time = _clicked_time
+                            _set_pick_feedback(
+                                f"Line start set at trace {_clicked_trace}, {_clicked_time:.5f} s.",
+                                level="info",
+                                record=selected_record,
+                            )
+                            st.rerun()
+                        else:
+                            line_points = _line_pick_points(
+                                gather,
+                                int(_la_trace),
+                                float(_la_time),
+                                int(_clicked_trace),
+                                float(_clicked_time),
+                                max_time_s=float(max_pick_time),
+                            )
+                            _, _saved_count, _learned_count, _learn_error = _commit_manual_pick_batch(
+                                line_points,
+                                gather,
+                                selected_record,
+                                processed,
+                                max_time_s=float(max_pick_time),
+                                learn_window_s=float(learn_window),
+                                learning_method=str(
+                                    st.session_state.get("seismic_learning_method") or "1D velocity model"
+                                ),
+                                update_remaining=auto_learn_after_manual,
+                            )
+                            _clear_line_pick_anchor()
+                            if _learn_error:
+                                _set_pick_feedback(
+                                    f"Saved {_saved_count} line picks. Auto update skipped: {_learn_error}",
+                                    level="warning",
+                                    record=selected_record,
+                                )
+                            elif _learned_count:
+                                _set_pick_feedback(
+                                    f"Saved {_saved_count} line picks and updated {_learned_count} remaining picks.",
+                                    record=selected_record,
+                                )
+                            else:
+                                _set_pick_feedback(
+                                    f"Saved {_saved_count} line picks.",
+                                    record=selected_record,
+                                )
+                            st.rerun()
+                    else:
+                        _, _saved_count, _learned_count, _learn_error = _commit_manual_pick_batch(
+                            [(int(_clicked_trace), float(_clicked_time))],
+                            gather,
+                            selected_record,
+                            processed,
+                            max_time_s=float(max_pick_time),
+                            learn_window_s=float(learn_window),
+                            learning_method=str(
+                                st.session_state.get("seismic_learning_method") or "1D velocity model"
+                            ),
+                            update_remaining=auto_learn_after_manual,
+                        )
+                        if _learn_error:
+                            _set_pick_feedback(
+                                f"Saved trace {_clicked_trace} at {_clicked_time:.5f} s. "
+                                f"Auto update skipped: {_learn_error}",
+                                level="warning",
+                                record=selected_record,
+                            )
+                        elif _learned_count:
+                            _set_pick_feedback(
+                                f"Saved trace {_clicked_trace} at {_clicked_time:.5f} s; "
+                                f"updated {_learned_count} remaining picks.",
+                                record=selected_record,
+                            )
+                        else:
+                            _set_pick_feedback(
+                                f"Saved trace {_clicked_trace} at {_clicked_time:.5f} s.",
+                                record=selected_record,
+                            )
+                        st.rerun()
         else:
             st.info("Load a SEG-Y file or Geometrics DAT survey, select a gather, then run processing to preview picks.")
 
@@ -10646,10 +11444,9 @@ def main() -> None:
     
     sidebar_state = render_sidebar()
 
-    tab_workflow, tab_processing, tab_hydro_multi, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs([
+    tab_workflow, tab_workbench, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs([
         "🚀 Run Workflow",
-        "Geophysical Data Processing",
-        "🌊 Hydro → Geophysics",
+        "🖥️ Professional Workbench",
         "📖 Step-by-Step Tutorials",
         "🔬 Learn Hydrogeophysics & Ask AI",
         "💻 Local Deployment",
@@ -10659,11 +11456,8 @@ def main() -> None:
     with tab_workflow:
         render_workflow_tab(sidebar_state)
 
-    with tab_processing:
-        render_geophysical_data_processing_tab(sidebar_state)
-
-    with tab_hydro_multi:
-        render_hydro_multigeophys_tab()
+    with tab_workbench:
+        render_professional_workbench_tab(sidebar_state)
 
     with tab_tutorial:
         render_tutorial_tab()
