@@ -134,6 +134,9 @@ class SeismicProcessingModule(BaseModule):
         self._shot_pos: Dict[int, float] = {}
         self._all_picks: Dict[int, Dict[int, Any]] = {}
         self._all_src: Dict[int, Dict[int, str]] = {}
+        self._geo_positions: Optional[Dict[int, Tuple[float, float]]] = None  # trace idx -> (x, z)
+        self._shot_spacing: Optional[float] = None  # regular shot interval (m); auto-fills shot_x per record
+        self._shot0_x: float = 0.0  # x of the first record's shot
         self._srt_worker: Optional[SRTInversionWorker] = None
         self._load_worker: Optional[TaskWorker] = None
         self._proc_cache: Optional[np.ndarray] = None
@@ -178,6 +181,18 @@ class SeismicProcessingModule(BaseModule):
         self._info = QLabel("No data loaded.")
         self._info.setWordWrap(True)
         layout.addWidget(self._info)
+
+        pos_btn = QPushButton("Load geophone positions / topography…")
+        pos_btn.setIcon(theme.icon("fa5s.map-marker-alt"))
+        pos_btn.setToolTip("Load a text file of per-geophone x distance and elevation "
+                           "(columns: station distance_m elevation_m, or x z). Picks then carry real "
+                           "positions + topography into the SRT inversion.")
+        pos_btn.clicked.connect(self._load_geometry_dialog)
+        layout.addWidget(pos_btn)
+        self._geo_info = QLabel("Even spacing (no position file).")
+        self._geo_info.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        self._geo_info.setWordWrap(True)
+        layout.addWidget(self._geo_info)
 
         self._shot_group = QGroupBox("Geometry")
         sform = QFormLayout(self._shot_group)
@@ -391,7 +406,7 @@ class SeismicProcessingModule(BaseModule):
         self._pick_src = dict(self._all_src.get(record, {}))
         self._order = list(self._picks.keys())
         self._shot_x.blockSignals(True)
-        self._shot_x.setValue(self._shot_pos.get(record, self._geo_start.value()))
+        self._shot_x.setValue(self._shot_pos.get(record, self._default_shot_x(record)))
         self._shot_x.blockSignals(False)
         self._recompute()
         self._update_info()
@@ -507,16 +522,155 @@ class SeismicProcessingModule(BaseModule):
     # -- picking -------------------------------------------------------------
     def _make_pick(self, trace: int, sample: int, value: float):
         dt = self._dt or 1.0
-        receiver_x = self._geo_start.value() + trace * self._spacing.value()
+        if self._geo_positions and trace in self._geo_positions:
+            receiver_x, receiver_z = self._geo_positions[trace]
+        else:
+            receiver_x = self._geo_start.value() + trace * self._spacing.value()
+            receiver_z = 0.0
         shot_x = self._shot_x.value()
+        shot_z = self._interp_topography(shot_x)
         if not _SEISMIC_OK:
-            return {"trace": trace, "sample": sample, "time_s": sample * dt, "value": value}
+            return {"trace": trace, "sample": sample, "time_s": sample * dt, "value": value,
+                    "source_x": float(shot_x), "source_z": float(shot_z),
+                    "receiver_x": float(receiver_x), "receiver_z": float(receiver_z)}
         record = self._current_record if self._current_record is not None else 1
         return FirstBreakPick(
             source_id=int(record), receiver_id=trace + 1, time_s=float(sample * dt),
-            source_x=float(shot_x), source_z=0.0, receiver_x=float(receiver_x), receiver_z=0.0,
+            source_x=float(shot_x), source_z=float(shot_z),
+            receiver_x=float(receiver_x), receiver_z=float(receiver_z),
             field_record=int(record), trace_number=trace + 1, trace_index=trace, amplitude=float(value),
         )
+
+    def _interp_topography(self, x: float) -> float:
+        """Surface elevation at x, interpolated from loaded geophone positions (0 if none)."""
+        if not self._geo_positions:
+            return 0.0
+        pts = sorted(self._geo_positions.values())
+        xs = [a for a, _ in pts]
+        zs = [b for _, b in pts]
+        if len(xs) < 2:
+            return float(zs[0]) if zs else 0.0
+        return float(np.interp(float(x), xs, zs))
+
+    def _default_shot_x(self, record: int) -> float:
+        """Shot x for a record that has no manual override: a regular shot pattern
+        (first_shot_x + order * shot_spacing) if set, else the SEG-Y header source x,
+        else geophone-0 x."""
+        records = self._agent_records()
+        if self._shot_spacing is not None and records and record in records:
+            return float(self._shot0_x + records.index(record) * self._shot_spacing)
+        hx = self._header_shot_x(record)
+        if hx is not None:
+            return hx
+        return float(self._geo_start.value())
+
+    def _header_shot_x(self, record: int) -> Optional[float]:
+        """Source x for a record from the SEG-Y trace headers, if populated (non-zero)."""
+        if self._dataset is None:
+            return None
+        try:
+            headers = self._dataset.get_gather(int(record)).headers
+            xs = [float(h.source_x) for h in headers if np.isfinite(h.source_x)]
+        except Exception:  # noqa: BLE001
+            return None
+        if not xs or abs(xs[0]) <= 1e-9:
+            return None
+        return float(xs[0])
+
+    @staticmethod
+    def _parse_geometry_file(path: str) -> Dict[int, Tuple[float, float]]:
+        """Parse a geophone position/topography file into ``{trace_index: (x, z)}``.
+
+        Whitespace/comma separated; a non-numeric header row is skipped. 3+ columns
+        read as (station, x, elevation); 2 as (x, elevation); 1 as x with elevation
+        0. Geophone order follows file row order.
+        """
+        rows: List[List[float]] = []
+        with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+            for line in fh:
+                parts = line.replace(",", " ").split()
+                if not parts:
+                    continue
+                try:
+                    rows.append([float(p) for p in parts])
+                except ValueError:
+                    continue  # header / comment line
+        positions: Dict[int, Tuple[float, float]] = {}
+        for i, nums in enumerate(rows):
+            if len(nums) >= 3:
+                x, z = nums[1], nums[2]
+            elif len(nums) == 2:
+                x, z = nums[0], nums[1]
+            else:
+                x, z = nums[0], 0.0
+            positions[i] = (float(x), float(z))
+        return positions
+
+    def _apply_geometry_file(self, path: str) -> int:
+        positions = self._parse_geometry_file(path)
+        if not positions:
+            return 0
+        self._geo_positions = positions
+        xs = [positions[k][0] for k in sorted(positions)]
+        if len(xs) >= 2:
+            self._geo_start.blockSignals(True); self._geo_start.setValue(xs[0]); self._geo_start.blockSignals(False)
+            step = abs(xs[1] - xs[0])
+            if step > 0:
+                self._spacing.blockSignals(True); self._spacing.setValue(step); self._spacing.blockSignals(False)
+        self._restamp_all_picks()
+        if hasattr(self, "_geo_info"):
+            zs = [positions[k][1] for k in positions]
+            self._geo_info.setText(
+                f"{len(positions)} geophones from file · x {min(xs):.1f}–{max(xs):.1f} m · "
+                f"elev {min(zs):.1f}–{max(zs):.1f} m")
+        self._redraw_markers()
+        self._update_pick_info()
+        self._publish()
+        return len(positions)
+
+    def _restamp_all_picks(self) -> None:
+        """Update receiver x/z (and per-shot source elevation) on existing picks after
+        the geophone positions change. Only the geophones move, so each pick keeps its
+        own source_x / source_id / field_record — never re-stamp them with another
+        record's shot."""
+        import dataclasses
+
+        def receiver(i: int) -> Tuple[float, float]:
+            if self._geo_positions and i in self._geo_positions:
+                return self._geo_positions[i]
+            return (self._geo_start.value() + i * self._spacing.value(), 0.0)
+
+        def restamp(picks: Dict[int, Any]) -> None:
+            for tr in list(picks):
+                p = picks[tr]
+                rx, rz = receiver(int(tr))
+                if _SEISMIC_OK and hasattr(p, "receiver_x"):
+                    picks[tr] = dataclasses.replace(
+                        p, receiver_x=float(rx), receiver_z=float(rz),
+                        source_z=float(self._interp_topography(p.source_x)))
+                elif isinstance(p, dict):
+                    p["receiver_x"] = float(rx); p["receiver_z"] = float(rz)
+                    p["source_z"] = float(self._interp_topography(p.get("source_x", 0.0)))
+
+        restamp(self._picks)
+        for rec in self._all_picks:
+            restamp(self._all_picks[rec])
+
+    def _load_geometry_dialog(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Load geophone positions / topography", "",
+            "Text/CSV (*.txt *.csv *.dat);;All files (*)")
+        if not path:
+            return
+        try:
+            n = self._apply_geometry_file(path)
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not load geophone positions: {exc}", "error")
+            return
+        if n:
+            self.log(f"Loaded {n} geophone positions with elevation from {Path(path).name}.", "success")
+        else:
+            self.log("No numeric position rows found in the file.", "warn")
 
     def _viewer_picks(self) -> Dict[int, Any]:
         out: Dict[int, Any] = {}
@@ -787,8 +941,16 @@ class SeismicProcessingModule(BaseModule):
                  "desc": "List shot / field records in the loaded dataset."},
                 {"name": "select_record", "args": {"record": "int"},
                  "desc": "Switch to a shot record by its field-record number."},
-                {"name": "set_geometry", "args": {"spacing": "float", "geophone_start": "float", "shot_x": "float"},
-                 "desc": "Set geophone spacing (m), geophone-0 x (m), and this record's shot x (m, may be negative)."},
+                {"name": "set_geometry",
+                 "args": {"spacing": "float", "geophone_start": "float", "shot_x": "float",
+                          "shot_spacing": "float", "first_shot_x": "float"},
+                 "desc": ("Set geophone spacing (m) and geophone-0 x (m). For a REGULAR shot layout, pass "
+                          "first_shot_x and shot_spacing ONCE — shot_x then auto-fills for every record on "
+                          "select_record. Use shot_x only to set/override one record's shot (may be negative).")},
+                {"name": "load_geometry", "args": {"path": "str"},
+                 "desc": ("Load per-geophone positions + topography from a text file (columns: "
+                          "'station distance_m elevation_m', or 'x z'). Applies real receiver x and "
+                          "elevation so the SRT inversion honors topography; re-stamps existing picks.")},
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
                  "desc": ("Set processing/pick params. Keys: sta_lta_ratio, gain (slider 1-100), "
                           "clip_percentile, agc_window_ms, flip_polarity, normalize, agc.")},
@@ -820,6 +982,7 @@ class SeismicProcessingModule(BaseModule):
             "list_records": lambda: self._agent_list_records(),
             "select_record": lambda: self._agent_select_record(args.get("record")),
             "set_geometry": lambda: self._agent_set_geometry(args),
+            "load_geometry": lambda: self._agent_load_geometry(args.get("path")),
             "set_params": lambda: self._agent_set_params(args.get("params", args)),
             "auto_pick": lambda: self._agent_auto_pick(),
             "review_picks": lambda: self._agent_review_picks(),
@@ -904,13 +1067,47 @@ class SeismicProcessingModule(BaseModule):
                 self._spacing.setValue(float(args["spacing"])); applied["spacing"] = args["spacing"]
             if "geophone_start" in args:
                 self._geo_start.setValue(float(args["geophone_start"])); applied["geophone_start"] = args["geophone_start"]
-            if "shot_x" in args:
+            if args.get("shot_spacing") is not None:
+                self._shot_spacing = float(args["shot_spacing"]); applied["shot_spacing"] = args["shot_spacing"]
+            if "first_shot_x" in args:
+                self._shot0_x = float(args["first_shot_x"]); applied["first_shot_x"] = args["first_shot_x"]
+            # A new/updated shot pattern re-fills the current record's shot from it.
+            if ("shot_spacing" in args or "first_shot_x" in args) and self._current_record is not None:
+                self._shot_pos.pop(self._current_record, None)
+                self._shot_x.setValue(self._default_shot_x(self._current_record))
+                applied["shot_x"] = self._shot_x.value()
+            if "shot_x" in args:  # explicit per-record override wins
                 self._shot_x.setValue(float(args["shot_x"])); applied["shot_x"] = args["shot_x"]
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": str(exc)}
         if not applied:
-            return {"status": "failed", "error": "Provide spacing, geophone_start, and/or shot_x."}
-        return {"status": "ok", "applied": applied}
+            return {"status": "failed",
+                    "error": "Provide spacing, geophone_start, shot_x, shot_spacing, and/or first_shot_x."}
+        result: Dict[str, Any] = {"status": "ok", "applied": applied}
+        if self._shot_spacing is not None:
+            result["shot_pattern"] = {
+                "first_shot_x": self._shot0_x, "shot_spacing": self._shot_spacing,
+                "note": "shot_x now auto-fills per record on select_record; set shot_x only to "
+                        "override one irregular shot."}
+        return result
+
+    def _agent_load_geometry(self, path: Any) -> Dict[str, Any]:
+        if not path:
+            return {"status": "failed", "error": "Provide 'path' to a geophone position/topography file."}
+        p = Path(str(path))
+        if not p.exists():
+            return {"status": "failed", "error": f"File not found: {p}"}
+        try:
+            n = self._apply_geometry_file(str(p))
+        except Exception as exc:  # noqa: BLE001
+            return {"status": "failed", "error": f"Could not parse positions: {exc}"}
+        if not n:
+            return {"status": "failed", "error": "No numeric position rows found in the file."}
+        xs = [v[0] for v in self._geo_positions.values()]
+        zs = [v[1] for v in self._geo_positions.values()]
+        return {"status": "ok", "geophones": n,
+                "x_range": [min(xs), max(xs)], "elevation_range": [min(zs), max(zs)],
+                "note": "Per-geophone x + elevation applied; picks re-stamped; the SRT inversion will honor topography."}
 
     def _agent_set_params(self, params: Any) -> Dict[str, Any]:
         if not isinstance(params, dict):
@@ -959,6 +1156,16 @@ class SeismicProcessingModule(BaseModule):
         self._pick_mode.setChecked(True)
         auto = sum(1 for s in self._pick_src.values() if s == "auto")
         manual = sum(1 for s in self._pick_src.values() if s == "manual")
+        all_records = self._agent_records()
+        picked = [r for r in all_records if self._all_picks.get(r)]
+        remaining = [r for r in all_records if r not in picked]
+        next_record = remaining[0] if remaining else None
+        if remaining:
+            tail = (f"This is shot {self._current_record}. {len(remaining)} more shot(s) still need "
+                    f"picking (next: {next_record}). After you say 'continue' I will pick the next shot; "
+                    "I run the SRT inversion only once every shot is reviewed.")
+        else:
+            tail = "Every shot is picked — say 'continue' to run the SRT inversion."
         return {
             "status": "awaiting_user",
             "current_record": self._current_record,
@@ -966,10 +1173,13 @@ class SeismicProcessingModule(BaseModule):
             "auto": auto,
             "manual": manual,
             "suspect_traces": self._suspect_pick_traces(),
+            "records_total": all_records,
+            "records_picked": sorted(picked),
+            "records_remaining": remaining,
+            "next_record": next_record,
             "message": (
                 "Auto-picks are in and Manual pick mode is ON. Correct any bad traces by clicking / "
-                "Ctrl+dragging in the plot, or ask me to set_pick / delete_pick a trace. Say 'continue' "
-                "when the picks look good and I will run the SRT inversion."
+                "Ctrl+dragging, or ask me to set_pick / delete_pick a trace. " + tail
             ),
         }
 
