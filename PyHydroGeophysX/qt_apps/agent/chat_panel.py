@@ -39,6 +39,10 @@ from PyHydroGeophysX.qt_apps.agent.tools import tool_specs
 
 _P = theme.PALETTE
 
+# Inputs that, while paused at a checkpoint, resume the workflow with no LLM call.
+_CONTINUE_WORDS = frozenset({"continue", "next", "go", "go on", "proceed", "done",
+                             "next shot", "继续", "下一炮", "下一个"})
+
 SYSTEM_PROMPT = """You are AQUAH, an assistant embedded in the PyHydroGeophysX desktop workbench, a hydrogeophysics tool. You help the user process and model geophysical data by driving the workbench GUI through tools, not by writing code.
 
 Rules:
@@ -51,7 +55,7 @@ Rules:
 - For a processing request, a typical sequence is: navigate to the right module, describe it, load data (use the example data if the user gave none), set parameters, then run.
 - If a tool result has status "failed" or "declined", read it and adjust, or ask the user what to do. Do not invent module names, actions, or parameters; discover them with the tools.
 - Always finish your turn by telling the user the next step: what you will do next, or what they can ask for. When you START a long job (a tool result with status "started"), say it is running in the background and that the user can ask for its status (for example "is it done?") or say "continue" to proceed once it finishes — then end your turn rather than guessing the job is complete.
-- Seismic first-break picking is PER SHOT and has a mandatory human checkpoint. Workflow: load_data -> (load_geometry if the user gives a geophone positions/topography file) -> set_geometry (for a REGULAR shot interval, pass first_shot_x + shot_spacing ONCE so each record's shot_x auto-fills on select_record — do NOT set shot_x for every record; use a per-record shot_x only to override an irregular shot) -> then for EACH shot record: select_record -> auto_pick -> review_picks (pause). The review_picks result includes records_remaining and next_record. After the user says continue: if records_remaining is non-empty, call select_record(next_record) -> auto_pick -> review_picks again, and repeat until no shots remain. Run run_srt ONLY when records_remaining is empty (every shot picked and reviewed). Never run_srt while shots remain, and never run_srt in the same turn as auto_pick.
+- Seismic first-break picking is PER SHOT and has a mandatory human checkpoint. Workflow: load_data -> (load_geometry if the user gives a geophone positions/topography file) -> set_geometry (for a REGULAR shot interval, pass first_shot_x + shot_spacing ONCE so each record's shot_x auto-fills on select_record — do NOT set shot_x for every record; use a per-record shot_x only to override an irregular shot) -> then step through shots with pick_next_shot — ONE call that selects the next un-picked record, auto-picks it, and pauses for review (it returns records_remaining and next_record). After the user says continue: if records_remaining is non-empty, call pick_next_shot again; repeat until none remain. Prefer pick_next_shot over separate select_record/auto_pick/review_picks (it is much faster, one call per shot); use the individual actions only to manually re-pick a specific shot. Run run_srt ONLY when records_remaining is empty (every shot picked and reviewed). Never run_srt while shots remain, and never run_srt in the same turn as auto_pick.
 - When a tool returns status "awaiting_user", the workflow is paused for the user to act in the GUI (for example correcting picks). Relay the message, end your turn, and resume only when the user says to continue. During the pause the user may also ask you to set_pick or delete_pick specific traces.
 
 Workbench modules (key: purpose):
@@ -98,6 +102,8 @@ class AquahChatPanel(QWidget):
         self._current_call: Optional[Dict[str, Any]] = None
         self._executed_in_turn = False
         self._awaiting_user = False
+        self._paused_resume: Optional[Dict[str, Any]] = None  # resume action while paused
+        self._resume_seq = 0
         self._busy = False
         self._worker: Optional[LlmCallWorker] = None
 
@@ -290,19 +296,49 @@ class AquahChatPanel(QWidget):
     def _on_send(self) -> None:
         if self._busy:
             return
+        text = self._input.text().strip()
+        if not text:
+            return
+        # Fast-path: while paused at a checkpoint, "continue" runs the module's
+        # declared resume action directly — no LLM round-trip, no approval click.
+        if self._paused_resume and text.lower() in _CONTINUE_WORDS:
+            self._input.clear()
+            self._render_user(text)
+            self._resume_paused(text)
+            return
         ok, reason = self._provider.available()
         if not ok:
             self._render_note(reason)
             self._refresh_ready_state()
             return
-        text = self._input.text().strip()
-        if not text:
-            return
         self._input.clear()
         self._render_user(text)
         self._messages.append({"role": "user", "content": text})
+        self._paused_resume = None  # a non-"continue" message takes manual control
         self._set_busy(True)
         self._start_request()
+
+    def _resume_paused(self, text: str) -> None:
+        """Run the paused checkpoint's resume action directly (no LLM call), keeping the
+        message log valid (user -> assistant tool_call -> tool result) for later calls."""
+        spec = self._paused_resume or {}
+        action = spec.get("action")
+        if not action:
+            self._paused_resume = None
+            return
+        args = {"action": action, "args": spec.get("args", {}) or {}}
+        self._resume_seq += 1
+        cid = f"resume_{self._resume_seq}"
+        self._messages.append({"role": "user", "content": text})
+        self._messages.append({"role": "assistant", "content": None,
+                               "tool_calls": [{"id": cid, "name": "apply_action", "arguments": args}]})
+        result = self._controller.dispatch("apply_action", args)
+        self._answer_tool({"id": cid, "name": "apply_action"}, result)
+        self._render_tool_result("apply_action", result)
+        self._paused_resume = (result.get("resume")
+                               if isinstance(result, dict) and result.get("status") == "awaiting_user"
+                               else None)
+        self._refresh_ready_state()
 
     def _start_request(self) -> None:
         self._send_btn.setText("…")
@@ -378,6 +414,7 @@ class AquahChatPanel(QWidget):
         result = self._controller.dispatch(name, args)
         if isinstance(result, dict) and result.get("status") == "awaiting_user":
             self._awaiting_user = True
+            self._paused_resume = result.get("resume")
         self._answer_tool(call, result)
         self._render_tool_result(name, result)
         self._executed_in_turn = True
@@ -401,8 +438,17 @@ class AquahChatPanel(QWidget):
             "role": "tool",
             "id": call.get("id"),
             "name": call.get("name"),
-            "content": result,
+            "content": self._compact_for_context(result),
         })
+
+    @staticmethod
+    def _compact_for_context(result: Any) -> Any:
+        """Trim display-only / redundant fields before a result enters the model
+        context, so a long multi-step session does not bloat each call."""
+        if not isinstance(result, dict):
+            return result
+        drop = {"message", "records_total", "records_picked", "resume", "suspect_traces"}
+        return {k: v for k, v in result.items() if k not in drop}
 
     # -- state / rendering ---------------------------------------------------
     def _set_busy(self, busy: bool) -> None:

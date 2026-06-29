@@ -33,6 +33,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from PySide6.QtCore import Qt
+
 from PyHydroGeophysX.qt_apps import gravmag_pipeline as gmp
 from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
@@ -86,7 +88,10 @@ class GravMagProcessingModule(BaseModule):
         return s
 
     def _build_controls(self) -> QScrollArea:
-        scroll = QScrollArea(); scroll.setWidgetResizable(True); scroll.setMaximumWidth(330)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        # Wide enough to fit the controls without a horizontal scrollbar.
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setMinimumWidth(400); scroll.setMaximumWidth(460)
         panel = QWidget(); scroll.setWidget(panel)
         layout = QVBoxLayout(panel)
 

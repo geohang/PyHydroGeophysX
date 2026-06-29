@@ -16,7 +16,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 
-from PyHydroGeophysX.qt_apps import io_utils
+from PyHydroGeophysX.qt_apps import ert_load, io_utils
 
 LogFn = Callable[[str], None]
 
@@ -26,8 +26,13 @@ DEFAULT_TL = {
     "lambda_val": 50.0, "alpha": 10.0, "inversion_type": "L2",
     "max_iterations": 15, "relativeError": 0.05, "absoluteUError": 0.0,
     "method": "cgls", "mesh_quality": 34.0, "rho_min": 1.0, "rho_max": 1.0e4,
-    "windowed": False, "window_size": 3,
+    "windowed": False, "window_size": 3, "save_memory": False, "instrument": None,
 }
+
+#: Above this many model unknowns (para cells x time steps) the dense
+#: Gauss-Newton matrices get large, so sparse/low-memory mode is auto-enabled
+#: unless the caller set ``save_memory`` explicitly.
+_AUTO_SPARSE_UNKNOWNS = 15000
 
 
 class BackendUnavailable(RuntimeError):
@@ -47,6 +52,32 @@ def default_times(n: int) -> List[int]:
     return list(range(1, int(n) + 1))
 
 
+def _step_titles(labels: Sequence[str], times: Sequence[float], n_time: int) -> List[str]:
+    """Clear per-step titles so the panel always says what the number means:
+    a parsed date stays as the date; a plain 1..n sequence becomes "Time step N";
+    any other numeric time becomes "t = <value>"."""
+    labels = list(labels or [])
+    is_dated = any("-" in str(lbl) for lbl in labels)
+    is_sequence = labels == [str(i + 1) for i in range(n_time)]
+    titles: List[str] = []
+    for i in range(n_time):
+        lbl = labels[i] if i < len(labels) else str(i + 1)
+        if is_dated:
+            titles.append(str(lbl))
+        elif is_sequence:
+            titles.append(f"Time step {i + 1}")
+        else:
+            t = times[i] if i < len(times) else (i + 1)
+            titles.append(f"t = {t:g}" if isinstance(t, (int, float)) else f"t = {lbl}")
+    return titles
+
+
+def _safe_label(text: str) -> str:
+    """Filename-safe version of a time label."""
+    out = "".join(c if c.isalnum() or c in "-_." else "_" for c in str(text))
+    return out.strip("_") or "step"
+
+
 def build_timelapse_config(data_files: Sequence[str], measurement_times: Sequence[float],
                            params: Dict[str, Any]) -> Dict[str, Any]:
     """JSON-serializable configuration (no backend needed)."""
@@ -57,10 +88,11 @@ def build_timelapse_config(data_files: Sequence[str], measurement_times: Sequenc
         "n_files": len(data_files),
         "data_files": [str(f) for f in data_files],
         "measurement_times": [float(t) for t in measurement_times],
+        "instrument": p.get("instrument"),
         "inversion": {k: p[k] for k in (
             "lambda_val", "alpha", "inversion_type", "max_iterations",
             "relativeError", "method", "mesh_quality", "rho_min", "rho_max",
-            "windowed", "window_size")},
+            "windowed", "window_size", "save_memory")},
     }
 
 
@@ -88,16 +120,45 @@ def run_timelapse_ert(
     except Exception as exc:  # noqa: BLE001
         raise BackendUnavailable(str(exc))
 
-    files = [str(f) for f in data_files]
-    if len(files) < 2:
+    import os
+
+    source_files = [str(f) for f in data_files]
+    if len(source_files) < 2:
         raise ValueError("Time-lapse inversion needs at least two ERT data files.")
-    times = list(measurement_times) if measurement_times is not None and len(measurement_times) == len(files) \
-        else default_times(len(files))
     p = {**DEFAULT_TL, **(params or {})}
 
-    log(f"Building mesh from {Path(files[0]).name} (quality {p['mesh_quality']})")
-    data0 = pg_ert.load(files[0])
+    # Derive measurement times + display labels. Filenames that embed dates (e.g.
+    # the E4D monthly series 2021-10-08_1400.ohm) give elapsed-day times and date
+    # labels; otherwise fall back to a sequential 1..n.
+    if measurement_times is not None and len(measurement_times) == len(source_files):
+        times = [float(t) for t in measurement_times]
+        labels = [f"{t:g}" for t in times]
+    else:
+        times, labels = ert_load.measurement_times_for(source_files)
+
+    # Load every file through the robust device-aware loader and re-write it as a
+    # clean pygimli file. Raw ``ert.load`` cannot parse index-prefixed / header-less
+    # formats (E4D etc.) and would drop all data + topography; normalizing first is
+    # what makes the time-lapse inversion actually work on those files.
+    instrument = p.get("instrument")
+    log(f"Preparing {len(source_files)} ERT files"
+        + (f" (instrument: {instrument})" if instrument else " (auto-detect)") + " …")
+    clean_dir, basenames, containers = ert_load.normalize_for_timelapse(
+        source_files, instrument, out_dir, log=log)
+    files = [os.path.join(clean_dir, b) for b in basenames]
+
+    log(f"Building mesh from {Path(source_files[0]).name} (quality {p['mesh_quality']})")
+    data0 = containers[0]
     mesh = pg_ert.ERTManager(data0).createMesh(data=data0, quality=float(p["mesh_quality"]))
+
+    # Pick dense vs. sparse (low-memory) solve. Honor an explicit choice; otherwise
+    # auto-enable sparse once the dense Gauss-Newton matrices would get large.
+    save_memory = bool(p.get("save_memory", False))
+    n_unknowns = int(mesh.cellCount()) * len(files)
+    if "save_memory" not in (params or {}) and not save_memory and n_unknowns > _AUTO_SPARSE_UNKNOWNS:
+        save_memory = True
+        log(f"Auto-enabling low-memory (sparse) mode: ~{n_unknowns} model unknowns "
+            f"({mesh.cellCount()} cells x {len(files)} steps).")
 
     inv_kwargs = dict(
         lambda_val=float(p["lambda_val"]), alpha=float(p["alpha"]),
@@ -105,21 +166,16 @@ def run_timelapse_ert(
         relativeError=float(p["relativeError"]), absoluteUError=float(p.get("absoluteUError", 0.0)),
         inversion_type=str(p["inversion_type"]),
         model_constraints=(float(p["rho_min"]), float(p["rho_max"])),
+        save_memory=save_memory,
     )
-    import os
     use_windowed = bool(p.get("windowed", False)) and 2 <= int(p["window_size"]) <= len(files)
-    if use_windowed and len({os.path.dirname(f) for f in files}) != 1:
-        log("Windowed mode needs all files in one folder; falling back to full inversion.")
-        use_windowed = False
 
     if use_windowed:
         window_size = int(p["window_size"])
-        data_dir = os.path.dirname(files[0])
-        ert_files = [os.path.basename(f) for f in files]
         log(f"Running windowed {p['inversion_type']} time-lapse inversion: {len(files)} steps, "
             f"window={window_size}, lambda={p['lambda_val']}, alpha={p['alpha']}")
         inversion = WindowedTimeLapseERTInversion(
-            data_dir=data_dir, ert_files=ert_files, measurement_times=times,
+            data_dir=clean_dir, ert_files=basenames, measurement_times=times,
             window_size=window_size, mesh=mesh, **inv_kwargs)
         result = inversion.run(window_parallel=False)
         mode = "windowed"
@@ -146,6 +202,11 @@ def run_timelapse_ert(
     figure_paths: List[str] = []
     data_paths: List[str] = []
 
+    # Per-step titles: a parsed date is shown as-is (already unambiguous); a plain
+    # sequence reads "Time step N"; any other numeric time reads "t = <value>" so
+    # the panel always says what the number means.
+    panel_titles = _step_titles(labels, times, n_time)
+
     # Resistivity-evolution panel.
     finite = final_models[np.isfinite(final_models)]
     cmin = float(np.percentile(finite, 5)) if finite.size else 1.0
@@ -165,8 +226,10 @@ def run_timelapse_ert(
             show_kw.pop("coverage", None)
             ax.clear()
             pg.show(res_mesh, final_models[:, i], **show_kw)
-        ax.set_title(f"t = {times[i]:g}")
-    fig.tight_layout()
+        ax.set_title(panel_titles[i])
+    span = f": {labels[0]} → {labels[-1]}" if n_time and any("-" in str(l) for l in labels) else ""
+    fig.suptitle(f"Time-lapse resistivity ({mode}, {n_time} time steps){span}", y=1.0)
+    fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.97))
     panel = out / "timelapse_resistivity.png"
     fig.savefig(panel, dpi=160, bbox_inches="tight"); plt.close(fig)
     figure_paths.append(str(panel))
@@ -175,22 +238,43 @@ def run_timelapse_ert(
     np.save(out / "final_models.npy", final_models); data_paths.append(str(out / "final_models.npy"))
     if coverage is not None:
         np.save(out / "all_coverage.npy", coverage); data_paths.append(str(out / "all_coverage.npy"))
-    io_utils.write_csv(out / "measurement_times.csv", [(i, float(t)) for i, t in enumerate(times)],
-                       header=["index", "time"])
+    io_utils.write_csv(
+        out / "measurement_times.csv",
+        [(i, float(times[i]), labels[i] if i < len(labels) else "",
+          Path(source_files[i]).name if i < len(source_files) else "") for i in range(n_time)],
+        header=["index", "time", "label", "source_file"])
     data_paths.append(str(out / "measurement_times.csv"))
     try:
         res_mesh.save(str(out / "timelapse_mesh.bms")); data_paths.append(str(out / "timelapse_mesh.bms"))
     except Exception as exc:  # noqa: BLE001
         log(f"Mesh export skipped: {exc}")
+    # Per-step VTKs (one resistivity field each) — a clean ParaView time series.
+    vtk_step_paths: List[str] = []
+    try:
+        steps_dir = io_utils.ensure_dir(out / "vtk_steps")
+        for i in range(n_time):
+            step_mesh = pg.Mesh(res_mesh)  # copy before the combined fields are added
+            step_mesh["resistivity"] = final_models[:, i]
+            if coverage is not None and coverage.shape[0] > i:
+                step_mesh["coverage"] = np.asarray(coverage[i], dtype=float)
+            lbl = _safe_label(labels[i]) if i < len(labels) else f"{i:03d}"
+            sp = steps_dir / f"resistivity_t{i:03d}_{lbl}.vtk"
+            step_mesh.exportVTK(str(sp))
+            vtk_step_paths.append(str(sp)); data_paths.append(str(sp))
+    except Exception as exc:  # noqa: BLE001
+        log(f"Per-step VTK export skipped: {exc}")
+    # Combined VTK: every time step as a separate field on one mesh.
+    vtk_combined = ""
     try:
         for i in range(n_time):
             res_mesh[f"resistivity_t{i}"] = final_models[:, i]
         vtk = out / "timelapse_resistivity.vtk"
         res_mesh.exportVTK(str(vtk)); data_paths.append(str(vtk))
+        vtk_combined = str(vtk)
     except Exception as exc:  # noqa: BLE001
         log(f"VTK export skipped: {exc}")
 
-    config = build_timelapse_config(files, times, p)
+    config = build_timelapse_config(source_files, times, p)
     io_utils.write_json(out / "timelapse_config.json", config)
 
     return {
@@ -200,9 +284,16 @@ def run_timelapse_ert(
         "n_times": int(n_time),
         "mesh_cells": int(res_mesh.cellCount()),
         "inversion_type": str(p["inversion_type"]),
+        "instrument": instrument,
+        "save_memory": bool(save_memory),
+        "measurement_times": [float(t) for t in times],
+        "time_labels": list(labels),
         "resistivity_range": [cmin, cmax],
         "figure_paths": figure_paths,
         "data_paths": data_paths,
+        "vtk_combined": vtk_combined,
+        "vtk_step_paths": vtk_step_paths,
+        "normalized_dir": clean_dir,
         "config_path": str(out / "timelapse_config.json"),
         "output_dir": str(out),
     }

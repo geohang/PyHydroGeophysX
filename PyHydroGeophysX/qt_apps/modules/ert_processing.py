@@ -12,12 +12,13 @@ device-specific files and ``pygimli.physics.ert.load`` for auto-detection.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pyqtgraph as pg
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
@@ -27,6 +28,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
+    QListWidget,
+    QListWidgetItem,
     QMenu,
     QProgressBar,
     QPushButton,
@@ -37,7 +40,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from PyHydroGeophysX.qt_apps import io_utils, theme
+from PyHydroGeophysX.qt_apps import ert_load, io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
@@ -163,8 +166,11 @@ class ERTProcessingModule(BaseModule):
         self._inv_worker: Optional[ERTInversionWorker] = None
         self._load_worker: Optional[TaskWorker] = None
         self._tl_files: List[str] = []
+        self._tl_labels: List[str] = []
+        self._tl_times: List[float] = []
         self._tl_worker: Optional[TimeLapseWorker] = None
         self._tl_out: Optional[str] = None
+        self._tl_result: Optional[dict] = None
         self._cmap = pg.colormap.get("viridis")
 
         root = QHBoxLayout(self)
@@ -204,7 +210,12 @@ class ERTProcessingModule(BaseModule):
     def _build_controls(self) -> QWidget:
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setMaximumWidth(320)
+        # Wide enough that the time-lapse list, button row, and long labels fit
+        # without a horizontal scrollbar (vertical scrolling only). The minimum
+        # covers the widest group + the vertical scrollbar gutter so nothing clips.
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setMinimumWidth(450)
+        scroll.setMaximumWidth(500)
         panel = QWidget()
         scroll.setWidget(panel)
         layout = QVBoxLayout(panel)
@@ -214,6 +225,10 @@ class ERTProcessingModule(BaseModule):
         self._instrument = QComboBox()
         for label, value in _INSTRUMENTS:
             self._instrument.addItem(label, value)
+        # Don't let the longest item ("BERT / Unified (.ohm/.dat)") force the whole
+        # control panel wide; elide in the closed box (full text in the dropdown).
+        self._instrument.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self._instrument.setMinimumContentsLength(16)
         lform.addRow("Instrument / format", self._instrument)
         self._spacing = QDoubleSpinBox()
         self._spacing.setRange(0.0, 1000.0)
@@ -274,12 +289,41 @@ class ERTProcessingModule(BaseModule):
         iform.addRow(self._inv_progress)
         layout.addWidget(inv)
 
-        tl = QGroupBox("Time-lapse inversion")
+        tl = QGroupBox("Time-lapse inversion (upload many ERT files)")
         tlform = QFormLayout(tl)
-        add_btn = QPushButton("Add ERT data files (time sequence)…")
+        tl_hint = QLabel("Upload one ERT file per time step — like shots in the Seismic "
+                         "module. Files load with the <b>Instrument / format</b> above; "
+                         "click a row to preview it. Order top→bottom = time order.")
+        tl_hint.setWordWrap(True)
+        tlform.addRow(tl_hint)
+
+        self._tl_list = QListWidget()
+        self._tl_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self._tl_list.setMaximumHeight(160)
+        self._tl_list.setToolTip("Ordered ERT time sequence. Select a row to preview its "
+                                 "electrodes + pseudosection.")
+        self._tl_list.itemSelectionChanged.connect(self._on_tl_selection_changed)
+        self._tl_list.itemClicked.connect(self._preview_tl_item)
+        tlform.addRow(self._tl_list)
+
+        tl_btns = QHBoxLayout()
+        add_btn = QPushButton("Add files…")
         add_btn.setIcon(theme.icon("fa5s.layer-group"))
         add_btn.clicked.connect(self._add_tl_files)
-        tlform.addRow(add_btn)
+        rm_btn = QPushButton("Remove")
+        rm_btn.setIcon(theme.icon("fa5s.minus"))
+        rm_btn.clicked.connect(self._remove_tl_files)
+        up_btn = QPushButton("↑"); up_btn.setToolTip("Move selected up"); up_btn.setMaximumWidth(34)
+        up_btn.clicked.connect(lambda: self._move_tl_files(-1))
+        down_btn = QPushButton("↓"); down_btn.setToolTip("Move selected down"); down_btn.setMaximumWidth(34)
+        down_btn.clicked.connect(lambda: self._move_tl_files(1))
+        clr_btn = QPushButton("Clear")
+        clr_btn.setIcon(theme.icon("fa5s.trash"))
+        clr_btn.clicked.connect(self._clear_tl_files)
+        for b in (add_btn, rm_btn, up_btn, down_btn, clr_btn):
+            tl_btns.addWidget(b)
+        tlform.addRow(tl_btns)
+
         self._tl_info = QLabel("No files added."); self._tl_info.setWordWrap(True)
         tlform.addRow(self._tl_info)
         self._tl_lambda = QDoubleSpinBox(); self._tl_lambda.setRange(1.0, 1000.0); self._tl_lambda.setValue(50.0)
@@ -297,14 +341,19 @@ class ERTProcessingModule(BaseModule):
         tlform.addRow("Max iterations", self._tl_iter)
         tlform.addRow("Relative error", self._tl_relerr)
         tlform.addRow("Mesh quality", self._tl_quality)
-        self._tl_windowed = QCheckBox("Windowed (sliding window for long series)")
-        self._tl_windowed.setToolTip("Process consecutive time steps in overlapping windows — "
+        self._tl_windowed = QCheckBox("Windowed (sliding window)")
+        self._tl_windowed.setToolTip("Process consecutive time steps in overlapping windows: "
                                      "cheaper and lower-memory for long monitoring sequences.")
         self._tl_window = QSpinBox(); self._tl_window.setRange(2, 50); self._tl_window.setValue(3)
         self._tl_window.setEnabled(False)
         self._tl_windowed.toggled.connect(self._tl_window.setEnabled)
         tlform.addRow(self._tl_windowed)
         tlform.addRow("Window size", self._tl_window)
+        self._tl_lowmem = QCheckBox("Low memory (sparse)")
+        self._tl_lowmem.setToolTip("Use single-precision sparse operators to cut RAM "
+                                   "(for many files / large meshes). Auto-enabled for "
+                                   "large problems; check to force it on.")
+        tlform.addRow(self._tl_lowmem)
         self._tl_btn = QPushButton("Run time-lapse inversion")
         self._tl_btn.setProperty("primary", True)
         self._tl_btn.setIcon(theme.icon("fa5s.history", color="#ffffff"))
@@ -312,6 +361,13 @@ class ERTProcessingModule(BaseModule):
         tlform.addRow(self._tl_btn)
         self._tl_progress = QProgressBar(); self._tl_progress.setVisible(False)
         tlform.addRow(self._tl_progress)
+        self._tl_export_btn = QPushButton("Export results (VTK + npy + mesh)…")
+        self._tl_export_btn.setIcon(theme.icon("fa5s.cube"))
+        self._tl_export_btn.setToolTip("Save the time-lapse models to a folder you pick: a combined VTK, "
+                                       "per-step VTKs, final_models.npy, the mesh (.bms), times CSV, and the figure.")
+        self._tl_export_btn.setEnabled(False)
+        self._tl_export_btn.clicked.connect(self._export_tl_results)
+        tlform.addRow(self._tl_export_btn)
         self._tl_open = QPushButton("Open output folder")
         self._tl_open.setIcon(theme.icon("fa5s.folder-open"))
         self._tl_open.setEnabled(False)
@@ -348,8 +404,9 @@ class ERTProcessingModule(BaseModule):
         exp_g = QPushButton("Export survey geometry JSON…")
         exp_g.setIcon(theme.icon("fa5s.file-export"))
         exp_g.clicked.connect(self._export_geometry)
-        self._model_export_btn = QPushButton("Export resistivity model (npy + mesh + VTK)…")
+        self._model_export_btn = QPushButton("Export resistivity model…")
         self._model_export_btn.setIcon(theme.icon("fa5s.cube"))
+        self._model_export_btn.setToolTip("Export the inverted model as npy + pygimli mesh (.bms) + VTK.")
         self._model_export_btn.setEnabled(False)
         self._model_export_btn.clicked.connect(self._export_resistivity_model)
         ebox.addWidget(exp_e)
@@ -365,6 +422,11 @@ class ERTProcessingModule(BaseModule):
         path, _ = QFileDialog.getOpenFileName(self, "Load ERT data", "", _DATA_FILTER)
         if not path:
             return
+        self._start_load(path)
+
+    def _start_load(self, path: str) -> None:
+        """Load one ERT file (off the UI thread) into the electrode + pseudosection
+        view. Shared by the file dialog and the time-lapse preview."""
         instrument = self._instrument.currentData()
         # Capture widget/state values on the UI thread; the parse runs off-thread.
         out_dir = self.state.output_dir or Path.cwd()
@@ -479,59 +541,11 @@ class ERTProcessingModule(BaseModule):
                     pseudo.append((float(np.mean(xs)), max(span * 0.19, 0.01), float(obs.app_res)))
         return elec, pseudo, len(std.observations or []), data
 
-    @staticmethod
-    def _electrode_elevation(electrodes) -> np.ndarray:
-        """Per-electrode elevation. ``load_ert_resipy`` carries 2D elevation in
-        ``y`` (see ``_normalize_elevation_axis``); fall back to ``z`` if ``y`` is
-        flat. Returns an array aligned with ``electrodes``."""
-        if not electrodes:
-            return np.zeros(0)
-        ys = np.array([float(e.y) for e in electrodes])
-        zs = np.array([float(e.z) for e in electrodes])
-        return ys if ys.std() >= zs.std() else zs
-
-    @staticmethod
-    def _standard_to_pg(std):
-        """Build a pygimli DataContainerERT from a StandardERT for inversion."""
-        try:
-            import pygimli as pg
-            from pygimli.physics import ert as pg_ert
-        except Exception:  # noqa: BLE001
-            return None
-        data = pg.DataContainerERT()
-        id_to_idx = {}
-        elecs = std.electrodes or []
-        elev = ERTProcessingModule._electrode_elevation(elecs)
-        for i, e in enumerate(elecs):
-            data.createSensor(pg.Pos(float(e.x), 0.0, float(elev[i])))
-            id_to_idx[int(e.id)] = i
-        keys = ("A", "B", "M", "N")
-        valid = [
-            o for o in (std.observations or [])
-            if o.app_res is not None and all(int(getattr(o.quad, k)) in id_to_idx for k in keys)
-        ]
-        if not valid:
-            return None
-        data.resize(len(valid))
-        for name, qk in zip(("a", "b", "m", "n"), keys):
-            data.set(name, [id_to_idx[int(getattr(o.quad, qk))] for o in valid])
-        vals = np.array([float(o.app_res) for o in valid], dtype=float)
-        data.set("r", vals)
-        data.set("err", [float(o.rel_err) if o.rel_err else 0.05 for o in valid])
-        # Most instrument loaders report transfer resistance (V/I), not apparent
-        # resistivity, so convert with geometric factors: rhoa = R * k. When the
-        # source already provides apparent resistivity, use it as-is. pygimli's
-        # forward operator uses the same data["k"], so the inversion is consistent.
-        try:
-            data["k"] = pg_ert.createGeometricFactors(data, numerical=False)
-            k = np.asarray(data["k"], dtype=float)
-        except Exception:  # noqa: BLE001
-            k = np.ones(len(valid))
-        source = str((std.metadata or {}).get("app_res_source", "")).lower()
-        rhoa = vals * k if source == "resistance" else vals
-        data.set("rhoa", rhoa)
-        data.markValid(data("rhoa") > 0)
-        return data
+    # Geometry/topography + StandardERT->pygimli conversion live in the shared
+    # ``ert_load`` module so the single-inversion loader and the time-lapse
+    # pipeline behave identically. Kept as thin static wrappers for callers here.
+    _electrode_elevation = staticmethod(ert_load.electrode_elevation)
+    _standard_to_pg = staticmethod(ert_load.standard_to_pg)
 
     @staticmethod
     def _build_pseudo_from_indices(x, a, b, m, n, rhoa) -> List[Tuple[float, float, float]]:
@@ -659,33 +673,115 @@ class ERTProcessingModule(BaseModule):
         self._inv_progress.setVisible(False)
 
     # -- time-lapse inversion ------------------------------------------------
+    def _set_tl_files(self, paths: List[str]) -> None:
+        """Replace the ordered time-lapse file set and refresh the list + times."""
+        self._tl_files = [str(p) for p in paths]
+        self._tl_times, self._tl_labels = ert_load.measurement_times_for(self._tl_files)
+        self._refresh_tl_list()
+
+    def _refresh_tl_list(self) -> None:
+        self._tl_list.blockSignals(True)
+        self._tl_list.clear()
+        for i, path in enumerate(self._tl_files):
+            label = self._tl_labels[i] if i < len(self._tl_labels) else str(i + 1)
+            item = QListWidgetItem(f"{i + 1}.  {label}    ·    {Path(path).name}")
+            item.setData(Qt.UserRole, path)
+            item.setToolTip(path)
+            self._tl_list.addItem(item)
+        self._tl_list.blockSignals(False)
+        n = len(self._tl_files)
+        if n == 0:
+            self._tl_info.setText("No files added.")
+        else:
+            dated = any(lbl and not lbl.isdigit() for lbl in self._tl_labels)
+            span = f"{self._tl_labels[0]} → {self._tl_labels[-1]}" if dated else f"{n} steps"
+            self._tl_info.setText(f"<b>{n}</b> time step{'s' if n != 1 else ''} ({span}). "
+                                  f"Instrument: {self._instrument.currentText()}.")
+
     def _add_tl_files(self) -> None:
         paths, _ = QFileDialog.getOpenFileNames(
-            self, "Select ERT data files (time sequence, ordered)", "", _DATA_FILTER)
+            self, "Add ERT data files (one per time step)", "", _DATA_FILTER)
         if not paths:
             return
-        self._tl_files = list(paths)
-        self._tl_info.setText(
-            f"{len(self._tl_files)} files: {Path(self._tl_files[0]).name} … "
-            f"{Path(self._tl_files[-1]).name}")
-        self.log(f"Added {len(self._tl_files)} ERT files for time-lapse inversion.", "info")
+        # Append new files, preserving order and dropping duplicates.
+        merged = list(self._tl_files)
+        added = 0
+        for p in paths:
+            if p not in merged:
+                merged.append(p); added += 1
+        self._set_tl_files(merged)
+        self.log(f"Added {added} ERT file(s); {len(self._tl_files)} total for time-lapse.", "info")
+
+    def _selected_tl_rows(self) -> List[int]:
+        return sorted(self._tl_list.row(it) for it in self._tl_list.selectedItems())
+
+    def _remove_tl_files(self) -> None:
+        rows = set(self._selected_tl_rows())
+        if not rows:
+            self.log("Select one or more files in the list to remove.", "warn")
+            return
+        self._set_tl_files([p for i, p in enumerate(self._tl_files) if i not in rows])
+        self.log(f"Removed {len(rows)} file(s); {len(self._tl_files)} remain.", "info")
+
+    def _move_tl_files(self, delta: int) -> None:
+        rows = self._selected_tl_rows()
+        if not rows:
+            return
+        order = list(range(len(self._tl_files)))
+        seq = rows if delta < 0 else list(reversed(rows))
+        for r in seq:
+            j = r + delta
+            if 0 <= j < len(order):
+                order[r], order[j] = order[j], order[r]
+        self._tl_files = [self._tl_files[i] for i in order]
+        self._tl_times, self._tl_labels = ert_load.measurement_times_for(self._tl_files)
+        moved = {order.index(i) for i in rows}
+        self._refresh_tl_list()
+        for r in moved:
+            self._tl_list.item(r).setSelected(True)
+
+    def _clear_tl_files(self) -> None:
+        self._set_tl_files([])
+        self.log("Cleared time-lapse file list.", "info")
+
+    def _on_tl_selection_changed(self) -> None:
+        rows = self._selected_tl_rows()
+        if len(rows) > 1:
+            self._tl_info.setText(f"{len(rows)} files selected — Remove / Move ↑ ↓, "
+                                  f"or click one to preview.")
+
+    def _preview_tl_item(self, item: QListWidgetItem) -> None:
+        path = item.data(Qt.UserRole)
+        if path and Path(str(path)).exists():
+            self.log(f"Preview: loading {Path(str(path)).name} …", "info")
+            self._start_load(str(path))
+
+    def _preview_selected_tl(self) -> None:
+        items = self._tl_list.selectedItems()
+        if items:
+            self._preview_tl_item(items[0])
 
     def _run_timelapse(self) -> None:
         if len(self._tl_files) < 2:
             self.log("Add at least two ordered ERT data files (a time sequence).", "warn")
             return
         out_dir = str(self.state.output_dir or Path.cwd())
+        instrument = self._instrument.currentData()
         params = {
             "lambda_val": self._tl_lambda.value(), "alpha": self._tl_alpha.value(),
             "inversion_type": self._tl_type.currentText(), "max_iterations": self._tl_iter.value(),
             "relativeError": self._tl_relerr.value(), "mesh_quality": self._tl_quality.value(),
             "windowed": self._tl_windowed.isChecked(), "window_size": self._tl_window.value(),
+            "instrument": instrument,
         }
+        if self._tl_lowmem.isChecked():
+            params["save_memory"] = True
+        times = self._tl_times if len(self._tl_times) == len(self._tl_files) else None
         self._tl_btn.setEnabled(False); self._tl_btn.setText("Inverting…")
         self._tl_progress.setVisible(True); self._tl_progress.setRange(0, 0)
         self.log(f"Starting {params['inversion_type']} time-lapse ERT inversion "
                  f"({len(self._tl_files)} steps)…", "info")
-        self._tl_worker = TimeLapseWorker(self._tl_files, None, params, out_dir)
+        self._tl_worker = TimeLapseWorker(self._tl_files, times, params, out_dir)
         self._tl_worker.logged.connect(lambda m: self.log(m, "info"))
         self._tl_worker.succeeded.connect(self._on_tl_ok)
         self._tl_worker.failed.connect(self._on_tl_failed)
@@ -694,14 +790,20 @@ class ERTProcessingModule(BaseModule):
         self._tl_worker.start()
 
     def _on_tl_ok(self, result: dict) -> None:
+        self._tl_result = result
         self._tl_out = result.get("output_dir")
         self._tl_open.setEnabled(bool(self._tl_out))
+        self._tl_export_btn.setEnabled(True)
         figs = result.get("figure_paths", [])
         if figs and Path(figs[0]).exists():
             self._tl_view.set_image_file(figs[0])
             self._tabs.setCurrentWidget(self._tl_view)
-        self.log(f"Time-lapse inversion complete: {result.get('n_times')} steps, "
-                 f"{result.get('mesh_cells')} cells.", "success")
+        lowmem = " · low-memory" if result.get("save_memory") else ""
+        n_vtk = len(result.get("vtk_step_paths") or [])
+        self.log(f"Time-lapse inversion complete ({result.get('mode')}{lowmem}): "
+                 f"{result.get('n_times')} steps, {result.get('mesh_cells')} cells. "
+                 f"Saved VTK (combined + {n_vtk} per-step), npy, mesh. "
+                 f"Use “Export results…” to save them to a folder you pick.", "success")
         self.report_result(result)
 
     def _on_tl_failed(self, message: str, backend: bool) -> None:
@@ -711,6 +813,52 @@ class ERTProcessingModule(BaseModule):
     def _reset_tl_button(self) -> None:
         self._tl_btn.setEnabled(True); self._tl_btn.setText("Run time-lapse inversion")
         self._tl_progress.setVisible(False)
+
+    def _tl_result_files(self) -> List[str]:
+        """All result files worth exporting (figure + data + config), de-duplicated."""
+        res = self._tl_result or {}
+        files: List[str] = []
+        for key in ("figure_paths", "data_paths"):
+            files.extend(res.get(key) or [])
+        if res.get("config_path"):
+            files.append(res["config_path"])
+        seen, unique = set(), []
+        for f in files:
+            if f and f not in seen and Path(f).exists():
+                seen.add(f); unique.append(f)
+        return unique
+
+    def _export_tl_results(self, folder: Optional[str] = None) -> Optional[str]:
+        """Copy the time-lapse result files (VTK, npy, mesh, CSV, figure) to a folder."""
+        if not self._tl_result:
+            self.log("Run the time-lapse inversion first.", "warn")
+            return None
+        files = self._tl_result_files()
+        if not files:
+            self.log("No time-lapse result files found to export.", "warn")
+            return None
+        if not folder:
+            folder = QFileDialog.getExistingDirectory(
+                self, "Export time-lapse results to folder", str(self.state.output_dir or Path.cwd()))
+            if not folder:
+                return None
+        import shutil
+        src_root = Path(self._tl_result.get("output_dir") or "")
+        dest = io_utils.ensure_dir(Path(folder))
+        copied = 0
+        for f in files:
+            try:
+                src = Path(f)
+                # Preserve the vtk_steps/ subfolder so per-step VTKs stay grouped.
+                rel = src.relative_to(src_root) if src_root and src_root in src.parents else Path(src.name)
+                target = dest / rel
+                io_utils.ensure_dir(target.parent)
+                shutil.copy2(str(src), str(target))
+                copied += 1
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Could not copy {Path(f).name}: {exc}", "warn")
+        self.log(f"Exported {copied} time-lapse result file(s) to {dest}", "success")
+        return str(dest)
 
     def _open_tl_output(self) -> None:
         out = self._tl_out or str(self.state.output_dir or "")
@@ -920,13 +1068,24 @@ class ERTProcessingModule(BaseModule):
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
                  "desc": ("Set parameters. Keys: lambda, scheme (wa/dd/slm/dp), fallback_spacing, "
                           "tl_lambda, tl_alpha, tl_norm (L2/L1/L1L2), tl_iterations, tl_relative_error, "
-                          "tl_mesh_quality, tl_windowed, tl_window_size.")},
+                          "tl_mesh_quality, tl_windowed, tl_window_size, tl_low_memory.")},
                 {"name": "run_inversion", "args": {},
                  "desc": "Run a single-time ERT inversion on the loaded data."},
-                {"name": "add_timelapse_files", "args": {"paths": ["str", "str"]},
-                 "desc": "Set the ordered list of ERT files for time-lapse inversion."},
+                {"name": "add_timelapse_files", "args": {"paths": ["str", "str"], "append": "bool (optional)"},
+                 "desc": ("Add ERT files for time-lapse inversion (one file per time step, like seismic "
+                          "shots). append=true adds to the current list; otherwise replaces it. Files load "
+                          "with the selected instrument; times are parsed from filenames when dated.")},
+                {"name": "list_timelapse_files", "args": {},
+                 "desc": "List the ordered time-lapse files with their parsed time labels."},
+                {"name": "remove_timelapse_files", "args": {"indices": ["int"]},
+                 "desc": "Remove time-lapse files by 0-based index (or omit to clear all)."},
+                {"name": "preview_timelapse_file", "args": {"index": "int"},
+                 "desc": "Load one time-lapse file (0-based index) into the electrode + pseudosection view."},
                 {"name": "run_timelapse", "args": {},
                  "desc": "Run time-lapse ERT inversion (needs >=2 files)."},
+                {"name": "export_timelapse", "args": {"folder": "str"},
+                 "desc": ("Export the last time-lapse result to a folder: combined VTK, per-step VTKs, "
+                          "final_models.npy, mesh (.bms), times CSV, and the figure.")},
                 {"name": "get_status", "args": {},
                  "desc": "Report loaded data, electrode/measurement counts, and last result."},
             ],
@@ -940,8 +1099,13 @@ class ERTProcessingModule(BaseModule):
             "apply_filter": lambda: self._agent_apply_filter(args),
             "set_params": lambda: self._agent_set_params(args.get("params", args)),
             "run_inversion": lambda: self._agent_run_inversion(),
-            "add_timelapse_files": lambda: self._agent_add_timelapse_files(args.get("paths")),
+            "add_timelapse_files": lambda: self._agent_add_timelapse_files(
+                args.get("paths"), args.get("append", False)),
+            "list_timelapse_files": lambda: self._agent_list_timelapse(),
+            "remove_timelapse_files": lambda: self._agent_remove_timelapse(args.get("indices")),
+            "preview_timelapse_file": lambda: self._agent_preview_timelapse(args.get("index")),
             "run_timelapse": lambda: self._agent_run_timelapse(),
+            "export_timelapse": lambda: self._agent_export_timelapse(args.get("folder")),
             "get_status": lambda: self._agent_status(),
         }
         handler = handlers.get(action)
@@ -960,6 +1124,8 @@ class ERTProcessingModule(BaseModule):
             "instrument": self._instrument.currentText(),
             "data_file": str(self._data_path or ""),
             "timelapse_files": len(self._tl_files),
+            "timelapse_labels": list(self._tl_labels),
+            "timelapse_low_memory": self._tl_lowmem.isChecked(),
             "lambda": self._lam.value(),
             "has_model": getattr(self, "_inv_mgr", None) is not None,
             "last_result_keys": sorted(last.keys()),
@@ -1052,6 +1218,7 @@ class ERTProcessingModule(BaseModule):
             "tl_mesh_quality": lambda v: self._tl_quality.setValue(float(v)),
             "tl_windowed": lambda v: self._tl_windowed.setChecked(bool(v)),
             "tl_window_size": lambda v: self._tl_window.setValue(int(v)),
+            "tl_low_memory": lambda v: self._tl_lowmem.setChecked(bool(v)),
         }
         applied: Dict[str, Any] = {}
         ignored: Dict[str, str] = {}
@@ -1074,17 +1241,51 @@ class ERTProcessingModule(BaseModule):
         return {"status": "started", "message": "ERT inversion started. Ask for status shortly.",
                 "lambda": self._lam.value()}
 
-    def _agent_add_timelapse_files(self, paths: Any) -> Dict[str, Any]:
+    def _agent_add_timelapse_files(self, paths: Any, append: Any = False) -> Dict[str, Any]:
         if not isinstance(paths, list) or not paths:
             return {"status": "failed", "error": "Provide 'paths' as a non-empty list of files."}
         missing = [str(p) for p in paths if not Path(str(p)).exists()]
         if missing:
             return {"status": "failed", "error": f"Files not found: {missing}"}
-        self._tl_files = [str(p) for p in paths]
-        self._tl_info.setText(
-            f"{len(self._tl_files)} files: {Path(self._tl_files[0]).name} … "
-            f"{Path(self._tl_files[-1]).name}")
+        merged = list(self._tl_files) if append else []
+        for p in paths:
+            if str(p) not in merged:
+                merged.append(str(p))
+        self._set_tl_files(merged)
+        return {"status": "ok", "files": len(self._tl_files),
+                "time_labels": list(self._tl_labels)}
+
+    def _agent_list_timelapse(self) -> Dict[str, Any]:
+        return {
+            "status": "ok",
+            "count": len(self._tl_files),
+            "files": [{"index": i, "label": self._tl_labels[i] if i < len(self._tl_labels) else str(i + 1),
+                       "time": self._tl_times[i] if i < len(self._tl_times) else float(i + 1),
+                       "name": Path(p).name, "path": p}
+                      for i, p in enumerate(self._tl_files)],
+        }
+
+    def _agent_remove_timelapse(self, indices: Any) -> Dict[str, Any]:
+        if indices is None:
+            self._set_tl_files([])
+            return {"status": "ok", "files": 0, "message": "Cleared all time-lapse files."}
+        try:
+            drop = {int(i) for i in indices}
+        except (TypeError, ValueError):
+            return {"status": "failed", "error": "Provide 'indices' as a list of integers."}
+        self._set_tl_files([p for i, p in enumerate(self._tl_files) if i not in drop])
         return {"status": "ok", "files": len(self._tl_files)}
+
+    def _agent_preview_timelapse(self, index: Any) -> Dict[str, Any]:
+        try:
+            i = int(index)
+        except (TypeError, ValueError):
+            return {"status": "failed", "error": "Provide 'index' as an integer (0-based)."}
+        if not (0 <= i < len(self._tl_files)):
+            return {"status": "failed", "error": f"index out of range (0..{len(self._tl_files) - 1})."}
+        self._start_load(self._tl_files[i])
+        return {"status": "started", "message": f"Loading time step {i} for preview.",
+                "name": Path(self._tl_files[i]).name}
 
     def _agent_run_timelapse(self) -> Dict[str, Any]:
         if len(self._tl_files) < 2:
@@ -1093,3 +1294,15 @@ class ERTProcessingModule(BaseModule):
         self._run_timelapse()
         return {"status": "started", "message": "Time-lapse inversion started. Ask for status shortly.",
                 "steps": len(self._tl_files)}
+
+    def _agent_export_timelapse(self, folder: Any) -> Dict[str, Any]:
+        if not self._tl_result:
+            return {"status": "failed", "error": "Run the time-lapse inversion first."}
+        if not folder:
+            return {"status": "failed", "error": "Provide 'folder' to export the results into."}
+        dest = self._export_tl_results(str(folder))
+        if not dest:
+            return {"status": "failed", "error": "Export failed (no result files found)."}
+        return {"status": "ok", "folder": dest, "files": len(self._tl_result_files()),
+                "vtk_combined": (self._tl_result or {}).get("vtk_combined", ""),
+                "vtk_steps": len((self._tl_result or {}).get("vtk_step_paths") or [])}

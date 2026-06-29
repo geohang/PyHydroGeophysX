@@ -152,7 +152,7 @@ class SeismicProcessingModule(BaseModule):
         self._tt_widget = pg.PlotWidget()
         self._tt_widget.setBackground("w")
         self._tt_widget.showGrid(x=True, y=True, alpha=0.3)
-        self._tt_widget.setLabel("bottom", "offset = geophone − shot (m)")
+        self._tt_widget.setLabel("bottom", "geophone position x (m)")
         self._tt_widget.setLabel("left", "travel time (ms)")
         self._tt_plot = self._tt_widget.getPlotItem()
         self._tt_plot.addLegend()
@@ -317,7 +317,10 @@ class SeismicProcessingModule(BaseModule):
         layout.addStretch(1)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setMaximumWidth(326)
+        # Wide enough to fit the controls without a horizontal scrollbar.
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setMinimumWidth(450)
+        scroll.setMaximumWidth(500)
         scroll.setWidget(panel)
         return scroll
 
@@ -769,17 +772,24 @@ class SeismicProcessingModule(BaseModule):
             return
         from collections import defaultdict
 
+        # PyGIMLi-style first-pick plot: travel time vs ABSOLUTE geophone position,
+        # one connected branch per shot, each shot marked with a star at t = 0.
         by_shot = defaultdict(list)
+        shot_x: Dict[int, float] = {}
         for p in picks:
-            by_shot[int(p.source_id)].append((float(p.receiver_x - p.source_x), float(p.time_s) * 1000.0))
+            by_shot[int(p.source_id)].append((float(p.receiver_x), float(p.time_s) * 1000.0))
+            shot_x[int(p.source_id)] = float(p.source_x)
         colors = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#8c564b", "#e377c2"]
-        for i, shot in enumerate(sorted(by_shot)):
-            pts = sorted(by_shot[shot])
+        for i, shot in enumerate(sorted(by_shot, key=lambda s: shot_x.get(s, 0.0))):
+            pts = sorted(by_shot[shot])  # by geophone position
             xs = [a for a, _ in pts]
             ys = [b for _, b in pts]
             color = colors[i % len(colors)]
             self._tt_plot.plot(xs, ys, pen=pg.mkPen(color, width=1.5), symbol="o", symbolSize=5,
-                               symbolBrush=color, symbolPen=None, name=f"shot {shot}")
+                               symbolBrush=color, symbolPen=None, name=f"shot @ {shot_x.get(shot, 0.0):.0f} m")
+            # shot location on the t = 0 baseline (like pygimli drawFirstPicks)
+            self._tt_plot.plot([shot_x.get(shot, 0.0)], [0.0], pen=None, symbol="star",
+                               symbolSize=15, symbolBrush=color, symbolPen=pg.mkPen("#222", width=0.8))
 
     # -- export --------------------------------------------------------------
     def _ordered_picks(self) -> list:
@@ -956,6 +966,11 @@ class SeismicProcessingModule(BaseModule):
                           "clip_percentile, agc_window_ms, flip_polarity, normalize, agc.")},
                 {"name": "auto_pick", "args": {},
                  "desc": "Auto-pick first breaks on the current record (STA/LTA)."},
+                {"name": "pick_next_shot", "args": {},
+                 "desc": ("FAST per-shot step: advance to the next shot record that still needs picking, "
+                          "auto-pick it, and pause for review (returns 'awaiting_user' with records_remaining "
+                          "and next_record). ONE call replaces select_record + auto_pick + review_picks — "
+                          "prefer it to step through shots; use the individual actions only for manual re-picking.")},
                 {"name": "review_picks", "args": {},
                  "desc": ("Pause for the user to review/correct first-break picks: turns on Manual pick mode, "
                           "flags suspect traces, and returns status 'awaiting_user'. ALWAYS call this after "
@@ -985,6 +1000,7 @@ class SeismicProcessingModule(BaseModule):
             "load_geometry": lambda: self._agent_load_geometry(args.get("path")),
             "set_params": lambda: self._agent_set_params(args.get("params", args)),
             "auto_pick": lambda: self._agent_auto_pick(),
+            "pick_next_shot": lambda: self._agent_pick_next_shot(),
             "review_picks": lambda: self._agent_review_picks(),
             "set_pick": lambda: self._agent_set_pick(args),
             "delete_pick": lambda: self._agent_delete_pick(args),
@@ -1145,6 +1161,27 @@ class SeismicProcessingModule(BaseModule):
         self._clear_picks_and_publish()
         return {"status": "ok", "picks": 0}
 
+    def _agent_pick_next_shot(self) -> Dict[str, Any]:
+        """Fast loop step: select the next un-picked shot, auto-pick it, pause for review.
+        Collapses select_record + auto_pick + review_picks into one tool call so the
+        per-shot loop costs one LLM round-trip and one approval instead of three."""
+        if self._raw is None:
+            return {"status": "failed", "error": "Load data first."}
+        all_records = self._agent_records()
+        if not all_records:  # single matrix, no shot records
+            self._auto_pick()
+            return self._agent_review_picks()
+        self._save_current_picks()
+        picked = [r for r in all_records if self._all_picks.get(r)]
+        remaining = [r for r in all_records if r not in picked]
+        if not remaining:
+            return {"status": "ok", "records_remaining": [],
+                    "message": "All shots are already picked — call run_srt to invert."}
+        target = remaining[0]
+        self._shot_combo.setCurrentIndex(all_records.index(target))
+        self._auto_pick()
+        return self._agent_review_picks()
+
     def _agent_review_picks(self) -> Dict[str, Any]:
         """Human-in-the-loop checkpoint: hand control to the user to correct picks."""
         if self._raw is None:
@@ -1177,6 +1214,7 @@ class SeismicProcessingModule(BaseModule):
             "records_picked": sorted(picked),
             "records_remaining": remaining,
             "next_record": next_record,
+            "resume": {"action": "pick_next_shot" if remaining else "run_srt", "args": {}},
             "message": (
                 "Auto-picks are in and Manual pick mode is ON. Correct any bad traces by clicking / "
                 "Ctrl+dragging, or ask me to set_pick / delete_pick a trace. " + tail

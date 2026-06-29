@@ -187,7 +187,10 @@ class Mesh3DModule(BaseModule):
     def _build_controls(self) -> QScrollArea:
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setMaximumWidth(340)
+        # Wide enough to fit the controls without a horizontal scrollbar.
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setMinimumWidth(420)
+        scroll.setMaximumWidth(480)
         panel = QWidget()
         scroll.setWidget(panel)
         layout = QVBoxLayout(panel)

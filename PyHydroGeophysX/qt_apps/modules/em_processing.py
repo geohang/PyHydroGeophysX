@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -102,7 +102,10 @@ class EMProcessingModule(BaseModule):
         return s
 
     def _build_controls(self) -> QScrollArea:
-        scroll = QScrollArea(); scroll.setWidgetResizable(True); scroll.setMaximumWidth(330)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        # Wide enough to fit the controls without a horizontal scrollbar.
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setMinimumWidth(450); scroll.setMaximumWidth(500)
         panel = QWidget(); scroll.setWidget(panel)
         layout = QVBoxLayout(panel)
 
