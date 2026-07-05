@@ -71,3 +71,12 @@ Thumbs.db
 
 # Sphinx temporary files
 *.rst.new
+
+# Sphinx build output (published via CI, not tracked)
+docs/build/
+
+# Example and app run outputs
+examples/results/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
