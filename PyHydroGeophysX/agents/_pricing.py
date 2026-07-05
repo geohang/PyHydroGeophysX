@@ -14,10 +14,24 @@ DEFAULT_PROVIDER_RATES_USD_PER_MTOK: Dict[Tuple[str, str], Tuple[float, float]] 
     ("openai", "gpt-4o-mini"): (0.15, 0.60),
     ("openai", "gpt-4o"): (5.00, 15.00),
     ("openai", "gpt-4"): (30.00, 60.00),
+    ("openai", "gpt-4.1"): (2.00, 8.00),
+    ("openai", "gpt-4.1-mini"): (0.40, 1.60),
     ("gemini", "gemini-pro"): (0.50, 1.50),
     ("claude", "claude-3-haiku-20240307"): (0.25, 1.25),
     ("claude", "claude-3-5-sonnet-20241022"): (3.00, 15.00),
     ("claude", "claude-3-opus-20240229"): (15.00, 75.00),
+    # Current Anthropic generation (July 2026). "claude" and "anthropic" keys both
+    # work because different entry points pass different provider labels.
+    ("claude", "claude-sonnet-5"): (3.00, 15.00),
+    ("claude", "claude-sonnet-4-6"): (3.00, 15.00),
+    ("claude", "claude-opus-4-8"): (5.00, 25.00),
+    ("claude", "claude-opus-4-7"): (5.00, 25.00),
+    ("claude", "claude-haiku-4-5"): (1.00, 5.00),
+    ("anthropic", "claude-sonnet-5"): (3.00, 15.00),
+    ("anthropic", "claude-sonnet-4-6"): (3.00, 15.00),
+    ("anthropic", "claude-opus-4-8"): (5.00, 25.00),
+    ("anthropic", "claude-opus-4-7"): (5.00, 25.00),
+    ("anthropic", "claude-haiku-4-5"): (1.00, 5.00),
 }
 
 FALLBACK_RATE_USD_PER_MTOK: Tuple[float, float] = (1.00, 3.00)

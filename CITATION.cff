@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the software record below and the preferred-citation article."
+title: "PyHydroGeophysX"
+type: software
+authors:
+  - family-names: Chen
+    given-names: Hang
+    email: hangchen.work@gmail.com
+    affiliation: "University of Iowa"
+version: 0.3.0
+doi: 10.5281/zenodo.17025139
+repository-code: "https://github.com/geohang/PyHydroGeophysX"
+url: "https://geohang.github.io/PyHydroGeophysX/"
+license: Apache-2.0
+keywords:
+  - hydrogeophysics
+  - geophysics
+  - hydrology
+  - ERT
+  - seismic
+  - inversion
+  - MODFLOW
+  - ParFlow
+preferred-citation:
+  type: article
+  title: "PyHydroGeophysX: An Extensible Open-Source Platform for Integrating Hydrological Models with Geophysical Measurements"
+  authors:
+    - family-names: Chen
+      given-names: Hang
+    - family-names: Niu
+      given-names: Qifei
+    - family-names: Wu
+      given-names: Yuxin
+  journal: SoftwareX
+  year: 2026
+  notes: "In press"

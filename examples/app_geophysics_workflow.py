@@ -1529,7 +1529,7 @@ You can use any of the following providers:
 5. Copy and save your API key securely
 6. Add billing information in the Billing section
 
-**Recommended models:** `claude-3-5-sonnet-20241022`, `claude-3-haiku-20240307` (faster)
+**Recommended models:** `claude-sonnet-5`, `claude-haiku-4-5` (faster)
 
 #### Option 3: Google (Gemini)
 1. Go to [Google AI Studio](https://aistudio.google.com/)
@@ -6642,7 +6642,7 @@ def render_sidebar() -> Dict[str, Any]:
         help="Used by the context agent to parse your natural-language request.",
     )
 
-    default_models = {"openai": "gpt-4o-mini", "gemini": "gemini-pro", "claude": "claude-3-5-sonnet-20241022"}
+    default_models = {"openai": "gpt-4o-mini", "gemini": "gemini-pro", "claude": "claude-sonnet-5"}
     model_default = st.session_state.llm_model or default_models.get(provider, "gpt-4o-mini")
     model = st.sidebar.text_input("Model name", value=model_default)
 
@@ -6909,6 +6909,12 @@ def run_workflow(
     Returns:
         None.
     """
+    if not (st.session_state.get("api_key") or "").strip():
+        st.warning(
+            "No API key is set (sidebar: enter a key, then click Initialize). Steps that "
+            "call an LLM, such as request parsing and result interpretation, will fail "
+            "without one; deterministic quick-mode processing still runs."
+        )
     # Create progress container for real-time updates
     progress_container = st.container()
     with progress_container:
@@ -6936,6 +6942,12 @@ def run_workflow(
                 f"Detected workflow type: {_detect_workflow_type(workflow_config)}",
             )
         else:
+            if not st.session_state.context_agent:
+                st.error(
+                    "The context agent is not initialized. Enter your API key in the "
+                    "sidebar and click Initialize before running an Auto (LLM) workflow."
+                )
+                return
             update_progress("Parsing request with LLM...", 0.05, "Analyzing your natural language request")
             workflow_config = st.session_state.context_agent.parse_request(user_request.strip())
             # Merge upload-driven overrides on top of parsed configuration

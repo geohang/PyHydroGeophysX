@@ -274,9 +274,11 @@ PROVIDER_META: Dict[str, Dict[str, Any]] = {
         "label": "Claude (Anthropic)",
         "env_key": "ANTHROPIC_API_KEY",
         "model_env": "ANTHROPIC_MODEL",
-        # Sonnet is the speed/intelligence sweet spot and far cheaper than Opus.
-        "models": ["claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5", "claude-opus-4-7"],
-        "default_model": "claude-sonnet-4-6",
+        # Sonnet is the speed/intelligence sweet spot and far cheaper than Opus;
+        # claude-sonnet-5 is the current Sonnet generation (near-Opus coding quality
+        # at the same price, intro pricing through 2026-08-31).
+        "models": ["claude-sonnet-5", "claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5", "claude-opus-4-7"],
+        "default_model": "claude-sonnet-5",
         "needs_base_url": False,
     },
     "openai_compatible": {

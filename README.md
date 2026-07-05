@@ -60,6 +60,8 @@ pip install "pyhydrogeophysx[geophysics,webapp]"
 pip install "pyhydrogeophysx[all]"
 ```
 
+> **Version note:** PyPI currently serves v0.1.0; the v0.3.0 release is pending. Until it lands, install from source (below) to match this README.
+
 > **Note on PyGIMLi:** PyGIMLi links against C++ libraries. If `pip install` fails, install it first via conda:
 > ```bash
 > conda install -c gimli pygimli
@@ -88,6 +90,26 @@ pip install -e ".[geophysics]"
 
 ---
 
+## Running the apps
+
+**Web app (Streamlit):**
+
+```bash
+streamlit run examples/app_geophysics_workflow.py
+```
+
+**Desktop workbench (Qt):**
+
+```bash
+python -m PyHydroGeophysX.qt_apps.launcher
+# or, after (re)installing the package:
+pyhydrogeophysx-workbench
+```
+
+Desktop dependencies come from the `desktop` extra (`pip install "pyhydrogeophysx[desktop]"`) or `requirements-desktop.txt`. See `docs/desktop_workbench.md` for details.
+
+---
+
 ## Package Structure
 
 ```
@@ -112,7 +134,6 @@ All examples have paired `.ipynb` notebooks and `.py` scripts under `examples/`.
 
 | Example | Description |
 |---|---|
-| `Ex_hello_agent` | ERT hello-world, no API key needed |
 | `Ex_ERT_data_process` | Field ERT loading, QC, RESIPY export |
 | `Ex_model_output` | MODFLOW/ParFlow output loading |
 | `Ex_ERT_workflow` | End-to-end ERT forward + inversion |
