@@ -282,6 +282,40 @@ _WORKFLOW_TYPE_TO_QT_MODULE: Dict[str, str] = {
 _QT_MODULES = ["home", "ert", "seismic", "hydro_geophysics", "mesh3d", "em", "gravmag",
                "geo_hydrology", "seismic3d"]
 
+#: Human-friendly labels for the Qt module launch grid.
+_QT_MODULE_LABELS: Dict[str, str] = {
+    "home": "🏠 Home",
+    "seismic": "🌊 Seismic / SRT",
+    "ert": "⚡ ERT + time-lapse",
+    "em": "📡 EM (FDEM/TDEM)",
+    "gravmag": "🧲 Gravity / Magnetics",
+    "mesh3d": "🧊 Mesh 3D + forward",
+    "hydro_geophysics": "🌱 Hydro → Geophysics",
+    "geo_hydrology": "💧 ERT → Water Content",
+    "seismic3d": "⛰️ Seismic → Structure",
+}
+
+
+def _qt_result_age_label(result: Optional[Dict[str, Any]]) -> str:
+    """Return a freshness label ('saved 3 min ago', with a stale warning) for a result."""
+    ts = (result or {}).get("created_time") or ""
+    try:
+        from datetime import datetime, timezone
+
+        saved = datetime.strptime(str(ts), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        age_s = max(0.0, (datetime.now(timezone.utc) - saved).total_seconds())
+    except Exception:  # noqa: BLE001 - freshness is decorative
+        return ""
+    if age_s < 90:
+        label = "saved moments ago"
+    elif age_s < 3600:
+        label = f"saved {int(age_s // 60)} min ago"
+    elif age_s < 86400:
+        label = f"saved {age_s / 3600:.1f} h ago"
+    else:
+        label = f"⚠ old result, saved {age_s / 86400:.1f} days ago"
+    return label
+
 
 def _qt_module_for_config(config: Dict[str, Any]) -> str:
     """Map the current web workflow config to the best Qt module to open at."""
@@ -330,9 +364,8 @@ def _render_one_qt_module_result(res: Dict[str, Any]) -> None:
             st.image(str(fig), use_container_width=True)
     artifacts = _qt_result_artifacts(res)
     if artifacts:
-        st.caption("Artifacts:")
-        for a in artifacts:
-            st.code(a, language="text")
+        with st.expander(f"Artifacts ({len(artifacts)})", expanded=False):
+            st.code("\n".join(artifacts), language="text")
     if isinstance(res.get("ert3d_forward"), dict):
         st.markdown("*3D ERT forward:*")
         _render_one_qt_module_result(res["ert3d_forward"])
@@ -341,11 +374,16 @@ def _render_one_qt_module_result(res: Dict[str, Any]) -> None:
 def _render_qt_results(result: Optional[Dict[str, Any]]) -> None:
     """Render the full Qt result payload (status + per-module cards)."""
     if not result:
-        st.caption("No Qt results yet. Launch the workbench, run a module, and outputs appear here automatically.")
+        st.info(
+            "**No Qt results yet.** Launch the workbench above, run a module, then click "
+            "**File → Save Result** in Qt — the outputs appear here within a few seconds.",
+            icon="🕐",
+        )
         return
+    age = _qt_result_age_label(result)
     st.caption(
         f"Status: **{result.get('status', '?')}** · last module: "
-        f"`{result.get('selected_module', '?')}` · {result.get('created_time', '')}"
+        f"`{result.get('selected_module', '?')}` · {age or result.get('created_time', '')}"
     )
     mod_results = result.get("module_results") or {}
     if not mod_results:
@@ -391,41 +429,75 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
     """The web↔Qt desktop hub: pre-load the project into Qt and auto-sync results back."""
     st.subheader("🖥️ Professional Workbench")
     st.markdown(
-        "This web app is the **agent, report, and deployment portal**. For hands-on mouse work "
-        "(data processing, profile picking, geometry editing, forward modeling) open the **Qt "
-        "desktop workbench**. The web hands your current project to Qt, and Qt's results sync "
-        "back here automatically."
+        "Hands-on desktop companion to this web app: picking, geometry editing, QC, inversion, "
+        "and forward modeling across eight modules. The web hands your current project to Qt; "
+        "everything you **Save Result** in Qt syncs back to this page automatically."
     )
 
     can_launch, reason = _can_launch_qt_locally()
 
+    # -- status strip ---------------------------------------------------------
+    pid = st.session_state.get("qt_pid")
+    alive = _pid_alive(int(pid)) if pid else False
+    s1, s2, s3 = st.columns(3)
+    s1.metric("Desktop mode", "🟢 available" if can_launch else "🔴 unavailable")
+    s2.metric("Qt workbench", f"🟢 running (PID {pid})" if alive else ("⚪ closed" if pid else "⚪ not launched"))
+    last_seen = st.session_state.get("qt_last_result") or _read_qt_result()
+    s3.metric("Last Qt result", _qt_result_age_label(last_seen) or ("none yet" if not last_seen else "saved"))
+
     if can_launch:
         cfg = st.session_state.get("workflow_config") or {}
         auto_module = _qt_module_for_config(cfg)
-        st.success("Local desktop mode — open the Qt workbench with your current project.")
-        primary_label = "🚀 Open in Qt with current project"
-        if cfg:
-            primary_label += f"  (→ {auto_module})"
-        if st.button(primary_label, type="primary", use_container_width=True, key="qt_open_current"):
-            _launch_qt_at(sidebar_state, auto_module)
 
-        c1, c2, c3 = st.columns(3)
-        if c1.button("📈 Seismic / SRT", use_container_width=True, key="qt_open_seismic"):
-            _launch_qt_at(sidebar_state, "seismic")
-        if c2.button("⚡ ERT", use_container_width=True, key="qt_open_ert"):
-            _launch_qt_at(sidebar_state, "ert")
-        if c3.button("🌊 Hydro → Geophysics", use_container_width=True, key="qt_open_hydro"):
-            _launch_qt_at(sidebar_state, "hydro_geophysics")
+        col_launch, col_handoff = st.columns([3, 2], gap="large")
 
-        with st.expander("Open a specific module"):
-            module = st.selectbox("Module", _QT_MODULES, key="qt_module_pick")
-            if st.button("Open module", key="qt_open_specific"):
-                _launch_qt_at(sidebar_state, module)
+        with col_launch:
+            with st.container(border=True):
+                st.markdown("##### 🚀 Launch")
+                primary_label = "Open in Qt with current project"
+                if cfg:
+                    primary_label += f"  (→ {_QT_MODULE_LABELS.get(auto_module, auto_module)})"
+                if st.button(primary_label, type="primary", use_container_width=True, key="qt_open_current"):
+                    _launch_qt_at(sidebar_state, auto_module)
 
-        pid = st.session_state.get("qt_pid")
-        if pid:
-            alive = _pid_alive(int(pid))
-            st.caption(f"Qt workbench PID {pid}: {'🟢 running' if alive else '⚪ not running'}")
+                st.caption("Or jump straight to a module:")
+                grid_modules = [m for m in _QT_MODULES if m != "home"]
+                for row_start in range(0, len(grid_modules), 4):
+                    row = grid_modules[row_start:row_start + 4]
+                    cols = st.columns(4)
+                    for col, mod in zip(cols, row):
+                        if col.button(_QT_MODULE_LABELS.get(mod, mod), use_container_width=True,
+                                      key=f"qt_open_{mod}"):
+                            _launch_qt_at(sidebar_state, mod)
+                if alive:
+                    st.caption("The workbench is its own window — closing this browser tab does not close it.")
+
+        with col_handoff:
+            with st.container(border=True):
+                st.markdown("##### 📦 What Qt receives")
+                if cfg:
+                    wtype = _detect_workflow_type(cfg)
+                    st.markdown(f"- Detected workflow: **{wtype}**")
+                    st.markdown(f"- Opens at module: **{_QT_MODULE_LABELS.get(auto_module, auto_module)}**")
+                    files = _collect_data_files(cfg)
+                    if files:
+                        n_files = sum(len(v) if isinstance(v, list) else 1 for v in files.values())
+                        st.markdown(f"- Data files: **{n_files}**")
+                        with st.expander("Show file list", expanded=False):
+                            for key, val in files.items():
+                                vals = val if isinstance(val, list) else [val]
+                                for item in vals:
+                                    st.caption(f"`{key}`: {item}")
+                    else:
+                        st.markdown("- Data files: none in the current config")
+                else:
+                    st.caption(
+                        "No web workflow configured yet — Qt opens at **Home** and every module "
+                        "still works standalone (all of them ship example data)."
+                    )
+                st.markdown(f"- Output dir: `{sidebar_state.get('output_dir', 'results/streamlit_workflow')}`")
+                if sidebar_state.get("demo_mode"):
+                    st.markdown("- ⚠ Demo mode is ON (Qt receives the demo flag)")
     else:
         st.info(f"Remote / download mode: {reason}")
         st.markdown(
@@ -440,15 +512,19 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
             f"- **Source**: [{QT_DOWNLOAD_LINKS['source']}]({QT_DOWNLOAD_LINKS['source']})"
         )
         st.code(
+            'pip install "pyhydrogeophysx[desktop]"\n'
+            "pyhydrogeophysx-workbench\n\n"
+            "# or from a source checkout\n"
             "pip install -r requirements-desktop.txt\n"
             "python -m PyHydroGeophysX.qt_apps.launcher",
             language="bash",
         )
 
     st.markdown("---")
-    st.markdown("#### 🔗 Results from Qt (synced back automatically)")
-    live = st.toggle("Live updates", value=True, key="qt_live_toggle",
-                     help="Poll the Qt result file every few seconds and update this panel.")
+    head_l, head_r = st.columns([3, 1])
+    head_l.markdown("#### 🔗 Results from Qt (synced back automatically)")
+    live = head_r.toggle("Live updates", value=True, key="qt_live_toggle",
+                         help="Poll the Qt result file every few seconds and update this panel.")
     if live:
         _qt_live_results()
     else:
@@ -459,17 +535,36 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
     last = st.session_state.get("qt_last_result")
     if last and last.get("module_results"):
         st.markdown("---")
-        if st.button("⬇️ Bring these Qt results into the web", key="qt_bring_in"):
+        imp_l, imp_r = st.columns([1, 2])
+        if imp_l.button("⬇️ Import into the web session", key="qt_bring_in",
+                        help="Keep a copy of these results in the web session and enable downloads."):
             st.session_state["qt_results"] = last
-            st.success("Imported. The artifacts below are now downloadable in the web app.")
+            st.toast("Qt results imported.", icon="✅")
         if st.session_state.get("qt_results"):
             with st.expander("Imported Qt artifacts (downloads)", expanded=True):
                 _render_qt_downloads(st.session_state["qt_results"])
 
-    with st.expander("Bridge files (advanced)"):
+    with st.expander("Bridge files & maintenance (advanced)"):
         bridge = _qt_bridge_dir()
+        result_file = bridge / "full_workbench_result.json"
         st.caption(f"Context JSON: `{bridge / 'full_workbench_context.json'}`")
-        st.caption(f"Result JSON: `{bridge / 'full_workbench_result.json'}`")
+        st.caption(f"Result JSON: `{result_file}`")
+        m1, m2 = st.columns(2)
+        if m1.button("🧹 Clear saved Qt result", key="qt_clear_result",
+                     help="Delete the synced result file; Qt writes a fresh one on the next Save Result."):
+            try:
+                if result_file.exists():
+                    result_file.unlink()
+                st.session_state["qt_last_result"] = None
+                st.session_state["qt_results"] = None
+                st.toast("Saved Qt result cleared.", icon="🧹")
+            except Exception as exc:  # noqa: BLE001
+                st.warning(f"Could not clear the result file: {exc}")
+        if os.name == "nt" and m2.button("📂 Open bridge folder", key="qt_open_bridge"):
+            try:
+                os.startfile(str(bridge))  # noqa: S606 - local convenience on Windows
+            except Exception as exc:  # noqa: BLE001
+                st.warning(f"Could not open the folder: {exc}")
 
     # Legacy in-browser workbenches are retired from the main UI; reachable only when
     # PHGX_SHOW_LEGACY_WORKBENCHES=1 so the code path is not lost.
