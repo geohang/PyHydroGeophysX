@@ -26,3 +26,6 @@ jobs:
       - name: Import smoke test
         run: python -c "import PyHydroGeophysX; print('Import OK:', PyHydroGeophysX.__version__)"
 
+      - name: Run tests
+        run: pytest -q
+

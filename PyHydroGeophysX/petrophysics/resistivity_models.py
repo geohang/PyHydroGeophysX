@@ -139,12 +139,23 @@ def resistivity_to_water_content(
     Returns:
         array: Volumetric water content values
     """
-    # Calculate saturation
-    saturation = resistivity_to_saturation(resistivity, rhos, n, sigma_sur)
-    
+    # Calculate saturation. ``resistivity_to_saturation`` derives the saturated
+    # resistivity from Archie's law (a * rho_fluid * porosity^-m); passing
+    # rho_fluid=rhos with m=0 collapses that expression to the ``rhos`` given
+    # here, so the same Waxman-Smits solver applies unchanged. The previous
+    # positional call passed the wrong arguments and raised a TypeError.
+    saturation = resistivity_to_saturation(
+        resistivity,
+        porosity=porosity,
+        m=0.0,
+        rho_fluid=rhos,
+        n=n,
+        sigma_sur=sigma_sur,
+    )
+
     # Convert saturation to water content
     water_content = saturation * porosity
-    
+
     return water_content
 
 
@@ -223,7 +234,7 @@ def resistivity_to_saturation(
                               xtol=tol,
                               maxiter=maxiter)
             return sol.root if sol.converged else S0[i]
-        except:
+        except Exception:
             return S0[i]
 
     # Compute saturation for each point
@@ -337,7 +348,7 @@ def resistivity_to_porosity(
                 try:
                     solution = fsolve(func, initial_guess)
                     porosity_val = solution[0]
-                except:
+                except Exception:
                     # If numerical solution fails, use simplified formula
                     porosity_val = ((a * rho_fluid) / (rho_val * S_val**n_val))**(1.0/m_val)
         
