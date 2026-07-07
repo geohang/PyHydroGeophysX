@@ -68,9 +68,9 @@ os.makedirs(output_dir, exist_ok=True)
 data_dir = "data/"
 
 # This example expects the workflow demonstration dataset (id.txt, top.txt,
-# Porosity.npy, Watercontent.npy) inside ``data_dir``. That dataset is not
-# bundled with the repository; point ``data_dir`` at your own MODFLOW-derived
-# arrays or adjust the file names below.
+# Porosity.npy, Watercontent.npy), which ships in ``examples/data``. Run the
+# script from the ``examples`` directory, or point ``data_dir`` at your own
+# MODFLOW-derived arrays.
 _required = ["id.txt", "top.txt", "Porosity.npy", "Watercontent.npy"]
 _missing = [n for n in _required if not os.path.exists(os.path.join(data_dir, n))]
 if _missing:

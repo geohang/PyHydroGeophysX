@@ -24,6 +24,25 @@ This roadmap comes from a full repository audit (2026-07-05, working tree at com
 
 Note: the QSettings and placeholder-hint changes live in `qt_apps/main_window.py` and `qt_apps/modules/__init__.py`, which also carry unrelated in-progress local work; they are edited in the working tree but deliberately left out of the branch commits until that work is ready.
 
+## Functional QA of the desktop workbench (2026-07-06, env `pg`)
+
+Every module was driven end to end through the agent action layer with the bundled datasets (about 80 scripted steps, all passing after the fix below):
+
+- **Seismic**: SEG-Y load (`AP_411.sgy`, 13 records), record selection, regular shot geometry, topography import, STA/LTA auto-pick, review pause, manual pick edit, `pick_next_shot`, travel-time file load, SRT tomography (chi-square, rrms, VTK export).
+- **ERT**: BERT field data (72 electrodes / 936 measurements), QC filter, single inversion with resistivity model + VTK; DAS-1 load, three-file time-lapse inversion (31 s) and full export.
+- **EM**: SkyTEM TDEM CSV + line geometry, auto-calibrate, three-sounding line inversion (mean chi-square + section npz); FDEM method switch.
+- **Gravity/Magnetics**: Bushveld gravity load, detrend + SimPEG 3D inversion; switch to magnetics + Britain aeromagnetic load.
+- **Wizards**: Hydro → Geophysics ERT forward on the synthetic example (26 s, result ok); ERT → Water Content Monte Carlo (result ok); Seismic → Structure 3D build from three example lines (50-76 s, result ok) plus the structure handoff.
+- **Mesh 3D**: sensor preview, PyGIMLi topography-prism generation (6,916 cells), 3D ERT forward (dipole-dipole), offscreen fallback, and an on-screen PyVistaQt render verified via a framebuffer screenshot (marker-colored mesh, axes, colorbar).
+- **Bridge**: atomic result write to the stable per-user location.
+
+**Fixed during QA (working tree, WIP files, uncommitted):** the three wizard modules stored their run worker in `self._worker` without `register_worker`, so `closeEvent` could not join a live run and closing the app mid-run destroyed a running QThread (a hard crash). All three now register the worker.
+
+**Noted, not changed:**
+- `send_structure_to_hydro` switches the active module, so a follow-up `get_status` in the same agent turn reports the hydro module rather than seismic3d. Consider returning the target module key in the result, or a system-prompt note for AQUAH.
+- The example bundles for ERT → Water Content and Seismic → Structure live under `examples/results/synthetic_*`, which is no longer tracked, so a fresh clone lacks "use example data" for those two modules. Ship small bundles under `examples/data/` or generate them on demand (see item 3).
+- resipy prints "pyvista not installed" at import even though `import pyvista` works in the same environment; the warning is resipy-internal and cosmetic here.
+
 ## P0: remaining items with the highest impact
 
 ### 1. Publish v0.3.0 to PyPI
@@ -41,8 +60,8 @@ Before uploading: confirm the version, tag the release (`git tag v0.3.0`), and c
 ### 2. Extend the test suite to the geophysics engines
 The pygimli-free suite is in place. Next: a second CI job using `mamba-org/setup-micromamba` that installs pygimli and runs small forward/inversion smoke tests (tiny mesh, few electrodes), so the ERT/SRT code paths get coverage too. Also worth a live run: `agents/fetch_climate_data.py` against the Daymet service.
 
-### 3. Publish or generate the workflow example dataset
-`Ex_ERT_workflow.py` (and the docs gallery built from it) needs `id.txt`, `top.txt`, `Porosity.npy`, `Watercontent.npy`, which are not in the repository. Either publish the dataset (Zenodo works well next to the software DOI) and link it from the example, or add a small synthetic generator. Committed notebooks still embed absolute Windows paths in outputs; re-run them with repository-relative paths or adopt `nbstripout`.
+### 3. Clean the committed notebooks
+The workflow demonstration dataset (`id.txt`, `top.txt`, `Porosity.npy`, `Watercontent.npy`) ships in `examples/data`, and the scripts run from the `examples` directory. The remaining problem is the committed notebooks: their outputs embed absolute Windows paths from the author machine. Re-run them with repository-relative paths or adopt `nbstripout`, and state in the README that examples are meant to run with `examples/` as the working directory.
 
 ## P1: remaining robustness work
 
