@@ -1450,11 +1450,15 @@ def render_tutorial_tab() -> None:
     """
     st.subheader("Tutorial")
     st.markdown(
-        "**New here?** Three ways to work:\n"
-        "- **Workflow → One-click** — describe your task in plain language and run it.\n"
-        "- **Workflow → AQUAH chat** — converse step by step; AQUAH builds the config and runs it.\n"
-        "- **Professional Workbench** — open the Qt desktop for hands-on picking / editing; results sync back to the web.\n\n"
-        "First set a provider + API key in the sidebar **Setup**, then open the **Workflow** tab."
+        "**New here?** PyHydroGeophysX gives you three ways to work, all backed by the same engine:\n\n"
+        "1. **Run Workflow → One-click** — describe your task in plain language (or click an example), "
+        "preview the auto-built configuration, then run it.\n"
+        "2. **Run Workflow → AQUAH chat** — converse step by step; the assistant assembles the configuration "
+        "with you and runs it when you approve.\n"
+        "3. **Professional Workbench** — a desktop app with eight hands-on modules (Seismic, ERT + time-lapse, "
+        "EM, Gravity/Magnetics, Mesh 3D, and three hydro / structure wizards); results sync back here.\n\n"
+        "The one-click and AQUAH modes need an LLM provider + API key (sidebar **Setup**). The desktop modules "
+        "run locally with **no key required** — a key is only needed for the in-app AQUAH assistant."
     )
     st.markdown("---")
 
@@ -1503,6 +1507,152 @@ def render_tutorial_tab() -> None:
         unsafe_allow_html=True,
     )
 
+    # Desktop workbench module-by-module guide (new functionality)
+    st.markdown("---")
+    st.markdown("### Desktop Workbench: module-by-module guide")
+    st.markdown(
+        "The **Professional Workbench** is a PySide6 desktop app with eight modules for hands-on "
+        "processing, inversion, and forward modeling. Launch it from the **🖥️ Professional Workbench** "
+        "tab (**Open in Qt with current project**), or start it standalone:"
+    )
+    st.code(
+        "# after installing the package\n"
+        "pyhydrogeophysx-workbench\n\n"
+        "# or, from a source checkout\n"
+        "python -m PyHydroGeophysX.qt_apps.launcher",
+        language="bash",
+    )
+    st.markdown(
+        "Each module has a guided form on the left, a viewer in the middle, and an **AQUAH Chat** dock on "
+        "the right that can drive the same actions in plain language (it approves each step before running). "
+        "The examples below use the datasets bundled under `examples/data/`."
+    )
+
+    with st.expander("🌊 Seismic — first-break picking & SRT tomography", expanded=False):
+        st.markdown(
+            """
+Refraction first-break picking and seismic refraction tomography (SRT).
+
+1. **Load data** — SEG-Y (`.sgy/.segy`), Geometrics `.dat`, SEG-2, or a `.npy/.csv` matrix.
+   Example: `examples/data/Seismic/AP_411.sgy` (13 shot records × 24 traces).
+2. **Set geometry** — geophone spacing and geophone-0 position. For a regular shot layout, set
+   **first shot x** and **shot spacing** once and each record's shot position auto-fills.
+3. **Load topography (optional)** — `examples/data/Seismic/location.txt`
+   (`station distance_m elevation_m`); real receiver elevations flow into the inversion.
+4. **Auto-pick** first breaks (STA/LTA), then **review**: suspect traces are flagged and you can
+   drag to correct a pick or Ctrl+drag a straight line across traces. Step shots with **Pick next shot**.
+5. **Run SRT** — travel-time tomography produces a velocity section (chi-square, RMS) and exports a VTK.
+   You can also **load a pre-picked travel-time file** (pyGIMLi `.sgt/.dat` or a CSV) and invert directly —
+   try `examples/data/Seismic/srtfieldline2.dat`.
+"""
+        )
+        st.info("Tip: always review picks before running — bad first breaks are the main source of SRT artifacts.")
+
+    with st.expander("⚡ ERT — single & time-lapse inversion", expanded=False):
+        st.markdown(
+            """
+Field ERT inversion with topography, QC, and time-lapse support.
+
+1. **Load data** — pick the instrument/format that matches your file (BERT, E4D, DAS-1, Syscal,
+   ABEM-Lund, Res2DInv, Protocol DC/IP, Sting, ARES, Lippmann, Electra, Custom). Works with or without
+   resipy installed. Example: `examples/data/ERT/Bert/fielddataline2.dat` (BERT, 72 electrodes).
+2. **QC / filter** — restrict the apparent-resistivity range and drop high-error measurements; the
+   pseudosection redraws.
+3. **Set parameters** — `lambda` (smoothness), `max_iterations`, mesh quality.
+4. **Run inversion** — produces a resistivity section on the real pyGIMLi mesh (chi-square, RMS) and a VTK.
+
+**Time-lapse:** add several files (one per time step, e.g. the DAS series
+`examples/data/ERT/DAS/2017110*_1*.Data`), choose the temporal regularization
+(`tl_alpha`, `tl_norm` L2/L1/L1L2, optional windowed mode), **Run time-lapse**, then **Export** a folder
+with the combined VTK, per-step VTKs, `final_models.npy`, mesh, and the times CSV.
+"""
+        )
+
+    with st.expander("📡 EM — FDEM / TDEM sounding & line inversion", expanded=False):
+        st.markdown(
+            """
+Frequency- and time-domain electromagnetic inversion (SimPEG).
+
+1. **Choose method** — FDEM or TDEM.
+2. **Load data** — a single sounding gives a 1D layered model; a multi-sounding file is inverted
+   sounding-by-sounding into a position × depth resistivity section. Example (TDEM):
+   `examples/data/EM/skytem_bhmar_tdem.csv` with geometry `skytem_bhmar_geometry.csv`.
+3. **Calibrate** — for normalized airborne data, **Auto-calibrate** estimates the data scale, or set a
+   known `ref_resistivity` to anchor the absolute level.
+4. **Set parameters** — number of layers, thickness bounds, smoothness, geometry (source radius,
+   Tx–Rx separation, height, orientation).
+5. **Run inversion** — reports mean chi-square and saves the section.
+"""
+        )
+
+    with st.expander("🧲 Gravity / Magnetics — 3D inversion", expanded=False):
+        st.markdown(
+            """
+Potential-field inversion (SimPEG): gravity → density, magnetics → susceptibility.
+
+1. **Set field type** — gravity or magnetics.
+2. **Load stations** — an `x, y, value` table. Examples:
+   `examples/data/Gravity_Magnetics/bushveld_gravity_disturbance.csv` (gravity),
+   `britain_aeromagnetic_anomaly.csv` (magnetics).
+3. **Set parameters** — regional-trend degree to remove (`detrend` 0–3), lateral/depth cell counts,
+   iterations; for magnetics, the ambient field strength, inclination, and declination.
+4. **Run inversion** — a regional trend is removed first, then a 3D model is estimated and shown in the
+   Inversion model tab.
+"""
+        )
+
+    with st.expander("🧊 Mesh 3D — mesh builder & 3D ERT forward", expanded=False):
+        st.markdown(
+            """
+Build 3D meshes and run 3D ERT forward modeling; interactive PyVistaQt viewer (needs a GPU desktop).
+
+1. **Configure geometry** — mesh type (surface-with-topography or box), sensor array
+   (surface grid / borehole / crosshole / surface-to-borehole), and topography
+   (flat / linear tilt / Gaussian hill / custom expression / from points).
+2. **Preview sensors**, then **Generate** — builds the structured or PyGIMLi prism mesh and saves the
+   selected formats (BMS / VTK / CSV).
+3. **3D ERT forward** — on the generated mesh, choose a scheme (dd/wa/slm/wb), background resistivity,
+   and noise, then run to produce synthetic ERT data (`.dat`) plus a resistivity VTK.
+4. **View** — rotate/clip the mesh; electrodes and region markers are colored in the 3D scene.
+"""
+        )
+        st.info("No GPU? The controls, generation, and export still work; only the interactive 3D view is disabled.")
+
+    with st.expander("🔗 Hydro / structure wizards (three modules)", expanded=False):
+        st.markdown(
+            """
+Guided, step-by-step wizards that connect hydrology and geophysics. All three ship with example data
+(**Use example data**), so you can run them end to end without uploading anything.
+
+**Hydro → Geophysics** — turn hydrologic model outputs into synthetic geophysical responses.
+Load water content / porosity / topography, pick a 2D profile with two clicks, choose methods
+(ERT, SRT, TDEM, FDEM, Gravity), set acquisition and rock-physics parameters, then **Run** forward modeling.
+
+**ERT → Water Content** — convert an inverted resistivity model into hydrologic products.
+Load the inverted model (mesh + resistivity + markers), detect geological layers, choose products
+(water content, porosity), and **Run** a Monte Carlo estimation with per-layer petrophysical uncertainty.
+
+**Seismic → Structure** — build a 3D velocity model from several 2D lines.
+Add lines by their mesh + velocity files and map endpoints (or **Use example** for three bundled lines),
+set the grid and interpolation (griddata or kriging), **Run** the build, and optionally
+**send the bedrock interface** to the Hydro → Geophysics module as a structural constraint.
+"""
+        )
+
+    with st.expander("💬 AQUAH assistant (inside the workbench)", expanded=False):
+        st.markdown(
+            """
+The right-hand **AQUAH Chat** dock drives any module in plain language. It proposes one tool call at a
+time and waits for your **Approve / Reject** before running, so you stay in control.
+
+- Pick a provider (OpenAI, Claude, or an OpenAI-compatible endpoint) and model at the top of the dock;
+  paste a key or set `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` in the environment.
+- Example prompts: *"open ERT, load the BERT example, filter errors above 5%, set lambda 20, run the
+  inversion"* or *"in Seismic, load AP_411.sgy, auto-pick the first shot, and pause so I can review."*
+- For picking-sensitive work the assistant always pauses for you to review before it runs an inversion.
+"""
+        )
+
     # API Key Setup Section
     st.markdown("### How to Get an API Key")
     with st.expander("Step-by-step guide to obtain LLM API keys", expanded=False):
@@ -1545,7 +1695,7 @@ You can use any of the following providers:
 **Important Tips:**
 - Keep your API key **secret** - never share it publicly or commit it to GitHub
 - API usage is **pay-per-use** - typical workflow costs $0.01-0.10 per run
-- Start with cheaper models (`gpt-4o-mini`, `claude-3-haiku`, `gemini-1.5-flash`) for testing
+- Start with cheaper models (`gpt-4o-mini`, `claude-haiku-4-5`, `gemini-2.5-flash`) for testing
 - Set up **usage limits** in your provider's dashboard to avoid unexpected charges
         """)
 
