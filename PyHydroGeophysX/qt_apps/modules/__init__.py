@@ -23,12 +23,38 @@ MODULE_SPECS = {
     "em": ("em_processing", "EMProcessingModule", "EM Processing"),
     "gravmag": ("gravmag_processing", "GravMagProcessingModule", "Gravity / Magnetics"),
     "hydro_geophysics": ("hydro_geophysics", "HydroGeophysicsModule", "Hydro → Geophysics"),
-    "geo_hydrology": ("geo_hydrology", "GeoHydrologyModule", "Geophysics → Hydro"),
-    "seismic3d": ("seismic3d", "Seismic3DModule", "Seismic → 3D Model"),
+    "geo_hydrology": ("geo_hydrology", "GeoHydrologyModule", "ERT → Water Content"),
+    "seismic3d": ("seismic3d", "Seismic3DModule", "Seismic → Structure"),
 }
 
 #: Order used to populate the central stack. ``home`` is always first.
 MODULE_ORDER: List[str] = ["home", "seismic", "ert", "mesh3d", "em", "gravmag", "hydro_geophysics", "geo_hydrology", "seismic3d"]
+
+#: Install commands for optional packages a module import may be missing.
+_INSTALL_HINTS = {
+    "obspy": 'pip install "pyhydrogeophysx[seismic-raw]"',
+    "segyio": "pip install segyio",
+    "pyvista": "pip install pyvista pyvistaqt",
+    "pyvistaqt": "pip install pyvista pyvistaqt",
+    "pygimli": "conda install -c gimli pygimli",
+    "simpeg": 'pip install "pyhydrogeophysx[geophysics]"',
+    "resipy": "pip install resipy",
+    "qtawesome": 'pip install "pyhydrogeophysx[desktop]"',
+    "pyqtgraph": 'pip install "pyhydrogeophysx[desktop]"',
+}
+
+
+def _missing_dependency_hint(exc: BaseException) -> str:
+    """Return an HTML hint naming the missing package and how to install it."""
+    name = getattr(exc, "name", None)
+    if not name:
+        return ""
+    root = str(name).split(".")[0]
+    hint = _INSTALL_HINTS.get(root, f"pip install {root}")
+    return (
+        f"<br>Missing package: <b>{root}</b>. Install it with "
+        f"<code>{hint}</code> and restart the workbench."
+    )
 
 
 def build_module(key: str, state: Any, log: LogFn) -> BaseModule:
@@ -46,11 +72,13 @@ def build_module(key: str, state: Any, log: LogFn) -> BaseModule:
     except Exception as exc:  # noqa: BLE001 - we want to catch everything here
         log(f"Failed to load module '{key}': {exc}", "error")
         log(traceback.format_exc(), "debug")
+        dependency_hint = _missing_dependency_hint(exc) if isinstance(exc, ImportError) else ""
         return PlaceholderModule(
             state,
             log,
             title,
-            f"This module could not be loaded:<br><br><code>{exc}</code><br><br>"
+            f"This module could not be loaded:<br><br><code>{exc}</code>"
+            f"{dependency_hint}<br><br>"
             "The rest of the workbench is unaffected.",
             key=key,
         )

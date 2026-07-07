@@ -768,12 +768,19 @@ class HydroGeophysicsModule(BaseModule):
         self._reload()
 
     def _example_data_dir(self) -> Optional[Path]:
-        """Locate the bundled ``examples/data`` folder for standalone launches."""
+        """Locate the bundled synthetic hydrology grids for standalone launches.
+
+        Points at the synthetic ``timelapse_infiltration`` dataset produced by
+        ``examples/generate_synthetic_examples.py``. The real Treeline demo in
+        ``examples/data`` is preserved and can still be opened via "Select
+        folder...".
+        """
+        rel = ("examples", "data", "synthetic", "timelapse_infiltration")
         candidates: List[Path] = []
         if self.state.project_root:
-            candidates.append(Path(self.state.project_root) / "examples" / "data")
+            candidates.append(Path(self.state.project_root).joinpath(*rel))
         here = Path(__file__).resolve()
-        candidates.extend(p / "examples" / "data" for p in here.parents)
+        candidates.extend(p.joinpath(*rel) for p in here.parents)
         for cand in candidates:
             files = hydro_pipeline.find_hydro_files(cand)
             if files.get("top") is not None or files.get("water_content") is not None:
@@ -822,7 +829,10 @@ class HydroGeophysicsModule(BaseModule):
         files = hydro_pipeline.find_hydro_files(Path(data_dir))
         self._wc = self._safe_load(files["water_content"], mmap=True)
         self._por = self._safe_load(files["porosity"], mmap=True)
-        self._top = self._safe_load(files["top"], text=True)
+        # top is a NumPy array (top.npy), same as the other three; load with
+        # np.load, not np.loadtxt (text=True fails on a binary .npy and left
+        # _top as None).
+        self._top = self._safe_load(files["top"], mmap=True)
         self._bot = self._safe_load(files["bot"], mmap=True)
         if self._wc is not None and self._wc.ndim == 4:
             self._snapshot.setRange(0, self._wc.shape[0] - 1)
@@ -1058,7 +1068,9 @@ class HydroGeophysicsModule(BaseModule):
         self._progress.setRange(0, 0)  # busy
         self._run_status.setText("Starting forward modeling…")
         self.log("Starting hydro → geophysics forward modeling…", "info")
-        self._worker = ForwardWorker(self.state.context, params, methods, self._point1, self._point2)
+        self._worker = self.register_worker(
+            ForwardWorker(self.state.context, params, methods, self._point1, self._point2)
+        )
         self._worker.logged.connect(self._on_worker_log)
         self._worker.succeeded.connect(self._on_forward_ok)
         self._worker.failed.connect(self._on_forward_failed)

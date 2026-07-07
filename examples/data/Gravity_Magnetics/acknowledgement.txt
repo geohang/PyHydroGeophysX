@@ -1,0 +1,36 @@
+This folder holds two open-source potential-field demo datasets, reformatted to
+the workbench station format (x_m, y_m, value). Local x/y in metres come from an
+equirectangular projection of the original longitude/latitude; the anomaly values
+are unchanged.
+
+==============================================================================
+1. bushveld_gravity_disturbance.csv   (gravity, mGal)
+==============================================================================
+Ground gravity disturbance over the Bushveld Igneous Complex, Southern Africa
+(3877 stations).
+
+Source : Southern Africa gravity compilation, NOAA NCEI
+         (https://www.ngdc.noaa.gov/mgg/gravity/); original data public domain.
+         Curated, and the gravity disturbance computed, by the Fatiando a Terra
+         project (ensaio).
+DOI    : https://doi.org/10.5281/zenodo.6511942
+License: CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+Link   : https://github.com/fatiando-data/bushveld-gravity
+
+==============================================================================
+2. britain_aeromagnetic_anomaly.csv   (magnetics, nT)
+==============================================================================
+Airborne total-field magnetic anomaly over Britain. A 1x1 degree subset over
+south-west England (about 3451 stations) of the full survey is included here so
+the demo file stays small.
+
+Source : British Geological Survey, GB aeromagnetic survey
+         (https://www.bgs.ac.uk/datasets/gb-aeromagnetic-survey/).
+         Contains British Geological Survey materials (c) UKRI 2021,
+         Open Government Licence. Curated by the Fatiando a Terra project (ensaio).
+DOI    : https://doi.org/10.5281/zenodo.5879260
+License: CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+Link   : https://github.com/fatiando-data/britain-magnetic
+
+We thank NOAA NCEI, the British Geological Survey, and the Fatiando a Terra
+project for making these datasets openly available.

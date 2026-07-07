@@ -110,11 +110,12 @@ class HomePage(BaseModule):
             "Gravity / Magnetics.<br>"
             "<b>Hydro → Geophysics</b>: load hydrologic model outputs, pick a "
             "profile, set survey geometry, and run forward modeling.<br>"
-            "<b>Geophysics → Subsurface</b>: derive subsurface structure and "
-            "hydrology from geophysics. Seismic velocity sections build a 3D "
-            "structure (bedrock interface + velocity volume); that structure can "
-            "be handed to the ERT → hydrology step, which estimates water content "
-            "and porosity per layer with Monte Carlo uncertainty."
+            "<b>Geophy → Hydrology</b>: derive subsurface structure and "
+            "hydrology from geophysics. <b>Seismic → Structure</b> builds a 3D "
+            "structure (bedrock interface + velocity volume) from velocity "
+            "sections; that structure can be handed to <b>ERT → Water Content</b>, "
+            "which estimates water content and porosity per layer with Monte "
+            "Carlo uncertainty."
         )
         intro.setWordWrap(True)
         self._summary = QTextEdit()

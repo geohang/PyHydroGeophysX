@@ -1,20 +1,22 @@
-"""EM module: 1D FDEM / TDEM forward modeling and inversion.
+"""EM module: 1D FDEM / TDEM inversion.
 
-Load a sounding (FDEM: frequency, real, imag; TDEM: time, response), build a
-layered resistivity model and compute its forward response, and invert the
-sounding for a layered model (Occam-style 1D fit). The numerics live in the
-Qt-free ``PyHydroGeophysX.qt_apps.em_pipeline`` (a thin wrapper over the package's
-SimPEG forward operators). Results export to npy / csv / json.
+Load a sounding (FDEM: frequency, real, imag; TDEM: time, response) and invert it
+for a layered resistivity model. A file that stacks several soundings side by side
+(a survey line) is inverted sounding-by-sounding and stitched into a position x
+depth resistivity section. The numerics live in the Qt-free
+``PyHydroGeophysX.qt_apps.em_pipeline`` (a thin wrapper over the package's SimPEG
+forward operators). Results export to npy / csv.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDoubleSpinBox,
@@ -27,9 +29,8 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSpinBox,
+    QStackedWidget,
     QTabWidget,
-    QTableWidget,
-    QTableWidgetItem,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -39,12 +40,16 @@ from PyHydroGeophysX.qt_apps import em_pipeline, io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.widgets.curve_viewer import CurveViewer
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
+from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
+from PyHydroGeophysX.qt_apps.widgets.plan_slice_view import PlanSliceView
+from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
+from PyHydroGeophysX.qt_apps.workers import TaskWorker
 
 _FILE_FILTER = "Sounding (*.csv *.txt *.dat);;All files (*)"
 
 
 class InversionWorker(QThread):
-    """Runs a 1D EM inversion off the UI thread."""
+    """Runs a single-sounding 1D EM inversion off the UI thread."""
 
     logged = Signal(str)
     succeeded = Signal(dict)
@@ -77,17 +82,48 @@ class EMProcessingModule(BaseModule):
         self._data: Optional[Dict[str, np.ndarray]] = None
         self._source_path: Optional[Path] = None
         self._last_result: Optional[Dict[str, Any]] = None
+        self._last_section: Optional[Dict[str, Any]] = None
         self._inv_worker: Optional[InversionWorker] = None
+        self._line_worker: Optional[TaskWorker] = None
+        self._geom_positions: Optional[np.ndarray] = None
+        self._geom_heights: Optional[np.ndarray] = None
+        self._geom_x: Optional[np.ndarray] = None
+        self._geom_y: Optional[np.ndarray] = None
 
         root = QHBoxLayout(self)
         self._tabs = QTabWidget()
         self._curve = CurveViewer()
-        self._inv_view = ZoomableImageView()
+        # The "Resistivity model" tab adapts to the result: a 1D depth profile
+        # (single sounding), or — for a line — a plan-view depth slice (a map you
+        # slice by depth) or the position x depth section, chosen with "View".
+        self._inv_view = ZoomableImageView()       # page 0: single-sounding profile
+        self._plan_view = PlanSliceView()          # page 1: plan-view depth slice
+        self._section_view = Model3DView()         # page 2: position x depth section
+        self._model_stack = QStackedWidget()
+        self._model_stack.addWidget(self._inv_view)
+        self._model_stack.addWidget(self._plan_view)
+        self._model_stack.addWidget(self._section_view)
+        self._model_tab = QWidget()
+        mlay = QVBoxLayout(self._model_tab); mlay.setContentsMargins(0, 0, 0, 0)
+        self._view_row = QWidget()
+        vr = QHBoxLayout(self._view_row); vr.setContentsMargins(6, 2, 6, 2)
+        vr.addWidget(QLabel("View:"))
+        self._view_mode = QComboBox(); self._view_mode.addItems(["Plan slice (map)", "Section"])
+        self._view_mode.currentIndexChanged.connect(self._on_view_mode)
+        vr.addWidget(self._view_mode); vr.addStretch(1)
+        self._view_row.setVisible(False)
+        mlay.addWidget(self._view_row)
+        mlay.addWidget(self._model_stack, stretch=1)
+        self._quality_view = InversionQualityView()
         self._tabs.addTab(self._curve, "Sounding")
-        self._tabs.addTab(self._inv_view, "Inversion")
+        self._tabs.addTab(self._model_tab, "Resistivity model")
+        self._tabs.addTab(self._quality_view, "Inversion quality")
         root.addWidget(self._tabs, stretch=1)
         root.addWidget(self._build_controls())
         self._on_method_changed()
+
+    def _on_view_mode(self, idx: int) -> None:
+        self._model_stack.setCurrentWidget(self._plan_view if idx == 0 else self._section_view)
 
     # -- helpers -------------------------------------------------------------
     @staticmethod
@@ -109,81 +145,86 @@ class EMProcessingModule(BaseModule):
         panel = QWidget(); scroll.setWidget(panel)
         layout = QVBoxLayout(panel)
 
+        layout.addWidget(self._build_loader_group())
+        layout.addWidget(self._build_geometry_group())
+        layout.addWidget(self._build_inversion_group())
+        layout.addStretch(1)
+        return scroll
+
+    def _build_loader_group(self) -> QGroupBox:
+        box = QGroupBox("Load sounding data"); v = QVBoxLayout(box)
         self._method = QComboBox(); self._method.addItems(list(em_pipeline.METHODS))
         self._method.currentTextChanged.connect(self._on_method_changed)
         mrow = QFormLayout(); mrow.addRow("Method", self._method)
-        layout.addLayout(mrow)
+        v.addLayout(mrow)
 
         row = QHBoxLayout()
-        load_btn = QPushButton("Load sounding…")
-        load_btn.setIcon(theme.icon("fa5s.folder-open"))
+        load_btn = QPushButton("Load sounding(s)…")
+        load_btn.setProperty("primary", True)
+        load_btn.setIcon(theme.icon("fa5s.folder-open", color="#ffffff"))
         load_btn.clicked.connect(self._load)
         fmt_btn = QPushButton("Data format")
         fmt_btn.setIcon(theme.icon("fa5s.file-alt"))
         fmt_btn.clicked.connect(self._show_format_help)
         row.addWidget(load_btn); row.addWidget(fmt_btn)
-        layout.addLayout(row)
-        self._info = QLabel("No sounding loaded. FDEM: freq, real, imag · TDEM: time, response.")
+        v.addLayout(row)
+
+        # Optional per-sounding geometry (positions / height) for a survey line;
+        # sits next to the loader, shown once a multi-sounding file is loaded.
+        self._geom_row = QWidget()
+        gv = QVBoxLayout(self._geom_row); gv.setContentsMargins(0, 0, 0, 0)
+        grow = QHBoxLayout()
+        self._geom_btn = QPushButton("Load geometry…")
+        self._geom_btn.setIcon(theme.icon("fa5s.map-marker-alt"))
+        self._geom_btn.setToolTip("Load a file of along-line positions (and optional sensor "
+                                  "height), one row per sounding, so the section uses real "
+                                  "distances instead of uniform spacing. See Data format.")
+        self._geom_btn.clicked.connect(self._load_geometry)
+        grow.addWidget(self._geom_btn); grow.addStretch(1)
+        gv.addLayout(grow)
+        self._geom_info = QLabel("Geometry: uniform spacing.")
+        self._geom_info.setStyleSheet("color:#5a6a7a; font-size:8pt;"); self._geom_info.setWordWrap(True)
+        gv.addWidget(self._geom_info)
+        self._geom_row.setVisible(False)
+        v.addWidget(self._geom_row)
+
+        hint = QLabel("Upload one file. FDEM: columns freq, real, imag. TDEM: columns "
+                      "time, response. Stack several soundings side by side for a survey "
+                      "line (it is inverted into a resistivity section).")
+        hint.setWordWrap(True); hint.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        v.addWidget(hint)
+
+        # Picker for files that hold several soundings (drives the preview curve).
+        self._sounding_row = QWidget()
+        srow = QFormLayout(self._sounding_row); srow.setContentsMargins(0, 0, 0, 0)
+        self._sounding = QSpinBox(); self._sounding.setRange(1, 1); self._sounding.setValue(1)
+        self._sounding.setToolTip("This file holds several soundings; pick which one to preview.")
+        self._sounding.valueChanged.connect(self._on_sounding_changed)
+        srow.addRow("Preview sounding #", self._sounding)
+        self._sounding_row.setVisible(False)
+        v.addWidget(self._sounding_row)
+
+        self._info = QLabel("No sounding loaded.")
         self._info.setWordWrap(True)
-        layout.addWidget(self._info)
-
-        layout.addWidget(self._build_geometry_group())
-        layout.addWidget(self._build_model_group())
-        layout.addWidget(self._build_inversion_group())
-
-        exp = QPushButton("Export config JSON…")
-        exp.setIcon(theme.icon("fa5s.file-export"))
-        exp.clicked.connect(self._export_config)
-        layout.addWidget(exp)
-        layout.addStretch(1)
-        return scroll
+        v.addWidget(self._info)
+        return box
 
     def _build_geometry_group(self) -> QGroupBox:
-        box = QGroupBox("Survey geometry"); form = QFormLayout(box)
+        box = QGroupBox("Survey geometry (system)"); form = QFormLayout(box)
         f = em_pipeline.DEFAULT_FDEM
-        self._x_min = self._dspin(f["freq_min"], 1e-3, 1e7, 10.0, 3)
-        self._x_max = self._dspin(f["freq_max"], 1.0, 1e8, 100.0, 1)
-        self._n_x = self._ispin(f["n_freq"], 4, 200)
         self._src_radius = self._dspin(f["source_radius"], 0.5, 200.0, 1.0, 1)
         self._tx_rx = self._dspin(f["tx_rx_sep"], 0.0, 500.0, 1.0, 1)
         self._height = self._dspin(f["height"], 0.0, 500.0, 1.0, 1)
         self._orient = QComboBox(); self._orient.addItems(["z", "x", "y"])
         self._component = QComboBox(); self._component.addItems(["secondary", "total", "both"])
         self._waveform = QComboBox()
-        self._xlabel = QLabel("Frequencies (min / max / n)")
-        form.addRow(self._xlabel, self._x_min)
-        form.addRow("", self._x_max)
-        form.addRow("", self._n_x)
         form.addRow("Source radius (m)", self._src_radius)
-        self._tx_rx_row = self._tx_rx
         form.addRow("Tx-Rx sep (m)", self._tx_rx)
         form.addRow("Height (m)", self._height)
         form.addRow("Orientation", self._orient)
         self._component_label = QLabel("Component")
         form.addRow(self._component_label, self._component)
         form.addRow("Waveform", self._waveform)
-        return box
-
-    def _build_model_group(self) -> QGroupBox:
-        box = QGroupBox("Layered model (forward)"); v = QVBoxLayout(box)
-        self._model_table = QTableWidget(0, 2)
-        self._model_table.setHorizontalHeaderLabels(["Thickness (m)", "Resistivity (Ω·m)"])
-        self._model_table.horizontalHeader().setStretchLastSection(True)
-        self._model_table.setMaximumHeight(150)
-        v.addWidget(self._model_table)
-        self._set_model(em_pipeline.DEFAULT_MODEL)
-        row = QHBoxLayout()
-        add = QPushButton("Add layer"); add.clicked.connect(self._add_layer)
-        rem = QPushButton("Remove layer"); rem.clicked.connect(self._remove_layer)
-        row.addWidget(add); row.addWidget(rem)
-        v.addLayout(row)
-        fwd = QPushButton("Compute forward response")
-        fwd.setIcon(theme.icon("fa5s.play"))
-        fwd.clicked.connect(self._compute_forward)
-        v.addWidget(fwd)
-        note = QLabel("Last row is the half-space (thickness ignored).")
-        note.setStyleSheet("color:#5a6a7a; font-size:8pt;"); note.setWordWrap(True)
-        v.addWidget(note)
         return box
 
     def _build_inversion_group(self) -> QGroupBox:
@@ -194,13 +235,46 @@ class EMProcessingModule(BaseModule):
         self._max_thick = self._dspin(d["max_thickness"], 1.0, 500.0, 1.0, 1)
         self._smooth = self._dspin(d["smoothness"], 0.0, 10.0, 0.1, 2)
         self._rel_err = self._dspin(d["rel_error"], 0.0, 1.0, 0.01, 3)
+        self._data_scale = self._dspin(1.0, 1e-4, 1e6, 0.1, 4)
+        self._data_scale.setToolTip(
+            "Multiply the observed data before inversion. Use for data in normalized units "
+            "(e.g. moment-normalized airborne dB/dt) that need a system calibration constant. "
+            "1.0 = no scaling.")
+        self._auto_scale = QCheckBox("Auto-calibrate")
+        self._auto_scale.setChecked(True)
+        self._auto_scale.setToolTip("Rough amplitude guess from the data shape (de-rails the "
+                                    "inversion, but the absolute resistivity is only approximate). "
+                                    "For reliable absolute values, use Reference resistivity instead.")
+        self._ref_res = self._dspin(0.0, 0.0, 1e5, 10.0, 1)
+        self._ref_res.setToolTip(
+            "Pin the ABSOLUTE resistivity to a known/expected value (ohm-m) from a borehole or "
+            "regional geology — it ties the data amplitude to a half-space at this value, the "
+            "same way for every dataset, so results are consistent (the data alone cannot fix the "
+            "level). Recovered resistivity lands near this value. 0 = off; overrides Auto-calibrate.")
         self._max_iter = self._ispin(d["max_iterations"], 3, 200)
         form.addRow("Layers", self._n_layers)
         form.addRow("Min thickness (m)", self._min_thick)
         form.addRow("Max thickness (m)", self._max_thick)
         form.addRow("Smoothness", self._smooth)
         form.addRow("Relative error", self._rel_err)
+        form.addRow("Data scale / calib.", self._data_scale)
+        form.addRow("", self._auto_scale)
+        form.addRow("Reference ρ (Ω·m)", self._ref_res)
         form.addRow("Max iterations", self._max_iter)
+
+        # Line-only parameters, shown when the loaded file holds several soundings.
+        self._line_rows = QWidget()
+        lrow = QFormLayout(self._line_rows); lrow.setContentsMargins(0, 0, 0, 0)
+        self._line_spacing = self._dspin(50.0, 0.1, 100000.0, 10.0, 2)
+        self._line_spacing.setToolTip("Uniform sounding spacing used for the section's x-axis "
+                                      "when no geometry file is loaded.")
+        self._line_max = self._ispin(12, 1, 500)
+        self._line_max.setToolTip("Cap on how many soundings to invert (keeps a long line fast).")
+        lrow.addRow("Sounding spacing (m)", self._line_spacing)
+        lrow.addRow("Max soundings", self._line_max)
+        self._line_rows.setVisible(False)
+        form.addRow(self._line_rows)
+
         self._inv_btn = QPushButton("Run inversion")
         self._inv_btn.setProperty("primary", True)
         self._inv_btn.setIcon(theme.icon("fa5s.bullseye", color="#ffffff"))
@@ -217,102 +291,126 @@ class EMProcessingModule(BaseModule):
 
     # -- method switch -------------------------------------------------------
     def _on_method_changed(self) -> None:
-        method = self._method.currentText()
-        fdem = method == "FDEM"
-        if fdem:
-            d = em_pipeline.DEFAULT_FDEM
-            self._xlabel.setText("Frequencies (min / max / n)")
-            self._waveform.clear(); self._waveform.addItems(["dipole", "loop"])
-        else:
-            d = em_pipeline.DEFAULT_TDEM
-            self._xlabel.setText("Times (min / max / n)")
-            self._waveform.clear(); self._waveform.addItems(["step_off", "ramp_off"])
-        self._x_min.setValue(d.get("freq_min", d.get("t_min", 1e-5)))
-        self._x_max.setValue(d.get("freq_max", d.get("t_max", 1e-2)))
-        self._n_x.setValue(d.get("n_freq", d.get("n_times", 16)))
+        fdem = self._method.currentText() == "FDEM"
+        self._waveform.clear()
+        self._waveform.addItems(["dipole", "loop"] if fdem else ["step_off", "ramp_off"])
         self._component_label.setVisible(fdem)
         self._component.setVisible(fdem)
         self._tx_rx.setEnabled(fdem)
 
-    # -- model table ---------------------------------------------------------
-    def _set_model(self, model: Dict[str, Any]) -> None:
-        thick = list(model.get("thickness", []))
-        res = list(model.get("resistivity", []))
-        self._model_table.setRowCount(len(res))
-        for i in range(len(res)):
-            t_item = QTableWidgetItem("—" if i == len(res) - 1 else f"{thick[i]:g}")
-            self._model_table.setItem(i, 0, t_item)
-            self._model_table.setItem(i, 1, QTableWidgetItem(f"{res[i]:g}"))
-
-    def _read_model(self) -> Dict[str, List[float]]:
-        n = self._model_table.rowCount()
-        thick, res = [], []
-        for i in range(n):
-            r_item = self._model_table.item(i, 1)
-            res.append(float(r_item.text()) if r_item else 100.0)
-            if i < n - 1:
-                t_item = self._model_table.item(i, 0)
-                try:
-                    thick.append(float(t_item.text()))
-                except Exception:  # noqa: BLE001
-                    thick.append(10.0)
-        return {"thickness": thick, "resistivity": res}
-
-    def _add_layer(self) -> None:
-        n = self._model_table.rowCount()
-        self._model_table.insertRow(n)
-        # The previous half-space becomes a real layer; give it a thickness.
-        if n >= 1:
-            self._model_table.setItem(n - 1, 0, QTableWidgetItem("10"))
-        self._model_table.setItem(n, 0, QTableWidgetItem("—"))
-        self._model_table.setItem(n, 1, QTableWidgetItem("100"))
-
-    def _remove_layer(self) -> None:
-        n = self._model_table.rowCount()
-        if n > 2:
-            self._model_table.removeRow(n - 1)
-            self._model_table.setItem(n - 2, 0, QTableWidgetItem("—"))
-
-    # -- geometry ------------------------------------------------------------
+    # -- geometry / params ---------------------------------------------------
     def _collect_geom(self) -> Dict[str, Any]:
-        method = self._method.currentText()
         geom: Dict[str, Any] = {
             "source_radius": self._src_radius.value(),
             "height": self._height.value(),
             "orientation": self._orient.currentText(),
             "waveform": self._waveform.currentText(),
         }
-        if method == "FDEM":
-            geom.update(freq_min=self._x_min.value(), freq_max=self._x_max.value(),
-                        n_freq=self._n_x.value(), tx_rx_sep=self._tx_rx.value(),
-                        component=self._component.currentText())
-        else:
-            geom.update(t_min=self._x_min.value(), t_max=self._x_max.value(),
-                        n_times=self._n_x.value())
+        if self._method.currentText() == "FDEM":
+            geom.update(tx_rx_sep=self._tx_rx.value(), component=self._component.currentText())
         return geom
 
     def _collect_inv(self) -> Dict[str, Any]:
         return {"n_layers": self._n_layers.value(), "min_thickness": self._min_thick.value(),
                 "max_thickness": self._max_thick.value(), "smoothness": self._smooth.value(),
                 "rel_error": self._rel_err.value(), "max_iterations": self._max_iter.value(),
-                "starting_resistivity": 100.0}
+                "data_scale": self._data_scale.value(), "starting_resistivity": 100.0}
 
     # -- data ----------------------------------------------------------------
     def _load(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Load sounding", "", _FILE_FILTER)
         if not path:
             return
+        self._source_path = Path(path)
+        self._sounding.blockSignals(True)
+        self._sounding.setValue(1)
+        self._sounding.blockSignals(False)
+        self._load_sounding(0)
+
+    def _load_sounding(self, index: int) -> None:
+        if self._source_path is None:
+            return
         try:
-            self._data = em_pipeline.load_sounding(path, self._method.currentText())
+            self._data = em_pipeline.load_sounding(
+                str(self._source_path), self._method.currentText(), sounding=int(index))
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not load sounding: {exc}", "error")
             self._info.setText(f"Load failed: {exc}")
             return
-        self._source_path = Path(path)
         n = self._data["frequencies"].size if "frequencies" in self._data else self._data["times"].size
-        self._info.setText(f"{self._source_path.name}<br>{n} channels ({self._method.currentText()})")
-        self.log(f"Loaded sounding {self._source_path.name}", "success")
+        n_snd = int(self._data.get("n_soundings", 1))
+        self._sounding.blockSignals(True)
+        self._sounding.setRange(1, max(1, n_snd))
+        self._sounding.setValue(int(self._data.get("sounding", 0)) + 1)
+        self._sounding.blockSignals(False)
+        self._sounding_row.setVisible(n_snd > 1)
+        self._line_rows.setVisible(n_snd > 1)
+        self._geom_row.setVisible(n_snd > 1)
+        # A new file invalidates any previously loaded per-sounding geometry.
+        self._geom_positions = None; self._geom_heights = None
+        self._geom_x = None; self._geom_y = None
+        self._geom_info.setText("Geometry: uniform spacing.")
+        if n_snd > 1:
+            self._maybe_auto_geometry()
+        snd_txt = f" · sounding {self._data.get('sounding', 0) + 1}/{n_snd}" if n_snd > 1 else ""
+        kind = "line of soundings" if n_snd > 1 else "single sounding"
+        self._info.setText(f"{self._source_path.name}<br>{n} channels "
+                           f"({self._method.currentText()}, {kind}){snd_txt}")
+        self.log(f"Loaded sounding {self._source_path.name}{snd_txt}", "success")
         self._plot_data()
+
+    def _on_sounding_changed(self, value: int) -> None:
+        self._load_sounding(int(value) - 1)
+
+    def _maybe_auto_geometry(self) -> None:
+        """Auto-load a companion geometry file (so UTM coordinates are used without
+        a manual step). Prefers ``<stem>_geometry.csv`` / ``<stem>_geom.csv``; else a
+        single ``*geom*.csv`` beside the data file. Silent if none/ambiguous."""
+        if self._source_path is None:
+            return
+        d, stem = self._source_path.parent, self._source_path.stem
+        found = next((c for c in (d / f"{stem}_geometry.csv", d / f"{stem}_geom.csv")
+                      if c.exists()), None)
+        if found is None:
+            others = [p for p in d.glob("*geom*.csv")
+                      if p.resolve() != self._source_path.resolve()]
+            found = others[0] if len(others) == 1 else None
+        if found is None:
+            return
+        try:
+            g = em_pipeline.load_line_geometry(str(found))
+        except Exception:  # noqa: BLE001 - a bad companion file just means manual load
+            return
+        self._geom_positions = g["positions"]
+        self._geom_heights = g["heights"] if g["has_heights"] else None
+        self._geom_x = g.get("x"); self._geom_y = g.get("y")
+        extra = (" + height" if g["has_heights"] else "") + (" + map x,y" if g.get("has_xy") else "")
+        self._geom_info.setText(f"Geometry (auto): {found.name}, {g['n']} soundings{extra}.")
+        self.log(f"Auto-loaded companion geometry {found.name}{extra}.", "info")
+
+    def _load_geometry(self) -> None:
+        if self._source_path is None:
+            self.log("Load the sounding file first.", "warn")
+            return
+        path, _ = QFileDialog.getOpenFileName(self, "Load line geometry", "", _FILE_FILTER)
+        if not path:
+            return
+        try:
+            g = em_pipeline.load_line_geometry(path)
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not load geometry: {exc}", "error")
+            return
+        self._geom_positions = g["positions"]
+        self._geom_heights = g["heights"] if g["has_heights"] else None
+        self._geom_x = g.get("x"); self._geom_y = g.get("y")
+        span = float(g["positions"][-1] - g["positions"][0]) if g["n"] else 0.0
+        extra = ""
+        if g["has_heights"]:
+            extra += " + height"
+        if g.get("has_xy"):
+            extra += " + map x,y"
+        self._geom_info.setText(f"Geometry: {g['n']} soundings, {span:.0f} m span{extra}.")
+        self.log(f"Loaded line geometry: {g['n']} positions{extra}.", "success")
 
     def _plot_data(self) -> None:
         if self._data is None:
@@ -327,44 +425,40 @@ class EMProcessingModule(BaseModule):
         self._curve.set_log_x(True)
         self._tabs.setCurrentWidget(self._curve)
 
-    # -- forward -------------------------------------------------------------
-    def _compute_forward(self) -> None:
-        method = self._method.currentText()
-        try:
-            model = self._read_model()
-            geom = self._collect_geom()
-            fn = em_pipeline.fdem_forward if method == "FDEM" else em_pipeline.tdem_forward
-            resp = fn(model, geom, log=lambda m: self.log(m, "info"))
-        except em_pipeline.BackendUnavailable as exc:
-            self.log(f"SimPEG is needed for EM forward modeling: {exc}", "warn")
-            return
-        except Exception as exc:  # noqa: BLE001
-            self.log(f"Forward modeling failed: {exc}", "error")
-            return
-        if method == "FDEM":
-            x = resp["frequencies"]
-            if self._data is None:
-                self._curve.clear_curves()
-            self._curve.add_curve(x, resp["real"], name="model real")
-            self._curve.add_curve(x, resp["imag"], name="model imag")
-        else:
-            x = resp["times"]
-            if self._data is None:
-                self._curve.clear_curves()
-            self._curve.add_curve(x, resp["response"], name="model")
-        self._curve.set_log_x(True)
-        self._tabs.setCurrentWidget(self._curve)
-        self.log(f"{method} forward computed ({x.size} channels).", "success")
-        self.report_result({"method": method, "forward_channels": int(x.size)})
-
-    # -- inversion -----------------------------------------------------------
+    # -- inversion (one button; single sounding -> profile, line -> section) --
     def _run_inversion(self) -> None:
         if self._data is None:
             self.log("Load a sounding first.", "warn")
             return
         method = self._method.currentText()
+        n_snd = int(self._data.get("n_soundings", 1))
+        ref = float(self._ref_res.value())
+        # Reference-resistivity calibration for a single sounding, or the rough
+        # auto-calibration, happen up front. For a line with a reference, invert_line
+        # calibrates inside the worker (off-thread) and reports the value it used.
+        if self._source_path is not None:
+            try:
+                if ref > 0 and n_snd == 1:
+                    self.log(f"Calibrating to reference {ref:.0f} Ω·m…", "info")
+                    k = em_pipeline.calibrate_to_reference(
+                        str(self._source_path), method, self._collect_geom(),
+                        self._collect_inv(), ref, log=lambda m: self.log(m, "info"))
+                    self._data_scale.setValue(float(k))
+                elif ref <= 0 and self._auto_scale.isChecked():
+                    k = em_pipeline.estimate_data_scale(str(self._source_path), method,
+                                                        self._collect_geom(), log=lambda m: self.log(m, "info"))
+                    self._data_scale.setValue(float(k))
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Calibration failed ({exc}); using data_scale="
+                         f"{self._data_scale.value():g}", "warn")
         self._inv_btn.setEnabled(False); self._inv_btn.setText("Inverting…")
         self._inv_progress.setVisible(True); self._inv_progress.setRange(0, 0)
+        if n_snd > 1:
+            self._start_line(method)
+        else:
+            self._start_single(method)
+
+    def _start_single(self, method: str) -> None:
         self.log(f"Starting {method} 1D inversion…", "info")
         self._inv_worker = InversionWorker(method, self._data, self._collect_geom(), self._collect_inv())
         self._inv_worker.logged.connect(lambda m: self.log(m, "info"))
@@ -374,24 +468,107 @@ class EMProcessingModule(BaseModule):
         self.register_worker(self._inv_worker)
         self._inv_worker.start()
 
+    def _start_line(self, method: str) -> None:
+        out_dir = str(io_utils.ensure_dir(Path(self.state.output_dir or ".") / "em_results"))
+        self.log(f"Starting {method} line inversion (up to {self._line_max.value()} soundings)…", "info")
+        worker = TaskWorker(
+            em_pipeline.invert_line, str(self._source_path), method,
+            self._collect_geom(), self._collect_inv(), with_log=True,
+            spacing=float(self._line_spacing.value()), positions=self._geom_positions,
+            heights=self._geom_heights, max_soundings=int(self._line_max.value()),
+            ref_resistivity=float(self._ref_res.value()), out_dir=Path(out_dir))
+        worker.logged.connect(lambda m: self.log(m, "info"))
+        worker.succeeded.connect(self._on_line_ok)
+        worker.failed.connect(self._on_line_failed)
+        worker.finished.connect(self._reset_inv_button)
+        self._line_worker = self.register_worker(worker)
+        worker.start()
+
+    def _reset_inv_button(self) -> None:
+        self._inv_btn.setEnabled(True); self._inv_btn.setText("Run inversion")
+        self._inv_progress.setVisible(False)
+
     def _on_inversion_ok(self, result: dict) -> None:
         self._last_result = result
         self._inv_export.setEnabled(True)
         png = self._render_inversion(result)
         if png:
             self._inv_view.set_image_file(png)
-            self._tabs.setCurrentWidget(self._inv_view)
+            self._view_row.setVisible(False)
+            self._model_stack.setCurrentWidget(self._inv_view)
+            self._tabs.setCurrentWidget(self._model_tab)
+        self._quality_view.show_quality(
+            {"chi2": float(result["chi2"]), "n_data": result.get("n_data"),
+             "method": f"{result['method']} 1D Occam",
+             "extra": {"layers": result.get("n_layers"), "forward evals": result.get("nfev")},
+             "note": "1D least-squares inversion (χ² is the mean weighted squared residual)."},
+            convergence=None, title=f"{result['method']} inversion")
         self.log(f"{result['method']} inversion complete (chi2={result['chi2']:.3f}).", "success")
         self.report_result({"method": result["method"], "chi2": float(result["chi2"]),
+                            "n_data": result.get("n_data"), "nfev": result.get("nfev"),
                             "n_layers": int(np.asarray(result["resistivity"]).size)})
+
+    def _on_line_ok(self, result: dict) -> None:
+        self._last_section = result
+        if "data_scale" in result:  # show the value the worker actually used (calibrated)
+            self._data_scale.setValue(float(result["data_scale"]))
+        self._section_view.show_model(result["edges"], result["model3d"],
+                                      label=result["label"], cmap=result["cmap"],
+                                      log_scale=result.get("log_scale", True))
+        self._populate_plan(result)
+        self._view_row.setVisible(True)
+        self._view_mode.blockSignals(True); self._view_mode.setCurrentIndex(0)
+        self._view_mode.blockSignals(False)
+        self._model_stack.setCurrentWidget(self._plan_view)  # default to the plan-view map
+        self._tabs.setCurrentWidget(self._model_tab)
+        rng = result.get("model_range", [float("nan"), float("nan")])
+        chi2 = result.get("chi2")
+        chi_txt = f", mean chi2={chi2:.2f}" if isinstance(chi2, float) and chi2 == chi2 else ""
+        self.log(f"{result['method']} line inversion complete: {result['n_soundings']} soundings, "
+                 f"resistivity {rng[0]:.3g}..{rng[1]:.3g} Ω·m{chi_txt}.", "success")
+        self._quality_view.show_quality(
+            {"chi2": float(chi2) if isinstance(chi2, float) else float("nan"),
+             "n_data": result.get("n_data"),
+             "method": f"{result['method']} line (stitched 1D Occam)",
+             "extra": {"soundings": result.get("n_soundings"), "layers": result.get("n_layers")},
+             "note": "Mean χ² over the soundings on the line (each inverted independently in 1D)."},
+            convergence=None, title=f"{result['method']} line inversion")
+        saved = result.get("saved") or []
+        for path in saved:
+            self.log(f"Saved section to {path}", "info")
+        self.report_result({"method": result["method"], "n_soundings": result.get("n_soundings"),
+                            "mean_chi2": chi2, "section_npz": saved[0] if saved else None})
+
+    def _populate_plan(self, result: dict) -> None:
+        """Feed the plan-view depth-slice map from a line-inversion result: each
+        sounding's map coordinate + its resistivity per depth layer."""
+        model = np.asarray(result["model3d"], dtype=float)[:, 0, :]  # (n_pos, n_layers), deepest-first
+        n_pos = model.shape[0]
+        depth_edges = np.asarray(result["depth_edges"], dtype=float)
+        depth_ctr = 0.5 * (depth_edges[:-1] + depth_edges[1:])       # surface-ordered
+        res_surface = model[:, ::-1]                                 # surface-ordered in depth
+        if (self._geom_x is not None and self._geom_y is not None
+                and self._geom_x.size >= n_pos and self._geom_y.size >= n_pos):
+            xy = np.column_stack([self._geom_x[:n_pos], self._geom_y[:n_pos]])
+            x_label, y_label = "Easting (m)", "Northing (m)"
+        else:  # no map coordinates loaded: lay soundings along the distance axis
+            pos = np.asarray(result["positions"], dtype=float)[:n_pos]
+            xy = np.column_stack([pos, np.zeros_like(pos)])
+            x_label, y_label = "Distance along line (m)", ""
+        self._plan_view.show_slices(xy, res_surface, depth_ctr,
+                                    label=result.get("label", "resistivity (Ω·m)"),
+                                    log_scale=result.get("log_scale", True),
+                                    x_label=x_label, y_label=y_label)
 
     def _on_inversion_failed(self, message: str, backend: bool) -> None:
         self.log(f"Inversion {'unavailable' if backend else 'failed'}: {message}",
                  "warn" if backend else "error")
 
-    def _reset_inv_button(self) -> None:
-        self._inv_btn.setEnabled(True); self._inv_btn.setText("Run inversion")
-        self._inv_progress.setVisible(False)
+    def _on_line_failed(self, message: str) -> None:
+        if any(k in message.lower() for k in ("backend", "simpeg", "discretize")):
+            self.log(f"Line inversion needs SimPEG: {message}", "warn")
+        else:
+            self.log(f"Line inversion failed: {message}", "error")
 
     def _render_inversion(self, result: dict) -> Optional[str]:
         try:
@@ -428,7 +605,7 @@ class EMProcessingModule(BaseModule):
 
     def _export_inversion(self) -> None:
         if not self._last_result:
-            self.log("Run an inversion first.", "warn")
+            self.log("Run a single-sounding inversion first (a line auto-saves its section).", "warn")
             return
         folder = QFileDialog.getExistingDirectory(self, "Export recovered model to folder",
                                                   str(self.state.output_dir or Path.cwd()))
@@ -436,15 +613,6 @@ class EMProcessingModule(BaseModule):
             return
         paths = em_pipeline.save_inversion(self._last_result, Path(folder))
         self.log(f"Exported recovered model ({len(paths)} files) to {folder}", "success")
-
-    def _export_config(self) -> None:
-        cfg = em_pipeline.build_em_config(self._method.currentText(), self._read_model(),
-                                          self._collect_geom(), self._collect_inv())
-        path, _ = QFileDialog.getSaveFileName(self, "Export EM config", "em_config.json", "JSON (*.json)")
-        if not path:
-            return
-        io_utils.write_json(path, cfg)
-        self.log(f"Exported EM config to {path}", "success")
 
     def _show_format_help(self) -> None:
         doc_path = Path(__file__).with_name("em_input_format.md")
@@ -472,17 +640,29 @@ class EMProcessingModule(BaseModule):
             "actions": [
                 {"name": "set_method", "args": {"method": list(em_pipeline.METHODS)},
                  "desc": "Choose the EM method (FDEM or TDEM)."},
-                {"name": "load_data", "args": {"path": "str"},
-                 "desc": "Load a sounding file for the current method."},
+                {"name": "load_data", "args": {"path": "str", "sounding": "int (optional, 1-based)"},
+                 "desc": ("Load a sounding file for the current method. If the file stacks several "
+                          "soundings side by side (a survey line), 'sounding' picks which one to "
+                          "preview (default 1); the inversion still uses the whole line.")},
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
-                 "desc": ("Set parameters. Geometry: x_min, x_max, n_channels, source_radius, "
-                          "tx_rx_sep, height, orientation (z/x/y), component (secondary/total/both), "
-                          "waveform. Inversion: n_layers, min_thickness, max_thickness, smoothness, "
-                          "rel_error, max_iterations.")},
-                {"name": "compute_forward", "args": {},
-                 "desc": "Compute the forward EM response of the layered model."},
+                 "desc": ("Set parameters. Geometry: source_radius, tx_rx_sep, height, orientation "
+                          "(z/x/y), component (secondary/total/both), waveform. Inversion: n_layers, "
+                          "min_thickness, max_thickness, smoothness, rel_error, data_scale "
+                          "(calibration multiplier), auto_scale (bool, rough), ref_resistivity "
+                          "(ohm-m; calibrate the absolute level to a known value, the reliable "
+                          "option), max_iterations. Line: spacing, max_soundings.")},
+                {"name": "auto_calibrate", "args": {},
+                 "desc": ("Estimate the data_scale calibration from the loaded data and set it. Use "
+                          "for normalized airborne data (e.g. moment-normalized dB/dt).")},
+                {"name": "load_geometry", "args": {"path": "str"},
+                 "desc": ("Load per-sounding line geometry (a file with along-line position and "
+                          "optional sensor height) so the section uses real distances instead of "
+                          "uniform spacing.")},
                 {"name": "run_inversion", "args": {},
-                 "desc": "Run the 1D Occam inversion on the loaded sounding."},
+                 "desc": ("Run the inversion. A single-sounding file gives a 1D layered model; a "
+                          "multi-sounding file is inverted sounding-by-sounding into a position x "
+                          "depth resistivity section. If auto-calibrate is on, data_scale is "
+                          "estimated first.")},
                 {"name": "get_status", "args": {},
                  "desc": "Report the method, loaded data, and last result."},
             ],
@@ -492,9 +672,10 @@ class EMProcessingModule(BaseModule):
         args = args or {}
         handlers = {
             "set_method": lambda: self._agent_set_method(args.get("method")),
-            "load_data": lambda: self._agent_load(args.get("path")),
+            "load_data": lambda: self._agent_load(args.get("path"), args.get("sounding", 1)),
             "set_params": lambda: self._agent_set_params(args.get("params", args)),
-            "compute_forward": lambda: self._agent_compute_forward(),
+            "auto_calibrate": lambda: self._agent_auto_calibrate(),
+            "load_geometry": lambda: self._agent_load_geometry(args.get("path")),
             "run_inversion": lambda: self._agent_run_inversion(),
             "get_status": lambda: self._agent_status(),
         }
@@ -506,12 +687,13 @@ class EMProcessingModule(BaseModule):
 
     def _agent_status(self) -> Dict[str, Any]:
         last = self.state.module_results.get(self.module_key, {})
+        n_snd = int(self._data.get("n_soundings", 1)) if self._data else 0
         return {
             "status": "ok",
             "method": self._method.currentText(),
             "data_loaded": self._data is not None,
             "source": str(self._source_path or ""),
-            "model_layers": self._model_table.rowCount(),
+            "n_soundings": n_snd,
             "last_result_keys": sorted(last.keys()),
         }
 
@@ -522,22 +704,24 @@ class EMProcessingModule(BaseModule):
         self._method.setCurrentText(method)
         return {"status": "ok", "method": self._method.currentText()}
 
-    def _agent_load(self, path: Any) -> Dict[str, Any]:
+    def _agent_load(self, path: Any, sounding: Any = 1) -> Dict[str, Any]:
         if not path:
             return {"status": "failed", "error": "Provide 'path' to a sounding file."}
         p = Path(str(path))
         if not p.exists():
             return {"status": "failed", "error": f"File not found: {p}"}
+        self._source_path = Path(p)
         try:
-            self._data = em_pipeline.load_sounding(str(p), self._method.currentText())
+            self._load_sounding(max(0, int(sounding) - 1))
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": f"Could not load sounding: {exc}"}
-        self._source_path = Path(p)
+        if self._data is None:
+            return {"status": "failed", "error": "Could not load sounding (wrong method/format?)."}
         arr = self._data.get("frequencies", self._data.get("times"))
         n = int(arr.size) if arr is not None else 0
-        self._info.setText(f"{self._source_path.name}<br>{n} channels ({self._method.currentText()})")
-        self._plot_data()
-        return {"status": "ok", "channels": n, "method": self._method.currentText()}
+        return {"status": "ok", "channels": n, "method": self._method.currentText(),
+                "n_soundings": int(self._data.get("n_soundings", 1)),
+                "sounding": int(self._data.get("sounding", 0)) + 1}
 
     def _agent_set_params(self, params: Any) -> Dict[str, Any]:
         if not isinstance(params, dict):
@@ -550,9 +734,6 @@ class EMProcessingModule(BaseModule):
             combo.setCurrentText(str(value))
 
         handlers = {
-            "x_min": lambda v: self._x_min.setValue(float(v)),
-            "x_max": lambda v: self._x_max.setValue(float(v)),
-            "n_channels": lambda v: self._n_x.setValue(int(v)),
             "source_radius": lambda v: self._src_radius.setValue(float(v)),
             "tx_rx_sep": lambda v: self._tx_rx.setValue(float(v)),
             "height": lambda v: self._height.setValue(float(v)),
@@ -564,7 +745,12 @@ class EMProcessingModule(BaseModule):
             "max_thickness": lambda v: self._max_thick.setValue(float(v)),
             "smoothness": lambda v: self._smooth.setValue(float(v)),
             "rel_error": lambda v: self._rel_err.setValue(float(v)),
+            "data_scale": lambda v: self._data_scale.setValue(float(v)),
+            "auto_scale": lambda v: self._auto_scale.setChecked(bool(v)),
+            "ref_resistivity": lambda v: self._ref_res.setValue(float(v)),
             "max_iterations": lambda v: self._max_iter.setValue(int(v)),
+            "spacing": lambda v: self._line_spacing.setValue(float(v)),
+            "max_soundings": lambda v: self._line_max.setValue(int(v)),
         }
         applied: Dict[str, Any] = {}
         ignored: Dict[str, str] = {}
@@ -580,14 +766,42 @@ class EMProcessingModule(BaseModule):
                 ignored[key] = str(exc)
         return {"status": "ok" if applied else "failed", "applied": applied, "ignored": ignored}
 
-    def _agent_compute_forward(self) -> Dict[str, Any]:
-        self._compute_forward()
-        return {"status": "ok", "message": "Forward response computed.",
-                "method": self._method.currentText()}
-
     def _agent_run_inversion(self) -> Dict[str, Any]:
         if self._data is None:
             return {"status": "failed", "error": "Load a sounding first."}
+        n_snd = int(self._data.get("n_soundings", 1))
         self._run_inversion()
-        return {"status": "started", "message": "EM inversion started. Ask for status shortly.",
-                "method": self._method.currentText()}
+        return {"status": "started",
+                "message": ("EM %s inversion started. Ask for status shortly."
+                            % ("line" if n_snd > 1 else "1D")),
+                "method": self._method.currentText(), "n_soundings": n_snd}
+
+    def _agent_auto_calibrate(self) -> Dict[str, Any]:
+        if self._data is None or self._source_path is None:
+            return {"status": "failed", "error": "Load a sounding first."}
+        try:
+            k = em_pipeline.estimate_data_scale(str(self._source_path), self._method.currentText(),
+                                                self._collect_geom(), log=lambda m: self.log(m, "info"))
+        except Exception as exc:  # noqa: BLE001
+            return {"status": "failed", "error": f"Auto-calibration failed: {exc}"}
+        self._data_scale.setValue(float(k))
+        return {"status": "ok", "data_scale": float(k)}
+
+    def _agent_load_geometry(self, path: Any) -> Dict[str, Any]:
+        if not path:
+            return {"status": "failed", "error": "Provide 'path' to a geometry file."}
+        p = Path(str(path))
+        if not p.exists():
+            return {"status": "failed", "error": f"File not found: {p}"}
+        try:
+            g = em_pipeline.load_line_geometry(str(p))
+        except Exception as exc:  # noqa: BLE001
+            return {"status": "failed", "error": f"Could not load geometry: {exc}"}
+        self._geom_positions = g["positions"]
+        self._geom_heights = g["heights"] if g["has_heights"] else None
+        self._geom_x = g.get("x"); self._geom_y = g.get("y")
+        extra = (" + height" if g["has_heights"] else "") + (" + map x,y" if g.get("has_xy") else "")
+        span = float(g["positions"][-1] - g["positions"][0]) if g["n"] else 0.0
+        self._geom_info.setText(f"Geometry: {g['n']} soundings, {span:.0f} m span{extra}.")
+        return {"status": "ok", "n": g["n"], "has_heights": g["has_heights"],
+                "has_xy": bool(g.get("has_xy"))}

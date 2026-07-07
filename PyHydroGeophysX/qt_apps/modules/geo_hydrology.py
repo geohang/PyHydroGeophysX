@@ -81,7 +81,7 @@ _GENERIC_LAYER = {
 }
 
 _INPUT_FORMAT_FALLBACK = (
-    "# Geophysics → Hydro input format\n\n"
+    "# ERT → Water Content input format\n\n"
     "Place an inverted-model bundle in one folder:\n\n"
     "- `mesh_res.bms` - pyGIMLi inversion mesh\n"
     "- `resmodel.npy` - inverted resistivity (n_cells, n_time)\n"
@@ -118,7 +118,7 @@ class InverseWorker(QThread):
 
 class GeoHydrologyModule(BaseModule):
     module_key = "geo_hydrology"
-    module_title = "Geophysics → Hydro"
+    module_title = "ERT → Water Content"
 
     def __init__(self, state: Any, log: LogFn, parent=None) -> None:
         super().__init__(state, log, parent)
@@ -742,12 +742,18 @@ class GeoHydrologyModule(BaseModule):
         self._reload()
 
     def _example_data_dir(self) -> Optional[Path]:
-        """Locate the bundled inverted-model demo for standalone launches."""
+        """Locate the bundled synthetic inverted-model demo for standalone launches.
+
+        Points at the synthetic ERT bundle produced by
+        ``examples/generate_synthetic_examples.py``. The real Treeline demo in
+        ``examples/results/Structure_WC`` is preserved and can still be opened via
+        "Select folder...".
+        """
         candidates: List[Path] = []
         if self.state.project_root:
-            candidates.append(Path(self.state.project_root) / "examples" / "results" / "Structure_WC")
+            candidates.append(Path(self.state.project_root) / "examples" / "results" / "synthetic_Structure_WC")
         here = Path(__file__).resolve()
-        candidates.extend(p / "examples" / "results" / "Structure_WC" for p in here.parents)
+        candidates.extend(p / "examples" / "results" / "synthetic_Structure_WC" for p in here.parents)
         for cand in candidates:
             files = geo_pipeline.find_model_files(cand)
             if files.get("resistivity") is not None and files.get("mesh") is not None:
@@ -761,7 +767,7 @@ class GeoHydrologyModule(BaseModule):
         except Exception:  # noqa: BLE001
             text = _INPUT_FORMAT_FALLBACK
         dlg = QDialog(self)
-        dlg.setWindowTitle("Geophysics → Hydro input format")
+        dlg.setWindowTitle("ERT → Water Content input format")
         dlg.resize(760, 640)
         lay = QVBoxLayout(dlg)
         browser = QTextBrowser(); browser.setOpenExternalLinks(True)
@@ -886,7 +892,7 @@ class GeoHydrologyModule(BaseModule):
         self._progress.setRange(0, 0)
         self._run_status.setText("Starting Monte Carlo estimation…")
         self.log("Starting geophysics → hydrology estimation…", "info")
-        self._worker = InverseWorker(self._context(), params)
+        self._worker = self.register_worker(InverseWorker(self._context(), params))
         self._worker.logged.connect(self._on_worker_log)
         self._worker.succeeded.connect(self._on_run_ok)
         self._worker.failed.connect(self._on_run_failed)

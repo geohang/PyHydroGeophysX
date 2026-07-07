@@ -198,6 +198,19 @@ def run_timelapse_ert(
         coverage = None
     res_mesh = getattr(result, "mesh", mesh)
 
+    # Inversion-quality history: result.all_chi2 holds [chi2, phi_m, phi_t] per
+    # iteration (full mode). Reduce to a chi2-per-iteration list for the panel.
+    chi2_history: List[float] = []
+    try:
+        for entry in (getattr(result, "all_chi2", None) or []):
+            arr = np.asarray(entry, dtype=float).ravel()
+            if arr.size:
+                chi2_history.append(float(arr[0]))
+    except Exception:  # noqa: BLE001 - convergence history is optional
+        chi2_history = []
+    final_chi2 = chi2_history[-1] if chi2_history else float("nan")
+    n_data_total = int(sum(int(c.size()) for c in containers))
+
     out = io_utils.ensure_dir(Path(out_dir) / "qt_ert_timelapse")
     figure_paths: List[str] = []
     data_paths: List[str] = []
@@ -286,6 +299,9 @@ def run_timelapse_ert(
         "inversion_type": str(p["inversion_type"]),
         "instrument": instrument,
         "save_memory": bool(save_memory),
+        "chi2": final_chi2,
+        "chi2_history": chi2_history,
+        "n_data": n_data_total,
         "measurement_times": [float(t) for t in times],
         "time_labels": list(labels),
         "resistivity_range": [cmin, cmax],
@@ -296,4 +312,10 @@ def run_timelapse_ert(
         "normalized_dir": clean_dir,
         "config_path": str(out / "timelapse_config.json"),
         "output_dir": str(out),
+        # In-memory results for interactive per-step display (a pyGIMLi mesh +
+        # arrays; not JSON-serializable, so the UI strips these before publishing).
+        "mesh": res_mesh,
+        "final_models": final_models,
+        "coverage": coverage,
+        "step_titles": panel_titles,
     }

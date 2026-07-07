@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import pyqtgraph as pg
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QPixmap
 from PySide6.QtWidgets import (
     QDockWidget,
@@ -85,6 +85,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
 
         self._build_menus()
         self._build_toolbar()
+        self._geometry_restored = self._restore_window_settings()
 
         self._status_label = QLabel("Ready")
         self.statusBar().addWidget(self._status_label)
@@ -95,6 +96,26 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         self.show_module(self.state.selected_module or "home")
 
     # -- layout helpers ------------------------------------------------------
+    def _restore_window_settings(self) -> bool:
+        """Restore window geometry and dock layout saved on the last close.
+
+        Returns True when a saved geometry was applied, so the launcher knows
+        not to override it with the default window size.
+        """
+        settings = QSettings("PyHydroGeophysX", "Workbench")
+        geometry = settings.value("main/geometry")
+        window_state = settings.value("main/windowState")
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+        if window_state is not None:
+            self.restoreState(window_state)
+        return geometry is not None
+
+    def _save_window_settings(self) -> None:
+        settings = QSettings("PyHydroGeophysX", "Workbench")
+        settings.setValue("main/geometry", self.saveGeometry())
+        settings.setValue("main/windowState", self.saveState())
+
     def _make_dock(self, title: str, widget: QWidget, area: Qt.DockWidgetArea) -> QDockWidget:
         dock = QDockWidget(title, self)
         dock.setWidget(widget)
@@ -148,9 +169,9 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         tools_menu = menubar.addMenu("&Tools")
         self._add_action(tools_menu, "Geophysical Data Processing", lambda: self.show_module("seismic"))
         self._add_action(tools_menu, "Hydro → Geophysics", lambda: self.show_module("hydro_geophysics"))
-        subsurface = tools_menu.addMenu("Geophysics → Subsurface")
-        self._add_action(subsurface, "Seismic → 3D Structure", lambda: self.show_module("seismic3d"))
-        self._add_action(subsurface, "ERT → Hydro", lambda: self.show_module("geo_hydrology"))
+        subsurface = tools_menu.addMenu("Geophy → Hydrology")
+        self._add_action(subsurface, "Seismic → Structure", lambda: self.show_module("seismic3d"))
+        self._add_action(subsurface, "ERT → Water Content", lambda: self.show_module("geo_hydrology"))
 
         help_menu = menubar.addMenu("&Help")
         self._add_action(help_menu, "About", self._about)
@@ -326,7 +347,11 @@ class PyHydroGeophysXWorkbench(QMainWindow):
 
     # -- shutdown ------------------------------------------------------------
     def closeEvent(self, event) -> None:
-        """Cancel/join any module worker threads so none is destroyed mid-run."""
+        """Persist the layout, then cancel/join module workers before closing."""
+        try:
+            self._save_window_settings()
+        except Exception:  # noqa: BLE001 - persistence is best effort
+            pass
         for page in list(self._pages.values()):
             try:
                 page.stop_workers()

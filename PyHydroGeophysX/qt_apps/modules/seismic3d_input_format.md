@@ -1,4 +1,4 @@
-# Seismic → 3D Model input data format
+# Seismic → Structure input data format
 
 This module builds a 3D subsurface model (velocity volume + bedrock-interface
 surface) from one or more **2D seismic velocity sections**. It does not invert the
@@ -16,7 +16,7 @@ Each seismic line needs three things:
 | Line geometry | four numbers | Map coordinates of the line endpoints: `(x0, y0)` → `(x1, y1)`. |
 
 The **Add line (folder)…** button expects a folder holding `velmesh.bms` and
-`Vinvmodel.npy` (the convention used by the bundled `seismic_example`).
+`Vinvmodel.npy` (the convention used by the bundled `synthetic_seismic` lines).
 **Add line (files)…** lets you pick the mesh and velocity array separately. The
 endpoint columns in the table are editable so you can position each section in
 map coordinates.
@@ -35,11 +35,16 @@ map coordinates.
 4. Outputs: a depth-to-bedrock map, a 3D structure view, a VTK velocity volume
    (openable in ParaView or the Mesh 3D module), and `.npy` surfaces.
 
-## Example (bundled)
+## Example (bundled synthetic)
 
-`examples/results/seismic_example/` holds one inverted section
-(`velmesh.bms`, `Vinvmodel.npy`). **Use example** adds it three times at map
-`y = 0, 60, 120 m` so the 3D interpolation has multiple lines to work with.
+`examples/results/synthetic_seismic/` holds three synthetic velocity sections
+(`line1/`, `line2/`, `line3/`, each with `velmesh.bms` + `Vinvmodel.npy`),
+produced by `examples/generate_synthetic_examples.py` from the same synthetic
+hydrology model that drives the Hydro → Geophysics and ERT → Water Content
+examples. **Use example** adds all three as distinct, non-parallel lines at
+their own map endpoints, so the 3D interpolation has genuinely different lines
+to work with. The regolith velocity is below and the bedrock velocity above the
+default 1200 m/s threshold, so **Build 3D model** works out of the box.
 
 ## Tips
 

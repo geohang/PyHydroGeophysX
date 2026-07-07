@@ -37,6 +37,7 @@ from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import Debouncer
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
+from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView, metrics_from_manager
 from PyHydroGeophysX.qt_apps.widgets.seismic_viewer import SeismicViewer, first_arrival_onsets
 from PyHydroGeophysX.qt_apps.workers import TaskWorker
 
@@ -73,28 +74,34 @@ class SRTInversionWorker(QThread):
     failed = Signal(str)
     logged = Signal(str)
 
-    def __init__(self, picks, spacing: float, out_dir: str) -> None:
+    def __init__(self, picks, spacing: float, out_dir: str, tt_data=None) -> None:
         super().__init__()
         self._picks = picks
         self._spacing = spacing
         self._out_dir = out_dir
+        self._tt_data = tt_data  # pre-built travel-time container (uploaded); skips picks
 
     def run(self) -> None:  # noqa: D401
         try:
             import pygimli as pg
             import pygimli.physics.traveltime as tt
-            from PyHydroGeophysX.data_processing.seismic import first_breaks_to_traveltime
 
-            dat = str(Path(self._out_dir) / "traveltime.dat")
-            self.logged.emit("Building travel-time data from picks…")
-            first_breaks_to_traveltime(self._picks, dat, receiver_spacing=self._spacing)
-            try:
-                data = tt.load(dat)
-            except Exception:  # noqa: BLE001
-                data = pg.DataContainer(dat, "s g")
-            self.logged.emit(f"Inverting {int(data.size())} travel times…")
+            if self._tt_data is not None:
+                data = self._tt_data
+                self.logged.emit(f"Inverting {int(data.size())} uploaded travel times…")
+            else:
+                from PyHydroGeophysX.data_processing.seismic import first_breaks_to_traveltime
+                dat = str(Path(self._out_dir) / "traveltime.dat")
+                self.logged.emit("Building travel-time data from picks…")
+                first_breaks_to_traveltime(self._picks, dat, receiver_spacing=self._spacing)
+                try:
+                    data = tt.load(dat)
+                except Exception:  # noqa: BLE001
+                    data = pg.DataContainer(dat, "s g")
+                self.logged.emit(f"Inverting {int(data.size())} travel times…")
             mgr = tt.TravelTimeManager(data)
             mgr.invert(data, verbose=False)
+            metrics, convergence = metrics_from_manager(mgr, n_data=int(data.size()), method="SRT")
             mesh = mgr.paraDomain
             # pygimli's TravelTimeManager inverts for velocity (m/s) and exposes it
             # as ``mgr.velocity``; ``mgr.model`` is the same velocity, NOT slowness.
@@ -110,7 +117,8 @@ class SRTInversionWorker(QThread):
                 mesh.exportVTK(vtk_path)
             except Exception:  # noqa: BLE001
                 vtk_path = ""
-            self.succeeded.emit({"mgr": mgr, "n": int(data.size()), "vtk": vtk_path})
+            self.succeeded.emit({"mgr": mgr, "n": int(data.size()), "vtk": vtk_path,
+                                 "metrics": metrics, "convergence": convergence})
         except Exception as exc:  # noqa: BLE001
             self.failed.emit(str(exc))
 
@@ -138,6 +146,8 @@ class SeismicProcessingModule(BaseModule):
         self._shot_spacing: Optional[float] = None  # regular shot interval (m); auto-fills shot_x per record
         self._shot0_x: float = 0.0  # x of the first record's shot
         self._srt_worker: Optional[SRTInversionWorker] = None
+        self._tt_data = None                 # uploaded pre-picked travel-time DataContainer
+        self._tt_path: Optional[Path] = None
         self._load_worker: Optional[TaskWorker] = None
         self._proc_cache: Optional[np.ndarray] = None
         self._proc_key: Optional[tuple] = None
@@ -159,6 +169,8 @@ class SeismicProcessingModule(BaseModule):
         self._center_tabs.addTab(self._tt_widget, "Travel-time")
         self._vel_view = MeshResultView()
         self._center_tabs.addTab(self._vel_view, "Velocity model")
+        self._quality_view = InversionQualityView()
+        self._center_tabs.addTab(self._quality_view, "Inversion quality")
         root.addWidget(self._center_tabs, stretch=1)
         root.addWidget(self._build_controls())
         if not _SEISMIC_OK:
@@ -295,10 +307,33 @@ class SeismicProcessingModule(BaseModule):
 
         srt = QGroupBox("SRT inversion (all shots)")
         srtbox = QVBoxLayout(srt)
-        acc = QLabel("Picks are kept per shot record; pick across shots, set each shot's x, then invert.")
+        acc = QLabel("Pick first breaks across shots and set each shot's x — or skip "
+                     "picking and upload pre-picked travel times below.")
         acc.setWordWrap(True)
         acc.setStyleSheet("color:#5a6a7a; font-size:8pt;")
         srtbox.addWidget(acc)
+
+        up_row = QHBoxLayout()
+        self._tt_upload_btn = QPushButton("Upload travel times…")
+        self._tt_upload_btn.setIcon(theme.icon("fa5s.file-upload"))
+        self._tt_upload_btn.setToolTip(
+            "Load a pre-picked travel-time file and invert it directly (no picking). "
+            "Formats: pyGIMLi/BERT .sgt/.dat (sensors + 's g t'), or a CSV/text with columns "
+            "source_x, receiver_x, time  (or source_x, source_z, receiver_x, receiver_z, time). "
+            "Times in seconds (milliseconds auto-detected).")
+        self._tt_upload_btn.clicked.connect(self._upload_traveltime)
+        self._tt_clear_btn = QPushButton("✕")
+        self._tt_clear_btn.setToolTip("Clear the uploaded travel times (go back to using picks).")
+        self._tt_clear_btn.setMaximumWidth(32)
+        self._tt_clear_btn.setEnabled(False)
+        self._tt_clear_btn.clicked.connect(self._clear_traveltime)
+        up_row.addWidget(self._tt_upload_btn); up_row.addWidget(self._tt_clear_btn)
+        srtbox.addLayout(up_row)
+        self._tt_status = QLabel("Inversion source: picks (no upload).")
+        self._tt_status.setWordWrap(True)
+        self._tt_status.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        srtbox.addWidget(self._tt_status)
+
         self._srt_btn = QPushButton("Run SRT inversion")
         self._srt_btn.setProperty("primary", True)
         self._srt_btn.setIcon(theme.icon("fa5s.layer-group", color="#ffffff"))
@@ -851,19 +886,141 @@ class SeismicProcessingModule(BaseModule):
                     trace_index=int(trace), amplitude=0.0))
         return out
 
-    def _run_srt(self) -> None:
-        picks = self._all_first_breaks()
-        n_shots = sum(1 for v in self._all_picks.values() if v)
-        if len(picks) < 8:
-            self.log("Pick first breaks on at least a couple of shots before SRT inversion.", "warn")
+    # -- upload pre-picked travel times --------------------------------------
+    def _upload_traveltime(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Upload picked travel times", "",
+            "Travel-time data (*.sgt *.tt *.gtt *.dat *.csv *.txt);;All files (*)")
+        if not path:
             return
+        try:
+            data = self._load_traveltime_container(path)
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not load travel times: {exc}", "error")
+            return
+        self._tt_data = data
+        self._tt_path = Path(path)
+        n = int(data.size())
+        self._tt_clear_btn.setEnabled(True)
+        self._tt_status.setText(f"<b>Using {n} uploaded travel times</b> from "
+                                f"{Path(path).name}. Click “Run SRT inversion”.")
+        self._plot_tt_container(data)
+        self._center_tabs.setCurrentWidget(self._tt_widget)
+        self.log(f"Loaded {n} travel times from {Path(path).name}; run SRT inversion to invert them.",
+                 "success")
+
+    def _load_traveltime_container(self, path: str):
+        """Load a travel-time file into a pyGIMLi DataContainer. Tries the native
+        pyGIMLi/BERT format first, then a generic table (source_x [source_z]
+        receiver_x [receiver_z] time)."""
+        import pygimli.physics.traveltime as tt
+        p = str(path)
+        # 1. Native pyGIMLi / BERT travel-time format (sensors + 's g t').
+        try:
+            data = tt.load(p)
+            if data is not None and int(data.size()) > 0 and data.haveData("t"):
+                return data
+        except Exception:  # noqa: BLE001 - fall through to the table parser
+            pass
+        # 2. Generic columnar text / CSV.
+        arr = np.atleast_2d(np.asarray(io_utils.load_2d_array(p), dtype=float))
+        if arr.shape[1] == 3:
+            sx, gx, t = arr[:, 0], arr[:, 1], arr[:, 2]
+            sz = np.zeros(len(t)); gz = np.zeros(len(t))
+        elif arr.shape[1] >= 5:
+            sx, sz, gx, gz, t = arr[:, 0], arr[:, 1], arr[:, 2], arr[:, 3], arr[:, 4]
+        else:
+            raise ValueError("Expected 3 columns (source_x, receiver_x, time) or 5 "
+                             "(source_x, source_z, receiver_x, receiver_z, time).")
+        t = np.asarray(t, dtype=float)
+        pos_t = t[np.isfinite(t) & (t > 0)]
+        if pos_t.size and np.median(pos_t) > 5.0:  # SRT times are <~1 s; >5 ⇒ milliseconds
+            t = t / 1000.0
+            self.log("Travel times look like milliseconds; interpreted as ms (÷1000).", "info")
+        from PyHydroGeophysX.data_processing.seismic import FirstBreakPick, first_breaks_to_traveltime
+        src_ids: Dict[float, int] = {}
+        rec_ids: Dict[float, int] = {}
+        picks = []
+        for i in range(len(t)):
+            if not np.isfinite(t[i]) or t[i] <= 0:
+                continue
+            skey = round(float(sx[i]), 4); gkey = round(float(gx[i]), 4)
+            sid = src_ids.setdefault(skey, len(src_ids) + 1)
+            gid = rec_ids.setdefault(gkey, len(rec_ids) + 1)
+            picks.append(FirstBreakPick(
+                source_id=sid, receiver_id=gid, time_s=float(t[i]),
+                source_x=float(sx[i]), source_z=float(sz[i]),
+                receiver_x=float(gx[i]), receiver_z=float(gz[i]),
+                field_record=sid, trace_number=gid, trace_index=gid - 1, amplitude=0.0))
+        if not picks:
+            raise ValueError("No valid (finite, positive) travel times found.")
         out = io_utils.ensure_dir(Path(str(self.state.output_dir or Path.cwd())) / "srt_results")
+        tmp = str(out / "uploaded_traveltime.dat")
+        first_breaks_to_traveltime(picks, tmp)
+        return tt.load(tmp)
+
+    def _clear_traveltime(self) -> None:
+        self._tt_data = None
+        self._tt_path = None
+        self._tt_clear_btn.setEnabled(False)
+        self._tt_status.setText("Inversion source: picks (no upload).")
+        self._update_tt_qc()  # revert the travel-time plot to the picks
+        self.log("Cleared uploaded travel times; SRT inversion will use picks.", "info")
+
+    def _plot_tt_container(self, data) -> None:
+        """Plot an uploaded travel-time container in the Travel-time tab: time (ms)
+        vs absolute receiver position, one branch per shot (pyGIMLi style)."""
+        if not hasattr(self, "_tt_plot"):
+            return
+        self._tt_plot.clear()
+        pos = np.asarray(data.sensors(), dtype=float)
+        s = np.asarray(data["s"], dtype=int)
+        g = np.asarray(data["g"], dtype=int)
+        t = np.asarray(data["t"], dtype=float) * 1000.0
+        from collections import defaultdict
+        by_shot = defaultdict(list)
+        shot_x: Dict[int, float] = {}
+        for i in range(len(t)):
+            si, gi = int(s[i]), int(g[i])
+            if not (0 <= si < len(pos) and 0 <= gi < len(pos)):
+                continue
+            by_shot[si].append((float(pos[gi, 0]), float(t[i])))
+            shot_x[si] = float(pos[si, 0])
+        colors = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#8c564b", "#e377c2"]
+        for i, shot in enumerate(sorted(by_shot, key=lambda ss: shot_x.get(ss, 0.0))):
+            pts = sorted(by_shot[shot])
+            xs = [a for a, _ in pts]; ys = [b for _, b in pts]
+            color = colors[i % len(colors)]
+            self._tt_plot.plot(xs, ys, pen=pg.mkPen(color, width=1.5), symbol="o", symbolSize=5,
+                               symbolBrush=color, symbolPen=None, name=f"shot @ {shot_x.get(shot, 0.0):.0f} m")
+            self._tt_plot.plot([shot_x.get(shot, 0.0)], [0.0], pen=None, symbol="star",
+                               symbolSize=15, symbolBrush=color, symbolPen=pg.mkPen("#222", width=0.8))
+
+    def _run_srt(self) -> None:
+        out = io_utils.ensure_dir(Path(str(self.state.output_dir or Path.cwd())) / "srt_results")
+        # Uploaded travel times take priority over picks (invert them directly).
+        if self._tt_data is not None:
+            n = int(self._tt_data.size())
+            if n < 4:
+                self.log("Uploaded travel-time file has too few measurements to invert.", "warn")
+                return
+            worker = SRTInversionWorker([], self._spacing.value(), str(out), tt_data=self._tt_data)
+            start_msg = f"Running SRT inversion on {n} uploaded travel times."
+        else:
+            picks = self._all_first_breaks()
+            n_shots = sum(1 for v in self._all_picks.values() if v)
+            if len(picks) < 8:
+                self.log("Pick first breaks on at least a couple of shots, or upload "
+                         "travel times, before SRT inversion.", "warn")
+                return
+            worker = SRTInversionWorker(picks, self._spacing.value(), str(out))
+            start_msg = f"Running SRT inversion: {len(picks)} picks from {n_shots} shot(s)."
         self._srt_btn.setEnabled(False)
         self._srt_btn.setText("Inverting…")
         self._srt_progress.setVisible(True)
         self._srt_progress.setRange(0, 0)
-        self.log(f"Running SRT inversion: {len(picks)} picks from {n_shots} shot(s).", "info")
-        self._srt_worker = SRTInversionWorker(picks, self._spacing.value(), str(out))
+        self.log(start_msg, "info")
+        self._srt_worker = worker
         self._srt_worker.logged.connect(lambda m: self.log(m, "info"))
         self._srt_worker.succeeded.connect(self._on_srt_ok)
         self._srt_worker.failed.connect(self._on_srt_failed)
@@ -878,11 +1035,17 @@ class SeismicProcessingModule(BaseModule):
             self._vel_view.show_model(mgr, kind="srt")
             self._center_tabs.setCurrentWidget(self._vel_view)
             self._srt_export_btn.setEnabled(True)
+        metrics = dict(result.get("metrics") or {})
+        self._quality_view.show_quality(metrics, result.get("convergence"), title="SRT inversion")
         vtk = result.get("vtk")
         if vtk:
             self.log(f"Saved velocity mesh to {vtk}", "info")
-        self.log("SRT inversion complete.", "success")
-        self.report_result({"velocity_vtk": vtk, "num_traveltimes": result.get("n")})
+        chi2 = metrics.get("chi2")
+        self.log(f"SRT inversion complete (chi2={chi2:.2f})." if isinstance(chi2, float) and chi2 == chi2
+                 else "SRT inversion complete.", "success")
+        self.report_result({"velocity_vtk": vtk, "num_traveltimes": result.get("n"),
+                            "chi2": metrics.get("chi2"), "rrms": metrics.get("rrms"),
+                            "iterations": metrics.get("iterations")})
 
     def _export_velocity_model(self) -> None:
         mgr = getattr(self, "_srt_mgr", None)
@@ -983,8 +1146,15 @@ class SeismicProcessingModule(BaseModule):
                  "desc": "List current-record picks as {trace: {time_s, source}}, with suspect traces flagged."},
                 {"name": "clear_picks", "args": {},
                  "desc": "Clear picks on the current record."},
+                {"name": "load_traveltime", "args": {"path": "str"},
+                 "desc": ("Upload a pre-picked travel-time file and invert it directly (no picking). "
+                          "Formats: pyGIMLi/BERT .sgt/.dat, or a CSV/text with columns source_x, receiver_x, "
+                          "time (or source_x, source_z, receiver_x, receiver_z, time). Then call run_srt.")},
+                {"name": "clear_traveltime", "args": {},
+                 "desc": "Clear uploaded travel times so run_srt uses the picks again."},
                 {"name": "run_srt", "args": {},
-                 "desc": "Run SRT travel-time tomography from all picked shots (needs >=8 picks total)."},
+                 "desc": ("Run SRT travel-time tomography. Inverts uploaded travel times if any were loaded, "
+                          "otherwise the picked shots (needs >=8 picks total).")},
                 {"name": "get_status", "args": {},
                  "desc": "Report loaded data, current record, pick counts, and last result."},
             ],
@@ -1006,6 +1176,8 @@ class SeismicProcessingModule(BaseModule):
             "delete_pick": lambda: self._agent_delete_pick(args),
             "list_picks": lambda: self._agent_list_picks(),
             "clear_picks": lambda: self._agent_clear_picks(),
+            "load_traveltime": lambda: self._agent_load_traveltime(args.get("path")),
+            "clear_traveltime": lambda: self._agent_clear_traveltime(),
             "run_srt": lambda: self._agent_run_srt(),
             "get_status": lambda: self._agent_status(),
         }
@@ -1300,11 +1472,39 @@ class SeismicProcessingModule(BaseModule):
                 "count": len(picks), "picks": picks,
                 "suspect_traces": self._suspect_pick_traces()}
 
+    def _agent_load_traveltime(self, path: Any) -> Dict[str, Any]:
+        if not path:
+            return {"status": "failed", "error": "Provide 'path' to a travel-time file."}
+        p = Path(str(path))
+        if not p.exists():
+            return {"status": "failed", "error": f"File not found: {p}"}
+        try:
+            data = self._load_traveltime_container(str(p))
+        except Exception as exc:  # noqa: BLE001
+            return {"status": "failed", "error": f"Could not load travel times: {exc}"}
+        self._tt_data = data
+        self._tt_path = p
+        self._tt_clear_btn.setEnabled(True)
+        n = int(data.size())
+        self._tt_status.setText(f"<b>Using {n} uploaded travel times</b> from {p.name}.")
+        self._plot_tt_container(data)
+        return {"status": "ok", "traveltimes": n,
+                "note": "Run SRT inversion to invert these directly (no picking needed)."}
+
+    def _agent_clear_traveltime(self) -> Dict[str, Any]:
+        self._clear_traveltime()
+        return {"status": "ok", "message": "Uploaded travel times cleared; run_srt will use picks."}
+
     def _agent_run_srt(self) -> Dict[str, Any]:
+        if self._tt_data is not None:
+            self._run_srt()
+            return {"status": "started", "message": "SRT inversion started on uploaded travel times.",
+                    "traveltimes": int(self._tt_data.size())}
         picks = self._all_first_breaks()
         if len(picks) < 8:
             return {"status": "failed", "error": "Need at least 8 first-break picks across shots.",
-                    "picks": len(picks), "hint": "Auto-pick first breaks on a couple of shots first."}
+                    "picks": len(picks),
+                    "hint": "Auto-pick first breaks on a couple of shots, or upload a travel-time file."}
         self._run_srt()
         return {"status": "started", "message": "SRT inversion started. Ask for status shortly.",
                 "picks": len(picks)}

@@ -1,4 +1,4 @@
-# Geophysics → Hydro input data format
+# ERT → Water Content input data format
 
 The **Data** step expects a single folder holding an **inverted ERT model
 bundle** — the output of a (time-lapse) ERT inversion. The module does not run the

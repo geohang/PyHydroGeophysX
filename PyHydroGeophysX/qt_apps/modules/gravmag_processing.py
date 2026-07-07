@@ -1,16 +1,17 @@
-"""Gravity / Magnetics module: anomaly tools + analytic forward modeling.
+"""Gravity / Magnetics module: 3D potential-field inversion.
 
-Load station data (x, y, value), separate a polynomial regional from the
-residual, grid the field and extract profiles, and forward-model buried bodies
-(gravity: sphere / prism; magnetics: dipole) overlaid on the data. Grids and
-profiles export to npy / CSV / VTK. The numerics live in the Qt-free
+Load station data (x, y, value) and run a SimPEG 3D inversion for a subsurface
+model: gravity → density contrast (g/cc), magnetics → susceptibility (SI). A
+polynomial regional trend is removed first (the "Detrend degree" control) so a raw
+field is inverted on its residual anomaly. The result is shown as a 3D model you
+can slice at different depths and positions. The numerics live in the Qt-free
 ``PyHydroGeophysX.qt_apps.gravmag_pipeline``.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pyqtgraph as pg
@@ -23,10 +24,10 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QProgressBar,
     QPushButton,
     QScrollArea,
     QSpinBox,
-    QStackedWidget,
     QTabWidget,
     QTextBrowser,
     QVBoxLayout,
@@ -38,10 +39,11 @@ from PySide6.QtCore import Qt
 from PyHydroGeophysX.qt_apps import gravmag_pipeline as gmp
 from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
-from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
+from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
+from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
+from PyHydroGeophysX.qt_apps.workers import TaskWorker
 
-_FILE_FILTER = "Station/grid (*.csv *.txt *.dat);;All files (*)"
-_DISPLAY = ["Observed", "Regional", "Residual", "Forward", "Obs − Forward"]
+_FILE_FILTER = "Station data (*.csv *.txt *.dat);;All files (*)"
 
 
 class GravMagProcessingModule(BaseModule):
@@ -53,9 +55,9 @@ class GravMagProcessingModule(BaseModule):
         self._x: Optional[np.ndarray] = None
         self._y: Optional[np.ndarray] = None
         self._fields: Dict[str, np.ndarray] = {}
-        self._grid: Optional[Dict[str, np.ndarray]] = None
-        self._profile: Optional[Dict[str, np.ndarray]] = None
         self._source_path: Optional[Path] = None
+        self._inv_result: Optional[Dict[str, Any]] = None
+        self._inv_worker: Optional[TaskWorker] = None
         self._cmap = pg.colormap.get("viridis")
 
         root = QHBoxLayout(self)
@@ -65,13 +67,11 @@ class GravMagProcessingModule(BaseModule):
         self._plot_widget.setLabel("bottom", "x"); self._plot_widget.setLabel("left", "y")
         self._scatter = pg.ScatterPlotItem(size=13)
         self._plot_widget.getPlotItem().addItem(self._scatter)
-        self._grid_view = ArrayViewer()
-        self._profile_plot = pg.PlotWidget(); self._profile_plot.setBackground("w")
-        self._profile_plot.showGrid(x=True, y=True, alpha=0.3)
-        self._profile_plot.setLabel("bottom", "distance"); self._profile_plot.setLabel("left", "value")
+        self._model_view = Model3DView()
+        self._quality_view = InversionQualityView()
         self._tabs.addTab(self._plot_widget, "Station map")
-        self._tabs.addTab(self._grid_view, "Grid")
-        self._tabs.addTab(self._profile_plot, "Profile")
+        self._tabs.addTab(self._model_view, "Inversion model")
+        self._tabs.addTab(self._quality_view, "Inversion quality")
         root.addWidget(self._tabs, stretch=1)
         root.addWidget(self._build_controls())
         self._on_kind_changed()
@@ -91,145 +91,89 @@ class GravMagProcessingModule(BaseModule):
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
         # Wide enough to fit the controls without a horizontal scrollbar.
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setMinimumWidth(400); scroll.setMaximumWidth(460)
+        scroll.setMinimumWidth(450); scroll.setMaximumWidth(500)
         panel = QWidget(); scroll.setWidget(panel)
         layout = QVBoxLayout(panel)
 
-        load_btn = QPushButton("Load station file (x, y, value)…")
-        load_btn.setIcon(theme.icon("fa5s.folder-open"))
-        load_btn.clicked.connect(self._load)
-        layout.addWidget(load_btn)
-        fmt_btn = QPushButton("Data format")
-        fmt_btn.setIcon(theme.icon("fa5s.file-alt"))
-        fmt_btn.clicked.connect(self._show_format_help)
-        layout.addWidget(fmt_btn)
-        self._info = QLabel("No data loaded."); self._info.setWordWrap(True)
-        layout.addWidget(self._info)
-
-        top = QFormLayout()
-        self._kind = QComboBox(); self._kind.addItems(["gravity", "magnetics"])
-        self._kind.currentTextChanged.connect(self._on_kind_changed)
-        self._display = QComboBox(); self._display.addItems(_DISPLAY)
-        self._display.currentTextChanged.connect(self._refresh_scatter)
-        top.addRow("Field type", self._kind)
-        top.addRow("Display", self._display)
-        layout.addLayout(top)
-
-        layout.addWidget(self._build_separation_group())
-        layout.addWidget(self._build_grid_group())
-        layout.addWidget(self._build_profile_group())
-        layout.addWidget(self._build_forward_group())
-
-        exp = QPushButton("Export displayed field CSV…")
-        exp.setIcon(theme.icon("fa5s.file-export"))
-        exp.clicked.connect(self._export_field_csv)
-        layout.addWidget(exp)
+        layout.addWidget(self._build_loader_group())
+        layout.addWidget(self._build_field_group())
+        layout.addWidget(self._build_inversion_group())
         layout.addStretch(1)
         return scroll
 
-    def _build_separation_group(self) -> QGroupBox:
-        box = QGroupBox("Regional / residual"); form = QFormLayout(box)
-        self._degree = self._ispin(1, 1, 3)
-        form.addRow("Polynomial degree", self._degree)
-        btn = QPushButton("Compute regional + residual")
-        btn.clicked.connect(self._compute_separation)
-        form.addRow(btn)
+    def _build_loader_group(self) -> QGroupBox:
+        box = QGroupBox("Load station data"); v = QVBoxLayout(box)
+        row = QHBoxLayout()
+        load_btn = QPushButton("Load stations…")
+        load_btn.setProperty("primary", True)
+        load_btn.setIcon(theme.icon("fa5s.folder-open", color="#ffffff"))
+        load_btn.clicked.connect(self._load)
+        fmt_btn = QPushButton("Data format")
+        fmt_btn.setIcon(theme.icon("fa5s.file-alt"))
+        fmt_btn.clicked.connect(self._show_format_help)
+        row.addWidget(load_btn); row.addWidget(fmt_btn)
+        v.addLayout(row)
+
+        krow = QFormLayout()
+        self._kind = QComboBox(); self._kind.addItems(["gravity", "magnetics"])
+        self._kind.currentTextChanged.connect(self._on_kind_changed)
+        krow.addRow("Field type", self._kind)
+        v.addLayout(krow)
+
+        hint = QLabel("Upload a table with three columns: x, y, value. Gravity in mGal, "
+                      "magnetics in nT. The map colours the uploaded value at each station.")
+        hint.setWordWrap(True); hint.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        v.addWidget(hint)
+        self._info = QLabel("No data loaded."); self._info.setWordWrap(True)
+        v.addWidget(self._info)
         return box
 
-    def _build_grid_group(self) -> QGroupBox:
-        box = QGroupBox("Gridding"); form = QFormLayout(box)
-        self._nx = self._ispin(120, 10, 600); self._ny = self._ispin(120, 10, 600)
-        self._grid_method = QComboBox(); self._grid_method.addItems(["linear", "cubic", "nearest"])
-        form.addRow("nx", self._nx); form.addRow("ny", self._ny)
-        form.addRow("Method", self._grid_method)
-        grid_btn = QPushButton("Grid displayed field"); grid_btn.clicked.connect(self._grid_field)
-        form.addRow(grid_btn)
-        exp_btn = QPushButton("Export grid (npy + csv + VTK)…")
-        exp_btn.setIcon(theme.icon("fa5s.file-export")); exp_btn.clicked.connect(self._export_grid)
-        form.addRow(exp_btn)
-        return box
-
-    def _build_profile_group(self) -> QGroupBox:
-        box = QGroupBox("Profile"); form = QFormLayout(box)
-        self._p1x = self._dspin(0.0, -1e6, 1e6, 1.0, 2); self._p1y = self._dspin(0.0, -1e6, 1e6, 1.0, 2)
-        self._p2x = self._dspin(0.0, -1e6, 1e6, 1.0, 2); self._p2y = self._dspin(0.0, -1e6, 1e6, 1.0, 2)
-        self._p_n = self._ispin(200, 10, 2000)
-        r1 = QHBoxLayout(); r1.addWidget(QLabel("P1")); r1.addWidget(self._p1x); r1.addWidget(self._p1y)
-        r2 = QHBoxLayout(); r2.addWidget(QLabel("P2")); r2.addWidget(self._p2x); r2.addWidget(self._p2y)
-        w1 = QWidget(); w1.setLayout(r1); w2 = QWidget(); w2.setLayout(r2)
-        form.addRow(w1); form.addRow(w2); form.addRow("Samples", self._p_n)
-        ext = QPushButton("Extract profile"); ext.clicked.connect(self._extract_profile)
-        form.addRow(ext)
-        exp = QPushButton("Export profile CSV…"); exp.setIcon(theme.icon("fa5s.file-export"))
-        exp.clicked.connect(self._export_profile)
-        form.addRow(exp)
-        return box
-
-    def _build_forward_group(self) -> QGroupBox:
-        box = QGroupBox("Forward body"); v = QVBoxLayout(box)
-        self._body_type = QComboBox()
-        v.addWidget(self._body_type)
-        self._body_stack = QStackedWidget()
-
-        # sphere page
-        sp = QWidget(); sf = QFormLayout(sp)
-        self._s_x0 = self._dspin(0.0, -1e6, 1e6, 1.0, 1); self._s_y0 = self._dspin(0.0, -1e6, 1e6, 1.0, 1)
-        self._s_z0 = self._dspin(20.0, 0.1, 1e5, 1.0, 1); self._s_R = self._dspin(8.0, 0.1, 1e4, 0.5, 1)
-        self._s_drho = self._dspin(300.0, -5000.0, 5000.0, 10.0, 0)
-        self._s_chi = self._dspin(0.05, 0.0, 5.0, 0.01, 3)
-        for lbl, w in (("x0", self._s_x0), ("y0", self._s_y0), ("depth z0 (m)", self._s_z0),
-                       ("radius (m)", self._s_R), ("Δρ (kg/m³)", self._s_drho), ("susceptibility", self._s_chi)):
-            sf.addRow(lbl, w)
-        self._body_stack.addWidget(sp)
-
-        # prism page
-        pp = QWidget(); pf = QFormLayout(pp)
-        self._p_x1 = self._dspin(-10.0, -1e6, 1e6, 1.0, 1); self._p_x2 = self._dspin(10.0, -1e6, 1e6, 1.0, 1)
-        self._p_y1 = self._dspin(-10.0, -1e6, 1e6, 1.0, 1); self._p_y2 = self._dspin(10.0, -1e6, 1e6, 1.0, 1)
-        self._p_z1 = self._dspin(5.0, 0.0, 1e5, 1.0, 1); self._p_z2 = self._dspin(25.0, 0.1, 1e5, 1.0, 1)
-        self._p_drho = self._dspin(300.0, -5000.0, 5000.0, 10.0, 0)
-        for lbl, w in (("x1", self._p_x1), ("x2", self._p_x2), ("y1", self._p_y1), ("y2", self._p_y2),
-                       ("z top (m)", self._p_z1), ("z bot (m)", self._p_z2), ("Δρ (kg/m³)", self._p_drho)):
-            pf.addRow(lbl, w)
-        self._body_stack.addWidget(pp)
-        v.addWidget(self._body_stack)
-
+    def _build_field_group(self) -> QGroupBox:
+        # Ambient field for magnetics; hidden in gravity mode by _on_kind_changed.
         self._field_box = QGroupBox("Ambient field (magnetics)")
         ff = QFormLayout(self._field_box)
         self._B0 = self._dspin(50000.0, 100.0, 100000.0, 100.0, 0)
         self._inc = self._dspin(60.0, -90.0, 90.0, 1.0, 1)
         self._dec = self._dspin(0.0, -180.0, 180.0, 1.0, 1)
-        ff.addRow("Strength (nT)", self._B0); ff.addRow("Inclination (°)", self._inc)
+        ff.addRow("Strength (nT)", self._B0)
+        ff.addRow("Inclination (°)", self._inc)
         ff.addRow("Declination (°)", self._dec)
-        v.addWidget(self._field_box)
+        return self._field_box
 
-        fwd = QPushButton("Compute forward at stations")
-        fwd.setIcon(theme.icon("fa5s.play")); fwd.clicked.connect(self._compute_forward)
-        v.addWidget(fwd)
+    def _build_inversion_group(self) -> QGroupBox:
+        box = QGroupBox("3D inversion (SimPEG)"); form = QFormLayout(box)
+        hint = QLabel("Inverts the uploaded field for a subsurface model: gravity → density "
+                      "contrast (g/cc), magnetics → susceptibility (SI). Slice the result at "
+                      "different depths and positions in the Inversion model tab.")
+        hint.setWordWrap(True); hint.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        form.addRow(hint)
+        self._detrend = self._ispin(1, 0, 3)
+        self._detrend.setToolTip("Remove a polynomial regional trend before inverting "
+                                 "(0 = none, 1 = linear, 2 = quadratic). Inversion works on "
+                                 "the residual anomaly.")
+        self._inv_nxy = self._ispin(22, 8, 40)
+        self._inv_nz = self._ispin(12, 4, 30)
+        self._inv_iter = self._ispin(20, 3, 60)
+        form.addRow("Detrend degree", self._detrend)
+        form.addRow("Lateral cells", self._inv_nxy)
+        form.addRow("Depth cells", self._inv_nz)
+        form.addRow("Max iterations", self._inv_iter)
+        self._inv_btn = QPushButton("Run 3D inversion")
+        self._inv_btn.setProperty("primary", True)
+        self._inv_btn.setIcon(theme.icon("fa5s.cubes", color="#ffffff"))
+        self._inv_btn.clicked.connect(self._run_inversion)
+        form.addRow(self._inv_btn)
+        self._inv_progress = QProgressBar(); self._inv_progress.setVisible(False)
+        form.addRow(self._inv_progress)
         return box
 
-    # -- kind / display ------------------------------------------------------
+    # -- kind ----------------------------------------------------------------
     def _on_kind_changed(self) -> None:
-        kind = self._kind.currentText()
-        self._body_type.clear()
-        if kind == "gravity":
-            self._body_type.addItems(["sphere", "prism"])
-            self._field_box.setVisible(False)
-        else:
-            self._body_type.addItems(["dipole"])
-            self._field_box.setVisible(True)
-        self._body_type.currentIndexChanged.connect(self._sync_body_page)
-        self._sync_body_page()
+        self._field_box.setVisible(self._kind.currentText() == "magnetics")
 
-    def _sync_body_page(self) -> None:
-        # sphere + dipole share the sphere page (index 0); prism is index 1.
-        self._body_stack.setCurrentIndex(1 if self._body_type.currentText() == "prism" else 0)
-
-    def _current_values(self) -> Optional[np.ndarray]:
-        return self._fields.get(self._display.currentText())
-
+    # -- station map ---------------------------------------------------------
     def _refresh_scatter(self) -> None:
-        vals = self._current_values()
+        vals = self._fields.get("Observed")
         if vals is None or self._x is None:
             return
         vmin, vmax = float(np.nanmin(vals)), float(np.nanmax(vals))
@@ -257,139 +201,77 @@ class GravMagProcessingModule(BaseModule):
         self._x = table[:, 0]; self._y = table[:, 1]
         self._fields = {"Observed": table[:, 2].astype(float)}
         self._source_path = Path(path)
-        # Default profile across the survey.
-        self._p1x.setValue(float(self._x.min())); self._p1y.setValue(float(np.median(self._y)))
-        self._p2x.setValue(float(self._x.max())); self._p2y.setValue(float(np.median(self._y)))
         self._info.setText(f"{self._source_path.name}<br>{self._x.size} stations")
         self.log(f"Loaded {self._x.size} stations from {self._source_path.name}", "success")
-        self._display.setCurrentText("Observed")
         self._refresh_scatter()
         self._publish()
 
-    # -- separation ----------------------------------------------------------
-    def _compute_separation(self) -> None:
-        if "Observed" not in self._fields:
+    # -- 3D inversion --------------------------------------------------------
+    def _run_inversion(self) -> None:
+        vals = self._fields.get("Observed")
+        if vals is None or self._x is None:
             self.log("Load station data first.", "warn")
             return
-        regional, residual = gmp.regional_residual(self._x, self._y, self._fields["Observed"],
-                                                   degree=self._degree.value())
-        self._fields["Regional"] = regional
-        self._fields["Residual"] = residual
-        self._display.setCurrentText("Residual")
-        self._refresh_scatter()
-        self.log(f"Computed regional (degree {self._degree.value()}) + residual.", "success")
-        self._publish()
-
-    # -- gridding ------------------------------------------------------------
-    def _grid_field(self) -> None:
-        vals = self._current_values()
-        if vals is None:
-            self.log("Nothing to grid; load data / pick a field.", "warn")
-            return
-        try:
-            self._grid = gmp.grid_data(self._x, self._y, vals, self._nx.value(),
-                                       self._ny.value(), self._grid_method.currentText())
-        except Exception as exc:  # noqa: BLE001
-            self.log(f"Gridding failed: {exc}", "error")
-            return
-        self._grid_view.set_array(np.asarray(self._grid["zz"], dtype=float))
-        self._tabs.setCurrentWidget(self._grid_view)
-        self.log(f"Gridded '{self._display.currentText()}' to {self._nx.value()}×{self._ny.value()}.", "success")
-
-    def _export_grid(self) -> None:
-        if self._grid is None:
-            self.log("Grid a field first.", "warn")
-            return
-        folder = QFileDialog.getExistingDirectory(self, "Export grid to folder",
-                                                  str(self.state.output_dir or Path.cwd()))
-        if not folder:
-            return
-        name = self._display.currentText().split()[0].lower()
-        paths = gmp.save_grid(self._grid, Path(folder), name=name, log=lambda m: self.log(m, "info"))
-        self.log(f"Exported grid ({len(paths)} files) to {folder}", "success")
-        self.report_result({"kind": self._kind.currentText(), "grid_files": paths,
-                            "field": self._display.currentText()})
-
-    # -- profile -------------------------------------------------------------
-    def _extract_profile(self) -> None:
-        if self._grid is None:
-            self._grid_field()
-        if self._grid is None:
-            return
-        self._profile = gmp.extract_profile(
-            self._grid, (self._p1x.value(), self._p1y.value()),
-            (self._p2x.value(), self._p2y.value()), self._p_n.value())
-        self._profile_plot.clear()
-        self._profile_plot.plot(self._profile["distance"], self._profile["value"],
-                                pen=pg.mkPen("#1f77b4", width=2))
-        self._tabs.setCurrentWidget(self._profile_plot)
-        self.log(f"Extracted profile ({self._p_n.value()} samples).", "success")
-
-    def _export_profile(self) -> None:
-        if self._profile is None:
-            self.log("Extract a profile first.", "warn")
-            return
-        path, _ = QFileDialog.getSaveFileName(self, "Export profile", "profile.csv", "CSV (*.csv)")
-        if not path:
-            return
-        rows = list(zip(self._profile["distance"].tolist(), self._profile["x"].tolist(),
-                        self._profile["y"].tolist(), self._profile["value"].tolist()))
-        io_utils.write_csv(path, rows, header=["distance", "x", "y", "value"])
-        self.log(f"Exported profile to {path}", "success")
-
-    # -- forward -------------------------------------------------------------
-    def _collect_body(self) -> Dict[str, Any]:
-        bt = self._body_type.currentText()
-        if bt == "prism":
-            return {"type": "prism", "x1": self._p_x1.value(), "x2": self._p_x2.value(),
-                    "y1": self._p_y1.value(), "y2": self._p_y2.value(),
-                    "z1": self._p_z1.value(), "z2": self._p_z2.value(),
-                    "density_contrast": self._p_drho.value()}
-        return {"type": bt, "x0": self._s_x0.value(), "y0": self._s_y0.value(),
-                "z0": self._s_z0.value(), "radius": self._s_R.value(),
-                "density_contrast": self._s_drho.value(), "susceptibility": self._s_chi.value()}
-
-    def _compute_forward(self) -> None:
-        if self._x is None:
-            self.log("Load station coordinates first.", "warn")
-            return
         kind = self._kind.currentText()
-        field = {"strength": self._B0.value(), "inclination": self._inc.value(),
-                 "declination": self._dec.value()}
-        try:
-            fwd = gmp.forward_bodies(self._x, self._y, kind, [self._collect_body()],
-                                     field=field, log=lambda m: self.log(m, "info"))
-        except Exception as exc:  # noqa: BLE001
-            self.log(f"Forward modeling failed: {exc}", "error")
-            return
-        self._fields["Forward"] = np.asarray(fwd, dtype=float)
-        if "Observed" in self._fields:
-            self._fields["Obs − Forward"] = self._fields["Observed"] - self._fields["Forward"]
-        self._display.setCurrentText("Forward")
-        self._refresh_scatter()
-        unit = "mGal" if kind == "gravity" else "nT"
-        self.log(f"Computed {kind} forward (range {np.min(fwd):.3g} – {np.max(fwd):.3g} {unit}).", "success")
-        self.report_result({"kind": kind, "forward_range": [float(np.min(fwd)), float(np.max(fwd))]})
+        field = None
+        if kind != "gravity":
+            field = {"strength_nT": self._B0.value(), "inclination": self._inc.value(),
+                     "declination": self._dec.value()}
+        out_dir = str(self.state.output_dir or Path.cwd())
+        self._inv_btn.setEnabled(False); self._inv_btn.setText("Inverting…")
+        self._inv_progress.setVisible(True); self._inv_progress.setRange(0, 0)
+        self.log(f"Running SimPEG 3D {kind} inversion ({self._x.size} stations, "
+                 f"detrend {self._detrend.value()})…", "info")
+        worker = TaskWorker(gmp.invert_gravmag, self._x, self._y, vals, kind,
+                            field=field, detrend=self._detrend.value(),
+                            n_xy=self._inv_nxy.value(), n_z=self._inv_nz.value(),
+                            max_iterations=self._inv_iter.value(), out_dir=out_dir,
+                            log=lambda _m: None)
+        worker.succeeded.connect(self._on_inversion_ok)
+        worker.failed.connect(self._on_inversion_failed)
+        worker.finished.connect(self._reset_inv_button)
+        self._inv_worker = self.register_worker(worker)
+        worker.start()
 
-    # -- export / publish ----------------------------------------------------
-    def _export_field_csv(self) -> None:
-        vals = self._current_values()
-        if vals is None:
-            self.log("Nothing to export.", "warn")
-            return
-        path, _ = QFileDialog.getSaveFileName(self, "Export field", "gravmag_field.csv", "CSV (*.csv)")
-        if not path:
-            return
-        rows = [(float(self._x[i]), float(self._y[i]), float(vals[i])) for i in range(self._x.size)]
-        io_utils.write_csv(path, rows, header=["x", "y", self._display.currentText()])
-        self.log(f"Exported '{self._display.currentText()}' to {path}", "success")
+    def _on_inversion_ok(self, result: dict) -> None:
+        self._inv_result = result
+        self._model_view.show_model(result["edges"], result["model3d"],
+                                    label=result["label"], cmap=result["cmap"],
+                                    log_scale=result.get("log_scale", False))
+        self._tabs.setCurrentWidget(self._model_view)
+        rng = result.get("model_range", [0.0, 0.0]); chi2 = result.get("chi2")
+        chi_txt = f", chi2={chi2:.1f}" if isinstance(chi2, float) and chi2 == chi2 else ""
+        self.log(f"3D {result['kind']} inversion complete: {result['n_cells']} cells, "
+                 f"model {rng[0]:.3g}..{rng[1]:.3g}{chi_txt}.", "success")
+        self._quality_view.show_quality(
+            {"chi2": float(chi2) if isinstance(chi2, float) else float("nan"),
+             "n_data": result.get("n_data"),
+             "method": f"{result['kind']} 3D SimPEG",
+             "extra": {"cells": result.get("n_cells"), "detrend degree": self._detrend.value()},
+             "note": "3D potential-field inversion (χ² is the normalized data misfit)."},
+            convergence=None, title="Gravity/Magnetics inversion")
+        vtk = result.get("vtk")
+        if vtk:
+            self.log(f"Saved model VTK to {vtk}", "info")
+        self.report_result({"inversion_kind": result["kind"], "chi2": chi2,
+                            "model_vtk": vtk, "n_cells": result["n_cells"]})
 
+    def _on_inversion_failed(self, message: str) -> None:
+        if "backend" in message.lower() or "simpeg" in message.lower() or "discretize" in message.lower():
+            self.log(f"SimPEG 3D inversion needs SimPEG + discretize: {message}", "warn")
+        else:
+            self.log(f"3D inversion failed: {message}", "error")
+
+    def _reset_inv_button(self) -> None:
+        self._inv_btn.setEnabled(True); self._inv_btn.setText("Run 3D inversion")
+        self._inv_progress.setVisible(False)
+
+    # -- publish -------------------------------------------------------------
     def _publish(self) -> None:
         self.report_result({
             "kind": self._kind.currentText(),
             "source_file": str(self._source_path) if self._source_path else "",
             "num_stations": int(self._x.size) if self._x is not None else 0,
-            "fields": list(self._fields.keys()),
         })
 
     # -- AQUAH agent interface ----------------------------------------------
@@ -402,24 +284,17 @@ class GravMagProcessingModule(BaseModule):
                 {"name": "load_data", "args": {"path": "str"},
                  "desc": "Load a station file (x, y, value) for gravity or magnetics."},
                 {"name": "set_field_type", "args": {"kind": ["gravity", "magnetics"]},
-                 "desc": "Set the field type."},
-                {"name": "set_display", "args": {"name": "str"},
-                 "desc": "Choose which field to display (e.g. Observed, Regional, Residual, Forward)."},
-                {"name": "compute_separation", "args": {},
-                 "desc": "Compute regional + residual by polynomial fit."},
-                {"name": "grid_field", "args": {},
-                 "desc": "Grid the displayed field onto a regular grid."},
-                {"name": "extract_profile", "args": {"p1": "[x, y]", "p2": "[x, y]", "samples": "int"},
-                 "desc": "Extract a profile across the gridded field between two points."},
-                {"name": "compute_forward", "args": {},
-                 "desc": "Compute the forward response of the configured body at the stations."},
+                 "desc": "Set the field type (gravity or magnetics)."},
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
-                 "desc": ("Set parameters. Keys: degree, nx, ny, grid_method (linear/cubic/nearest), "
-                          "profile_samples, body_type, sphere_x0/sphere_y0/sphere_depth/sphere_radius/"
-                          "sphere_drho/sphere_susceptibility, prism_x1/prism_x2/prism_y1/prism_y2/"
-                          "prism_z_top/prism_z_bot/prism_drho, field_strength/field_inclination/field_declination.")},
+                 "desc": ("Set parameters. Inversion: detrend (0..3 regional-trend degree), "
+                          "lateral_cells, depth_cells, max_iterations. Magnetics ambient field: "
+                          "field_strength, field_inclination, field_declination.")},
+                {"name": "run_inversion", "args": {},
+                 "desc": ("Run a SimPEG 3D inversion of the uploaded field (gravity → density, "
+                          "magnetics → susceptibility). A regional trend of the chosen degree is "
+                          "removed first. Result shows in the Inversion model tab.")},
                 {"name": "get_status", "args": {},
-                 "desc": "Report loaded data, available fields, and grid state."},
+                 "desc": "Report loaded data and the field type."},
             ],
         }
 
@@ -428,12 +303,8 @@ class GravMagProcessingModule(BaseModule):
         handlers = {
             "load_data": lambda: self._agent_load(args.get("path")),
             "set_field_type": lambda: self._agent_set_field_type(args.get("kind")),
-            "set_display": lambda: self._agent_set_display(args.get("name")),
-            "compute_separation": lambda: self._agent_compute_separation(),
-            "grid_field": lambda: self._agent_grid_field(),
-            "extract_profile": lambda: self._agent_extract_profile(args),
-            "compute_forward": lambda: self._agent_compute_forward(),
             "set_params": lambda: self._agent_set_params(args.get("params", args)),
+            "run_inversion": lambda: self._agent_run_inversion(),
             "get_status": lambda: self._agent_status(),
         }
         handler = handlers.get(action)
@@ -449,9 +320,6 @@ class GravMagProcessingModule(BaseModule):
             "data_loaded": self._x is not None,
             "source": str(self._source_path or ""),
             "stations": int(self._x.size) if self._x is not None else 0,
-            "fields": list(self._fields.keys()),
-            "display": self._display.currentText(),
-            "gridded": self._grid is not None,
         }
 
     def _agent_load(self, path: Any) -> Dict[str, Any]:
@@ -467,10 +335,7 @@ class GravMagProcessingModule(BaseModule):
         self._x = table[:, 0]; self._y = table[:, 1]
         self._fields = {"Observed": table[:, 2].astype(float)}
         self._source_path = Path(p)
-        self._p1x.setValue(float(self._x.min())); self._p1y.setValue(float(np.median(self._y)))
-        self._p2x.setValue(float(self._x.max())); self._p2y.setValue(float(np.median(self._y)))
         self._info.setText(f"{self._source_path.name}<br>{self._x.size} stations")
-        self._display.setCurrentText("Observed")
         self._refresh_scatter()
         self._publish()
         return {"status": "ok", "stations": int(self._x.size)}
@@ -481,76 +346,21 @@ class GravMagProcessingModule(BaseModule):
         self._kind.setCurrentText(kind)
         return {"status": "ok", "kind": self._kind.currentText()}
 
-    def _agent_set_display(self, name: Any) -> Dict[str, Any]:
-        items = [self._display.itemText(i) for i in range(self._display.count())]
-        if name not in items:
-            return {"status": "failed", "error": f"Unknown display '{name}'.", "valid": items}
-        self._display.setCurrentText(str(name))
-        return {"status": "ok", "display": self._display.currentText()}
-
-    def _agent_compute_separation(self) -> Dict[str, Any]:
-        if "Observed" not in self._fields:
+    def _agent_run_inversion(self) -> Dict[str, Any]:
+        if self._x is None or self._fields.get("Observed") is None:
             return {"status": "failed", "error": "Load station data first."}
-        self._compute_separation()
-        return {"status": "ok", "fields": list(self._fields.keys())}
-
-    def _agent_grid_field(self) -> Dict[str, Any]:
-        if self._current_values() is None:
-            return {"status": "failed", "error": "Load data / pick a field first."}
-        self._grid_field()
-        return {"status": "ok", "gridded": self._grid is not None}
-
-    def _agent_extract_profile(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        p1, p2 = args.get("p1"), args.get("p2")
-        try:
-            if isinstance(p1, (list, tuple)) and len(p1) == 2:
-                self._p1x.setValue(float(p1[0])); self._p1y.setValue(float(p1[1]))
-            if isinstance(p2, (list, tuple)) and len(p2) == 2:
-                self._p2x.setValue(float(p2[0])); self._p2y.setValue(float(p2[1]))
-            if "samples" in args:
-                self._p_n.setValue(int(args["samples"]))
-        except Exception as exc:  # noqa: BLE001
-            return {"status": "failed", "error": str(exc)}
-        self._extract_profile()
-        return {"status": "ok" if self._profile is not None else "failed",
-                "samples": self._p_n.value()}
-
-    def _agent_compute_forward(self) -> Dict[str, Any]:
-        if self._x is None:
-            return {"status": "failed", "error": "Load station coordinates first."}
-        self._compute_forward()
-        return {"status": "ok", "kind": self._kind.currentText()}
+        self._run_inversion()
+        return {"status": "started", "message": "SimPEG 3D inversion started. Ask for status shortly.",
+                "kind": self._kind.currentText(), "detrend": self._detrend.value()}
 
     def _agent_set_params(self, params: Any) -> Dict[str, Any]:
         if not isinstance(params, dict):
             return {"status": "failed", "error": "Provide 'params' as a JSON object."}
-
-        def set_combo(combo, value):
-            items = [combo.itemText(i) for i in range(combo.count())]
-            if str(value) not in items:
-                raise ValueError(f"must be one of {items}")
-            combo.setCurrentText(str(value))
-
         handlers = {
-            "degree": lambda v: self._degree.setValue(int(v)),
-            "nx": lambda v: self._nx.setValue(int(v)),
-            "ny": lambda v: self._ny.setValue(int(v)),
-            "grid_method": lambda v: set_combo(self._grid_method, v),
-            "profile_samples": lambda v: self._p_n.setValue(int(v)),
-            "body_type": lambda v: set_combo(self._body_type, v),
-            "sphere_x0": lambda v: self._s_x0.setValue(float(v)),
-            "sphere_y0": lambda v: self._s_y0.setValue(float(v)),
-            "sphere_depth": lambda v: self._s_z0.setValue(float(v)),
-            "sphere_radius": lambda v: self._s_R.setValue(float(v)),
-            "sphere_drho": lambda v: self._s_drho.setValue(float(v)),
-            "sphere_susceptibility": lambda v: self._s_chi.setValue(float(v)),
-            "prism_x1": lambda v: self._p_x1.setValue(float(v)),
-            "prism_x2": lambda v: self._p_x2.setValue(float(v)),
-            "prism_y1": lambda v: self._p_y1.setValue(float(v)),
-            "prism_y2": lambda v: self._p_y2.setValue(float(v)),
-            "prism_z_top": lambda v: self._p_z1.setValue(float(v)),
-            "prism_z_bot": lambda v: self._p_z2.setValue(float(v)),
-            "prism_drho": lambda v: self._p_drho.setValue(float(v)),
+            "detrend": lambda v: self._detrend.setValue(int(v)),
+            "lateral_cells": lambda v: self._inv_nxy.setValue(int(v)),
+            "depth_cells": lambda v: self._inv_nz.setValue(int(v)),
+            "max_iterations": lambda v: self._inv_iter.setValue(int(v)),
             "field_strength": lambda v: self._B0.setValue(float(v)),
             "field_inclination": lambda v: self._inc.setValue(float(v)),
             "field_declination": lambda v: self._dec.setValue(float(v)),

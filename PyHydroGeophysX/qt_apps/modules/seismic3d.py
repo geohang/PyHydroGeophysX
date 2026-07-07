@@ -46,8 +46,17 @@ _STEP_ICONS = ["fa5s.wave-square", "fa5s.mountain", "fa5s.th", "fa5s.cubes", "fa
 _P = theme.PALETTE
 _COLUMNS = ["Name", "x0", "y0", "x1", "y1", "Mesh", "Velocity"]
 
+# Synthetic 3D seismic demo: three non-parallel velocity sections produced by
+# ``examples/generate_synthetic_examples.py``. The folder names and map endpoints
+# below must stay in sync with ``SEISMIC_LINES`` in that generator.
+_SYNTHETIC_LINES = [
+    {"name": "L1", "folder": "line1", "x0": 15.0, "y0": 20.0, "x1": 105.0, "y1": 25.0},
+    {"name": "L2", "folder": "line2", "x0": 20.0, "y0": 70.0, "x1": 100.0, "y1": 65.0},
+    {"name": "L3", "folder": "line3", "x0": 30.0, "y0": 15.0, "x1": 35.0, "y1": 75.0},
+]
+
 _INPUT_FORMAT_FALLBACK = (
-    "# Seismic → 3D Model input format\n\n"
+    "# Seismic → Structure input format\n\n"
     "Add one or more 2D seismic velocity lines. Each line needs:\n\n"
     "- a pyGIMLi mesh (`velmesh.bms`)\n"
     "- a per-cell velocity array (`Vinvmodel.npy`)\n"
@@ -82,7 +91,7 @@ class Seismic3DWorker(QThread):
 
 class Seismic3DModule(BaseModule):
     module_key = "seismic3d"
-    module_title = "Seismic → 3D Model"
+    module_title = "Seismic → Structure"
 
     def __init__(self, state: Any, log: LogFn, parent=None) -> None:
         super().__init__(state, log, parent)
@@ -249,28 +258,44 @@ class Seismic3DModule(BaseModule):
         self._update_strip()
 
     def _example_dir(self) -> Optional[Path]:
+        """Locate the synthetic seismic demo root holding ``line1/``, ``line2/``, ...
+
+        Produced by ``examples/generate_synthetic_examples.py``. The real
+        ``seismic_example`` demo is preserved and can still be added via
+        "Add line (folder)...".
+        """
         candidates: List[Path] = []
         if self.state.project_root:
-            candidates.append(Path(self.state.project_root) / "examples" / "results" / "seismic_example")
+            candidates.append(Path(self.state.project_root) / "examples" / "results" / "synthetic_seismic")
         here = Path(__file__).resolve()
-        candidates.extend(p / "examples" / "results" / "seismic_example" for p in here.parents)
+        candidates.extend(p / "examples" / "results" / "synthetic_seismic" for p in here.parents)
+        first = str(_SYNTHETIC_LINES[0]["folder"])
         for cand in candidates:
-            files = seismic3d_pipeline.find_velocity_files(cand)
+            files = seismic3d_pipeline.find_velocity_files(cand / first)
             if files.get("mesh") is not None and files.get("velocity") is not None:
                 return cand
         return None
 
     def _use_example(self) -> None:
-        d = self._example_dir()
-        if d is None:
-            self.log("Bundled seismic_example not found.", "warn")
+        root = self._example_dir()
+        if root is None:
+            self.log("Synthetic seismic demo not found. Run "
+                     "examples/generate_synthetic_examples.py first.", "warn")
             return
-        files = seismic3d_pipeline.find_velocity_files(d)
-        mesh, vel = str(files["mesh"]), str(files["velocity"])
-        for i, y in enumerate((0.0, 60.0, 120.0)):
-            self._add_row({"name": f"L{i + 1}", "mesh": mesh, "velocity": vel,
-                           "x0": 0.0, "y0": y, "x1": 110.0, "y1": y})
-        self.log(f"Added 3 example lines from {d}", "success")
+        added = 0
+        for spec in _SYNTHETIC_LINES:
+            files = seismic3d_pipeline.find_velocity_files(root / str(spec["folder"]))
+            if files.get("mesh") is None or files.get("velocity") is None:
+                continue
+            self._add_row({"name": spec["name"], "mesh": str(files["mesh"]),
+                           "velocity": str(files["velocity"]),
+                           "x0": spec["x0"], "y0": spec["y0"],
+                           "x1": spec["x1"], "y1": spec["y1"]})
+            added += 1
+        if added:
+            self.log(f"Added {added} synthetic example line(s) from {root}", "success")
+        else:
+            self.log(f"No synthetic velocity lines found under {root}.", "warn")
 
     def _add_line_folder(self) -> None:
         path = QFileDialog.getExistingDirectory(self, "Select velocity-model folder", str(Path.cwd()))
@@ -323,7 +348,7 @@ class Seismic3DModule(BaseModule):
         handoff = QPushButton("Send bedrock structure → Hydro")
         handoff.setIcon(theme.icon("fa5s.share"))
         handoff.setToolTip("Pass the bedrock interface of the first line to the "
-                           "Geophysics → Hydro module to define its layers.")
+                           "ERT → Water Content module to define its layers.")
         handoff.clicked.connect(self._send_structure_to_hydrology)
         btn_row.addWidget(handoff)
         btn_row.addStretch(1)
@@ -351,7 +376,7 @@ class Seismic3DModule(BaseModule):
             "threshold": float(self._threshold.value()),
         }
         self.log(f"Sent bedrock structure ({len(raw)} pts, {self._threshold.value():.0f} m/s) "
-                 f"to Geophysics → Hydro. Use 'Derive markers from structure' in its "
+                 f"to ERT → Water Content. Use 'Derive markers from structure' in its "
                  f"Layers step.", "success")
         self.navigateRequested.emit("geo_hydrology")
 
@@ -566,7 +591,7 @@ class Seismic3DModule(BaseModule):
             text = doc_path.read_text(encoding="utf-8")
         except Exception:  # noqa: BLE001
             text = _INPUT_FORMAT_FALLBACK
-        dlg = QDialog(self); dlg.setWindowTitle("Seismic → 3D Model input format")
+        dlg = QDialog(self); dlg.setWindowTitle("Seismic → Structure input format")
         dlg.resize(760, 620); lay = QVBoxLayout(dlg)
         browser = QTextBrowser(); browser.setOpenExternalLinks(True)
         try:
@@ -629,7 +654,7 @@ class Seismic3DModule(BaseModule):
         self._progress.setVisible(True); self._progress.setRange(0, 0)
         self._run_status.setText("Building 3D model…")
         self.log("Starting seismic → 3D model build…", "info")
-        self._worker = Seismic3DWorker(self._context(), params)
+        self._worker = self.register_worker(Seismic3DWorker(self._context(), params))
         self._worker.logged.connect(self._on_worker_log)
         self._worker.succeeded.connect(self._on_build_ok)
         self._worker.failed.connect(self._on_build_failed)

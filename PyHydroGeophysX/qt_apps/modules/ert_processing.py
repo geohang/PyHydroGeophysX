@@ -5,8 +5,10 @@ device), shows the electrode layout and a QC apparent-resistivity pseudosection,
 runs a pygimli ERT inversion, and shows the inverted resistivity section. The
 electrode geometry can still be edited and exported.
 
-Loading reuses ``data_processing.ert_data_agent.load_ert_resipy`` for
-device-specific files and ``pygimli.physics.ert.load`` for auto-detection.
+Loading reuses ``data_processing.ert_data_agent.load_ert_resipy`` for the
+device/format the user selects (there is no auto-detect: pygimli's native reader
+silently mis-parses several common formats, e.g. E4D). ``pygimli.physics.ert.load``
+remains an internal fallback when a device parser raises.
 """
 
 from __future__ import annotations
@@ -42,26 +44,24 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.qt_apps import ert_load, io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
-from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
+from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView, metrics_from_manager
 from PyHydroGeophysX.qt_apps.workers import TaskWorker
 
 _ELEC_FILTER = "Electrodes (*.csv *.txt *.dat);;All files (*)"
 _DATA_FILTER = "ERT data (*.dat *.ohm *.txt *.csv *.Data *.bin *.stg *.amp *.udf);;All files (*)"
-_SCHEMES = ["wa", "dd", "slm", "dp"]
 
 _INSTRUMENTS: List[Tuple[str, Optional[str]]] = [
-    ("Auto-detect (pygimli)", None),
+    ("BERT / Unified (.ohm/.dat)", "BERT"),
+    ("E4D", "E4D"),
     ("DAS-1", "DAS-1"),
     ("Syscal", "Syscal"),
     ("ABEM-Lund", "ABEM-Lund"),
-    ("BERT / Unified (.ohm/.dat)", "BERT"),
     ("Res2DInv", "ResInv"),
     ("Protocol DC", "Protocol DC"),
     ("Protocol IP", "Protocol IP"),
     ("Sting / SuperSting", "Sting"),
     ("ARES", "ARES"),
-    ("E4D", "E4D"),
     ("Lippmann", "Lippmann"),
     ("Electra", "Electra"),
     ("Custom", "Custom"),
@@ -75,11 +75,15 @@ class ERTInversionWorker(QThread):
     failed = Signal(str)
     logged = Signal(str)
 
-    def __init__(self, data, lam: float, out_dir: str) -> None:
+    def __init__(self, data, lam: float, out_dir: str, max_iter: int = 15,
+                 rel_err: float = 0.05, quality: float = 34.0) -> None:
         super().__init__()
         self._data = data
         self._lam = lam
         self._out_dir = out_dir
+        self._max_iter = int(max_iter)
+        self._rel_err = float(rel_err)
+        self._quality = float(quality)
 
     def run(self) -> None:  # noqa: D401
         try:
@@ -96,16 +100,19 @@ class ERTInversionWorker(QThread):
                     data["rhoa"] = data["u"] / data["i"] * data["k"]
             import numpy as _np
             try:
-                err = _np.asarray(pg_ert.estimateError(data, relativeError=0.05), dtype=float)
+                err = _np.asarray(pg_ert.estimateError(data, relativeError=self._rel_err), dtype=float)
             except Exception:  # noqa: BLE001
-                err = _np.asarray(data["err"], dtype=float) if data.haveData("err") else _np.full(data.size(), 0.05)
-            err[~_np.isfinite(err)] = 0.05
-            err[err <= 0] = 0.05
+                err = _np.asarray(data["err"], dtype=float) if data.haveData("err") else _np.full(data.size(), self._rel_err)
+            err[~_np.isfinite(err)] = self._rel_err
+            err[err <= 0] = self._rel_err
             data["err"] = err
             self.logged.emit("Inverting ERT data…")
             mgr = pg_ert.ERTManager(data)
-            mgr.invert(data, lam=self._lam, verbose=False)
-            chi2 = float(getattr(mgr.inv, "chi2", lambda: float("nan"))()) if hasattr(mgr, "inv") else float("nan")
+            inv_mesh = mgr.createMesh(data=data, quality=self._quality)
+            mgr.invert(data, mesh=inv_mesh, lam=self._lam, maxIter=self._max_iter, verbose=False)
+            metrics, convergence = metrics_from_manager(
+                mgr, n_data=int(data.size()), lam=float(self._lam))
+            chi2 = metrics.get("chi2", float("nan"))
             mesh = mgr.paraDomain
             resistivity = _np.asarray(mgr.model, dtype=float)
             vtk_path = ""
@@ -115,7 +122,8 @@ class ERTInversionWorker(QThread):
                 mesh.exportVTK(vtk_path)
             except Exception:  # noqa: BLE001
                 vtk_path = ""
-            self.succeeded.emit({"mgr": mgr, "chi2": chi2, "vtk": vtk_path})
+            self.succeeded.emit({"mgr": mgr, "chi2": chi2, "vtk": vtk_path,
+                                 "metrics": metrics, "convergence": convergence})
         except Exception as exc:  # noqa: BLE001
             self.failed.emit(str(exc))
 
@@ -171,6 +179,10 @@ class ERTProcessingModule(BaseModule):
         self._tl_worker: Optional[TimeLapseWorker] = None
         self._tl_out: Optional[str] = None
         self._tl_result: Optional[dict] = None
+        self._tl_mesh = None              # in-memory time-lapse result for the
+        self._tl_models = None            # interactive per-step viewer
+        self._tl_coverage = None
+        self._tl_step_titles: List[str] = []
         self._cmap = pg.colormap.get("viridis")
 
         root = QHBoxLayout(self)
@@ -197,12 +209,38 @@ class ERTProcessingModule(BaseModule):
         self._pseudo_plot.addItem(self._pseudo_scatter)
 
         self._model_view = MeshResultView()
-        self._tl_view = ZoomableImageView()
+        # The "Resistivity model" tab shows the single inversion OR any time step
+        # of a time-lapse run, picked with the step selector (hidden until a
+        # time-lapse result is available) — so there is no separate time-lapse tab.
+        model_tab = QWidget()
+        self._model_tab = model_tab
+        model_layout = QVBoxLayout(model_tab)
+        model_layout.setContentsMargins(0, 0, 0, 0)
+        self._tl_step_row = QWidget()
+        step_bar = QHBoxLayout(self._tl_step_row)
+        step_bar.setContentsMargins(6, 2, 6, 2)
+        step_bar.addWidget(QLabel("Time step:"))
+        self._tl_step_combo = QComboBox()
+        self._tl_step_combo.setToolTip("Choose which time-lapse inversion result to display.")
+        self._tl_step_combo.currentIndexChanged.connect(self._show_tl_step)
+        step_bar.addWidget(self._tl_step_combo, stretch=1)
+        self._tl_prev_btn = QPushButton("◀"); self._tl_prev_btn.setMaximumWidth(34)
+        self._tl_prev_btn.setToolTip("Previous time step")
+        self._tl_prev_btn.clicked.connect(lambda: self._step_tl(-1))
+        self._tl_next_btn = QPushButton("▶"); self._tl_next_btn.setMaximumWidth(34)
+        self._tl_next_btn.setToolTip("Next time step")
+        self._tl_next_btn.clicked.connect(lambda: self._step_tl(1))
+        step_bar.addWidget(self._tl_prev_btn); step_bar.addWidget(self._tl_next_btn)
+        self._tl_step_row.setVisible(False)
+        model_layout.addWidget(self._tl_step_row)
+        model_layout.addWidget(self._model_view, stretch=1)
+
+        self._quality_view = InversionQualityView()
 
         self._tabs.addTab(self._plot_widget, "Electrodes")
         self._tabs.addTab(self._pseudo_widget, "Pseudosection")
-        self._tabs.addTab(self._model_view, "Resistivity model")
-        self._tabs.addTab(self._tl_view, "Time-lapse")
+        self._tabs.addTab(model_tab, "Resistivity model")
+        self._tabs.addTab(self._quality_view, "Inversion quality")
         root.addWidget(self._tabs, stretch=1)
         root.addWidget(self._build_controls())
 
@@ -230,18 +268,41 @@ class ERTProcessingModule(BaseModule):
         self._instrument.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
         self._instrument.setMinimumContentsLength(16)
         lform.addRow("Instrument / format", self._instrument)
-        self._spacing = QDoubleSpinBox()
-        self._spacing.setRange(0.0, 1000.0)
-        self._spacing.setValue(0.0)
-        self._spacing.setSuffix(" m")
-        self._spacing.setToolTip("Fallback electrode spacing if the file has no geometry (0 = use file geometry).")
-        lform.addRow("Fallback spacing", self._spacing)
-        load_d = QPushButton("Load ERT data…")
-        load_d.setProperty("primary", True)
-        load_d.setIcon(theme.icon("fa5s.file-import", color="#ffffff"))
-        load_d.clicked.connect(self._load_ert_data)
-        lform.addRow(load_d)
-        self._load_btn = load_d
+
+        load_hint = QLabel("Add one or more ERT files (one per time step for time-lapse). "
+                           "Click a row to preview it; order top→bottom is time order.")
+        load_hint.setWordWrap(True)
+        lform.addRow(load_hint)
+
+        self._tl_list = QListWidget()
+        self._tl_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self._tl_list.setMaximumHeight(150)
+        self._tl_list.setToolTip("Loaded ERT files. Click a row to preview it; two or more "
+                                 "become a time sequence for time-lapse inversion.")
+        self._tl_list.itemSelectionChanged.connect(self._on_tl_selection_changed)
+        self._tl_list.itemClicked.connect(self._preview_tl_item)
+        lform.addRow(self._tl_list)
+
+        tl_btns = QHBoxLayout()
+        add_btn = QPushButton("Add files…")
+        add_btn.setProperty("primary", True)
+        add_btn.setIcon(theme.icon("fa5s.file-import", color="#ffffff"))
+        add_btn.clicked.connect(self._add_tl_files)
+        rm_btn = QPushButton("Remove"); rm_btn.setIcon(theme.icon("fa5s.minus"))
+        rm_btn.clicked.connect(self._remove_tl_files)
+        up_btn = QPushButton("↑"); up_btn.setToolTip("Move selected up"); up_btn.setMaximumWidth(34)
+        up_btn.clicked.connect(lambda: self._move_tl_files(-1))
+        down_btn = QPushButton("↓"); down_btn.setToolTip("Move selected down"); down_btn.setMaximumWidth(34)
+        down_btn.clicked.connect(lambda: self._move_tl_files(1))
+        clr_btn = QPushButton("Clear"); clr_btn.setIcon(theme.icon("fa5s.trash"))
+        clr_btn.clicked.connect(self._clear_tl_files)
+        for b in (add_btn, rm_btn, up_btn, down_btn, clr_btn):
+            tl_btns.addWidget(b)
+        lform.addRow(tl_btns)
+
+        self._tl_info = QLabel("No files added."); self._tl_info.setWordWrap(True)
+        lform.addRow(self._tl_info)
+
         load_e = QPushButton("Electrode file (optional)…")
         load_e.setIcon(theme.icon("fa5s.folder-open"))
         load_e.clicked.connect(self._load_electrodes)
@@ -272,13 +333,33 @@ class ERTProcessingModule(BaseModule):
         qform.addRow(qrow)
         layout.addWidget(qc)
 
+        # One inversion section. λ / iterations / relative error / mesh quality are
+        # shared by single and time-lapse inversion; ticking "Time-lapse" reveals
+        # the time-lapse-only options and swaps the Run button.
         inv = QGroupBox("Inversion")
         iform = QFormLayout(inv)
         self._lam = QDoubleSpinBox()
-        self._lam.setRange(1.0, 1000.0)
-        self._lam.setValue(20.0)
-        self._lam.setToolTip("Regularization strength (lambda).")
+        self._lam.setRange(1.0, 1000.0); self._lam.setValue(20.0)
+        self._lam.setToolTip("Spatial regularization strength (smoothness).")
         iform.addRow("Lambda", self._lam)
+        self._iter = QSpinBox(); self._iter.setRange(2, 60); self._iter.setValue(15)
+        self._iter.setToolTip("Maximum number of Gauss-Newton iterations.")
+        iform.addRow("Max iterations", self._iter)
+        self._relerr = QDoubleSpinBox(); self._relerr.setRange(0.005, 1.0)
+        self._relerr.setDecimals(3); self._relerr.setSingleStep(0.01); self._relerr.setValue(0.05)
+        self._relerr.setToolTip("Assumed relative data error, used to weight the fit.")
+        iform.addRow("Relative error", self._relerr)
+        self._quality = QDoubleSpinBox(); self._quality.setRange(20.0, 40.0); self._quality.setValue(34.0)
+        self._quality.setToolTip("Inversion-mesh quality (higher = finer triangulation).")
+        iform.addRow("Mesh quality", self._quality)
+
+        self._tl_mode = QCheckBox("Time-lapse (multiple ERT files)")
+        self._tl_mode.setToolTip("Off: invert the single loaded dataset.  On: jointly invert an "
+                                 "ordered sequence of ERT files with temporal regularization "
+                                 "(the time-lapse options appear below).")
+        self._tl_mode.toggled.connect(self._on_tl_mode)
+        iform.addRow(self._tl_mode)
+
         self._invert_btn = QPushButton("Run inversion")
         self._invert_btn.setProperty("primary", True)
         self._invert_btn.setIcon(theme.icon("fa5s.play", color="#ffffff"))
@@ -287,93 +368,9 @@ class ERTProcessingModule(BaseModule):
         self._inv_progress = QProgressBar()
         self._inv_progress.setVisible(False)
         iform.addRow(self._inv_progress)
+
+        iform.addRow(self._build_timelapse_panel())
         layout.addWidget(inv)
-
-        tl = QGroupBox("Time-lapse inversion (upload many ERT files)")
-        tlform = QFormLayout(tl)
-        tl_hint = QLabel("Upload one ERT file per time step — like shots in the Seismic "
-                         "module. Files load with the <b>Instrument / format</b> above; "
-                         "click a row to preview it. Order top→bottom = time order.")
-        tl_hint.setWordWrap(True)
-        tlform.addRow(tl_hint)
-
-        self._tl_list = QListWidget()
-        self._tl_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self._tl_list.setMaximumHeight(160)
-        self._tl_list.setToolTip("Ordered ERT time sequence. Select a row to preview its "
-                                 "electrodes + pseudosection.")
-        self._tl_list.itemSelectionChanged.connect(self._on_tl_selection_changed)
-        self._tl_list.itemClicked.connect(self._preview_tl_item)
-        tlform.addRow(self._tl_list)
-
-        tl_btns = QHBoxLayout()
-        add_btn = QPushButton("Add files…")
-        add_btn.setIcon(theme.icon("fa5s.layer-group"))
-        add_btn.clicked.connect(self._add_tl_files)
-        rm_btn = QPushButton("Remove")
-        rm_btn.setIcon(theme.icon("fa5s.minus"))
-        rm_btn.clicked.connect(self._remove_tl_files)
-        up_btn = QPushButton("↑"); up_btn.setToolTip("Move selected up"); up_btn.setMaximumWidth(34)
-        up_btn.clicked.connect(lambda: self._move_tl_files(-1))
-        down_btn = QPushButton("↓"); down_btn.setToolTip("Move selected down"); down_btn.setMaximumWidth(34)
-        down_btn.clicked.connect(lambda: self._move_tl_files(1))
-        clr_btn = QPushButton("Clear")
-        clr_btn.setIcon(theme.icon("fa5s.trash"))
-        clr_btn.clicked.connect(self._clear_tl_files)
-        for b in (add_btn, rm_btn, up_btn, down_btn, clr_btn):
-            tl_btns.addWidget(b)
-        tlform.addRow(tl_btns)
-
-        self._tl_info = QLabel("No files added."); self._tl_info.setWordWrap(True)
-        tlform.addRow(self._tl_info)
-        self._tl_lambda = QDoubleSpinBox(); self._tl_lambda.setRange(1.0, 1000.0); self._tl_lambda.setValue(50.0)
-        self._tl_lambda.setToolTip("Spatial regularization strength.")
-        self._tl_alpha = QDoubleSpinBox(); self._tl_alpha.setRange(0.0, 1000.0); self._tl_alpha.setValue(10.0)
-        self._tl_alpha.setToolTip("Temporal regularization (couples consecutive models).")
-        self._tl_type = QComboBox(); self._tl_type.addItems(["L2", "L1", "L1L2"])
-        self._tl_iter = QSpinBox(); self._tl_iter.setRange(2, 60); self._tl_iter.setValue(15)
-        self._tl_relerr = QDoubleSpinBox(); self._tl_relerr.setRange(0.005, 1.0)
-        self._tl_relerr.setDecimals(3); self._tl_relerr.setSingleStep(0.01); self._tl_relerr.setValue(0.05)
-        self._tl_quality = QDoubleSpinBox(); self._tl_quality.setRange(20.0, 40.0); self._tl_quality.setValue(34.0)
-        tlform.addRow("Lambda (spatial)", self._tl_lambda)
-        tlform.addRow("Alpha (temporal)", self._tl_alpha)
-        tlform.addRow("Norm", self._tl_type)
-        tlform.addRow("Max iterations", self._tl_iter)
-        tlform.addRow("Relative error", self._tl_relerr)
-        tlform.addRow("Mesh quality", self._tl_quality)
-        self._tl_windowed = QCheckBox("Windowed (sliding window)")
-        self._tl_windowed.setToolTip("Process consecutive time steps in overlapping windows: "
-                                     "cheaper and lower-memory for long monitoring sequences.")
-        self._tl_window = QSpinBox(); self._tl_window.setRange(2, 50); self._tl_window.setValue(3)
-        self._tl_window.setEnabled(False)
-        self._tl_windowed.toggled.connect(self._tl_window.setEnabled)
-        tlform.addRow(self._tl_windowed)
-        tlform.addRow("Window size", self._tl_window)
-        self._tl_lowmem = QCheckBox("Low memory (sparse)")
-        self._tl_lowmem.setToolTip("Use single-precision sparse operators to cut RAM "
-                                   "(for many files / large meshes). Auto-enabled for "
-                                   "large problems; check to force it on.")
-        tlform.addRow(self._tl_lowmem)
-        self._tl_btn = QPushButton("Run time-lapse inversion")
-        self._tl_btn.setProperty("primary", True)
-        self._tl_btn.setIcon(theme.icon("fa5s.history", color="#ffffff"))
-        self._tl_btn.clicked.connect(self._run_timelapse)
-        tlform.addRow(self._tl_btn)
-        self._tl_progress = QProgressBar(); self._tl_progress.setVisible(False)
-        tlform.addRow(self._tl_progress)
-        self._tl_export_btn = QPushButton("Export results (VTK + npy + mesh)…")
-        self._tl_export_btn.setIcon(theme.icon("fa5s.cube"))
-        self._tl_export_btn.setToolTip("Save the time-lapse models to a folder you pick: a combined VTK, "
-                                       "per-step VTKs, final_models.npy, the mesh (.bms), times CSV, and the figure.")
-        self._tl_export_btn.setEnabled(False)
-        self._tl_export_btn.clicked.connect(self._export_tl_results)
-        tlform.addRow(self._tl_export_btn)
-        self._tl_open = QPushButton("Open output folder")
-        self._tl_open.setIcon(theme.icon("fa5s.folder-open"))
-        self._tl_open.setEnabled(False)
-        self._tl_open.clicked.connect(self._open_tl_output)
-        tlform.addRow(self._tl_open)
-        layout.addWidget(tl)
 
         modes = QGroupBox("Electrode editing")
         mbox = QVBoxLayout(modes)
@@ -388,13 +385,6 @@ class ERTProcessingModule(BaseModule):
         clear_btn.clicked.connect(self._clear)
         mbox.addWidget(clear_btn)
         layout.addWidget(modes)
-
-        survey = QGroupBox("Survey geometry")
-        sform = QFormLayout(survey)
-        self._scheme = QComboBox()
-        self._scheme.addItems(_SCHEMES)
-        sform.addRow("Array type", self._scheme)
-        layout.addWidget(survey)
 
         exp = QGroupBox("Export")
         ebox = QVBoxLayout(exp)
@@ -417,41 +407,91 @@ class ERTProcessingModule(BaseModule):
         layout.addStretch(1)
         return scroll
 
-    # -- loading -------------------------------------------------------------
-    def _load_ert_data(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Load ERT data", "", _DATA_FILTER)
-        if not path:
-            return
-        self._start_load(path)
+    def _build_timelapse_panel(self) -> QWidget:
+        """The time-lapse-only options, shown only when "Time-lapse" is ticked. The
+        ERT file list (which doubles as the single-file loader) lives in the Load
+        group at the top; shared λ / iterations / relative error / mesh quality live
+        in the Inversion group above. Only the temporal controls are here."""
+        panel = QWidget()
+        self._tl_panel = panel
+        tlform = QFormLayout(panel)
+        tlform.setContentsMargins(0, 6, 0, 0)
+        self._tl_alpha = QDoubleSpinBox(); self._tl_alpha.setRange(0.0, 1000.0); self._tl_alpha.setValue(10.0)
+        self._tl_alpha.setToolTip("Temporal regularization strength (couples consecutive time steps).")
+        tlform.addRow("Alpha (temporal)", self._tl_alpha)
+        self._tl_type = QComboBox(); self._tl_type.addItems(["L2", "L1", "L1L2"])
+        self._tl_type.setToolTip("Temporal norm: L2 smooth, L1 blocky, L1L2 hybrid.")
+        tlform.addRow("Norm", self._tl_type)
 
+        self._tl_windowed = QCheckBox("Windowed (sliding window)")
+        self._tl_windowed.setToolTip("Process consecutive time steps in overlapping windows: "
+                                     "cheaper and lower-memory for long monitoring sequences.")
+        self._tl_window = QSpinBox(); self._tl_window.setRange(2, 50); self._tl_window.setValue(3)
+        self._tl_window.setEnabled(False)
+        self._tl_windowed.toggled.connect(self._tl_window.setEnabled)
+        tlform.addRow(self._tl_windowed)
+        tlform.addRow("Window size", self._tl_window)
+        self._tl_lowmem = QCheckBox("Low memory (sparse)")
+        self._tl_lowmem.setToolTip("Use single-precision sparse operators to cut RAM "
+                                   "(for many files / large meshes). Auto-enabled for "
+                                   "large problems; check to force it on.")
+        tlform.addRow(self._tl_lowmem)
+
+        self._tl_btn = QPushButton("Run time-lapse inversion")
+        self._tl_btn.setProperty("primary", True)
+        self._tl_btn.setIcon(theme.icon("fa5s.history", color="#ffffff"))
+        self._tl_btn.clicked.connect(self._run_timelapse)
+        tlform.addRow(self._tl_btn)
+        self._tl_progress = QProgressBar(); self._tl_progress.setVisible(False)
+        tlform.addRow(self._tl_progress)
+        self._tl_export_btn = QPushButton("Export results (VTK + npy + mesh)…")
+        self._tl_export_btn.setIcon(theme.icon("fa5s.cube"))
+        self._tl_export_btn.setToolTip("Save the time-lapse models to a folder you pick: a combined VTK, "
+                                       "per-step VTKs, final_models.npy, the mesh (.bms), times CSV, and the figure.")
+        self._tl_export_btn.setEnabled(False)
+        self._tl_export_btn.clicked.connect(self._export_tl_results)
+        tlform.addRow(self._tl_export_btn)
+        self._tl_open = QPushButton("Open output folder")
+        self._tl_open.setIcon(theme.icon("fa5s.folder-open"))
+        self._tl_open.setEnabled(False)
+        self._tl_open.clicked.connect(self._open_tl_output)
+        tlform.addRow(self._tl_open)
+
+        panel.setVisible(False)
+        return panel
+
+    def _on_tl_mode(self, checked: bool) -> None:
+        """Toggle between single-file and time-lapse inversion."""
+        self._tl_panel.setVisible(bool(checked))
+        self._invert_btn.setVisible(not checked)
+
+    # -- loading -------------------------------------------------------------
     def _start_load(self, path: str) -> None:
         """Load one ERT file (off the UI thread) into the electrode + pseudosection
-        view. Shared by the file dialog and the time-lapse preview."""
+        view and make it the current single-inversion dataset. Used when a file is
+        added and when a row in the file list is clicked to preview it."""
         instrument = self._instrument.currentData()
         # Capture widget/state values on the UI thread; the parse runs off-thread.
         out_dir = self.state.output_dir or Path.cwd()
         elec_file = str(self._electrode_path) if self._electrode_path and self._electrode_path.exists() else None
-        spacing = self._spacing.value() if self._spacing.value() > 0 else None
-        self._load_btn.setEnabled(False)
-        self._load_btn.setText("Loading…")
+        spacing = None  # geometry comes from the file; instrument loaders handle layout
         self._info.setText(f"Loading {Path(path).name}…")
         worker = TaskWorker(self._parse_ert, path, instrument, out_dir, elec_file, spacing)
         worker.succeeded.connect(lambda res: self._on_ert_loaded(path, res))
         worker.failed.connect(self._on_ert_load_failed)
-        worker.finished.connect(self._reset_load_btn)
         self._load_worker = self.register_worker(worker)
         worker.start()
 
     def _parse_ert(self, path, instrument, out_dir, elec_file, spacing):
         """Parse ERT data off the UI thread. Returns a plain dict for the slot."""
         warning = ""
-        if instrument is None:
+        if instrument is None:  # defensive: the dropdown has no auto/None option
             elec, pseudo, nmeas, data = self._load_pygimli(path)
         else:
             try:
                 elec, pseudo, nmeas, data = self._load_resipy(path, instrument, out_dir, elec_file, spacing)
             except Exception as exc:  # noqa: BLE001
-                warning = f"{instrument} loader failed ({exc}); used auto-detect."
+                warning = f"{instrument} loader failed ({exc}); fell back to pygimli's native reader."
                 elec, pseudo, nmeas, data = self._load_pygimli(path)
         return {"elec": elec, "pseudo": pseudo, "nmeas": nmeas, "data": data, "warning": warning}
 
@@ -472,15 +512,15 @@ class ERTProcessingModule(BaseModule):
         self._draw_pseudosection()
         if pseudo:
             self._tabs.setCurrentWidget(self._pseudo_widget)
-        self.log(f"Loaded {len(self._x)} electrodes, {nmeas} measurements from {Path(path).name}", "success")
+        if nmeas == 0:
+            self.log(f"{Path(path).name}: parsed {len(self._x)} electrodes but 0 measurements — "
+                     f"the Instrument / format is probably wrong for this file.", "warn")
+        else:
+            self.log(f"Loaded {len(self._x)} electrodes, {nmeas} measurements from {Path(path).name}", "success")
 
     def _on_ert_load_failed(self, message: str) -> None:
         self.log(f"Could not load ERT data: {message}", "error")
         self._info.setText(f"Load failed: {message}")
-
-    def _reset_load_btn(self) -> None:
-        self._load_btn.setEnabled(True)
-        self._load_btn.setText("Load ERT data…")
 
     def _load_pygimli(self, path: str):
         import pygimli.physics.ert as ert
@@ -641,7 +681,9 @@ class ERTProcessingModule(BaseModule):
         self._invert_btn.setText("Inverting…")
         self._inv_progress.setVisible(True)
         self._inv_progress.setRange(0, 0)
-        self._inv_worker = ERTInversionWorker(self._ert_data, self._lam.value(), out_dir)
+        self._inv_worker = ERTInversionWorker(
+            self._ert_data, self._lam.value(), out_dir,
+            max_iter=self._iter.value(), rel_err=self._relerr.value(), quality=self._quality.value())
         self._inv_worker.logged.connect(lambda msg: self.log(msg, "info"))
         self._inv_worker.succeeded.connect(self._on_inversion_ok)
         self._inv_worker.failed.connect(self._on_inversion_failed)
@@ -653,15 +695,20 @@ class ERTProcessingModule(BaseModule):
         mgr = result.get("mgr")
         self._inv_mgr = mgr
         if mgr is not None:
+            self._tl_step_row.setVisible(False)  # single result: no step selector
             self._model_view.show_model(mgr, kind="ert")
-            self._tabs.setCurrentWidget(self._model_view)
+            self._tabs.setCurrentWidget(self._model_tab)
             self._model_export_btn.setEnabled(True)
+        metrics = dict(result.get("metrics") or {})
+        metrics.setdefault("method", self._instrument.currentText())
+        self._quality_view.show_quality(metrics, result.get("convergence"), title="ERT inversion")
         chi2 = result.get("chi2")
         self.log(f"ERT inversion complete (chi2={chi2:.2f})." if chi2 == chi2 else "ERT inversion complete.", "success")
         vtk = result.get("vtk")
         if vtk:
             self.log(f"Saved resistivity mesh to {vtk}", "info")
         self.report_result({"resistivity_vtk": vtk, "chi2": result.get("chi2"),
+                            "rrms": metrics.get("rrms"), "iterations": metrics.get("iterations"),
                             "num_measurements": self._n_meas, "instrument": self._instrument.currentText()})
 
     def _on_inversion_failed(self, message: str) -> None:
@@ -692,25 +739,33 @@ class ERTProcessingModule(BaseModule):
         n = len(self._tl_files)
         if n == 0:
             self._tl_info.setText("No files added.")
+        elif n == 1:
+            self._tl_info.setText(f"<b>1</b> file. Tick “Time-lapse” and add more for a "
+                                  f"time sequence. Instrument: {self._instrument.currentText()}.")
         else:
             dated = any(lbl and not lbl.isdigit() for lbl in self._tl_labels)
             span = f"{self._tl_labels[0]} → {self._tl_labels[-1]}" if dated else f"{n} steps"
-            self._tl_info.setText(f"<b>{n}</b> time step{'s' if n != 1 else ''} ({span}). "
+            self._tl_info.setText(f"<b>{n}</b> files ({span}). "
                                   f"Instrument: {self._instrument.currentText()}.")
 
     def _add_tl_files(self) -> None:
         paths, _ = QFileDialog.getOpenFileNames(
-            self, "Add ERT data files (one per time step)", "", _DATA_FILTER)
+            self, "Add ERT data file(s)", "", _DATA_FILTER)
         if not paths:
             return
         # Append new files, preserving order and dropping duplicates.
+        old_n = len(self._tl_files)
         merged = list(self._tl_files)
         added = 0
         for p in paths:
             if p not in merged:
                 merged.append(p); added += 1
         self._set_tl_files(merged)
-        self.log(f"Added {added} ERT file(s); {len(self._tl_files)} total for time-lapse.", "info")
+        self.log(f"Added {added} ERT file(s); {len(self._tl_files)} loaded.", "info")
+        # Auto-preview the first newly added file so the user sees data immediately.
+        if added and old_n < len(self._tl_files):
+            self._tl_list.setCurrentRow(old_n)
+            self._preview_tl_item(self._tl_list.item(old_n))
 
     def _selected_tl_rows(self) -> List[int]:
         return sorted(self._tl_list.row(it) for it in self._tl_list.selectedItems())
@@ -768,9 +823,9 @@ class ERTProcessingModule(BaseModule):
         out_dir = str(self.state.output_dir or Path.cwd())
         instrument = self._instrument.currentData()
         params = {
-            "lambda_val": self._tl_lambda.value(), "alpha": self._tl_alpha.value(),
-            "inversion_type": self._tl_type.currentText(), "max_iterations": self._tl_iter.value(),
-            "relativeError": self._tl_relerr.value(), "mesh_quality": self._tl_quality.value(),
+            "lambda_val": self._lam.value(), "alpha": self._tl_alpha.value(),
+            "inversion_type": self._tl_type.currentText(), "max_iterations": self._iter.value(),
+            "relativeError": self._relerr.value(), "mesh_quality": self._quality.value(),
             "windowed": self._tl_windowed.isChecked(), "window_size": self._tl_window.value(),
             "instrument": instrument,
         }
@@ -790,21 +845,70 @@ class ERTProcessingModule(BaseModule):
         self._tl_worker.start()
 
     def _on_tl_ok(self, result: dict) -> None:
+        # Pull out the in-memory mesh + models for the interactive viewer, then
+        # drop them so the published result stays JSON-serializable.
+        self._tl_mesh = result.pop("mesh", None)
+        self._tl_models = result.pop("final_models", None)
+        self._tl_coverage = result.pop("coverage", None)
+        self._tl_step_titles = list(result.pop("step_titles", []) or [])
         self._tl_result = result
         self._tl_out = result.get("output_dir")
         self._tl_open.setEnabled(bool(self._tl_out))
         self._tl_export_btn.setEnabled(True)
-        figs = result.get("figure_paths", [])
-        if figs and Path(figs[0]).exists():
-            self._tl_view.set_image_file(figs[0])
-            self._tabs.setCurrentWidget(self._tl_view)
+
+        self._populate_tl_steps()
+        self._quality_view.show_quality(
+            {"chi2": result.get("chi2"), "iterations": len(result.get("chi2_history") or []) or None,
+             "n_data": result.get("n_data"), "lambda": self._lam.value(),
+             "method": f"time-lapse {result.get('inversion_type', '')} ({result.get('n_times')} steps)",
+             "note": "Joint χ² over all time steps."},
+            result.get("chi2_history"), title="Time-lapse ERT inversion")
         lowmem = " · low-memory" if result.get("save_memory") else ""
         n_vtk = len(result.get("vtk_step_paths") or [])
         self.log(f"Time-lapse inversion complete ({result.get('mode')}{lowmem}): "
                  f"{result.get('n_times')} steps, {result.get('mesh_cells')} cells. "
                  f"Saved VTK (combined + {n_vtk} per-step), npy, mesh. "
-                 f"Use “Export results…” to save them to a folder you pick.", "success")
+                 f"Pick a step in the Resistivity model tab; “Export results…” saves them.", "success")
         self.report_result(result)
+
+    def _populate_tl_steps(self) -> None:
+        """Fill the step selector from the loaded time-lapse models and show step 0."""
+        import numpy as np
+        if self._tl_models is None or self._tl_mesh is None:
+            self._tl_step_row.setVisible(False)
+            return
+        n = int(np.asarray(self._tl_models).shape[1])
+        self._tl_step_combo.blockSignals(True)
+        self._tl_step_combo.clear()
+        for i in range(n):
+            title = self._tl_step_titles[i] if i < len(self._tl_step_titles) else f"Time step {i + 1}"
+            self._tl_step_combo.addItem(f"{i + 1}/{n}  ·  {title}", i)
+        self._tl_step_combo.setCurrentIndex(0)
+        self._tl_step_combo.blockSignals(False)
+        self._tl_step_row.setVisible(n > 1)
+        self._show_tl_step(0)
+        self._tabs.setCurrentWidget(self._model_tab)
+
+    def _step_tl(self, delta: int) -> None:
+        n = self._tl_step_combo.count()
+        if n:
+            self._tl_step_combo.setCurrentIndex((self._tl_step_combo.currentIndex() + delta) % n)
+
+    def _show_tl_step(self, idx: int) -> None:
+        import numpy as np
+        if self._tl_models is None or self._tl_mesh is None:
+            return
+        models = np.asarray(self._tl_models, dtype=float)
+        if idx < 0 or idx >= models.shape[1]:
+            return
+        values = models[:, idx]
+        cov = None
+        if self._tl_coverage is not None:
+            cov_all = np.asarray(self._tl_coverage, dtype=float)
+            if cov_all.ndim == 2 and idx < cov_all.shape[0] and cov_all.shape[1] == values.size:
+                cov = cov_all[idx] > -1.0  # boolean mask, matching the panel figure
+        title = self._tl_step_titles[idx] if idx < len(self._tl_step_titles) else f"Time step {idx + 1}"
+        self._model_view.show_field(self._tl_mesh, values, kind="ert", coverage=cov, title=title)
 
     def _on_tl_failed(self, message: str, backend: bool) -> None:
         self.log(f"Time-lapse inversion {'unavailable' if backend else 'failed'}: {message}",
@@ -998,7 +1102,6 @@ class ERTProcessingModule(BaseModule):
         geometry = {
             "method": "ERT",
             "instrument": self._instrument.currentText(),
-            "scheme_name": self._scheme.currentText(),
             "num_electrodes": len(self._x),
             "num_measurements": self._n_meas,
             "electrodes": self._coords(),
@@ -1043,7 +1146,6 @@ class ERTProcessingModule(BaseModule):
             "num_electrodes": len(self._x),
             "num_measurements": self._n_meas,
             "electrodes": self._coords(),
-            "scheme_name": self._scheme.currentText(),
             "electrode_file": str(self._electrode_path) if self._electrode_path else "",
             "data_file": str(self._data_path) if self._data_path else "",
         }
@@ -1059,16 +1161,18 @@ class ERTProcessingModule(BaseModule):
             "state": self._agent_status(),
             "actions": [
                 {"name": "load_data", "args": {"path": "str", "instrument": "str (optional)"},
-                 "desc": ("Load ERT data. instrument is one of: auto, " +
+                 "desc": ("Load ERT data; pick the instrument/format that matches the file "
+                          "(no auto-detect). One of: " +
                           ", ".join(v for _, v in _INSTRUMENTS if v) + ".")},
                 {"name": "load_electrodes", "args": {"path": "str"},
                  "desc": "Load an optional electrode geometry file (x, z table)."},
                 {"name": "apply_filter", "args": {"min_rhoa": "float", "max_rhoa": "float", "max_error": "float (%)"},
                  "desc": "Filter measurements by apparent resistivity range and max relative error."},
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
-                 "desc": ("Set parameters. Keys: lambda, scheme (wa/dd/slm/dp), fallback_spacing, "
-                          "tl_lambda, tl_alpha, tl_norm (L2/L1/L1L2), tl_iterations, tl_relative_error, "
-                          "tl_mesh_quality, tl_windowed, tl_window_size, tl_low_memory.")},
+                 "desc": ("Set parameters. Shared by single + time-lapse inversion: lambda, "
+                          "max_iterations, relative_error, mesh_quality, time_lapse (bool). "
+                          "Time-lapse-only: tl_alpha, tl_norm (L2/L1/L1L2), tl_windowed, "
+                          "tl_window_size, tl_low_memory.")},
                 {"name": "run_inversion", "args": {},
                  "desc": "Run a single-time ERT inversion on the loaded data."},
                 {"name": "add_timelapse_files", "args": {"paths": ["str", "str"], "append": "bool (optional)"},
@@ -1137,29 +1241,33 @@ class ERTProcessingModule(BaseModule):
         p = Path(str(path))
         if not p.exists():
             return {"status": "failed", "error": f"File not found: {p}"}
-        if instrument is not None and str(instrument).strip():
+        # An explicit instrument is matched; "auto"/"none" keeps the current
+        # selection (there is no auto-detect format — the user picks the device).
+        if instrument is not None and str(instrument).strip() \
+                and str(instrument).strip().lower() not in ("auto", "none", "auto-detect"):
             inst_key = str(instrument).strip().lower()
             idx = None
-            if inst_key in ("auto", "none", "auto-detect"):
-                idx = 0
-            else:
-                for i, (label, value) in enumerate(_INSTRUMENTS):
-                    if value is not None and (inst_key == value.lower() or inst_key == label.lower()):
-                        idx = i
-                        break
+            for i, (label, value) in enumerate(_INSTRUMENTS):
+                if value is not None and (inst_key == value.lower() or inst_key == label.lower()):
+                    idx = i
+                    break
             if idx is None:
                 return {"status": "failed", "error": f"Unknown instrument '{instrument}'.",
-                        "valid": ["auto"] + [v for _, v in _INSTRUMENTS if v]}
+                        "valid": [v for _, v in _INSTRUMENTS if v]}
             self._instrument.setCurrentIndex(idx)
         inst = self._instrument.currentData()
         out_dir = self.state.output_dir or Path.cwd()
         elec_file = str(self._electrode_path) if self._electrode_path and self._electrode_path.exists() else None
-        spacing = self._spacing.value() if self._spacing.value() > 0 else None
+        spacing = None  # geometry comes from the file
         try:
             res = self._parse_ert(str(p), inst, out_dir, elec_file, spacing)
             self._on_ert_loaded(str(p), res)
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": f"Could not load: {exc}"}
+        # Reflect the loaded file in the file list (it doubles as the loader).
+        if str(p) not in self._tl_files:
+            self._set_tl_files(self._tl_files + [str(p)])
+        self._tl_list.setCurrentRow(self._tl_files.index(str(p)))
         return {"status": "ok", "electrodes": len(self._x), "measurements": self._n_meas,
                 "instrument": self._instrument.currentText()}
 
@@ -1207,18 +1315,23 @@ class ERTProcessingModule(BaseModule):
             combo.setCurrentText(str(value))
 
         handlers = {
+            # shared by single + time-lapse inversion
             "lambda": lambda v: self._lam.setValue(float(v)),
-            "scheme": lambda v: set_combo(self._scheme, v),
-            "fallback_spacing": lambda v: self._spacing.setValue(float(v)),
-            "tl_lambda": lambda v: self._tl_lambda.setValue(float(v)),
+            "max_iterations": lambda v: self._iter.setValue(int(v)),
+            "relative_error": lambda v: self._relerr.setValue(float(v)),
+            "mesh_quality": lambda v: self._quality.setValue(float(v)),
+            "time_lapse": lambda v: self._tl_mode.setChecked(bool(v)),
+            # time-lapse-only
             "tl_alpha": lambda v: self._tl_alpha.setValue(float(v)),
             "tl_norm": lambda v: set_combo(self._tl_type, v),
-            "tl_iterations": lambda v: self._tl_iter.setValue(int(v)),
-            "tl_relative_error": lambda v: self._tl_relerr.setValue(float(v)),
-            "tl_mesh_quality": lambda v: self._tl_quality.setValue(float(v)),
             "tl_windowed": lambda v: self._tl_windowed.setChecked(bool(v)),
             "tl_window_size": lambda v: self._tl_window.setValue(int(v)),
             "tl_low_memory": lambda v: self._tl_lowmem.setChecked(bool(v)),
+            # backward-compatible aliases (these params are now shared)
+            "tl_lambda": lambda v: self._lam.setValue(float(v)),
+            "tl_iterations": lambda v: self._iter.setValue(int(v)),
+            "tl_relative_error": lambda v: self._relerr.setValue(float(v)),
+            "tl_mesh_quality": lambda v: self._quality.setValue(float(v)),
         }
         applied: Dict[str, Any] = {}
         ignored: Dict[str, str] = {}
@@ -1252,6 +1365,7 @@ class ERTProcessingModule(BaseModule):
             if str(p) not in merged:
                 merged.append(str(p))
         self._set_tl_files(merged)
+        self._tl_mode.setChecked(True)  # reveal the time-lapse options in the UI
         return {"status": "ok", "files": len(self._tl_files),
                 "time_labels": list(self._tl_labels)}
 

@@ -14,7 +14,7 @@ _MODULE_ROLE = Qt.UserRole
 _GROUP_ICONS = {
     "Geophysical Data Processing": "fa5s.wave-square",
     "Hydro → Geophysics": "fa5s.water",
-    "Geophysics → Subsurface": "fa5s.mountain",
+    "Geophy → Hydrology": "fa5s.mountain",
 }
 _CHILD_ICONS = {
     "Seismic": "fa5s.wave-square",
@@ -35,8 +35,8 @@ _CHILD_ICONS = {
     "Interface": "fa5s.mountain",
     "3D Grid": "fa5s.th",
     "Build Model": "fa5s.cubes",
-    "Seismic → 3D Structure": "fa5s.cube",
-    "ERT → Hydro": "fa5s.tint",
+    "Seismic → Structure": "fa5s.cube",
+    "ERT → Water Content": "fa5s.tint",
 }
 
 # (group label, [(child label, module key), ...]). Several Hydro children map to
@@ -63,10 +63,10 @@ TREE_STRUCTURE: List[Tuple[str, List[Tuple[str, str]]]] = [
         ],
     ),
     (
-        "Geophysics → Subsurface",
+        "Geophy → Hydrology",
         [
-            ("Seismic → 3D Structure", "seismic3d"),
-            ("ERT → Hydro", "geo_hydrology"),
+            ("Seismic → Structure", "seismic3d"),
+            ("ERT → Water Content", "geo_hydrology"),
         ],
     ),
 ]

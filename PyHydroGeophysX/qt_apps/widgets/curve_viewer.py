@@ -22,6 +22,25 @@ from PyHydroGeophysX.qt_apps import theme
 _CURVE_COLORS = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#8c564b"]
 
 
+class _ThinLogAxis(pg.AxisItem):
+    """A log axis that labels only 1/2/5 x 10^n ticks.
+
+    In log mode pyqtgraph labels every sub-decade tick (2, 3, ..., 9), which
+    crowds and overlaps when the data spans only a decade or two (e.g. TDEM gate
+    times). Keeping mantissas 1, 2 and 5 leaves a few well-spaced labels; the
+    other tick marks remain, only their text is blanked. In linear mode this does
+    nothing (``logTickStrings`` is only called when log mode is on).
+    """
+
+    def logTickStrings(self, values, scale, spacing):
+        strings = super().logTickStrings(values, scale, spacing)
+        out = []
+        for v, s in zip(values, strings):
+            mant = int(round((10.0 ** v) / (10.0 ** np.floor(float(v) + 1e-9))))
+            out.append(s if mant in (1, 2, 5) else "")
+        return out
+
+
 class CurveViewer(QWidget):
     """Plot one or more curves with log toggles, point picking and export."""
 
@@ -36,11 +55,17 @@ class CurveViewer(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self._plot_widget = pg.PlotWidget()
+        self._plot_widget = pg.PlotWidget(axisItems={
+            "bottom": _ThinLogAxis(orientation="bottom"),
+            "left": _ThinLogAxis(orientation="left"),
+        })
         self._plot_widget.setBackground("w")
         self._plot_widget.showGrid(x=True, y=True, alpha=0.3)
         self._plot_widget.addLegend()
         self._plot = self._plot_widget.getPlotItem()
+        # Drop any tick labels that would still overlap after the 1/2/5 thinning.
+        for _side in ("bottom", "left"):
+            self._plot.getAxis(_side).setStyle(hideOverlappingLabels=True)
         layout.addWidget(self._plot_widget, stretch=1)
 
         self._pick_scatter = pg.ScatterPlotItem(

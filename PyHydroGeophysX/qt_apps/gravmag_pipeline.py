@@ -202,3 +202,129 @@ def build_gravmag_config(kind: str, settings: Dict[str, Any], bodies: List[Dict[
         "bodies": [dict(b) for b in bodies],
         "field": dict(field) if field else {},
     }
+
+
+# ---------------------------------------------------------------------------
+# SimPEG 3D inversion (gravity -> density contrast; magnetics -> susceptibility)
+# ---------------------------------------------------------------------------
+class InversionBackendUnavailable(RuntimeError):
+    """SimPEG / discretize / a usable solver could not be imported."""
+
+
+def invert_gravmag(x, y, value, kind: str, *, field: Optional[Dict[str, Any]] = None,
+                   detrend: int = 0, n_xy: int = 22, n_z: int = 12, max_iterations: int = 20,
+                   beta0_ratio: float = 1.0, max_stations: int = 600,
+                   out_dir: Optional[str] = None, log: LogFn = _noop) -> Dict[str, Any]:
+    """Run a SimPEG 3D potential-field inversion under the survey.
+
+    ``gravity`` recovers a density-contrast model (g/cc); ``magnetics`` recovers a
+    susceptibility model (SI) and needs ``field`` = {inclination, declination,
+    strength_nT}. ``detrend`` (0..3) removes a polynomial regional trend of that
+    degree from ``value`` before inverting, so a raw field can be reduced to its
+    residual anomaly first (0 = invert the field as given). Returns the model on a
+    regular grid — ``edges`` = (ex, ey, ez) (cell edges, m) and ``model3d``
+    (nx, ny, nz), z = elevation increasing up — plus chi2 and the data count. Raises
+    :class:`InversionBackendUnavailable` if SimPEG is missing.
+    """
+    try:
+        import pymatsolver
+        from discretize import TensorMesh
+        from simpeg import (data, data_misfit, directives, inverse_problem,
+                            inversion, maps, optimization, regularization)
+        is_grav = str(kind).lower().startswith("grav")
+        if is_grav:
+            from simpeg.potential_fields import gravity as pf
+        else:
+            from simpeg.potential_fields import magnetics as pf
+    except Exception as exc:  # noqa: BLE001
+        raise InversionBackendUnavailable(str(exc))
+
+    x = np.asarray(x, float); y = np.asarray(y, float); value = np.asarray(value, float)
+    good = np.isfinite(x) & np.isfinite(y) & np.isfinite(value)
+    x, y, value = x[good], y[good], value[good]
+    if x.size < 20:
+        raise ValueError("Need at least ~20 stations for a stable inversion.")
+    if int(detrend) > 0:
+        _, value = regional_residual(x, y, value, degree=int(detrend))
+        log(f"Removed a degree-{int(detrend)} regional trend before inversion.")
+    if x.size > int(max_stations):
+        idx = np.linspace(0, x.size - 1, int(max_stations)).astype(int)
+        x, y, value = x[idx], y[idx], value[idx]
+    log(f"{kind} inversion: {x.size} stations")
+
+    x0, x1 = float(x.min()), float(x.max()); y0, y1 = float(y.min()), float(y.max())
+    csx = (x1 - x0) / int(n_xy); csy = (y1 - y0) / int(n_xy)
+    csz = max(csx, csy) * 0.6
+    padx, pady = 0.15 * (x1 - x0), 0.15 * (y1 - y0)
+    nx, ny, nz = int(n_xy) + 4, int(n_xy) + 4, int(n_z)
+    ox, oy, oz = x0 - padx - 2 * csx, y0 - pady - 2 * csy, -csz * nz
+    mesh = TensorMesh([[(csx, nx)], [(csy, ny)], [(csz, nz)]], origin=[ox, oy, oz])
+    actv = np.ones(mesh.n_cells, dtype=bool)
+    model_map = maps.IdentityMap(nP=mesh.n_cells)
+
+    rx = pf.receivers.Point(np.c_[x, y, np.full_like(x, 1.0)],
+                            components=("gz" if is_grav else "tmi"))
+    if is_grav:
+        survey = pf.survey.Survey(pf.sources.SourceField(receiver_list=[rx]))
+        sim = pf.simulation.Simulation3DIntegral(
+            mesh=mesh, survey=survey, rhoMap=model_map, active_cells=actv, engine="geoana")
+        m_label, m_cmap = "density (g/cc)", "RdBu_r"
+        lower, upper, floor = -1.0, 1.0, 0.5
+    else:
+        f = field or {}
+        src = pf.sources.UniformBackgroundField(
+            receiver_list=[rx], amplitude=float(f.get("strength_nT", 50000.0)),
+            inclination=float(f.get("inclination", 60.0)),
+            declination=float(f.get("declination", 0.0)))
+        survey = pf.survey.Survey(src)
+        sim = pf.simulation.Simulation3DIntegral(
+            mesh=mesh, survey=survey, chiMap=model_map, active_cells=actv, engine="geoana")
+        m_label, m_cmap = "susceptibility (SI)", "viridis"
+        # Smooth susceptibility "contrast": bound symmetric about 0 so the start
+        # model (0) is interior, otherwise ProjectedGNCG is stuck at the 0 lower bound.
+        lower, upper, floor = -0.5, 0.5, 2.0
+    # scipy LU solver: avoids the Pardiso/MKL native crash in this environment.
+    sim.solver = pymatsolver.Solver
+    sim.solver_opts = {}
+
+    std = 0.03 * np.abs(value) + floor
+    dmis = data_misfit.L2DataMisfit(
+        data=data.Data(survey, dobs=value, standard_deviation=std), simulation=sim)
+    reg = regularization.WeightedLeastSquares(mesh, active_cells=actv)
+    opt = optimization.ProjectedGNCG(maxIter=int(max_iterations), lower=lower, upper=upper,
+                                     maxIterCG=20, tolCG=1e-3)
+    invprob = inverse_problem.BaseInvProblem(dmis, reg, opt)
+    dlist = [directives.UpdateSensitivityWeights(every_iteration=False),
+             directives.BetaEstimate_ByEig(beta0_ratio=float(beta0_ratio)),
+             directives.BetaSchedule(coolingFactor=2.0, coolingRate=1),
+             directives.TargetMisfit()]
+    log(f"Running SimPEG inversion ({mesh.n_cells} cells, up to {int(max_iterations)} iters)…")
+    mrec = np.asarray(inversion.BaseInversion(invprob, directiveList=dlist).run(np.zeros(mesh.n_cells)), float)
+    try:
+        phi_d = float(dmis(mrec)); chi2 = phi_d / value.size
+    except Exception:  # noqa: BLE001
+        chi2 = float("nan")
+
+    model3d = mrec.reshape((nx, ny, nz), order="F")
+    ex = ox + csx * np.arange(nx + 1)
+    ey = oy + csy * np.arange(ny + 1)
+    ez = oz + csz * np.arange(nz + 1)
+    out: Dict[str, Any] = {
+        "kind": kind, "edges": (ex, ey, ez), "model3d": model3d,
+        "label": m_label, "cmap": m_cmap, "log_scale": False,
+        "chi2": chi2, "n_data": int(value.size), "n_cells": int(mesh.n_cells),
+        "model_range": [float(np.nanmin(mrec)), float(np.nanmax(mrec))],
+    }
+    if out_dir:
+        base = io_utils.ensure_dir(Path(out_dir) / "gravmag_inversion")
+        np.savez(base / "model_grid.npz", ex=ex, ey=ey, ez=ez, model=model3d)
+        try:
+            import pyvista as pv
+            grid = pv.RectilinearGrid(ex, ey, ez)
+            grid.cell_data[m_label] = model3d.flatten(order="F")
+            grid.save(str(base / "model.vtr"))
+            out["vtk"] = str(base / "model.vtr")
+        except Exception:  # noqa: BLE001 - VTK export is optional
+            pass
+        out["output_dir"] = str(base)
+    return out
