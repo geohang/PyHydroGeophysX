@@ -461,7 +461,7 @@ Provide a brief interpretation (2-3 sentences) about:
             interpretation = self.query_llm(prompt, self.system_message,
                                            temperature=0.5, max_tokens=200)
             return interpretation
-        except:
+        except Exception:
             return "Structure-constrained inversion completed with seismic-derived boundaries"
     
     def _log_execution(self, message: str, level: str = 'INFO'):

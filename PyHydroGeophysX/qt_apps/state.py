@@ -52,10 +52,19 @@ class WorkbenchState:
             state.context_path = Path(context_path)
             state.load_context()
         else:
-            # No bridge context: still pick a sensible place to write results so
-            # "Save Result" never crashes when the app is launched standalone.
-            state.output_dir = Path.cwd()
-            state.result_path = state.output_dir / "qt_bridge" / RESULT_FILENAME
+            # No bridge context: still pick a sensible, stable place to write
+            # results so "Save Result" never crashes when the app is launched
+            # standalone. Prefer the repository results dir when the current
+            # directory looks like a PyHydroGeophysX checkout; otherwise use a
+            # per-user location instead of scattering qt_bridge dirs around
+            # whatever directory the app happened to start in.
+            cwd = Path.cwd()
+            if (cwd / "PyHydroGeophysX").is_dir() and (cwd / "examples").is_dir():
+                base = cwd / "results" / "streamlit_workflow"
+            else:
+                base = Path.home() / ".pyhydrogeophysx"
+            state.output_dir = base
+            state.result_path = base / "qt_bridge" / RESULT_FILENAME
         return state
 
     # -- bridge IO -----------------------------------------------------------

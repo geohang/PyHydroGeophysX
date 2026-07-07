@@ -132,3 +132,17 @@ The hydro arrays are stored on a regular grid, so the workbench samples a profil
 `scipy.ndimage.map_coordinates` (bilinear) rather than a Delaunay-based `griddata`. On
 the test machine this reduced one profile extraction from minutes to under a second.
 The mesh-side interpolation used by the forward models is unchanged.
+
+## 9. Prebuilt bundles and persistence
+
+- `packaging/pyinstaller_workbench.spec` deliberately excludes the heavy engines
+  (pygimli, SimPEG, pyvista/VTK) to keep the bundle small. A prebuilt executable can
+  therefore load, view, QC, and export data, but forward modeling, inversion, and the
+  3D mesh viewer are unavailable in it. Install from source (this repository) for the
+  full feature set.
+- Window size and dock layout persist between sessions via `QSettings`
+  (organization "PyHydroGeophysX", application "Workbench"). Delete that settings key
+  to reset the layout to defaults.
+- Uncaught errors show an error dialog with a copyable traceback instead of closing
+  the app silently; the same text also goes to stderr and can be reported as a GitHub
+  issue.

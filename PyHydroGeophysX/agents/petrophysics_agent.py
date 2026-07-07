@@ -664,7 +664,7 @@ For bottom layers (bedrock): Lower porosity, higher m"""
             # Use defaults if parsing fails
             return self._get_default_layer_params(cell_markers)
             
-        except:
+        except Exception:
             return self._get_default_layer_params(cell_markers)
     
     def _interpret_results(self, water_content_mean: np.ndarray,
@@ -704,7 +704,7 @@ Provide a brief interpretation (2-3 sentences) about:
             interpretation = self.query_llm(prompt, self.system_message,
                                            temperature=0.5, max_tokens=200)
             return interpretation
-        except:
+        except Exception:
             return "Petrophysical conversion completed with uncertainty quantification"
     
     def _log_execution(self, message: str, level: str = 'INFO'):

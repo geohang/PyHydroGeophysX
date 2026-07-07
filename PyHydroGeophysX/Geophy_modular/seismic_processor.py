@@ -226,7 +226,7 @@ def extract_velocity_structure(
             
             # Apply additional smoothing
             z_dense = savgol_filter(z_dense, window_length=31, polyorder=3)
-        except:
+        except Exception:
             # Fall back to linear interpolation if cubic fails
             interp_func = interp1d(interface_x, interface_z, kind='linear',
                                   bounds_error=False, fill_value="extrapolate")

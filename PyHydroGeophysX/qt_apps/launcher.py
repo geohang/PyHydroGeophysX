@@ -16,6 +16,37 @@ import sys
 from typing import Optional, Sequence
 
 
+def _install_excepthook(show_dialog: bool) -> None:
+    """Route uncaught exceptions to stderr plus an error dialog.
+
+    Without this, an exception escaping a Qt slot or worker callback kills the
+    process with a console traceback that windowed users never see.
+    """
+    import traceback
+
+    def _hook(exc_type, exc_value, exc_tb):
+        text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        sys.stderr.write(text)
+        if show_dialog:
+            try:
+                from PySide6.QtWidgets import QApplication, QMessageBox
+
+                if QApplication.instance() is not None:
+                    box = QMessageBox()
+                    box.setIcon(QMessageBox.Icon.Critical)
+                    box.setWindowTitle("PyHydroGeophysX Workbench: unexpected error")
+                    box.setText(
+                        "An unexpected error occurred. The application will try to "
+                        "keep running; details are below."
+                    )
+                    box.setDetailedText(text)
+                    box.exec()
+            except Exception:
+                pass
+
+    sys.excepthook = _hook
+
+
 def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="PyHydroGeophysX Professional Workbench")
     parser.add_argument("--context", default=None, help="Path to the bridge context JSON.")
@@ -45,6 +76,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     app = QApplication.instance() or QApplication(sys.argv[:1])
     app.setApplicationName("PyHydroGeophysX Professional Workbench")
+    _install_excepthook(show_dialog=not args.self_test)
     # Apply the brand theme before building widgets (also sets pyqtgraph colors).
     theme.apply_theme(app)
 
@@ -53,7 +85,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         initial_module=(args.module or "home"),
     )
     window.setWindowIcon(theme.window_icon())
-    window.resize(1500, 900)
+    if not getattr(window, "_geometry_restored", False):
+        window.resize(1500, 900)
     window.show()
 
     if args.self_test:

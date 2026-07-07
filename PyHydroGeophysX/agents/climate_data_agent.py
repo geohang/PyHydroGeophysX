@@ -181,11 +181,23 @@ class ClimateDataAgent(BaseAgent):
         # Fetch the data
         self._log("Fetching climate data (this may take 1-2 minutes)...")
         
-        python_script = Path("fetch_climate_data.py").absolute()
-        if not python_script.exists():
+        # Prefer the copy bundled with the package; fall back to the working
+        # directory for user-supplied overrides. Resolving only against the
+        # working directory broke whenever the app was launched from elsewhere.
+        script_candidates = [
+            Path(__file__).resolve().parent / "fetch_climate_data.py",
+            Path("fetch_climate_data.py").absolute(),
+        ]
+        python_script = next((p for p in script_candidates if p.exists()), None)
+        if python_script is None:
+            searched = "; ".join(str(p) for p in script_candidates)
             return {
                 "success": False,
-                "message": f"Climate fetch script not found: {python_script}",
+                "message": (
+                    "Climate fetch script not found. Searched: "
+                    f"{searched}. Reinstall the package or place a "
+                    "fetch_climate_data.py in the working directory."
+                ),
                 "csv_path": None,
                 "stdout": ""
             }

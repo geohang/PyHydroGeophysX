@@ -1538,7 +1538,7 @@ You can use any of the following providers:
 4. Select or create a Google Cloud project
 5. Copy your API key
 
-**Recommended models:** `gemini-1.5-flash` (fast), `gemini-1.5-pro` (more capable)
+**Recommended models:** `gemini-2.5-flash` (fast), `gemini-2.5-pro` (more capable)
 
 ---
 
@@ -6642,7 +6642,7 @@ def render_sidebar() -> Dict[str, Any]:
         help="Used by the context agent to parse your natural-language request.",
     )
 
-    default_models = {"openai": "gpt-4o-mini", "gemini": "gemini-pro", "claude": "claude-sonnet-5"}
+    default_models = {"openai": "gpt-4o-mini", "gemini": "gemini-2.5-flash", "claude": "claude-sonnet-5"}
     model_default = st.session_state.llm_model or default_models.get(provider, "gpt-4o-mini")
     model = st.sidebar.text_input("Model name", value=model_default)
 

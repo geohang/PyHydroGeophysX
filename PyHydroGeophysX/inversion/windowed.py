@@ -278,7 +278,7 @@ class WindowedTimeLapseERTInversion:
             if window_parallel and mesh_file and not isinstance(self.mesh, str):
                 try:
                     os.unlink(mesh_file)
-                except:
+                except Exception:
                     pass
         
         return result

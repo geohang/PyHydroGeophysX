@@ -125,4 +125,6 @@ where = ["."]
 include = ["PyHydroGeophysX*"]
 
 [tool.setuptools.package-data]
-PyHydroGeophysX = ["data/*", "examples/*", "*.md"]
+# The examples/ tree lives at the repository root, not inside the package, so a
+# package-data entry cannot ship it; install from a checkout for the examples.
+PyHydroGeophysX = ["data/*", "*.md", "qt_apps/modules/*.md"]

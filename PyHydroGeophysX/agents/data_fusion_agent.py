@@ -346,7 +346,7 @@ Provide a brief explanation (3-4 sentences) suitable for a user about:
             interpretation = self.query_llm(prompt, self.system_message,
                                            temperature=0.5, max_tokens=250)
             return interpretation
-        except:
+        except Exception:
             return pattern_info['benefits']
     
     def get_available_patterns(self) -> Dict[str, Dict]:

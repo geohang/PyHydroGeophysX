@@ -347,7 +347,7 @@ Provide a 2-3 sentence explanation suitable for a user about:
             interpretation = self.query_llm(prompt, self.system_message,
                                           temperature=0.5, max_tokens=200)
             return interpretation
-        except:
+        except Exception:
             return description
     
     def _summarize_config(self, config: Dict) -> str:

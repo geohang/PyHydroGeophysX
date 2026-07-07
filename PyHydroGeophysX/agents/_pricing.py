@@ -17,6 +17,8 @@ DEFAULT_PROVIDER_RATES_USD_PER_MTOK: Dict[Tuple[str, str], Tuple[float, float]] 
     ("openai", "gpt-4.1"): (2.00, 8.00),
     ("openai", "gpt-4.1-mini"): (0.40, 1.60),
     ("gemini", "gemini-pro"): (0.50, 1.50),
+    ("gemini", "gemini-2.5-flash"): (0.30, 2.50),
+    ("gemini", "gemini-2.5-pro"): (1.25, 10.00),
     ("claude", "claude-3-haiku-20240307"): (0.25, 1.25),
     ("claude", "claude-3-5-sonnet-20241022"): (3.00, 15.00),
     ("claude", "claude-3-opus-20240229"): (15.00, 75.00),

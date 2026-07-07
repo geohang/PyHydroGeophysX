@@ -250,7 +250,7 @@ different data formats, coordinate systems, and common data quality issues."""
             }
             
             return metrics
-        except:
+        except Exception:
             return {'error': 'Could not compute quality metrics'}
     
     def _get_llm_insights(self, data_summary: str) -> str:
@@ -273,7 +273,7 @@ Provide concise, practical insights (2-3 sentences)."""
             
             insights = self.query_llm(prompt, self.system_message, temperature=0.5, max_tokens=200)
             return insights
-        except:
+        except Exception:
             return "Could not generate LLM insights"
     
     def _log_execution(self, message: str, level: str = 'INFO'):

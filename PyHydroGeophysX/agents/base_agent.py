@@ -260,8 +260,8 @@ class BaseAgent(ABC):
         Args:
             name: Name identifier for this agent
             api_key: LLM API key (uses provider-specific env var if not provided)
-            model: LLM model to use (default: gpt-4 for OpenAI, gemini-pro for Gemini,
-                   claude-sonnet-5 for Claude)
+            model: LLM model to use (default: gpt-4 for OpenAI, gemini-2.5-flash
+                   for Gemini, claude-sonnet-5 for Claude)
             llm_provider: LLM provider to use ('openai', 'gemini', or 'claude')
         """
         self.name = name
@@ -273,7 +273,7 @@ class BaseAgent(ABC):
             self.model = model or os.getenv('OPENAI_MODEL', 'gpt-4')
         elif self.llm_provider == "gemini":
             self.api_key = api_key or os.getenv('GEMINI_API_KEY')
-            self.model = model or os.getenv('GEMINI_MODEL', 'gemini-pro')
+            self.model = model or os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
         elif self.llm_provider == "claude":
             self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
             self.model = model or os.getenv('CLAUDE_MODEL', 'claude-sonnet-5')

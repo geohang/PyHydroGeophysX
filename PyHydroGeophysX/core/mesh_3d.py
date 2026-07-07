@@ -802,7 +802,7 @@ class Mesh3DCreator:
                 surface_z = float(topography_func(x, y))
                 if np.isnan(surface_z):
                     surface_z = z_max
-            except:
+            except Exception:
                 surface_z = z_max
             
             # Shift z-coordinate (z is negative depth relative to surface)
@@ -821,7 +821,7 @@ class Mesh3DCreator:
                     surface_z = float(topography_func(cell_x, cell_y))
                     if np.isnan(surface_z):
                         surface_z = z_max
-                except:
+                except Exception:
                     surface_z = z_max
                 
                 depth = surface_z - cell_z  # Positive depth below surface
@@ -842,7 +842,7 @@ class Mesh3DCreator:
                     surface_z = float(topography_func(cell_x, cell_y))
                     if np.isnan(surface_z):
                         surface_z = z_max
-                except:
+                except Exception:
                     surface_z = z_max
                 
                 depth = surface_z - cell_z

@@ -23,9 +23,9 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from PyHydroGeophysX.qt_apps.agent import providers
+from PyHydroGeophysX.llm import providers
 
-# Provider ids in the app sidebar -> provider ids in qt_apps.agent.providers.
+# Provider ids in the app sidebar -> provider ids in PyHydroGeophysX.llm.providers.
 _PROVIDER_MAP = {"openai": "openai", "claude": "anthropic"}
 
 SYSTEM_PROMPT = """You are AQUAH, an assistant embedded in the PyHydroGeophysX web app. You help the user run a geophysical workflow by assembling a workflow configuration and running it — you act only through the provided tools, not by writing code.
@@ -181,7 +181,9 @@ def run_agent_turn(
     """
     events: List[Dict[str, Any]] = []
     for _ in range(max_steps):
-        out = provider.complete(system, messages, specs)
+        # Long chats grow the prompt without bound; send a recent, safely
+        # windowed view while keeping the full transcript in session state.
+        out = provider.complete(system, providers.window_messages(messages), specs)
         assistant: Dict[str, Any] = {
             "role": "assistant",
             "content": out.get("content"),

@@ -265,7 +265,7 @@ Provide brief recommendations."""
             response = self.query_llm(prompt, self.system_message, temperature=0.5, max_tokens=300)
             self.update_context('petro_recommendations', response)
             
-        except:
+        except Exception:
             self._log_execution("Could not get LLM recommendations for petrophysical parameters")
         
         return {}  # Return empty, will use defaults
@@ -301,7 +301,7 @@ Provide a brief interpretation (2-3 sentences) about:
             interpretation = self.query_llm(prompt, self.system_message, 
                                           temperature=0.5, max_tokens=200)
             return interpretation
-        except:
+        except Exception:
             return "Could not generate interpretation"
     
     def _log_execution(self, message: str, level: str = 'INFO'):

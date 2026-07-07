@@ -103,11 +103,28 @@ def load_xyz_table(path: PathLike, min_cols: int = 2) -> np.ndarray:
 
 
 def write_json(path: PathLike, obj: Any) -> Path:
-    """Write ``obj`` to ``path`` as pretty JSON using ``default=str``."""
+    """Write ``obj`` to ``path`` as pretty JSON using ``default=str``.
+
+    The write is atomic (temp file in the same directory + ``os.replace``) so a
+    concurrent reader, e.g. the Streamlit bridge poller, never sees a
+    half-written document.
+    """
+    import os
+    import tempfile
+
     p = Path(path)
     ensure_dir(p.parent)
-    with p.open("w", encoding="utf-8") as handle:
-        json.dump(obj, handle, indent=2, default=str)
+    fd, tmp_name = tempfile.mkstemp(prefix=p.name + ".", suffix=".tmp", dir=str(p.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(obj, handle, indent=2, default=str)
+        os.replace(tmp_name, p)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
     return p
 
 

@@ -803,7 +803,7 @@ def direct_solver(
             try:
                 factor = splinalg.cholesky(A.tocsc())
                 return factor.solve(b)
-            except:
+            except Exception:
                 print("Warning: Matrix not SPD, falling back to spsolve")
                 return splinalg.spsolve(A, b)
         else:
@@ -838,7 +838,7 @@ def direct_solver(
                     scipy.linalg.solve_triangular(L, b, lower=True),
                     lower=False
                 )
-            except:
+            except Exception:
                 print("Warning: Matrix not SPD, falling back to LU")
                 return scipy.linalg.solve(A, b)
         else:
@@ -919,7 +919,7 @@ class TikhonvRegularization:
             if A.shape[0] * A.shape[1] < 1e6:
                 try:
                     return direct_solver(A_aug.T @ A_aug, A_aug.T @ b_aug)
-                except:
+                except Exception:
                     # Fall back to LSQR
                     return splinalg.lsqr(A_aug, b_aug)[0]
             else:
@@ -1043,7 +1043,7 @@ def get_optimal_solver(
                         lu = spla.splu(A.tocsc())
                         condition_est = lu.rcond
                         well_conditioned = condition_est > 1e-6
-                    except:
+                    except Exception:
                         well_conditioned = True  # Assume well-conditioned if estimation fails
                 else:
                     # For dense matrices, use SVD-based estimator
@@ -1051,7 +1051,7 @@ def get_optimal_solver(
                         s = scipy.linalg.svdvals(A)
                         condition_number = s[0] / s[-1]
                         well_conditioned = condition_number < 1e6
-                    except:
+                    except Exception:
                         well_conditioned = True  # Assume well-conditioned if estimation fails
             else:
                 well_conditioned = True
@@ -1070,7 +1070,7 @@ def get_optimal_solver(
                             scipy.linalg.cholesky(A)
                             solver = lambda A, b: direct_solver(A, b, method="cholesky")
                             return solver, {"type": "direct_dense", "method": "cholesky"}
-                        except:
+                        except Exception:
                             pass
                     
                     solver = lambda A, b: direct_solver(A, b, method="lu")
@@ -1111,7 +1111,7 @@ def get_optimal_solver(
                     # Symmetric positive definite, use CG
                     solver = lambda A, b: splinalg.cg(A, b)[0]
                     return solver, {"type": "cg", "matrix": "spd"}
-            except:
+            except Exception:
                 pass
             
             # Symmetric but not necessarily positive definite, use MINRES

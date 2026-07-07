@@ -134,7 +134,7 @@ def _bertParser_legacy(fname):
                 if len(vals) >= 4:  # A B M N minimum
                     data_start_line = i
                     break
-            except:
+            except Exception:
                 continue
 
     if data_start_line is None:
@@ -454,7 +454,7 @@ def _syscalParser(fname):
         if col in df.columns:
             try:
                 df[col] = df[col].astype(int)
-            except:
+            except Exception:
                 # If conversion fails, keep as is
                 pass
 
@@ -561,7 +561,7 @@ def _protocolParser(fname, ip=False):
         if col in df.columns:
             try:
                 df[col] = df[col].astype(int)
-            except:
+            except Exception:
                 pass  # Keep as float if conversion fails
 
     # Build electrode array

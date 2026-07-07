@@ -12,6 +12,8 @@ from typing import Any, Dict, List
 
 from PySide6.QtCore import QThread, Signal
 
+from PyHydroGeophysX.llm.providers import window_messages
+
 
 class LlmCallWorker(QThread):
     """Run one ``provider.complete(system, messages, specs)`` off the UI thread."""
@@ -23,7 +25,9 @@ class LlmCallWorker(QThread):
         super().__init__()
         self._provider = provider
         self._system = system
-        self._messages = list(messages)
+        # Send a safely windowed view of long conversations; the panel keeps
+        # the full transcript for display.
+        self._messages = window_messages(messages)
         self._specs = specs
 
     def run(self) -> None:  # noqa: D401 - QThread entry point
