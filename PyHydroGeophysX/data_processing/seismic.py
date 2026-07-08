@@ -1362,18 +1362,27 @@ def pick_first_breaks(
 def _pick_from_any(value: FirstBreakPick | Dict[str, Any]) -> FirstBreakPick:
     if isinstance(value, FirstBreakPick):
         return value
+
+    def float_or_default(raw: Any, default: float) -> float:
+        if raw is None or (isinstance(raw, str) and raw.strip() == ""):
+            return float(default)
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return float(default)
+
     return FirstBreakPick(
         source_id=int(value.get("source_id", value.get("field_record", 1))),
         receiver_id=int(value.get("receiver_id", value.get("trace_number", 1))),
-        time_s=float(value.get("time_s", value.get("time", np.nan))),
-        source_x=float(value.get("source_x", 0.0)),
-        source_z=float(value.get("source_z", 0.0)),
-        receiver_x=float(value.get("receiver_x", value.get("offset", 0.0))),
-        receiver_z=float(value.get("receiver_z", 0.0)),
+        time_s=float_or_default(value.get("time_s", value.get("time")), np.nan),
+        source_x=float_or_default(value.get("source_x"), np.nan),
+        source_z=float_or_default(value.get("source_z"), 0.0),
+        receiver_x=float_or_default(value.get("receiver_x", value.get("offset")), np.nan),
+        receiver_z=float_or_default(value.get("receiver_z"), 0.0),
         field_record=int(value.get("field_record", value.get("source_id", 1))),
         trace_number=int(value.get("trace_number", value.get("receiver_id", 1))),
         trace_index=int(value.get("trace_index", 0)),
-        amplitude=float(value.get("amplitude", np.nan)),
+        amplitude=float_or_default(value.get("amplitude"), np.nan),
     )
 
 
@@ -1426,11 +1435,7 @@ def first_breaks_to_traveltime(
             x = pick.receiver_x
             z = pick.receiver_z
             fallback_x = (pick.receiver_id - min_receiver) * receiver_spacing
-        if role == "source":
-            should_fallback = not np.isfinite(x) or (x == 0.0 and pick.source_id != min_source)
-        else:
-            should_fallback = not np.isfinite(x) or (x == 0.0 and pick.receiver_id != min_receiver)
-        if should_fallback:
+        if not np.isfinite(x):
             x = fallback_x
         if not np.isfinite(z):
             z = 0.0

@@ -10,7 +10,7 @@ and export picks to CSV and a PyGIMLi travel-time ``.dat`` file.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pyqtgraph as pg
@@ -560,11 +560,7 @@ class SeismicProcessingModule(BaseModule):
     # -- picking -------------------------------------------------------------
     def _make_pick(self, trace: int, sample: int, value: float):
         dt = self._dt or 1.0
-        if self._geo_positions and trace in self._geo_positions:
-            receiver_x, receiver_z = self._geo_positions[trace]
-        else:
-            receiver_x = self._geo_start.value() + trace * self._spacing.value()
-            receiver_z = 0.0
+        receiver_x, receiver_z = self._receiver_position(trace)
         shot_x = self._shot_x.value()
         shot_z = self._interp_topography(shot_x)
         if not _SEISMIC_OK:
@@ -603,7 +599,7 @@ class SeismicProcessingModule(BaseModule):
         return float(self._geo_start.value())
 
     def _header_shot_x(self, record: int) -> Optional[float]:
-        """Source x for a record from the SEG-Y trace headers, if populated (non-zero)."""
+        """Source x for a record from the SEG-Y trace headers, if populated."""
         if self._dataset is None:
             return None
         try:
@@ -611,9 +607,26 @@ class SeismicProcessingModule(BaseModule):
             xs = [float(h.source_x) for h in headers if np.isfinite(h.source_x)]
         except Exception:  # noqa: BLE001
             return None
-        if not xs or abs(xs[0]) <= 1e-9:
+        if not xs:
             return None
-        return float(xs[0])
+        if max(xs) - min(xs) > 1e-6:
+            return None
+        x0 = float(xs[0])
+        if abs(x0) <= 1e-9:
+            has_coordinate_context = any(
+                abs(float(getattr(h, "receiver_x", 0.0))) > 1e-9
+                or abs(float(getattr(h, "receiver_y", 0.0))) > 1e-9
+                or abs(float(getattr(h, "offset", 0.0))) > 1e-9
+                for h in headers
+            )
+            if not has_coordinate_context:
+                return None
+        return x0
+
+    def _receiver_position(self, trace: int) -> Tuple[float, float]:
+        if self._geo_positions and int(trace) in self._geo_positions:
+            return self._geo_positions[int(trace)]
+        return (self._geo_start.value() + int(trace) * self._spacing.value(), 0.0)
 
     @staticmethod
     def _parse_geometry_file(path: str) -> Dict[int, Tuple[float, float]]:
@@ -673,15 +686,10 @@ class SeismicProcessingModule(BaseModule):
         record's shot."""
         import dataclasses
 
-        def receiver(i: int) -> Tuple[float, float]:
-            if self._geo_positions and i in self._geo_positions:
-                return self._geo_positions[i]
-            return (self._geo_start.value() + i * self._spacing.value(), 0.0)
-
         def restamp(picks: Dict[int, Any]) -> None:
             for tr in list(picks):
                 p = picks[tr]
-                rx, rz = receiver(int(tr))
+                rx, rz = self._receiver_position(int(tr))
                 if _SEISMIC_OK and hasattr(p, "receiver_x"):
                     picks[tr] = dataclasses.replace(
                         p, receiver_x=float(rx), receiver_z=float(rz),
@@ -869,19 +877,33 @@ class SeismicProcessingModule(BaseModule):
         self._save_current_picks()
         if not _SEISMIC_OK:
             return []
-        geo_start = self._geo_start.value()
-        spacing = self._spacing.value()
         out = []
         for record, picks in self._all_picks.items():
-            shot_x = self._shot_pos.get(record, geo_start)
             for trace, pick in picks.items():
                 time_s = pick.time_s if hasattr(pick, "time_s") else pick["time_s"]
                 if not np.isfinite(time_s) or time_s <= 0:
                     continue
+                default_shot_x = self._shot_pos.get(record, self._default_shot_x(record))
+                source_x = getattr(pick, "source_x", None) if hasattr(pick, "source_x") else pick.get("source_x")
+                if source_x is None or not np.isfinite(float(source_x)):
+                    source_x = default_shot_x
+                source_z = getattr(pick, "source_z", None) if hasattr(pick, "source_z") else pick.get("source_z")
+                if source_z is None or not np.isfinite(float(source_z)):
+                    source_z = self._interp_topography(float(source_x))
+                receiver_x = getattr(pick, "receiver_x", None) if hasattr(pick, "receiver_x") else pick.get("receiver_x")
+                receiver_z = getattr(pick, "receiver_z", None) if hasattr(pick, "receiver_z") else pick.get("receiver_z")
+                receiver_ok = (
+                    receiver_x is not None
+                    and receiver_z is not None
+                    and np.isfinite(float(receiver_x))
+                    and np.isfinite(float(receiver_z))
+                )
+                if not receiver_ok:
+                    receiver_x, receiver_z = self._receiver_position(int(trace))
                 out.append(FirstBreakPick(
                     source_id=int(record), receiver_id=int(trace) + 1, time_s=float(time_s),
-                    source_x=float(shot_x), source_z=0.0,
-                    receiver_x=float(geo_start + int(trace) * spacing), receiver_z=0.0,
+                    source_x=float(source_x), source_z=float(source_z),
+                    receiver_x=float(receiver_x), receiver_z=float(receiver_z),
                     field_record=int(record), trace_number=int(trace) + 1,
                     trace_index=int(trace), amplitude=0.0))
         return out
