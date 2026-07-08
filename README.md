@@ -60,8 +60,6 @@ pip install "pyhydrogeophysx[geophysics,webapp]"
 pip install "pyhydrogeophysx[all]"
 ```
 
-> **Version note:** PyPI currently serves v0.1.0; the v0.3.0 release is pending. Until it lands, install from source (below) to match this README.
-
 > **Note on PyGIMLi:** PyGIMLi links against C++ libraries. If `pip install` fails, install it first via conda:
 > ```bash
 > conda install -c gimli pygimli
