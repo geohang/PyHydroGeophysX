@@ -140,7 +140,7 @@ def build_qss() -> str:
     QPushButton[primary="true"]:disabled {{ background-color: #9bb0c2; border-color: #9bb0c2; color: #eef2f6; }}
 
     /* Inputs */
-    QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {{
+    QLineEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {{
         background-color: {p['card']};
         border: 1px solid {p['border_blue']};
         border-radius: 6px;
@@ -148,7 +148,7 @@ def build_qss() -> str:
         selection-background-color: {p['accent']};
         selection-color: #ffffff;
     }}
-    QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {{ border-color: {p['accent']}; }}
+    QLineEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {{ border-color: {p['accent']}; }}
     QComboBox::drop-down {{ border: none; width: 18px; }}
     QComboBox QAbstractItemView {{
         background-color: {p['card']};

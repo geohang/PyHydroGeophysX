@@ -80,7 +80,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         right_tabs = QTabWidget()
         right_tabs.addTab(self._chat, "AQUAH Chat")
         right_tabs.addTab(self._properties, "Properties")
-        right_tabs.setMinimumWidth(380)
+        right_tabs.setMinimumWidth(440)
         self._properties_dock = self._make_dock("Assistant", right_tabs, Qt.RightDockWidgetArea)
 
         self._build_menus()

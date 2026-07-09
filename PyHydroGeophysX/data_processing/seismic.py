@@ -1461,10 +1461,15 @@ def first_breaks_to_traveltime(
     if not rows:
         raise ValueError("No valid source-receiver pairs remained after export filtering.")
 
+    order = sorted(range(len(sensors)), key=lambda i: (sensors[i][0], sensors[i][1]))
+    remap = {old_index + 1: new_index + 1 for new_index, old_index in enumerate(order)}
+    sorted_sensors = [sensors[i] for i in order]
+    rows = [(remap[sid], remap[gid], time_s) for sid, gid, time_s in rows]
+
     with path.open("w", encoding="utf-8") as f:
-        f.write(f"{len(sensors)}\n")
+        f.write(f"{len(sorted_sensors)}\n")
         f.write("# x y\n")
-        for x, z in sensors:
+        for x, z in sorted_sensors:
             f.write(f"{x:g}\t{z:g}\n")
         f.write(f"{len(rows)}\n")
         f.write("# s g t\n")

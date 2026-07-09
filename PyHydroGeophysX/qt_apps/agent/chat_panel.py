@@ -14,14 +14,16 @@ from __future__ import annotations
 import html
 from typing import Any, Dict, List, Optional
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPlainTextEdit,
     QPushButton,
+    QSizePolicy,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -61,6 +63,31 @@ Rules:
 Workbench modules (key: purpose):
 {modules}
 """
+
+
+class ChatInputEdit(QPlainTextEdit):
+    """Multi-line input box that sends on Ctrl/Command+Enter."""
+
+    sendRequested = Signal()
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.setMinimumHeight(96)
+        self.setMaximumHeight(190)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setLineWrapMode(QPlainTextEdit.WidgetWidth)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+    def keyPressEvent(self, event) -> None:  # noqa: D401 - Qt event override
+        if (
+            event.key() in (Qt.Key_Return, Qt.Key_Enter)
+            and event.modifiers() & (Qt.ControlModifier | Qt.MetaModifier)
+        ):
+            self.sendRequested.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
 
 def _default_provider_id() -> str:
@@ -159,17 +186,17 @@ class AquahChatPanel(QWidget):
         self._confirm.setVisible(False)
         root.addWidget(self._confirm)
 
-        # Input row.
+        # Multi-line input row.
         input_row = QHBoxLayout()
-        self._input = QLineEdit()
+        self._input = ChatInputEdit()
         self._input.setPlaceholderText("e.g. Run an ERT forward model on the example data")
-        self._input.returnPressed.connect(self._on_send)
+        self._input.sendRequested.connect(self._on_send)
         self._send_btn = QPushButton("Send")
         self._send_btn.setProperty("primary", True)
         self._send_btn.setIcon(theme.icon("fa5s.paper-plane", color="#ffffff"))
         self._send_btn.clicked.connect(self._on_send)
         input_row.addWidget(self._input, stretch=1)
-        input_row.addWidget(self._send_btn)
+        input_row.addWidget(self._send_btn, alignment=Qt.AlignBottom)
         root.addLayout(input_row)
 
     def _build_settings(self) -> QWidget:
@@ -296,7 +323,7 @@ class AquahChatPanel(QWidget):
     def _on_send(self) -> None:
         if self._busy:
             return
-        text = self._input.text().strip()
+        text = self._input.toPlainText().strip()
         if not text:
             return
         # Fast-path: while paused at a checkpoint, "continue" runs the module's
