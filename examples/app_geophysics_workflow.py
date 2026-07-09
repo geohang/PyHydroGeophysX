@@ -506,10 +506,17 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
             "dependencies and run it from source."
         )
         st.markdown(
-            f"- **Windows**: [{QT_DOWNLOAD_LINKS['windows']}]({QT_DOWNLOAD_LINKS['windows']})\n"
-            f"- **macOS**: [{QT_DOWNLOAD_LINKS['macos']}]({QT_DOWNLOAD_LINKS['macos']})\n"
-            f"- **Linux**: [{QT_DOWNLOAD_LINKS['linux']}]({QT_DOWNLOAD_LINKS['linux']})\n"
-            f"- **Source**: [{QT_DOWNLOAD_LINKS['source']}]({QT_DOWNLOAD_LINKS['source']})"
+            "**Download the desktop app** — each platform has a small **light** build "
+            "(load / view / QC / pick / export) and a **full** build with the geophysics "
+            "engines (forward modeling, inversion, 3D viewer) included:\n\n"
+            f"- **Windows**: [latest release]({QT_DOWNLOAD_LINKS['windows']}) — "
+            "`PyHydroGeophysX-Workbench-windows-light.zip` or `…-windows-full.zip`\n"
+            f"- **macOS**: [latest release]({QT_DOWNLOAD_LINKS['macos']}) — "
+            "`PyHydroGeophysX-Workbench-macos-light.zip` or `…-macos-full.zip`\n"
+            f"- **Linux / source**: [run from a source checkout]({QT_DOWNLOAD_LINKS['source']}) "
+            "(commands below)\n\n"
+            "Usage guide: [Desktop Workbench documentation]"
+            "(https://geohang.github.io/PyHydroGeophysX/agents/desktop_workbench.html)"
         )
         st.code(
             'pip install "pyhydrogeophysx[desktop]"\n'
