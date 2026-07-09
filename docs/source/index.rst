@@ -52,6 +52,13 @@ Start Here
 
       Open the Streamlit app and agent usage guidance.
 
+   .. grid-item-card:: Desktop Workbench
+      :link: agents/desktop_workbench
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Download the Qt desktop app for Windows and macOS.
+
 User Journeys
 -------------
 
@@ -107,10 +114,14 @@ Quickstart Code
    rho = water_content_to_resistivity(wc, rhos=100.0, n=2.0, porosity=0.3)
    print(rho)
 
-Web App
--------
+Web App and Desktop App
+-----------------------
 
 Open the hosted app: `pyhydrogeophysx.streamlit.app <https://pyhydrogeophysx.streamlit.app/>`_
+
+Download the desktop workbench (Windows / macOS): `GitHub Releases
+<https://github.com/geohang/PyHydroGeophysX/releases/latest>`_; usage guide:
+:doc:`agents/desktop_workbench`.
 
 Citation
 --------

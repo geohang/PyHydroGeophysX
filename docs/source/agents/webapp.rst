@@ -6,6 +6,18 @@ PyHydroGeophysX ships two interactive Streamlit applications:
 1. **Geophysics Workflow App** – natural-language orchestration of ERT/SRT/TDEM/FDEM workflows.
 2. **3D Mesh Builder** – graphical tool for building and exporting 3D ERT meshes (new in v0.3).
 
+.. tip::
+
+   Prefer a native desktop app? The :doc:`Qt Desktop Workbench <desktop_workbench>` is
+   available as a downloadable Windows / macOS application (a small *light* build and a
+   *full* build with the geophysics engines included).
+
+   .. button-link:: https://github.com/geohang/PyHydroGeophysX/releases/latest
+      :color: secondary
+      :expand:
+
+      Download the Desktop Workbench (Windows / macOS)
+
 .. contents:: On this page
    :local:
    :depth: 1

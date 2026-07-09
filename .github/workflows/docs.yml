@@ -1,0 +1,55 @@
+# Build the Sphinx docs and publish them to the gh-pages branch (the existing
+# GitHub Pages source for https://geohang.github.io/PyHydroGeophysX/). Replaces
+# the manual build_docs_windows.bat + ghp-import flow.
+
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "PyHydroGeophysX/**"
+      - "examples/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install the package and docs dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install -r docs/requirements.txt
+
+      - name: Build the Sphinx site
+        # qt_apps is excluded from apidoc: the desktop GUI is documented as a
+        # user guide (agents/desktop_workbench), not as API pages, and its
+        # PySide6 imports are not available on the docs runner.
+        run: |
+          sphinx-apidoc -f -o docs/source/api PyHydroGeophysX "PyHydroGeophysX/qt_apps"
+          sphinx-build -b html docs/source docs/build/html --keep-going
+
+      - name: Publish to gh-pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/build/html
+          force_orphan: true

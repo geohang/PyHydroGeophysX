@@ -27,6 +27,9 @@ MANIFEST
 *.spec
 # ...but keep the hand-authored desktop workbench build spec
 !packaging/pyinstaller_workbench.spec
+# Generated app icons (packaging/make_icons.py builds them from logo.png)
+packaging/app_icon.ico
+packaging/app_icon.icns
 
 # Unit test / coverage reports
 htmlcov/

@@ -1,5 +1,9 @@
 # PyHydroGeophysX Professional Desktop Workbench
 
+> Published on the docs site: <https://geohang.github.io/PyHydroGeophysX/agents/desktop_workbench.html>
+> (Sphinx source: `docs/source/agents/desktop_workbench.rst`). When editing this guide,
+> update the Sphinx page too; the site builds only the `.rst` version.
+
 PyHydroGeophysX ships two complementary front ends:
 
 - **Streamlit web app** (`examples/app_geophysics_workflow.py`) is the agent, report,
