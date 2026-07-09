@@ -118,9 +118,10 @@ class InversionQualityView(QWidget):
             f"{title_html}<span style='font-size:13px'>{head}</span><br>"
             f"<span style='color:{color}'><b>{verdict}</b></span>{note}")
 
-        self._draw_convergence(convergence)
+        self._draw_convergence(convergence, final_chi2=chi2)
 
-    def _draw_convergence(self, convergence: Optional[Sequence[float]]) -> None:
+    def _draw_convergence(self, convergence: Optional[Sequence[float]],
+                          final_chi2: Optional[float] = None) -> None:
         self._fig.clear()
         ax = self._fig.add_subplot(111)
         conv: List[float] = []
@@ -144,11 +145,23 @@ class InversionQualityView(QWidget):
             ax.legend(fontsize=8, loc="best")
             if len(iters) <= 15:
                 ax.set_xticks(iters)
+        elif final_chi2 is not None and final_chi2 == final_chi2:
+            value = float(final_chi2)
+            color = "#2e7d32" if value <= 1.2 else "#f9a825" if value <= 5.0 else "#c62828"
+            ax.bar(["Final \u03c7\u00b2"], [value], color=color, width=0.5)
+            ax.axhline(1.0, color="#1565ff", ls="--", lw=1.2, label="target \u03c7\u00b2 = 1")
+            ax.set_ylabel("\u03c7\u00b2")
+            ax.set_title("Final data misfit")
+            ax.grid(True, axis="y", ls=":", alpha=0.4)
+            ax.legend(fontsize=8, loc="best")
+            ax.text(0, value, f"  {value:.2f}", va="bottom", ha="center", fontsize=9)
         else:
             ax.text(0.5, 0.5, "No per-iteration history for this inversion.",
                     ha="center", va="center", transform=ax.transAxes, color="#888888")
             ax.axis("off")
-        self._canvas.draw_idle()
+        # This tab is usually hidden when an inversion worker completes; draw()
+        # guarantees the finished figure is ready when the user opens it.
+        self._canvas.draw()
 
     def clear(self) -> None:
         self._metrics.setText("<span style='color:#888888'>Run an inversion to see its "
@@ -156,4 +169,4 @@ class InversionQualityView(QWidget):
         self._fig.clear()
         ax = self._fig.add_subplot(111)
         ax.axis("off")
-        self._canvas.draw_idle()
+        self._canvas.draw()

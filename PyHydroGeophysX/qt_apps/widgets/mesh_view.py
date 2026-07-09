@@ -12,6 +12,11 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QVBoxLayout, QWidget
 
+from PyHydroGeophysX.qt_apps.ert_plot_style import (
+    ERT_RESISTIVITY_LABEL,
+    ert_model_plot_kwargs,
+)
+
 
 class MeshResultView(QWidget):
     """Show a pyGIMLi inversion manager's model drawn on its mesh."""
@@ -115,19 +120,22 @@ class MeshResultView(QWidget):
         mesh, values, coverage = self._resolve_source()
         if mesh is None or values is None:
             return
-        if self._kind == "srt":
-            cmap, log_scale, label = "turbo", False, "Velocity (m/s)"
-        else:
-            cmap, log_scale, label = "Spectral_r", True, "Resistivity (Ω·m)"
 
         self._fig.clear()
         ax = self._fig.add_subplot(111)
+        if self._kind == "srt":
+            cmap, log_scale, label = "turbo", False, "Velocity (m/s)"
+            show_kw = dict(ax=ax, colorBar=False, cMap=cmap, logScale=log_scale,
+                           showMesh=self._show_mesh.isChecked())
+        else:
+            label = ERT_RESISTIVITY_LABEL
+            show_kw = ert_model_plot_kwargs(show_mesh=self._show_mesh.isChecked())
+            show_kw.update(ax=ax, colorBar=False)
+
         try:
             # Draw the model on the mesh via pyGIMLi but build the colorbar with
             # matplotlib: pyGIMLi's own colorbar hits a divide-by-zero on some
             # velocity models. colorBar=False avoids that.
-            show_kw = dict(ax=ax, colorBar=False, cMap=cmap, logScale=log_scale,
-                           showMesh=self._show_mesh.isChecked())
             if coverage is not None and np.asarray(coverage).size == np.asarray(values).size:
                 show_kw["coverage"] = coverage
             try:

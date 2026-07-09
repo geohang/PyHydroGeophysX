@@ -19,7 +19,7 @@ _GROUP_ICONS = {
 _CHILD_ICONS = {
     "Seismic": "fa5s.wave-square",
     "ERT": "fa5s.bolt",
-    "Mesh 3D": "fa5s.cube",
+    "3D Mesh Builder": "fa5s.cube",
     "EM": "fa5s.broadcast-tower",
     "Gravity / Magnetics": "fa5s.magnet",
     "Hydro Data": "fa5s.database",
@@ -47,7 +47,7 @@ TREE_STRUCTURE: List[Tuple[str, List[Tuple[str, str]]]] = [
         [
             ("Seismic", "seismic"),
             ("ERT", "ert"),
-            ("Mesh 3D", "mesh3d"),
+            ("3D Mesh Builder", "mesh3d"),
             ("EM", "em"),
             ("Gravity / Magnetics", "gravmag"),
         ],

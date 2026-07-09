@@ -50,6 +50,7 @@ dependencies = [
 geophysics = [
     "pygimli>=1.5.5,<2.0",
     "simpeg>=0.24,<1.0",
+    "pymatsolver>=0.2",
     "flopy>=3.5,<4.0",
     "pftools>=1.3",
 ]
@@ -96,6 +97,7 @@ dev = [
 all = [
     "pygimli>=1.5.5,<2.0",
     "simpeg>=0.24,<1.0",
+    "pymatsolver>=0.2",
     "flopy>=3.5,<4.0",
     "pftools>=1.3",
     "cupy-cuda11x",

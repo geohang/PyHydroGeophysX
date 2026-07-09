@@ -53,6 +53,7 @@ _ARRAY_TYPES = ["Surface grid", "Single borehole", "Crosshole", "Surface-to-bore
 _MESH_TYPES = ["Surface with topography", "Box mesh"]
 _TOPO_TYPES = ["Flat", "Linear tilt", "Gaussian hill", "Custom expression", "From file (x, y, z)"]
 _MESH_ENGINES = ["Auto", "Gmsh (tetrahedral)", "PyGIMLi prism", "Structured grid"]
+_ERT_FORWARD_SCHEMES = ("dd", "wa", "slm", "wb")
 
 
 def _ensure_vtk_matplotlib_shim() -> None:
@@ -98,7 +99,7 @@ def _try_import_pyvista() -> Tuple[bool, Optional[Any], Optional[Any], str]:
 
 class Mesh3DModule(BaseModule):
     module_key = "mesh3d"
-    module_title = "Mesh 3D"
+    module_title = "3D Mesh Builder"
 
     def __init__(self, state: Any, log: LogFn, parent=None) -> None:
         super().__init__(state, log, parent)
@@ -109,7 +110,8 @@ class Mesh3DModule(BaseModule):
         self._topo_points = None     # loaded (x, y, z) topography points
         self._gen_worker: Optional[TaskWorker] = None
         self._ert_fwd_worker: Optional[TaskWorker] = None
-        self._ert_fwd_result = None  # last 3D ERT forward result
+        self._ert_fwd_result = None  # last agent-triggered 3D ERT forward result
+        self._ert_forward_params = {"scheme": "dd", "background_res": 100.0, "noise": 0.03}
 
         ok, pv, qt_interactor, err = _try_import_pyvista()
         self._pv = pv if ok else None
@@ -196,7 +198,7 @@ class Mesh3DModule(BaseModule):
         layout = QVBoxLayout(panel)
 
         # Geometry
-        geom = QGroupBox("Geometry")
+        geom = QGroupBox("Survey geometry")
         gform = QFormLayout(geom)
         self._mesh_type = QComboBox(); self._mesh_type.addItems(_MESH_TYPES)
         self._array_type = QComboBox(); self._array_type.addItems(_ARRAY_TYPES)
@@ -219,26 +221,7 @@ class Mesh3DModule(BaseModule):
         layout.addWidget(self._build_meshparam_group())
         layout.addWidget(self._build_borehole_group())
         layout.addWidget(self._build_output_group())
-        layout.addWidget(self._build_ert_forward_group())
-
-        self._preview_btn = QPushButton("Preview sensors")
-        self._preview_btn.setIcon(theme.icon("fa5s.eye"))
-        self._preview_btn.clicked.connect(self._preview_sensors)
-        layout.addWidget(self._preview_btn)
-
-        self._gen_btn = QPushButton("Generate 3D mesh")
-        self._gen_btn.setProperty("primary", True)
-        self._gen_btn.setIcon(theme.icon("fa5s.cubes", color="#ffffff"))
-        self._gen_btn.clicked.connect(self._generate_mesh)
-        layout.addWidget(self._gen_btn)
-
-        self._progress = QProgressBar()
-        self._progress.setVisible(False)
-        layout.addWidget(self._progress)
-
-        self._info = QLabel("Configure the geometry, then preview or generate.")
-        self._info.setWordWrap(True)
-        layout.addWidget(self._info)
+        layout.addWidget(self._build_build_group())
 
         layout.addStretch(1)
         return scroll
@@ -413,8 +396,8 @@ class Mesh3DModule(BaseModule):
         f.addRow("Boundary extension", self._bound_ext)
         self._single_region = QCheckBox("Single region (one marker)")
         self._single_region.setToolTip(
-            "Collapse the mesh to a single marker instead of the para-domain (2) / "
-            "boundary (1) split. Default off, which is what ERT inversion expects.")
+            "Collapse the mesh to one marker instead of preserving the parameter-domain (2) / "
+            "boundary (1) split.")
         f.addRow(self._single_region)
         return box
 
@@ -434,7 +417,7 @@ class Mesh3DModule(BaseModule):
         return self._borehole_group
 
     def _build_output_group(self) -> QGroupBox:
-        box = QGroupBox("Output")
+        box = QGroupBox("Mesh export")
         v = QVBoxLayout(box)
         f = QFormLayout()
         self._mesh_name = QLineEdit("my_3d_mesh")
@@ -454,12 +437,54 @@ class Mesh3DModule(BaseModule):
         v.addLayout(fr)
         return box
 
+    def _build_build_group(self) -> QGroupBox:
+        """Keep the two build actions and their status together at the workflow end."""
+        box = QGroupBox("Build & export")
+        layout = QVBoxLayout(box)
+        hint = QLabel(
+            "1. Preview the sensor geometry.  2. Generate the mesh and save the selected exports."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        layout.addWidget(hint)
+
+        buttons = QHBoxLayout()
+        self._preview_btn = QPushButton("1. Preview sensors")
+        self._preview_btn.setIcon(theme.icon("fa5s.eye"))
+        self._preview_btn.clicked.connect(self._preview_sensors)
+        buttons.addWidget(self._preview_btn)
+
+        self._gen_btn = QPushButton("2. Generate mesh")
+        self._gen_btn.setProperty("primary", True)
+        self._gen_btn.setIcon(theme.icon("fa5s.cubes", color="#ffffff"))
+        self._gen_btn.clicked.connect(self._generate_mesh)
+        buttons.addWidget(self._gen_btn)
+        layout.addLayout(buttons)
+
+        self._progress = QProgressBar()
+        self._progress.setVisible(False)
+        layout.addWidget(self._progress)
+
+        self._info = QLabel("Configure the survey geometry, then preview the sensors.")
+        self._info.setWordWrap(True)
+        layout.addWidget(self._info)
+        return box
+
     # -- visibility / config -------------------------------------------------
+    @staticmethod
+    def _fit_stack_to_current_page(stack: QStackedWidget) -> None:
+        """Size a stacked panel to its visible page, not its tallest sibling."""
+        page = stack.currentWidget()
+        if page is not None:
+            stack.setFixedHeight(page.sizeHint().height())
+
     def _update_visibility(self) -> None:
         mesh_type = self._mesh_type.currentText()
         array_type = self._array_type.currentText()
         self._array_stack.setCurrentIndex(_ARRAY_TYPES.index(array_type))
         self._topo_stack.setCurrentIndex(_TOPO_TYPES.index(self._topo_type.currentText()))
+        self._fit_stack_to_current_page(self._array_stack)
+        self._fit_stack_to_current_page(self._topo_stack)
         surface_topo = array_type == "Surface grid" and mesh_type == "Surface with topography"
         self._topo_group.setVisible(surface_topo)
         self._box_group.setVisible(mesh_type == "Box mesh")
@@ -622,55 +647,45 @@ class Mesh3DModule(BaseModule):
         self._gen_btn.setText("Generate 3D mesh")
         self._progress.setVisible(False)
 
-    # -- 3D ERT forward modeling --------------------------------------------
-    def _build_ert_forward_group(self) -> QGroupBox:
-        box = QGroupBox("3D ERT forward (on generated mesh)")
-        form = QFormLayout(box)
-        self._ert_scheme = QComboBox()
-        self._ert_scheme.addItems(["dd", "wa", "slm", "wb"])
-        self._ert_scheme.setToolTip("ERT array scheme: dd=dipole-dipole, wa=Wenner-alpha, "
-                                    "slm=Schlumberger, wb=Wenner-beta.")
-        self._ert_bg_res = self._dspin(1.0, 100000.0, 100.0, 10.0, 1, " Ω·m")
-        self._ert_noise = self._dspin(0.0, 0.5, 0.03, 0.01, 3)
-        form.addRow("Array scheme", self._ert_scheme)
-        form.addRow("Background ρ", self._ert_bg_res)
-        form.addRow("Noise (relative)", self._ert_noise)
-        self._ert_fwd_btn = QPushButton("Run 3D ERT forward")
-        self._ert_fwd_btn.setProperty("primary", True)
-        self._ert_fwd_btn.setIcon(theme.icon("fa5s.bolt", color="#ffffff"))
-        self._ert_fwd_btn.clicked.connect(lambda: self._run_ert_forward())
-        form.addRow(self._ert_fwd_btn)
-        note = QLabel("Generate a 3D mesh first, then run forward modeling to produce "
-                      "synthetic ERT data (saved as a pyGIMLi .dat).")
-        note.setWordWrap(True)
-        note.setStyleSheet("color:#5a6a7a; font-size:8pt;")
-        form.addRow(note)
-        return box
+    # -- hidden 3D ERT forward action (AQUAH only) -------------------------
+    def _set_ert_forward_param(self, key: str, value: Any) -> None:
+        """Validate and store an agent-only 3D ERT forward parameter."""
+        if key == "scheme":
+            scheme = str(value)
+            if scheme not in _ERT_FORWARD_SCHEMES:
+                raise ValueError(f"scheme must be one of {list(_ERT_FORWARD_SCHEMES)}")
+            self._ert_forward_params[key] = scheme
+            return
+        numeric = float(value)
+        limits = {"background_res": (1.0, 100000.0), "noise": (0.0, 0.5)}
+        low, high = limits[key]
+        if not low <= numeric <= high:
+            raise ValueError(f"{key} must be between {low:g} and {high:g}")
+        self._ert_forward_params[key] = numeric
 
     def _run_ert_forward(self, marker_res=None) -> None:
+        """Run the hidden 3D ERT forward action requested through AQUAH."""
         if self._mesh is None or self._sensors is None:
             self.log("Generate a 3D mesh first (Generate 3D mesh).", "warn")
             return
         from PyHydroGeophysX.qt_apps import ert3d_pipeline
 
         out_dir = self._out_dir.text().strip() or str(self._default_output_dir())
-        self._ert_fwd_btn.setEnabled(False)
-        self._ert_fwd_btn.setText("Running…")
         self._progress.setVisible(True)
         self._progress.setRange(0, 0)
-        self.log("Running 3D ERT forward modeling…", "info")
+        self.log("Running agent-requested 3D ERT forward modeling…", "info")
         worker = TaskWorker(
             ert3d_pipeline.run_ert3d_forward, self._mesh, self._sensors,
-            scheme=self._ert_scheme.currentText(),
-            background_res=self._ert_bg_res.value(),
+            scheme=self._ert_forward_params["scheme"],
+            background_res=self._ert_forward_params["background_res"],
             marker_res=marker_res,
-            noise=self._ert_noise.value(),
+            noise=self._ert_forward_params["noise"],
             output_dir=out_dir, with_log=True,
         )
         worker.logged.connect(lambda m: self.log(m, "info"))
         worker.succeeded.connect(self._on_ert_forward_ok)
         worker.failed.connect(self._on_ert_forward_failed)
-        worker.finished.connect(self._reset_ert_forward_btn)
+        worker.finished.connect(self._reset_ert_forward_progress)
         self._ert_fwd_worker = self.register_worker(worker)
         worker.start()
 
@@ -689,9 +704,7 @@ class Mesh3DModule(BaseModule):
         self.log(f"3D ERT forward failed: {message}", "error")
         self._info.setText(f"3D ERT forward failed: {message}")
 
-    def _reset_ert_forward_btn(self) -> None:
-        self._ert_fwd_btn.setEnabled(True)
-        self._ert_fwd_btn.setText("Run 3D ERT forward")
+    def _reset_ert_forward_progress(self) -> None:
         self._progress.setVisible(False)
 
     def _safe_name(self) -> str:
@@ -889,8 +902,7 @@ class Mesh3DModule(BaseModule):
                 {"name": "run_ert_forward",
                  "args": {"scheme": "dd/wa/slm/wb", "background_res": "float",
                           "noise": "float", "marker_res": "{marker: resistivity} (optional)"},
-                 "desc": "Run 3D ERT FORWARD modeling on the generated mesh to produce synthetic "
-                         "ERT data (.dat). Generate the mesh first."},
+                 "desc": "Hidden UI action: run 3D ERT forward modeling on the generated mesh."},
                 {"name": "load_mesh", "args": {"path": "str"},
                  "desc": "Load a mesh / 3D volume file into the viewer."},
                 {"name": "get_status", "args": {},
@@ -942,15 +954,9 @@ class Mesh3DModule(BaseModule):
         if self._mesh is None or self._sensors is None:
             return {"status": "failed", "error": "Generate a 3D mesh first (action 'generate')."}
         try:
-            if "scheme" in args:
-                items = [self._ert_scheme.itemText(i) for i in range(self._ert_scheme.count())]
-                if str(args["scheme"]) not in items:
-                    return {"status": "failed", "error": f"scheme must be one of {items}"}
-                self._ert_scheme.setCurrentText(str(args["scheme"]))
-            if "background_res" in args:
-                self._ert_bg_res.setValue(float(args["background_res"]))
-            if "noise" in args:
-                self._ert_noise.setValue(float(args["noise"]))
+            for key in ("scheme", "background_res", "noise"):
+                if key in args:
+                    self._set_ert_forward_param(key, args[key])
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": str(exc)}
         marker_res = args.get("marker_res")
@@ -959,7 +965,7 @@ class Mesh3DModule(BaseModule):
         self._run_ert_forward(marker_res=marker_res)
         return {"status": "started",
                 "message": "3D ERT forward modeling started. Ask for status shortly.",
-                "scheme": self._ert_scheme.currentText()}
+                "scheme": self._ert_forward_params["scheme"]}
 
     def _agent_load_mesh(self, path: Any) -> Dict[str, Any]:
         if not path:
@@ -1022,9 +1028,9 @@ class Mesh3DModule(BaseModule):
             "fmt_bms": lambda v: self._fmt_bms.setChecked(bool(v)),
             "fmt_vtk": lambda v: self._fmt_vtk.setChecked(bool(v)),
             "fmt_csv": lambda v: self._fmt_csv.setChecked(bool(v)),
-            "ert_scheme": lambda v: set_combo(self._ert_scheme, v),
-            "ert_background_res": lambda v: self._ert_bg_res.setValue(float(v)),
-            "ert_noise": lambda v: self._ert_noise.setValue(float(v)),
+            "ert_scheme": lambda v: self._set_ert_forward_param("scheme", v),
+            "ert_background_res": lambda v: self._set_ert_forward_param("background_res", v),
+            "ert_noise": lambda v: self._set_ert_forward_param("noise", v),
         }
         applied: Dict[str, Any] = {}
         ignored: Dict[str, str] = {}

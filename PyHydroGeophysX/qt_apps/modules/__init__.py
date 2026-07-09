@@ -19,7 +19,7 @@ LogFn = Callable[..., None]
 MODULE_SPECS = {
     "seismic": ("seismic_processing", "SeismicProcessingModule", "Seismic Processing"),
     "ert": ("ert_processing", "ERTProcessingModule", "ERT Processing"),
-    "mesh3d": ("mesh3d_processing", "Mesh3DModule", "Mesh 3D"),
+    "mesh3d": ("mesh3d_processing", "Mesh3DModule", "3D Mesh Builder"),
     "em": ("em_processing", "EMProcessingModule", "EM Processing"),
     "gravmag": ("gravmag_processing", "GravMagProcessingModule", "Gravity / Magnetics"),
     "hydro_geophysics": ("hydro_geophysics", "HydroGeophysicsModule", "Hydro → Geophysics"),

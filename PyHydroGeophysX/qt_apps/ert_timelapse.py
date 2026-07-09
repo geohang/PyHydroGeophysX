@@ -16,7 +16,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 
-from PyHydroGeophysX.qt_apps import ert_load, io_utils
+from PyHydroGeophysX.qt_apps import ert_load, ert_plot_style, io_utils
 
 LogFn = Callable[[str], None]
 
@@ -220,19 +220,20 @@ def run_timelapse_ert(
     # the panel always says what the number means.
     panel_titles = _step_titles(labels, times, n_time)
 
-    # Resistivity-evolution panel.
+    # Resistivity-evolution panel. Use the same per-model, logarithmic ERT
+    # rendering convention as the interactive Resistivity model view.
     finite = final_models[np.isfinite(final_models)]
-    cmin = float(np.percentile(finite, 5)) if finite.size else 1.0
-    cmax = float(np.percentile(finite, 95)) if finite.size else 1000.0
+    rho_min = float(np.min(finite)) if finite.size else 1.0
+    rho_max = float(np.max(finite)) if finite.size else 1000.0
     ncol = min(4, n_time)
     nrow = int(np.ceil(n_time / ncol))
     fig = plt.figure(figsize=(3.6 * ncol, 3.0 * nrow))
     for i in range(n_time):
         ax = fig.add_subplot(nrow, ncol, i + 1)
-        show_kw = dict(ax=ax, cMap="Spectral_r", cMin=cmin, cMax=cmax,
-                       label="Resistivity (Ω·m)", logScale=False)
+        show_kw = ert_plot_style.ert_model_plot_kwargs()
+        show_kw.update(ax=ax, label=ert_plot_style.ERT_RESISTIVITY_LABEL)
         if coverage is not None and coverage.shape[0] > i:
-            show_kw["coverage"] = coverage[i] > -1.0
+            show_kw["coverage"] = coverage[i]
         try:
             pg.show(res_mesh, final_models[:, i], **show_kw)
         except Exception:  # noqa: BLE001 - retry without coverage
@@ -304,7 +305,7 @@ def run_timelapse_ert(
         "n_data": n_data_total,
         "measurement_times": [float(t) for t in times],
         "time_labels": list(labels),
-        "resistivity_range": [cmin, cmax],
+        "resistivity_range": [rho_min, rho_max],
         "figure_paths": figure_paths,
         "data_paths": data_paths,
         "vtk_combined": vtk_combined,

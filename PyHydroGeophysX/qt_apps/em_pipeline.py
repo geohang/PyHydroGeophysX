@@ -53,6 +53,79 @@ class BackendUnavailable(RuntimeError):
     """Raised when SimPEG cannot be imported."""
 
 
+def backend_status(method: Optional[str] = None) -> Dict[str, Any]:
+    """Report whether the requested EM forward/inversion backend is usable.
+
+    The check imports the same method-specific forward class used by inversion.
+    This prevents the UI and AQUAH from announcing a background inversion that
+    cannot start because SimPEG or one of its runtime dependencies is missing.
+    """
+    methods = (method,) if method is not None else METHODS
+    result: Dict[str, Dict[str, Any]] = {}
+    for selected in methods:
+        if selected not in METHODS:
+            raise ValueError(f"method must be one of {METHODS}, got {selected!r}.")
+        try:
+            if selected == "FDEM":
+                from PyHydroGeophysX.forward.fdem_forward import FDEMForwardModeling  # noqa: F401
+            else:
+                from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling  # noqa: F401
+            result[selected] = {"available": True, "error": ""}
+        except Exception as exc:  # noqa: BLE001 - optional numerical backend
+            result[selected] = {"available": False, "error": str(exc)}
+    if method is not None:
+        return result[method]
+    return {
+        "available": all(item["available"] for item in result.values()),
+        "methods": result,
+    }
+
+
+def example_catalog() -> Dict[str, Dict[str, Any]]:
+    """Return the desktop EM examples and their documented settings.
+
+    Paths are resolved from the source checkout so the same catalog works for
+    both button-driven and AQUAH workflows.
+    """
+    root = Path(__file__).resolve().parents[2] / "examples" / "data" / "EM"
+    east_river = root / "EastRiver_VTEM"
+    return {
+        "east_river_vtem": {
+            "label": "East River VTEM (recommended)",
+            "method": "TDEM",
+            "path": east_river / "eastriver_vtem_line22030.csv",
+            "geometry_path": east_river / "eastriver_vtem_line22030_geometry.csv",
+            "params": {
+                "source_radius": 13.0, "height": 82.0, "orientation": "z",
+                "waveform": "step_off", "n_layers": 13, "min_thickness": 8.0,
+                "max_thickness": 55.0, "smoothness": 0.5, "rel_error": 0.08,
+                "max_iterations": 10, "ref_resistivity": 320.0,
+                "auto_scale": False, "max_soundings": 22,
+            },
+            "note": "Configured VTEM line with companion geometry and reference calibration.",
+        },
+        "skytem_bhmar": {
+            "label": "SkyTEM BHMAR (quick preview)",
+            "method": "TDEM",
+            "path": root / "skytem_bhmar_tdem.csv",
+            "geometry_path": root / "skytem_bhmar_geometry.csv",
+            "params": {"auto_scale": True, "ref_resistivity": 0.0, "max_soundings": 5},
+            "note": "Relative airborne TDEM preview; system calibration is not supplied.",
+        },
+        "synthetic_fdem": {
+            "label": "Synthetic FDEM (1D)",
+            "method": "FDEM",
+            "path": root / "synthetic_fdem.csv",
+            "params": {
+                "source_radius": 10.0, "tx_rx_sep": 10.0, "height": 30.0,
+                "orientation": "z", "component": "secondary", "waveform": "dipole",
+                "auto_scale": False, "ref_resistivity": 0.0,
+            },
+            "note": "Deterministic 3% noisy response of 50/200/20 ohm-m layers (10/20 m).",
+        },
+    }
+
+
 def _noop(_msg: str) -> None:
     return None
 
@@ -220,6 +293,7 @@ def _occam_1d(forward_vec: Callable[[np.ndarray], np.ndarray], dobs_vec: np.ndar
     lo, hi = 0.0, 5.0  # log10 resistivity bounds (1 .. 1e5 ohm-m)
     x0 = float(np.clip(np.log10(max(start_res, 1.0)), lo, hi)) * np.ones(n_layers)
     unc_vec = np.clip(unc_vec, 1e-30, None)
+    convergence: List[float] = []
 
     def residual(logres: np.ndarray) -> np.ndarray:
         sigma = 1.0 / np.power(10.0, logres)
@@ -229,13 +303,32 @@ def _occam_1d(forward_vec: Callable[[np.ndarray], np.ndarray], dobs_vec: np.ndar
         return np.concatenate([data_res, smooth])
 
     max_nfev = max(40, int(inv.get("max_iterations", 30)) * (n_layers + 1))
-    sol = least_squares(residual, x0, bounds=(lo, hi), method="trf",
-                        max_nfev=max_nfev, xtol=1e-8, ftol=1e-8)
+    def on_iteration(intermediate) -> None:
+        """Record the data-only chi-square from SciPy's outer optimizer."""
+        fun = getattr(intermediate, "fun", None)
+        if fun is None:
+            x = np.asarray(getattr(intermediate, "x", intermediate), dtype=float)
+            fun = residual(x)
+        data_res = np.asarray(fun, dtype=float).ravel()[:dobs_vec.size]
+        convergence.append(float(np.mean(data_res ** 2)))
+
+    kwargs: Dict[str, Any] = {"max_nfev": max_nfev, "xtol": 1e-8, "ftol": 1e-8}
+    # SciPy < 1.16 has no callback argument. Keep those supported environments
+    # working; their quality page falls back to the final chi-square chart.
+    try:
+        import inspect
+        if "callback" in inspect.signature(least_squares).parameters:
+            kwargs["callback"] = on_iteration
+    except Exception:  # pragma: no cover - defensive compatibility path
+        pass
+    sol = least_squares(residual, x0, bounds=(lo, hi), method="trf", **kwargs)
     res = np.power(10.0, sol.x)
     data_res = residual(sol.x)[: dobs_vec.size]
     chi2 = float(np.mean(data_res ** 2))
+    if not convergence or not np.isclose(convergence[-1], chi2):
+        convergence.append(chi2)
     log(f"  inversion done: {sol.nfev} forward evals, chi2={chi2:.3f}")
-    return res, chi2, int(sol.nfev)
+    return res, chi2, int(sol.nfev), convergence
 
 
 def fdem_invert(data: Dict[str, Any], geom: Dict[str, Any], inv: Dict[str, Any],
@@ -266,7 +359,7 @@ def fdem_invert(data: Dict[str, Any], geom: Dict[str, Any], inv: Dict[str, Any],
         resp = np.asarray(resp, dtype=complex).ravel()[: freqs.size]
         return np.concatenate([resp.real, resp.imag])
 
-    res, chi2, nfev = _occam_1d(forward_vec, dobs_vec, unc_vec, n_layers, inv, log)
+    res, chi2, nfev, convergence = _occam_1d(forward_vec, dobs_vec, unc_vec, n_layers, inv, log)
     sigma = 1.0 / np.clip(res, 1e-12, None)
     pred = forward_vec(sigma)
     pred_r, pred_i = pred[: freqs.size], pred[freqs.size:]
@@ -276,7 +369,8 @@ def fdem_invert(data: Dict[str, Any], geom: Dict[str, Any], inv: Dict[str, Any],
             "pred_real": pred_r, "pred_imag": pred_i,
             "thickness": thick, "resistivity": res, "conductivity": sigma,
             "depth": depth, "resistivity_step": res_step, "chi2": chi2,
-            "n_data": int(dobs_vec.size), "nfev": nfev, "n_layers": n_layers}
+            "n_data": int(dobs_vec.size), "nfev": nfev, "n_layers": n_layers,
+            "convergence": convergence}
 
 
 def tdem_invert(data: Dict[str, Any], geom: Dict[str, Any], inv: Dict[str, Any],
@@ -300,14 +394,15 @@ def tdem_invert(data: Dict[str, Any], geom: Dict[str, Any], inv: Dict[str, Any],
     def forward_vec(sigma: np.ndarray) -> np.ndarray:
         return np.asarray(modeler.forward(sigma), dtype=float).ravel()[: times.size]
 
-    res, chi2, nfev = _occam_1d(forward_vec, dobs, unc, n_layers, inv, log)
+    res, chi2, nfev, convergence = _occam_1d(forward_vec, dobs, unc, n_layers, inv, log)
     sigma = 1.0 / np.clip(res, 1e-12, None)
     pred = forward_vec(sigma)
     depth, res_step = model_depth_profile(thick, res)
     return {"method": "TDEM", "times": times, "obs": dobs, "pred": pred,
             "thickness": thick, "resistivity": res, "conductivity": sigma,
             "depth": depth, "resistivity_step": res_step, "chi2": chi2,
-            "n_data": int(dobs.size), "nfev": nfev, "n_layers": n_layers}
+            "n_data": int(dobs.size), "nfev": nfev, "n_layers": n_layers,
+            "convergence": convergence}
 
 
 # ---------------------------------------------------------------------------

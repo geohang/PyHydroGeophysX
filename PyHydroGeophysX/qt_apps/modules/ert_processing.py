@@ -906,7 +906,7 @@ class ERTProcessingModule(BaseModule):
         if self._tl_coverage is not None:
             cov_all = np.asarray(self._tl_coverage, dtype=float)
             if cov_all.ndim == 2 and idx < cov_all.shape[0] and cov_all.shape[1] == values.size:
-                cov = cov_all[idx] > -1.0  # boolean mask, matching the panel figure
+                cov = cov_all[idx]  # raw log-coverage, matching ERTManager.coverage()
         title = self._tl_step_titles[idx] if idx < len(self._tl_step_titles) else f"Time step {idx + 1}"
         self._model_view.show_field(self._tl_mesh, values, kind="ert", coverage=cov, title=title)
 

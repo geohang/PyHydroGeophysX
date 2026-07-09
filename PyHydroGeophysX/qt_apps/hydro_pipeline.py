@@ -388,6 +388,7 @@ def run_hydro_forward(
     figure_paths: List[str] = []
     data_paths: List[str] = []
     data_summary: Dict[str, Any] = {}
+    display_paths: Dict[str, Dict[str, str]] = {}
 
     def _save_data(fn: Callable[[Path], None], name: str) -> None:
         """Best-effort save of a synthetic-data artifact; never break the run."""
@@ -397,6 +398,18 @@ def run_hydro_forward(
             data_paths.append(str(path))
         except Exception as exc:  # noqa: BLE001
             log(f"Could not save {name}: {exc}")
+
+    def _save_display(method: str, panel: str, name: str, render: Callable[[Any], None]) -> None:
+        """Render one method-specific model or measurement panel for the Results UI."""
+        fig, ax = plt.subplots(figsize=(6.2, 4.5))
+        try:
+            render(ax)
+            fig.tight_layout()
+            path = out_dir / name
+            fig.savefig(path, dpi=180, bbox_inches="tight")
+            display_paths.setdefault(method, {})[panel] = str(path)
+        finally:
+            plt.close(fig)
 
     # Build the mesh once; ERT and SRT share it.
     n_bounds = structure.shape[0]
@@ -472,6 +485,28 @@ def run_hydro_forward(
                    "velocity_model.npy")
 
     if resistivity_model is not None or velocity_model is not None:
+        if resistivity_model is not None:
+            def render_ert_model(ax) -> None:
+                pg.show(mesh, resistivity_model, ax=ax, cMap="Spectral_r", label="Resistivity (ohm m)")
+                ax.set_title("ERT resistivity model")
+
+            def render_ert_measurement(ax) -> None:
+                pg_ert.show(ert_data, ax=ax)
+                ax.set_title("Synthetic ERT measurements")
+
+            _save_display("ERT", "model", "ert_model.png", render_ert_model)
+            _save_display("ERT", "measurement", "ert_measurements.png", render_ert_measurement)
+        if velocity_model is not None:
+            def render_srt_model(ax) -> None:
+                pg.show(mesh, velocity_model, ax=ax, cMap="turbo", label="Velocity (m/s)")
+                ax.set_title("Seismic velocity model")
+
+            def render_srt_measurement(ax) -> None:
+                tt.drawFirstPicks(ax, srt_data)
+                ax.set_title("Synthetic seismic first arrivals")
+
+            _save_display("SRT", "model", "srt_velocity_model.png", render_srt_model)
+            _save_display("SRT", "measurement", "srt_first_arrivals.png", render_srt_measurement)
         fig = plt.figure(figsize=(13, 7))
         if resistivity_model is not None:
             ax1 = fig.add_subplot(2, 2, 1)
@@ -505,6 +540,21 @@ def run_hydro_forward(
         por_station = por_profile[:, station_idx]
         structure_station = structure[:, station_idx]
 
+        fig_model, ax_model = plt.subplots(figsize=(6.2, 4.5))
+        im_model = ax_model.imshow(np.asarray(wc_profile, dtype=float), aspect="auto", origin="upper",
+                                   extent=[float(L_profile[0]), float(L_profile[-1]), n_layers, 0],
+                                   cmap="Blues")
+        ax_model.set_xlabel("Distance along profile (m)")
+        ax_model.set_ylabel("Layer index (surface \u2192 depth)")
+        ax_model.set_title("Hydrologic profile input")
+        fig_model.colorbar(im_model, ax=ax_model, label="Water content")
+        fig_model.tight_layout()
+        hydro_model_path = out_dir / "hydrologic_profile_model.png"
+        fig_model.savefig(hydro_model_path, dpi=180, bbox_inches="tight")
+        plt.close(fig_model)
+        for method in em_methods:
+            display_paths.setdefault(method, {})["model"] = str(hydro_model_path)
+
         fig, axes = plt.subplots(1, max(1, len(em_methods)), figsize=(5.2 * len(em_methods), 4.4), squeeze=False)
         col = 0
         if "TDEM" in methods:
@@ -530,6 +580,13 @@ def run_hydro_forward(
             im = ax.pcolormesh(x_station, times, np.abs(tdem_clean).T, shading="auto", cmap="magma")
             ax.set_yscale("log"); ax.set_xlabel("Distance (m)"); ax.set_ylabel("Time (s)")
             ax.set_title("Pseudo-2D TDEM |response|"); fig.colorbar(im, ax=ax)
+            def render_tdem_measurement(ax) -> None:
+                image = ax.pcolormesh(x_station, times, np.abs(tdem_clean).T, shading="auto", cmap="magma")
+                ax.set_yscale("log"); ax.set_xlabel("Distance (m)"); ax.set_ylabel("Time (s)")
+                ax.set_title("Synthetic TDEM measurements")
+                ax.figure.colorbar(image, ax=ax, label="|response|")
+
+            _save_display("TDEM", "measurement", "tdem_measurements.png", render_tdem_measurement)
             data_summary["tdem_shape"] = list(np.asarray(tdem_clean).shape)
             _save_data(lambda p: np.savez(p, times=times, clean=np.asarray(tdem_clean),
                                           noisy=np.asarray(tdem_noisy), x_station=x_station),
@@ -562,6 +619,14 @@ def run_hydro_forward(
             im = ax.pcolormesh(x_station, freqs, np.abs(np.imag(fdem_clean)).T, shading="auto", cmap="viridis")
             ax.set_yscale("log"); ax.set_xlabel("Distance (m)"); ax.set_ylabel("Frequency (Hz)")
             ax.set_title("Pseudo-2D FDEM |imag|"); fig.colorbar(im, ax=ax)
+            def render_fdem_measurement(ax) -> None:
+                image = ax.pcolormesh(x_station, freqs, np.abs(np.imag(fdem_clean)).T,
+                                      shading="auto", cmap="viridis")
+                ax.set_yscale("log"); ax.set_xlabel("Distance (m)"); ax.set_ylabel("Frequency (Hz)")
+                ax.set_title("Synthetic FDEM measurements")
+                ax.figure.colorbar(image, ax=ax, label="|imaginary response|")
+
+            _save_display("FDEM", "measurement", "fdem_measurements.png", render_fdem_measurement)
             data_summary["fdem_shape"] = list(np.asarray(fdem_clean).shape)
             _save_data(lambda p: np.savez(p, frequencies=freqs, clean=np.asarray(fdem_clean),
                                           x_station=x_station), "fdem_response.npz")
@@ -586,6 +651,14 @@ def run_hydro_forward(
             ax.plot(x_station, grav_noisy, "o", ms=3.5, alpha=0.7, label="noisy")
             ax.set_xlabel("Distance (m)"); ax.set_ylabel("Gravity anomaly (mGal)")
             ax.set_title("Pseudo-2D gravity"); ax.grid(True, alpha=0.25); ax.legend(loc="best")
+            def render_gravity_measurement(ax) -> None:
+                ax.plot(x_station, grav_clean, "k-", lw=1.6, label="clean")
+                ax.plot(x_station, grav_noisy, "o", ms=3.5, alpha=0.7, label="noisy")
+                ax.set_xlabel("Distance (m)"); ax.set_ylabel("Gravity anomaly (mGal)")
+                ax.set_title("Synthetic gravity measurements")
+                ax.grid(True, alpha=0.25); ax.legend(loc="best")
+
+            _save_display("Gravity", "measurement", "gravity_measurements.png", render_gravity_measurement)
             data_summary["gravity_range_mGal"] = [float(np.min(grav_clean)), float(np.max(grav_clean))]
             _save_data(lambda p: np.savez(p, station_x=x_station, clean=np.asarray(grav_clean),
                                           noisy=np.asarray(grav_noisy)), "gravity_response.npz")
@@ -609,6 +682,7 @@ def run_hydro_forward(
         "mesh_cells": int(mesh.cellCount()),
         "config_path": str(config_path),
         "figure_paths": figure_paths,
+        "display_paths": display_paths,
         "data_paths": data_paths,
         "data_summary": data_summary,
         "output_dir": str(out_dir),

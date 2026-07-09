@@ -23,9 +23,10 @@ MODULE_PURPOSES: Dict[str, str] = {
     "mesh3d": "Build a 3D finite-element mesh with sensor/electrode geometry, then run 3D ERT "
               "FORWARD modeling on it to generate synthetic 3D ERT data. Use this for '3D ERT "
               "forward modeling': first 'generate' the mesh, then 'run_ert_forward'.",
-    "em": "Forward-model and 1D-invert EM soundings (FDEM/TDEM).",
+    "em": "Forward-model and 1D-invert EM soundings (FDEM/TDEM). Has bundled TDEM and "
+          "synthetic FDEM examples (use_example_data).",
     "gravmag": "Process gravity / magnetic station data: regional-residual separation, gridding, "
-               "profiles, and simple body forward modeling.",
+               "profiles, and simple body forward modeling. Has bundled examples (use_example_data).",
     "hydro_geophysics": "Generate SYNTHETIC geophysical data by 2D-profile FORWARD MODELING (ERT, "
                         "SRT, TDEM, FDEM, gravity) from a hydrologic model along a 2D line / "
                         "cross-section. Use this for forward modeling along a profile. Has built-in "

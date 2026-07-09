@@ -26,6 +26,7 @@ LogFn = Callable[[str], None]
 _G = 6.67430e-11        # gravitational constant (m^3 kg^-1 s^-2)
 _MGAL = 1.0e5           # m/s^2 -> mGal
 _MU0_4PI = 1.0e-7       # mu0 / 4pi (T*m/A)
+_DEFAULT_NOISE_FLOOR = {"gravity": 0.5, "magnetics": 2.0}
 
 
 def _noop(_msg: str) -> None:
@@ -40,7 +41,7 @@ def _utc_now() -> str:
 # Anomaly separation + gridding + profiles
 # ---------------------------------------------------------------------------
 def regional_residual(x: np.ndarray, y: np.ndarray, value: np.ndarray,
-                      degree: int = 1) -> Tuple[np.ndarray, np.ndarray]:
+                       degree: int = 1) -> Tuple[np.ndarray, np.ndarray]:
     """Fit a polynomial regional trend of ``degree`` (1..3); return (regional, residual)."""
     x = np.asarray(x, dtype=float); y = np.asarray(y, dtype=float)
     v = np.asarray(value, dtype=float)
@@ -52,6 +53,65 @@ def regional_residual(x: np.ndarray, y: np.ndarray, value: np.ndarray,
     coef, *_ = np.linalg.lstsq(A, v, rcond=None)
     regional = A @ coef
     return regional, v - regional
+
+
+def spatially_balanced_indices(x: np.ndarray, y: np.ndarray, max_stations: int) -> np.ndarray:
+    """Return deterministic farthest-point indices for a spatially balanced subset.
+
+    The previous evenly spaced file-row selection could over-sample a survey
+    segment when input rows were ordered by flight line or acquisition order.
+    Farthest-point selection starts near the survey centroid and repeatedly adds
+    the station furthest from the selected set, preserving map coverage without
+    a random seed.
+    """
+    x = np.asarray(x, dtype=float).ravel()
+    y = np.asarray(y, dtype=float).ravel()
+    n = x.size
+    cap = max(1, int(max_stations))
+    if n <= cap:
+        return np.arange(n, dtype=int)
+    sx = max(float(np.ptp(x)), 1.0)
+    sy = max(float(np.ptp(y)), 1.0)
+    xy = np.column_stack(((x - float(x.min())) / sx, (y - float(y.min())) / sy))
+    center = np.mean(xy, axis=0)
+    first = int(np.argmin(np.sum((xy - center) ** 2, axis=1)))
+    selected = np.empty(cap, dtype=int)
+    selected[0] = first
+    min_dist2 = np.sum((xy - xy[first]) ** 2, axis=1)
+    min_dist2[first] = -1.0
+    for i in range(1, cap):
+        chosen = int(np.argmax(min_dist2))
+        selected[i] = chosen
+        min_dist2 = np.minimum(min_dist2, np.sum((xy - xy[chosen]) ** 2, axis=1))
+        min_dist2[selected[:i + 1]] = -1.0
+    return selected
+
+
+def qc_products(x: np.ndarray, y: np.ndarray, value: np.ndarray, *, detrend: int = 1,
+                nx: int = 120, ny: int = 120) -> Dict[str, Any]:
+    """Calculate observed, regional and residual products for map/profile QC."""
+    x = np.asarray(x, dtype=float).ravel()
+    y = np.asarray(y, dtype=float).ravel()
+    value = np.asarray(value, dtype=float).ravel()
+    good = np.isfinite(x) & np.isfinite(y) & np.isfinite(value)
+    if int(good.sum()) < 3:
+        raise ValueError("Need at least three finite stations for QC products.")
+    x, y, value = x[good], y[good], value[good]
+    degree = max(0, int(detrend))
+    if degree == 0:
+        regional = np.zeros_like(value)
+        residual = value.copy()
+    else:
+        regional, residual = regional_residual(x, y, value, degree=degree)
+    fields = {"Observed": value, "Regional": regional, "Residual": residual}
+    grids = {name: grid_data(x, y, values, nx=nx, ny=ny) for name, values in fields.items()}
+    stats = {
+        name: {"min": float(np.nanmin(values)), "max": float(np.nanmax(values)),
+               "mean": float(np.nanmean(values)), "std": float(np.nanstd(values))}
+        for name, values in fields.items()
+    }
+    return {"x": x, "y": y, "fields": fields, "grids": grids, "stats": stats,
+            "detrend": degree}
 
 
 def grid_data(x: np.ndarray, y: np.ndarray, value: np.ndarray,
@@ -211,20 +271,31 @@ class InversionBackendUnavailable(RuntimeError):
     """SimPEG / discretize / a usable solver could not be imported."""
 
 
-def invert_gravmag(x, y, value, kind: str, *, field: Optional[Dict[str, Any]] = None,
-                   detrend: int = 0, n_xy: int = 22, n_z: int = 12, max_iterations: int = 20,
+def backend_status() -> Dict[str, Any]:
+    """Report whether the SimPEG potential-field inversion stack is available."""
+    try:
+        import pymatsolver  # noqa: F401
+        from discretize import TensorMesh  # noqa: F401
+        from simpeg.potential_fields import gravity, magnetics  # noqa: F401
+    except Exception as exc:  # noqa: BLE001 - optional numerical backend
+        return {"available": False, "error": str(exc)}
+    return {"available": True, "error": ""}
+
+
+def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
+                   field: Optional[Dict[str, Any]] = None, detrend: int = 0,
+                   n_xy: int = 22, n_z: int = 12, max_iterations: int = 20,
                    beta0_ratio: float = 1.0, max_stations: int = 600,
+                   relative_error: float = 0.03, noise_floor: Optional[float] = None,
                    out_dir: Optional[str] = None, log: LogFn = _noop) -> Dict[str, Any]:
     """Run a SimPEG 3D potential-field inversion under the survey.
 
     ``gravity`` recovers a density-contrast model (g/cc); ``magnetics`` recovers a
     susceptibility model (SI) and needs ``field`` = {inclination, declination,
-    strength_nT}. ``detrend`` (0..3) removes a polynomial regional trend of that
-    degree from ``value`` before inverting, so a raw field can be reduced to its
-    residual anomaly first (0 = invert the field as given). Returns the model on a
-    regular grid — ``edges`` = (ex, ey, ez) (cell edges, m) and ``model3d``
-    (nx, ny, nz), z = elevation increasing up — plus chi2 and the data count. Raises
-    :class:`InversionBackendUnavailable` if SimPEG is missing.
+    strength_nT}. ``z`` is optional per-station elevation (m, positive upward); a
+    missing value falls back to 1 m. ``detrend`` (0..3) removes a polynomial
+    regional trend before inversion. The returned grid uses elevation increasing
+    upward. Raises :class:`InversionBackendUnavailable` if SimPEG is missing.
     """
     try:
         import pymatsolver
@@ -239,17 +310,27 @@ def invert_gravmag(x, y, value, kind: str, *, field: Optional[Dict[str, Any]] = 
     except Exception as exc:  # noqa: BLE001
         raise InversionBackendUnavailable(str(exc))
 
-    x = np.asarray(x, float); y = np.asarray(y, float); value = np.asarray(value, float)
-    good = np.isfinite(x) & np.isfinite(y) & np.isfinite(value)
-    x, y, value = x[good], y[good], value[good]
+    x = np.asarray(x, float).ravel(); y = np.asarray(y, float).ravel()
+    value = np.asarray(value, float).ravel()
+    if not (x.size == y.size == value.size):
+        raise ValueError("x, y and value must have the same number of stations.")
+    if z is None:
+        z = np.full(x.size, 1.0, dtype=float)
+    else:
+        z = np.asarray(z, float).ravel()
+        if z.size != x.size:
+            raise ValueError("z must be omitted or contain one elevation per station.")
+    good = np.isfinite(x) & np.isfinite(y) & np.isfinite(value) & np.isfinite(z)
+    x, y, value, z = x[good], y[good], value[good], z[good]
     if x.size < 20:
         raise ValueError("Need at least ~20 stations for a stable inversion.")
     if int(detrend) > 0:
         _, value = regional_residual(x, y, value, degree=int(detrend))
         log(f"Removed a degree-{int(detrend)} regional trend before inversion.")
+    n_input = int(x.size)
     if x.size > int(max_stations):
-        idx = np.linspace(0, x.size - 1, int(max_stations)).astype(int)
-        x, y, value = x[idx], y[idx], value[idx]
+        idx = spatially_balanced_indices(x, y, int(max_stations))
+        x, y, value, z = x[idx], y[idx], value[idx], z[idx]
     log(f"{kind} inversion: {x.size} stations")
 
     x0, x1 = float(x.min()), float(x.max()); y0, y1 = float(y.min()), float(y.max())
@@ -262,7 +343,7 @@ def invert_gravmag(x, y, value, kind: str, *, field: Optional[Dict[str, Any]] = 
     actv = np.ones(mesh.n_cells, dtype=bool)
     model_map = maps.IdentityMap(nP=mesh.n_cells)
 
-    rx = pf.receivers.Point(np.c_[x, y, np.full_like(x, 1.0)],
+    rx = pf.receivers.Point(np.c_[x, y, z],
                             components=("gz" if is_grav else "tmi"))
     if is_grav:
         survey = pf.survey.Survey(pf.sources.SourceField(receiver_list=[rx]))
@@ -287,23 +368,27 @@ def invert_gravmag(x, y, value, kind: str, *, field: Optional[Dict[str, Any]] = 
     sim.solver = pymatsolver.Solver
     sim.solver_opts = {}
 
-    std = 0.03 * np.abs(value) + floor
+    if noise_floor is None:
+        noise_floor = _DEFAULT_NOISE_FLOOR["gravity" if is_grav else "magnetics"]
+    std = max(0.0, float(relative_error)) * np.abs(value) + max(0.0, float(noise_floor))
     dmis = data_misfit.L2DataMisfit(
         data=data.Data(survey, dobs=value, standard_deviation=std), simulation=sim)
     reg = regularization.WeightedLeastSquares(mesh, active_cells=actv)
     opt = optimization.ProjectedGNCG(maxIter=int(max_iterations), lower=lower, upper=upper,
                                      maxIterCG=20, tolCG=1e-3)
     invprob = inverse_problem.BaseInvProblem(dmis, reg, opt)
+    history_directive = directives.SaveOutputEveryIteration(on_disk=False)
     dlist = [directives.UpdateSensitivityWeights(every_iteration=False),
              directives.BetaEstimate_ByEig(beta0_ratio=float(beta0_ratio)),
              directives.BetaSchedule(coolingFactor=2.0, coolingRate=1),
-             directives.TargetMisfit()]
+             history_directive, directives.TargetMisfit()]
     log(f"Running SimPEG inversion ({mesh.n_cells} cells, up to {int(max_iterations)} iters)…")
     mrec = np.asarray(inversion.BaseInversion(invprob, directiveList=dlist).run(np.zeros(mesh.n_cells)), float)
     try:
         phi_d = float(dmis(mrec)); chi2 = phi_d / value.size
     except Exception:  # noqa: BLE001
         chi2 = float("nan")
+    convergence = [float(phi_d) / value.size for phi_d in history_directive.phi_d]
 
     model3d = mrec.reshape((nx, ny, nz), order="F")
     ex = ox + csx * np.arange(nx + 1)
@@ -312,7 +397,9 @@ def invert_gravmag(x, y, value, kind: str, *, field: Optional[Dict[str, Any]] = 
     out: Dict[str, Any] = {
         "kind": kind, "edges": (ex, ey, ez), "model3d": model3d,
         "label": m_label, "cmap": m_cmap, "log_scale": False,
-        "chi2": chi2, "n_data": int(value.size), "n_cells": int(mesh.n_cells),
+        "chi2": chi2, "n_data": int(value.size), "n_input": n_input,
+        "n_cells": int(mesh.n_cells), "relative_error": float(relative_error),
+        "noise_floor": float(noise_floor), "convergence": convergence,
         "model_range": [float(np.nanmin(mrec)), float(np.nanmax(mrec))],
     }
     if out_dir:

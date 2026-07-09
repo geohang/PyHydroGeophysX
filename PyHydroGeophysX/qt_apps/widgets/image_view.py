@@ -42,3 +42,7 @@ class ZoomableImageView(QWidget):
         self._img.setImage(arr, levels=levels)
         self._vb.autoRange()
         return True
+
+    def clear(self) -> None:
+        """Remove the current image when a result panel has no matching output."""
+        self._img.clear()

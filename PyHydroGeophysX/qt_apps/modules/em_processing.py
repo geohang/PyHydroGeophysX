@@ -89,6 +89,7 @@ class EMProcessingModule(BaseModule):
         self._geom_heights: Optional[np.ndarray] = None
         self._geom_x: Optional[np.ndarray] = None
         self._geom_y: Optional[np.ndarray] = None
+        self._example_id: Optional[str] = None
 
         root = QHBoxLayout(self)
         self._tabs = QTabWidget()
@@ -207,6 +208,11 @@ class EMProcessingModule(BaseModule):
         self._info = QLabel("No sounding loaded.")
         self._info.setWordWrap(True)
         v.addWidget(self._info)
+        self._example_note = QLabel("")
+        self._example_note.setWordWrap(True)
+        self._example_note.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        self._example_note.setVisible(False)
+        v.addWidget(self._example_note)
         return box
 
     def _build_geometry_group(self) -> QGroupBox:
@@ -219,7 +225,8 @@ class EMProcessingModule(BaseModule):
         self._component = QComboBox(); self._component.addItems(["secondary", "total", "both"])
         self._waveform = QComboBox()
         form.addRow("Source radius (m)", self._src_radius)
-        form.addRow("Tx-Rx sep (m)", self._tx_rx)
+        self._tx_rx_label = QLabel("Tx-Rx sep (m)")
+        form.addRow(self._tx_rx_label, self._tx_rx)
         form.addRow("Height (m)", self._height)
         form.addRow("Orientation", self._orient)
         self._component_label = QLabel("Component")
@@ -280,6 +287,10 @@ class EMProcessingModule(BaseModule):
         self._inv_btn.setIcon(theme.icon("fa5s.bullseye", color="#ffffff"))
         self._inv_btn.clicked.connect(self._run_inversion)
         form.addRow(self._inv_btn)
+        self._backend_label = QLabel()
+        self._backend_label.setWordWrap(True)
+        self._backend_label.setStyleSheet("font-size:8pt;")
+        form.addRow("Backend", self._backend_label)
         self._inv_progress = QProgressBar(); self._inv_progress.setVisible(False)
         form.addRow(self._inv_progress)
         self._inv_export = QPushButton("Export recovered model (npy + csv)…")
@@ -296,7 +307,25 @@ class EMProcessingModule(BaseModule):
         self._waveform.addItems(["dipole", "loop"] if fdem else ["step_off", "ramp_off"])
         self._component_label.setVisible(fdem)
         self._component.setVisible(fdem)
-        self._tx_rx.setEnabled(fdem)
+        self._tx_rx_label.setVisible(fdem)
+        self._tx_rx.setVisible(fdem)
+        self._refresh_backend_state()
+
+    def _refresh_backend_state(self) -> bool:
+        """Reflect the method-specific SimPEG availability in the run controls."""
+        status = em_pipeline.backend_status(self._method.currentText())
+        available = bool(status["available"])
+        if available:
+            self._backend_label.setText("Ready: SimPEG backend available.")
+            self._backend_label.setStyleSheet("color:#27734b; font-size:8pt;")
+        else:
+            self._backend_label.setText(
+                "Unavailable: install the geophysics extra (SimPEG + discretize). "
+                f"{status['error']}")
+            self._backend_label.setStyleSheet("color:#9b5a00; font-size:8pt;")
+        if not self._inv_progress.isVisible():
+            self._inv_btn.setEnabled(available)
+        return available
 
     # -- geometry / params ---------------------------------------------------
     def _collect_geom(self) -> Dict[str, Any]:
@@ -321,11 +350,44 @@ class EMProcessingModule(BaseModule):
         path, _ = QFileDialog.getOpenFileName(self, "Load sounding", "", _FILE_FILTER)
         if not path:
             return
+        self._example_id = None
+        self._example_note.setVisible(False)
         self._source_path = Path(path)
         self._sounding.blockSignals(True)
         self._sounding.setValue(1)
         self._sounding.blockSignals(False)
         self._load_sounding(0)
+
+    def _load_example(self, example_id: str) -> Dict[str, Any]:
+        """Load a documented demo dataset and apply its compatible settings."""
+        catalog = em_pipeline.example_catalog()
+        spec = catalog.get(example_id)
+        if spec is None:
+            return {"status": "failed", "error": f"Unknown EM example '{example_id}'.",
+                    "valid_examples": sorted(catalog)}
+        path = Path(spec["path"])
+        if not path.exists():
+            return {"status": "failed", "error": f"Example file not found: {path}"}
+        self._method.setCurrentText(str(spec["method"]))
+        self._agent_set_params(dict(spec.get("params", {})))
+        self._example_id = example_id
+        self._source_path = path
+        self._sounding.blockSignals(True)
+        self._sounding.setValue(1)
+        self._sounding.blockSignals(False)
+        self._load_sounding(0)
+        if self._data is None:
+            return {"status": "failed", "error": f"Could not load example '{example_id}'."}
+        self._example_note.setText(f"Example: {spec['note']}")
+        self._example_note.setVisible(True)
+        channels = self._data.get("frequencies", self._data.get("times"))
+        self.log(f"Loaded EM example: {spec['label']}", "success")
+        return {
+            "status": "ok", "example": example_id, "method": self._method.currentText(),
+            "channels": int(np.asarray(channels).size),
+            "n_soundings": int(self._data.get("n_soundings", 1)),
+            "note": spec["note"],
+        }
 
     def _load_sounding(self, index: int) -> None:
         if self._source_path is None:
@@ -431,6 +493,11 @@ class EMProcessingModule(BaseModule):
             self.log("Load a sounding first.", "warn")
             return
         method = self._method.currentText()
+        status = em_pipeline.backend_status(method)
+        if not status["available"]:
+            self.log(f"{method} inversion unavailable: {status['error']}", "warn")
+            self._refresh_backend_state()
+            return
         n_snd = int(self._data.get("n_soundings", 1))
         ref = float(self._ref_res.value())
         # Reference-resistivity calibration for a single sounding, or the rough
@@ -485,8 +552,9 @@ class EMProcessingModule(BaseModule):
         worker.start()
 
     def _reset_inv_button(self) -> None:
-        self._inv_btn.setEnabled(True); self._inv_btn.setText("Run inversion")
+        self._inv_btn.setText("Run inversion")
         self._inv_progress.setVisible(False)
+        self._refresh_backend_state()
 
     def _on_inversion_ok(self, result: dict) -> None:
         self._last_result = result
@@ -500,9 +568,10 @@ class EMProcessingModule(BaseModule):
         self._quality_view.show_quality(
             {"chi2": float(result["chi2"]), "n_data": result.get("n_data"),
              "method": f"{result['method']} 1D Occam",
-             "extra": {"layers": result.get("n_layers"), "forward evals": result.get("nfev")},
+              "extra": {"layers": result.get("n_layers"), "forward evals": result.get("nfev"),
+                        "iterations": len(result.get("convergence") or [])},
              "note": "1D least-squares inversion (χ² is the mean weighted squared residual)."},
-            convergence=None, title=f"{result['method']} inversion")
+            convergence=result.get("convergence"), title=f"{result['method']} inversion")
         self.log(f"{result['method']} inversion complete (chi2={result['chi2']:.3f}).", "success")
         self.report_result({"method": result["method"], "chi2": float(result["chi2"]),
                             "n_data": result.get("n_data"), "nfev": result.get("nfev"),
@@ -638,6 +707,10 @@ class EMProcessingModule(BaseModule):
             "title": self.module_title,
             "state": self._agent_status(),
             "actions": [
+                {"name": "use_example_data",
+                 "args": {"example": ["east_river_vtem", "skytem_bhmar", "synthetic_fdem"]},
+                 "desc": ("Load a documented EM example. Default is east_river_vtem; "
+                          "synthetic_fdem is the reproducible FDEM demo.")},
                 {"name": "set_method", "args": {"method": list(em_pipeline.METHODS)},
                  "desc": "Choose the EM method (FDEM or TDEM)."},
                 {"name": "load_data", "args": {"path": "str", "sounding": "int (optional, 1-based)"},
@@ -671,6 +744,7 @@ class EMProcessingModule(BaseModule):
     def agent_apply(self, action: str, args: Dict[str, Any]) -> Dict[str, Any]:
         args = args or {}
         handlers = {
+            "use_example_data": lambda: self._load_example(args.get("example", "east_river_vtem")),
             "set_method": lambda: self._agent_set_method(args.get("method")),
             "load_data": lambda: self._agent_load(args.get("path"), args.get("sounding", 1)),
             "set_params": lambda: self._agent_set_params(args.get("params", args)),
@@ -693,7 +767,9 @@ class EMProcessingModule(BaseModule):
             "method": self._method.currentText(),
             "data_loaded": self._data is not None,
             "source": str(self._source_path or ""),
+            "example": self._example_id,
             "n_soundings": n_snd,
+            "backend": em_pipeline.backend_status(self._method.currentText()),
             "last_result_keys": sorted(last.keys()),
         }
 
@@ -710,6 +786,8 @@ class EMProcessingModule(BaseModule):
         p = Path(str(path))
         if not p.exists():
             return {"status": "failed", "error": f"File not found: {p}"}
+        self._example_id = None
+        self._example_note.setVisible(False)
         self._source_path = Path(p)
         try:
             self._load_sounding(max(0, int(sounding) - 1))
@@ -769,6 +847,11 @@ class EMProcessingModule(BaseModule):
     def _agent_run_inversion(self) -> Dict[str, Any]:
         if self._data is None:
             return {"status": "failed", "error": "Load a sounding first."}
+        backend = em_pipeline.backend_status(self._method.currentText())
+        if not backend["available"]:
+            self._refresh_backend_state()
+            return {"status": "failed", "error": f"EM backend unavailable: {backend['error']}",
+                    "backend": backend}
         n_snd = int(self._data.get("n_soundings", 1))
         self._run_inversion()
         return {"status": "started",

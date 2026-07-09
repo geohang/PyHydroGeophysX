@@ -114,6 +114,8 @@ class HydroGeophysicsModule(BaseModule):
         self._preview_debounced = Debouncer(self._update_preview, 120)
         self._param_panels: Dict[str, QWidget] = {}
         self._current = 0
+        self._agent_parameters_confirmed = False
+        self._agent_parameter_mode = ""
 
         root = QVBoxLayout(self)
         root.addWidget(self._build_strip())
@@ -702,48 +704,94 @@ class HydroGeophysicsModule(BaseModule):
         header.addWidget(open_btn)
         layout.addLayout(header)
 
-        self._gallery_scroll = QScrollArea()
-        self._gallery_scroll.setWidgetResizable(True)
-        self._gallery_host = QWidget()
-        self._gallery_layout = QVBoxLayout(self._gallery_host)
-        self._gallery_layout.addWidget(QLabel("No results yet. Complete Steps 1–5 and run forward modeling."))
-        self._gallery_scroll.setWidget(self._gallery_host)
-        layout.addWidget(self._gallery_scroll, stretch=1)
+        self._result_summary = QLabel("No results yet. Complete Steps 1–5 and run forward modeling.")
+        self._result_summary.setWordWrap(True)
+        layout.addWidget(self._result_summary)
+        picker = QHBoxLayout()
+        picker.addWidget(QLabel("Method:"))
+        self._result_method = QComboBox()
+        self._result_method.currentIndexChanged.connect(self._show_selected_result)
+        picker.addWidget(self._result_method)
+        picker.addStretch(1)
+        layout.addLayout(picker)
+
+        panels = QHBoxLayout()
+        model_box = QGroupBox("Model")
+        model_layout = QVBoxLayout(model_box)
+        self._result_model_caption = QLabel("Select a completed method to view its model.")
+        self._result_model_caption.setWordWrap(True)
+        self._result_model_view = ZoomableImageView()
+        self._result_model_view.setMinimumHeight(440)
+        model_layout.addWidget(self._result_model_caption)
+        model_layout.addWidget(self._result_model_view, stretch=1)
+        measurement_box = QGroupBox("Measurements")
+        measurement_layout = QVBoxLayout(measurement_box)
+        self._result_measurement_caption = QLabel("Select a completed method to view synthetic measurements.")
+        self._result_measurement_caption.setWordWrap(True)
+        self._result_measurement_view = ZoomableImageView()
+        self._result_measurement_view.setMinimumHeight(440)
+        measurement_layout.addWidget(self._result_measurement_caption)
+        measurement_layout.addWidget(self._result_measurement_view, stretch=1)
+        panels.addWidget(model_box, stretch=1)
+        panels.addWidget(measurement_box, stretch=1)
+        layout.addLayout(panels, stretch=1)
+        self._result_files = QLabel("")
+        self._result_files.setWordWrap(True)
+        layout.addWidget(self._result_files)
+        self._result_paths: Dict[str, Dict[str, str]] = {}
         return page
 
     def _populate_results(self, result: Dict[str, Any]) -> None:
-        while self._gallery_layout.count():
-            item = self._gallery_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        summary = QLabel(
+        self._result_summary.setText(
             f"<b>Status:</b> {result.get('status')} &nbsp; "
             f"<b>Methods:</b> {', '.join(result.get('methods', []))} &nbsp; "
             f"<b>Mesh cells:</b> {result.get('mesh_cells', '—')}")
-        summary.setWordWrap(True)
-        self._gallery_layout.addWidget(summary)
-        figs = result.get("figure_paths", [])
-        if not figs:
-            self._gallery_layout.addWidget(QLabel("No figures were produced (config exported instead)."))
-        for fig in figs:
-            if Path(fig).exists():
-                self._gallery_layout.addWidget(QLabel(f"<b>{Path(fig).name}</b>"))
-                view = ZoomableImageView()
-                view.setMinimumHeight(420)
-                if view.set_image_file(fig):
-                    self._gallery_layout.addWidget(view)
-                else:
-                    self._gallery_layout.addWidget(QLabel("(could not load figure)"))
-        data_files = result.get("data_paths", [])
-        if data_files:
-            names = ", ".join(Path(p).name for p in data_files)
-            lbl = QLabel(f"<b>Synthetic data exported:</b> {names}")
-            lbl.setWordWrap(True)
-            self._gallery_layout.addWidget(lbl)
+        paths = result.get("display_paths", {})
+        self._result_paths = {
+            str(method): {str(panel): str(path) for panel, path in panels.items()}
+            for method, panels in paths.items() if isinstance(panels, dict)
+        }
+        # Backward-compatible fallback for old results written before separate
+        # model/measurement figures were available.
+        legacy = [str(path) for path in result.get("figure_paths", []) if Path(path).exists()]
+        if not self._result_paths and legacy:
+            self._result_paths = {
+                method: {"model": legacy[0], "measurement": legacy[0]}
+                for method in result.get("methods", [])
+            }
+        self._result_method.blockSignals(True)
+        self._result_method.clear()
+        for method in result.get("methods", []):
+            if method in self._result_paths:
+                label = "Seismic (SRT)" if method == "SRT" else str(method)
+                self._result_method.addItem(label, method)
+        self._result_method.blockSignals(False)
+        if self._result_method.count():
+            self._result_method.setCurrentIndex(0)
+            self._show_selected_result()
+        else:
+            self._show_selected_result()
+        files = [Path(p).name for p in result.get("data_paths", [])]
         cfg = result.get("config_path")
+        bits = [f"<b>Synthetic data:</b> {', '.join(files)}" if files else ""]
         if cfg:
-            self._gallery_layout.addWidget(QLabel(f"Survey config: <code>{cfg}</code>"))
-        self._gallery_layout.addStretch(1)
+            bits.append(f"Survey config: <code>{cfg}</code>")
+        self._result_files.setText("<br>".join(bit for bit in bits if bit))
+
+    def _show_selected_result(self) -> None:
+        """Load the selected method into the side-by-side model/data panels."""
+        method = self._result_method.currentData()
+        paths = self._result_paths.get(str(method), {}) if method else {}
+        for panel, view, caption in (
+            ("model", self._result_model_view, self._result_model_caption),
+            ("measurement", self._result_measurement_view, self._result_measurement_caption),
+        ):
+            path = paths.get(panel)
+            if path and Path(path).exists() and view.set_image_file(path):
+                caption.setText(f"{str(method)} {panel}: <code>{Path(path).name}</code>")
+            else:
+                view.clear()
+                caption.setText(f"No {panel} figure is available for this method.")
 
     def _open_output_folder(self) -> None:
         out = self.state.module_results.get(self.module_key, {}).get("output_dir")
@@ -1121,15 +1169,21 @@ class HydroGeophysicsModule(BaseModule):
                  "desc": "Load the bundled example / project-context hydro data."},
                 {"name": "set_data_dir", "args": {"path": "str"},
                  "desc": "Load hydro data (Watercontent/Porosity/top/bot .npy) from a folder."},
+                {"name": "start_profile_pick", "args": {},
+                 "desc": "Open the Profile step and pause while the user clicks two map points."},
                 {"name": "pick_profile", "args": {"p1": "[col, row]", "p2": "[col, row]"},
                  "desc": "Define the 2D cross-section by two grid points."},
                 {"name": "select_methods", "args": {"methods": list(_METHODS)},
                  "desc": "Choose which forward methods to simulate."},
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
-                 "desc": ("Set parameters. Keys: snapshot_index, num_samples, seed, "
-                          "ert.num_electrodes, ert.electrode_spacing, ert.electrode_start, "
-                          "ert.scheme_name (one of wa/dd/slm/dp), ert.noise_level, "
-                          "srt.num_sensors, srt.sensor_spacing.")},
+                  "desc": ("Set parameters. Keys: snapshot_index, num_samples, seed, "
+                           "ert.num_electrodes, ert.electrode_spacing, ert.electrode_start, "
+                           "ert.scheme_name (one of wa/dd/slm/dp), ert.noise_level, "
+                           "ert.rel_error, ert.abs_error, srt.num_sensors, srt.sensor_spacing, "
+                           "srt.shot_distance, srt.noise_level, srt.noise_abs, plus the "
+                            "TDEM/FDEM/Gravity keys returned in parameter_defaults.")},
+                {"name": "confirm_parameters", "args": {"mode": ["defaults", "custom"]},
+                 "desc": "Confirm the user's explicit parameter choice before running; defaults keeps displayed values."},
                 {"name": "goto_step", "args": {"step": list(_STEPS)},
                  "desc": "Jump to a wizard step by name or index."},
                 {"name": "run", "args": {},
@@ -1145,9 +1199,11 @@ class HydroGeophysicsModule(BaseModule):
         handlers = {
             "use_example_data": lambda: self._agent_use_example_data(),
             "set_data_dir": lambda: self._agent_set_data_dir(args.get("path")),
+            "start_profile_pick": lambda: self._agent_start_profile_pick(),
             "pick_profile": lambda: self._agent_pick_profile(args),
             "select_methods": lambda: self._agent_select_methods(args.get("methods")),
             "set_params": lambda: self._agent_set_params(args.get("params", args)),
+            "confirm_parameters": lambda: self._agent_confirm_parameters(args.get("mode")),
             "goto_step": lambda: self._agent_goto_step(args.get("step")),
             "run": lambda: self._agent_run(),
             "get_status": lambda: self._agent_status(),
@@ -1167,6 +1223,9 @@ class HydroGeophysicsModule(BaseModule):
             "current_step": _STEPS[self._current],
             "data_dir": str(self._data_dir() or ""),
             "methods": self._collect_methods(),
+            "parameter_defaults": self._agent_parameter_defaults(),
+            "parameters_confirmed": self._agent_parameters_confirmed,
+            "parameter_mode": self._agent_parameter_mode,
             "profile": {"p1": self._point1, "p2": self._point2},
             "last_result_status": last.get("status"),
         }
@@ -1183,6 +1242,59 @@ class HydroGeophysicsModule(BaseModule):
         self._reload()
         return {"status": "ok", "data_dir": str(self._data_dir() or ""),
                 "loaded": self._top is not None or self._wc is not None}
+
+    def _agent_parameter_defaults(self) -> Dict[str, Dict[str, Any]]:
+        """Return the visible default acquisition settings for AQUAH to present."""
+        params = self._collect_params()
+        selected = set(self._collect_methods())
+        defaults: Dict[str, Dict[str, Any]] = {}
+        if "ERT" in selected:
+            defaults["ERT"] = {
+                "electrodes": params["ert"]["num_electrodes"],
+                "spacing_m": params["ert"]["electrode_spacing"],
+                "array": params["ert"]["scheme_name"],
+                "noise_level": params["ert"]["noise_level"],
+                "relative_error": params["ert"]["rel_error"],
+                "absolute_error": params["ert"]["abs_error"],
+            }
+        if "SRT" in selected:
+            defaults["SRT"] = {
+                "sensors": params["srt"]["num_sensors"],
+                "spacing_m": params["srt"]["sensor_spacing"],
+                "shot_distance_sensors": params["srt"]["shot_distance"],
+                "noise_level": params["srt"]["noise_level"],
+                "absolute_noise_s": params["srt"]["noise_abs"],
+            }
+        if "TDEM" in selected:
+            defaults["TDEM"] = {
+                "time_range_s": [params["tdem"]["t_min_s"], params["tdem"]["t_max_s"]],
+                "time_gates": params["tdem"]["n_gates"], "noise_level": params["tdem"]["noise_level"],
+            }
+        if "FDEM" in selected:
+            defaults["FDEM"] = {
+                "frequency_range_hz": [params["fdem"]["f_min_hz"], params["fdem"]["f_max_hz"]],
+                "frequencies": params["fdem"]["n_freqs"], "noise_level": params["fdem"]["noise_level"],
+            }
+        if "Gravity" in selected:
+            defaults["Gravity"] = {
+                "sensor_height_m": params["gravity"]["sensor_height"],
+                "noise_level": params["gravity"]["noise_level"],
+                "stations": params["em_stations"],
+            }
+        return defaults
+
+    def _agent_start_profile_pick(self) -> Dict[str, Any]:
+        """Open the interactive Profile step and pause AQUAH for two map clicks."""
+        if self._top is None and self._wc is None:
+            return {"status": "failed", "error": "Load hydrologic data before picking a profile.",
+                    "hint": "Use example data or select a hydrologic model-output folder first."}
+        self._go_to(1)
+        self._profile_mode.setChecked(True)
+        return {
+            "status": "awaiting_user",
+            "step": _STEPS[self._current],
+            "message": "Profile map is open. Click two endpoints, then say ‘continue’.",
+        }
 
     def _agent_pick_profile(self, args: Dict[str, Any]) -> Dict[str, Any]:
         p1, p2 = args.get("p1"), args.get("p2")
@@ -1204,8 +1316,13 @@ class HydroGeophysicsModule(BaseModule):
                     "valid": list(_METHODS)}
         for name, box in self._method_boxes.items():
             box.setChecked(name in methods)
+        self._agent_parameters_confirmed = False
+        self._agent_parameter_mode = ""
+        self._go_to(3)
         self._update_strip()
-        return {"status": "ok", "selected": self._collect_methods()}
+        return {"status": "ok", "selected": self._collect_methods(),
+                "parameter_defaults": self._agent_parameter_defaults(),
+                "parameter_confirmation_required": True}
 
     def _agent_set_params(self, params: Any) -> Dict[str, Any]:
         if not isinstance(params, dict):
@@ -1226,8 +1343,24 @@ class HydroGeophysicsModule(BaseModule):
             "ert.electrode_start": lambda v: self._ert_start.setValue(float(v)),
             "ert.scheme_name": lambda v: set_combo(self._ert_scheme, v),
             "ert.noise_level": lambda v: self._ert_noise.setValue(float(v)),
+            "ert.rel_error": lambda v: self._ert_rel.setValue(float(v)),
+            "ert.abs_error": lambda v: self._ert_abs.setValue(float(v)),
             "srt.num_sensors": lambda v: self._srt_count.setValue(int(v)),
             "srt.sensor_spacing": lambda v: self._srt_spacing.setValue(float(v)),
+            "srt.shot_distance": lambda v: self._srt_shot.setValue(int(v)),
+            "srt.noise_level": lambda v: self._srt_noise.setValue(float(v)),
+            "srt.noise_abs": lambda v: self._srt_noise_abs.setValue(float(v)),
+            "tdem.t_min_s": lambda v: self._tdem_tmin.setValue(float(v)),
+            "tdem.t_max_s": lambda v: self._tdem_tmax.setValue(float(v)),
+            "tdem.n_gates": lambda v: self._tdem_ngates.setValue(int(v)),
+            "tdem.noise_level": lambda v: self._tdem_noise.setValue(float(v)),
+            "fdem.f_min_hz": lambda v: self._fdem_fmin.setValue(float(v)),
+            "fdem.f_max_hz": lambda v: self._fdem_fmax.setValue(float(v)),
+            "fdem.n_freqs": lambda v: self._fdem_nfreq.setValue(int(v)),
+            "fdem.noise_level": lambda v: self._fdem_noise.setValue(float(v)),
+            "gravity.sensor_height": lambda v: self._grav_sensor_h.setValue(float(v)),
+            "gravity.noise_level": lambda v: self._grav_noise.setValue(float(v)),
+            "em_stations": lambda v: self._em_stations.setValue(int(v)),
         }
         applied: Dict[str, Any] = {}
         ignored: Dict[str, str] = {}
@@ -1241,7 +1374,19 @@ class HydroGeophysicsModule(BaseModule):
                 applied[key] = value
             except Exception as exc:  # noqa: BLE001
                 ignored[key] = str(exc)
+        if applied:
+            self._agent_parameters_confirmed = False
+            self._agent_parameter_mode = ""
         return {"status": "ok" if applied else "failed", "applied": applied, "ignored": ignored}
+
+    def _agent_confirm_parameters(self, mode: Any) -> Dict[str, Any]:
+        """Record the user's explicit default/custom parameter confirmation."""
+        if mode not in ("defaults", "custom"):
+            return {"status": "failed", "error": "mode must be 'defaults' or 'custom'."}
+        self._agent_parameters_confirmed = True
+        self._agent_parameter_mode = str(mode)
+        return {"status": "ok", "mode": self._agent_parameter_mode,
+                "methods": self._collect_methods(), "parameter_defaults": self._agent_parameter_defaults()}
 
     def _agent_goto_step(self, step: Any) -> Dict[str, Any]:
         names = {name.lower(): i for i, name in enumerate(_STEPS)}
@@ -1257,6 +1402,11 @@ class HydroGeophysicsModule(BaseModule):
             missing = [k for k in ("data", "profile", "methods") if not status[k]]
             return {"status": "failed", "error": "Not ready to run.", "missing": missing,
                     "hint": "Load data, pick a profile, and select methods first."}
+        if not self._agent_parameters_confirmed:
+            return {"status": "failed",
+                    "error": "Confirm the user's parameter choice before running.",
+                    "required_action": "confirm_parameters",
+                    "parameter_defaults": self._agent_parameter_defaults()}
         self._run_forward()
         return {"status": "started",
                 "message": "Forward modeling started. Ask for status shortly.",
