@@ -26,16 +26,20 @@ This example shows how to:
 2. Apply those weights to an ERT smoothness matrix.
 3. Build a cross-gradient operator between two models.
 
-.. GENERATED FROM PYTHON SOURCE LINES 10-70
+.. GENERATED FROM PYTHON SOURCE LINES 10-79
 
 .. code-block:: Python
 
 
+    from typing import Any
 
     import numpy as np
     from scipy.sparse import diags
 
     from PyHydroGeophysX.inversion.cross_constraints import StructuralConstraint
+
+
+
 
 
     class _DummyMesh:
@@ -53,7 +57,12 @@ This example shows how to:
             return np.column_stack((x, z))
 
 
-    def run_example():
+    def run_example() -> Any:
+        """Run the structural-constraint demonstration workflow.
+
+        Returns:
+            Tuple containing the weighted smoothness matrix and cross-gradient operator.
+        """
         n_cells = 60
         mesh = _DummyMesh(n_cells)
 

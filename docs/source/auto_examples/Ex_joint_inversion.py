@@ -11,15 +11,18 @@ Error inputs use ``ert_relative_error`` / ``ert_absolute_u_error`` and
 ``srt_relative_error`` / ``srt_absolute_error`` for both modalities.
 """
 
-# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_joint_inversion_fig_01.png'
-
 import os
 import sys
-import numpy as np
+from typing import Any
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pygimli as pg
 import pygimli.physics.traveltime as tt
 from pygimli.physics import ert
+
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_joint_inversion_fig_01.png'
+
 
 # Setup package path for development
 try:
@@ -104,12 +107,14 @@ cases = {
     "geostat_joint": {
         # Geostatistical joint inversion: smoothness Wm + geostatistical
         # covariance for cross-gradient neighborhood (RCM).
+        # Uses "spatial" mode to preserve continuous covariance weights
+        # (legacy: L_cgr=5000, L_cgs=40000).
         "regularization_mode": "smoothness",
         "lambda_ert": 10.0,
         "lambda_srt": 10.0,
-        "lambda_cg_ert": 80.0,
-        "lambda_cg_srt": 80.0,
-        "cross_gradient_mode": "direct",
+        "lambda_cg_ert": 5000.0,
+        "lambda_cg_srt": 5000.0,
+        "cross_gradient_mode": "spatial",
         "cross_gradient_source": "geostat",
         "cross_gradient_corr_lengths": (4.0, 4.0),
         "cross_gradient_threshold": 0.01,
@@ -117,7 +122,19 @@ cases = {
 }
 
 
-def run_case(case_name, case_params):
+def run_case(
+    case_name: Any,
+    case_params: Any,
+) -> Any:
+    """Run one joint ERT-SRT inversion configuration and save its outputs.
+
+    Args:
+        case_name: Label for the inversion scenario.
+        case_params: Scenario-specific inversion parameters.
+
+    Returns:
+        Dictionary containing the result object, saved arrays, and run metadata.
+    """
     print("")
     print(f"==================== Running case: {case_name} ====================")
     run_params = dict(common_params)
@@ -185,14 +202,18 @@ cross = run_outputs["cross_gradient_joint"]
 geo = run_outputs["geostat_joint"]
 
 # ---- Helper: coverage masks ----
-def ert_cov_mask(result):
+def ert_cov_mask(
+    result: Any,
+) -> Any:
     """ERT coverage mask: log10(covTrans/paramSizes) > -1."""
     cov = result.ert_coverage
     if cov is None:
         return None
     return cov > -1
 
-def srt_cov_mask(result):
+def srt_cov_mask(
+    result: Any,
+) -> Any:
     """SRT coverage mask: standardizedCoverage (already 0/1)."""
     cov = result.srt_coverage
     if cov is None:
@@ -201,12 +222,12 @@ def srt_cov_mask(result):
 
 
 def _draw_mesh(ax, mesh, data, cov, cmap, vmin, vmax, label, log=False):
-    """Draw model on ax using pg.viewer.mpl.drawModel + coverage + colorbar."""
-    from matplotlib.colors import LogNorm
-    kw = dict(cMap=cmap, cMin=vmin, cMax=vmax, logScale=log)
+    """Draw model on ax using drawModel + addCoverageAlpha + colorbar."""
+    gci = pg.viewer.mpl.drawModel(ax, mesh, data,
+                                  cMap=cmap, cMin=vmin, cMax=vmax,
+                                  logScale=log)
     if cov is not None:
-        kw["coverage"] = cov
-    gci = pg.viewer.mpl.drawModel(ax, mesh, data, **kw)
+        pg.viewer.mpl.addCoverageAlpha(gci, cov)
     cb = plt.colorbar(gci, ax=ax, orientation="vertical", shrink=0.9, pad=0.02)
     cb.set_label(label)
     return gci, cb
@@ -214,6 +235,7 @@ def _draw_mesh(ax, mesh, data, cov, cmap, vmin, vmax, label, log=False):
 
 # ---- Publication-quality comparison figure ----
 from palettable.lightbartlein.diverging import BlueDarkRed18_18
+
 ert_cmap = "Spectral_r"
 srt_cmap = BlueDarkRed18_18.mpl_colormap
 
@@ -222,7 +244,7 @@ ert_vmax = float(max(np.max(cross["ert_model"]), np.max(geo["ert_model"])))
 srt_vmin = float(min(np.min(cross["srt_model"]), np.min(geo["srt_model"])))
 srt_vmax = float(max(np.max(cross["srt_model"]), np.max(geo["srt_model"])))
 
-fig, axes = plt.subplots(2, 3, figsize=(17, 8.5))
+fig, axes = plt.subplots(2, 2, figsize=(14, 8.5))
 
 # --- Row 0: ERT resistivity ---
 _draw_mesh(axes[0, 0], cross["result"].mesh, cross["ert_model"],
@@ -241,15 +263,6 @@ axes[0, 1].set_title(f"Geostat ERT\nchi2={geo['result'].chi2_ert:.2f}")
 axes[0, 1].set_xlabel("x (m)")
 axes[0, 1].set_ylabel("z (m)")
 
-axes[0, 2].plot(np.arange(1, len(cross["chi2_ert_hist"]) + 1), cross["chi2_ert_hist"], "o-", lw=1.5, ms=4, label="cross-gradient")
-axes[0, 2].plot(np.arange(1, len(geo["chi2_ert_hist"]) + 1), geo["chi2_ert_hist"], "s-", lw=1.5, ms=4, label="geostat")
-axes[0, 2].axhline(common_params["target_chi2"], color="k", ls="--", lw=1.0, label="target")
-axes[0, 2].set_title("ERT chi2 history")
-axes[0, 2].set_xlabel("Iteration")
-axes[0, 2].set_ylabel("chi2")
-axes[0, 2].grid(True, alpha=0.3)
-axes[0, 2].legend(loc="best", fontsize=8)
-
 # --- Row 1: SRT velocity ---
 _draw_mesh(axes[1, 0], cross["result"].mesh, cross["srt_model"],
            srt_cov_mask(cross["result"]), srt_cmap, srt_vmin, srt_vmax,
@@ -266,15 +279,6 @@ pg.viewer.mpl.drawSensors(axes[1, 1], srt_data.sensors(), diam=0.4, facecolor="k
 axes[1, 1].set_title(f"Geostat SRT\nchi2={geo['result'].chi2_srt:.2f}")
 axes[1, 1].set_xlabel("x (m)")
 axes[1, 1].set_ylabel("z (m)")
-
-axes[1, 2].plot(np.arange(1, len(cross["chi2_srt_hist"]) + 1), cross["chi2_srt_hist"], "o-", lw=1.5, ms=4, label="cross-gradient")
-axes[1, 2].plot(np.arange(1, len(geo["chi2_srt_hist"]) + 1), geo["chi2_srt_hist"], "s-", lw=1.5, ms=4, label="geostat")
-axes[1, 2].axhline(common_params["target_chi2"], color="k", ls="--", lw=1.0, label="target")
-axes[1, 2].set_title("SRT chi2 history")
-axes[1, 2].set_xlabel("Iteration")
-axes[1, 2].set_ylabel("chi2")
-axes[1, 2].grid(True, alpha=0.3)
-axes[1, 2].legend(loc="best", fontsize=8)
 
 plt.tight_layout()
 fig_path = os.path.join(output_dir, "Ex_joint_inversion_fig_01.png")

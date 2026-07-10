@@ -1,4 +1,3 @@
-# %%
 """
 3D ERT Forward Modeling with MODFLOW Integration
 ================================================
@@ -6,6 +5,9 @@
 This example demonstrates the complete workflow for 3D ERT forward modeling
 using PyHydroGeophysX, integrating hydrological model outputs.
 """
+from typing import Any
+
+# %%
 # sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_3D_ERT_forward_fig_01.png'
 
 # %% [markdown]
@@ -80,13 +82,15 @@ using PyHydroGeophysX, integrating hydrological model outputs.
 # )
 # ```
 
+import importlib
+
 # %%
 import os
 import sys
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-import importlib
 
 # PyGIMLi imports
 import pygimli as pg
@@ -105,12 +109,13 @@ if parent_dir not in sys.path:
 
 # Import and reload PyHydroGeophysX modules (ensures latest code is used)
 import PyHydroGeophysX.core.mesh_3d as mesh_3d_module
+
 importlib.reload(mesh_3d_module)
 
 from PyHydroGeophysX.core.mesh_3d import (
     Mesh3DCreator,
     create_3d_ert_data_container,
-    interpolate_modflow_to_3d_mesh
+    interpolate_modflow_to_3d_mesh,
 )
 from PyHydroGeophysX.petrophysics.resistivity_models import WS_Model
 
@@ -353,7 +358,10 @@ print(electrode_positions.head(10))
 # This example creates a sloping surface with some undulation
 # Replace with your actual topography data or function
 
-def topography_function(x, y):
+def topography_function(
+    x: Any,
+    y: Any,
+) -> Any:
     """
     Example topography function returning elevation for (x, y) coordinates.
     

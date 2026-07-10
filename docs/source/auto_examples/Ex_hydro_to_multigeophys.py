@@ -13,20 +13,23 @@ simulated on the same profile:
    ``hydro_to_fdem``, and ``hydro_to_gravity``.
 """
 
+# %%
+import os
+import sys
+from typing import Any
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pygimli as pg
+import pygimli.physics.traveltime as tt
+from pygimli.physics import ert
+from scipy.interpolate import griddata
+
 # sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_hydro_to_multigeophys_fig_01.png'
 
 # %% [markdown]
 # ## Step 1: Imports
 
-# %%
-import os
-import sys
-import numpy as np
-import matplotlib.pyplot as plt
-import pygimli as pg
-from pygimli.physics import ert
-import pygimli.physics.traveltime as tt
-from scipy.interpolate import griddata
 
 # Setup package path for development
 try:
@@ -42,10 +45,10 @@ from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surfa
 from PyHydroGeophysX.core.mesh_utils import MeshCreator
 from PyHydroGeophysX.Hydro_modular import (
     hydro_to_ert,
-    hydro_to_srt,
-    hydro_to_tdem,
     hydro_to_fdem,
     hydro_to_gravity,
+    hydro_to_srt,
+    hydro_to_tdem,
 )
 
 # %%
@@ -59,7 +62,9 @@ rng_seed = 7
 # ## Step 2: Helper Functions
 
 # %%
-def fill_profile_nans(values):
+def fill_profile_nans(
+    values: Any,
+) -> Any:
     """Fill NaNs along profile direction for each layer."""
     arr = np.asarray(values, dtype=float).copy()
     if arr.ndim != 2:
@@ -81,7 +86,9 @@ def fill_profile_nans(values):
     return arr
 
 
-def get_mesh_xy(mesh):
+def get_mesh_xy(
+    mesh: Any,
+) -> Any:
     """Return mesh cell-center x/y arrays."""
     centers = np.asarray(mesh.cellCenters(), dtype=float)
     if centers.ndim == 2 and centers.shape[1] >= 2:
@@ -92,7 +99,14 @@ def get_mesh_xy(mesh):
     return x, y
 
 
-def assign_three_layer_markers(mesh, line1, line2, top_marker=0, mid_marker=3, bot_marker=2):
+def assign_three_layer_markers(
+    mesh: Any,
+    line1: Any,
+    line2: Any,
+    top_marker: Any = 0,
+    mid_marker: Any = 3,
+    bot_marker: Any = 2,
+) -> Any:
     """Assign top/middle/bottom markers from two interface lines."""
     x_cell, y_cell = get_mesh_xy(mesh)
 
@@ -107,7 +121,12 @@ def assign_three_layer_markers(mesh, line1, line2, top_marker=0, mid_marker=3, b
     return markers
 
 
-def interpolate_profile_to_mesh(profile_values, layer_boundaries, x_profile, mesh):
+def interpolate_profile_to_mesh(
+    profile_values: Any,
+    layer_boundaries: Any,
+    x_profile: Any,
+    mesh: Any,
+) -> Any:
     """Interpolate profile matrix (layers x distance) to mesh cells."""
     values = np.asarray(profile_values, dtype=float)
     bounds = np.asarray(layer_boundaries, dtype=float)
@@ -136,7 +155,19 @@ def interpolate_profile_to_mesh(profile_values, layer_boundaries, x_profile, mes
     return out
 
 
-def relative_l2(noisy, clean):
+def relative_l2(
+    noisy: Any,
+    clean: Any,
+) -> Any:
+    """Compute the relative L2 error between noisy and reference arrays.
+
+    Args:
+        noisy: Perturbed or noisy array.
+        clean: Reference array.
+
+    Returns:
+        Relative L2 error, or ``np.nan`` when the reference norm is zero.
+    """
     noisy_arr = np.asarray(noisy)
     clean_arr = np.asarray(clean)
     denom = np.linalg.norm(clean_arr)

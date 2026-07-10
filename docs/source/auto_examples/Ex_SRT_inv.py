@@ -1,4 +1,3 @@
-# %%
 """
 Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation
 =======================================================================
@@ -19,6 +18,9 @@ Interface Extraction: For the long profile, the script uses the extract_velocity
 Exporting Results: The coordinates of the extracted interfaces are saved to text files, making them available for constraining other models, such as hydrogeological simulations.
 
 """
+from typing import Any
+
+# %%
 # sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_SRT_inv_fig_01.png'
 
 
@@ -26,14 +28,14 @@ Exporting Results: The coordinates of the extracted interfaces are saved to text
 # %%
 import os
 import sys
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pygimli as pg
-from pygimli.physics import ert
-from pygimli.physics import TravelTimeManager
+import pygimli.meshtools as mt
 import pygimli.physics.traveltime as tt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import pygimli.meshtools as mt
+from pygimli.physics import TravelTimeManager, ert
 
 # Setup package path for development
 try:
@@ -48,12 +50,18 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
+from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surface_lines
+from PyHydroGeophysX.core.mesh_utils import (
+    MeshCreator,
+    createTriangles,
+    extract_velocity_interface,
+    fill_holes_2d,
+)
+from PyHydroGeophysX.inversion.srt_inversion import SRTInversion
+
 # Import PyHydroGeophysX modules
 from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
-from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surface_lines
-from PyHydroGeophysX.core.mesh_utils import MeshCreator,fill_holes_2d,createTriangles,extract_velocity_interface
-from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
-from PyHydroGeophysX.inversion.srt_inversion import SRTInversion
+from PyHydroGeophysX.petrophysics.velocity_models import DEMModel, HertzMindlinModel
 
 # %%
 output_dir = "results/seismic_example"
@@ -88,7 +96,11 @@ SHORT_SRT_PARAMS = {
 }
 
 
-def run_custom_srt_inversion(data_file, mesh, inversion_params):
+def run_custom_srt_inversion(
+    data_file: Any,
+    mesh: Any,
+    inversion_params: Any,
+) -> Any:
     """Run package-level SRTInversion with explicit parameter dictionary."""
     inversion = SRTInversion(
         data_file=data_file,
@@ -98,7 +110,19 @@ def run_custom_srt_inversion(data_file, mesh, inversion_params):
     return inversion.run()
 
 
-def compare_models(direct_model, custom_result):
+def compare_models(
+    direct_model: Any,
+    custom_result: Any,
+) -> Any:
+    """Validate direct and package SRT outputs share the same model shape.
+
+    Args:
+        direct_model: Velocity model from the direct PyGIMLi inversion.
+        custom_result: Result object returned by ``SRTInversion``.
+
+    Returns:
+        The final model extracted from ``custom_result`` as a NumPy array.
+    """
     custom_model = np.asarray(custom_result.final_model, dtype=float)
     if direct_model.shape != custom_model.shape:
         raise ValueError(
@@ -109,16 +133,32 @@ def compare_models(direct_model, custom_result):
 
 
 def plot_direct_vs_custom(
-    mesh,
-    direct_model,
-    custom_model,
-    direct_coverage,
-    custom_coverage,
-    sensors,
-    output_name,
-    velocity_limits,
-    title_prefix,
-):
+    mesh: Any,
+    direct_model: Any,
+    custom_model: Any,
+    direct_coverage: Any,
+    custom_coverage: Any,
+    sensors: Any,
+    output_name: Any,
+    velocity_limits: Any,
+    title_prefix: Any,
+) -> None:
+    """Create side-by-side plots for direct and package SRT inversions.
+
+    Args:
+        mesh: Mesh used for both inversions.
+        direct_model: Velocity model from the direct PyGIMLi inversion.
+        custom_model: Velocity model from ``SRTInversion``.
+        direct_coverage: Coverage values for the direct inversion.
+        custom_coverage: Coverage values for the package inversion.
+        sensors: Sensor positions used for plotting.
+        output_name: Output figure filename.
+        velocity_limits: Plot color limits for velocity.
+        title_prefix: Shared title prefix for the comparison figure.
+
+    Returns:
+        None.
+    """
     velocity_cmap = fixed_cmap if "fixed_cmap" in globals() else "viridis"
 
     fig = plt.figure(figsize=[12.5, 5.5])
@@ -206,11 +246,13 @@ params = {'legend.fontsize': 15,
          'xtick.labelsize':15,
          'ytick.labelsize':15}
 import matplotlib.pylab as pylab
+
 pylab.rcParams.update(params)
 
 plt.rcParams["font.family"] = "Arial"
 
 from palettable.lightbartlein.diverging import BlueDarkRed18_18
+
 fixed_cmap = BlueDarkRed18_18.mpl_colormap
 
 fig = plt.figure(figsize=[8,9])
@@ -351,11 +393,13 @@ params = {'legend.fontsize': 15,
          'xtick.labelsize':15,
          'ytick.labelsize':15}
 import matplotlib.pylab as pylab
+
 pylab.rcParams.update(params)
 
 plt.rcParams["font.family"] = "Arial"
 
 from palettable.lightbartlein.diverging import BlueDarkRed18_18
+
 fixed_cmap = BlueDarkRed18_18.mpl_colormap
 
 fig = plt.figure(figsize=[8,9])

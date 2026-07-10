@@ -32,7 +32,7 @@ sphinx_gallery_conf = {
     'examples_dirs': '../../examples',           # Path to example scripts
     'gallery_dirs': 'auto_examples',             # Output gallery directory
     'filename_pattern': r'/(Ex|EX)_.*\.py$',
-    'ignore_pattern': r'app_.*\.py$',
+    'ignore_pattern': r'(app_.*|aquah_web|generate_synthetic_examples)\.py$',
     'plot_gallery': False,                       # Don't execute scripts (use pre-generated figures)
     'download_all_examples': True,               # Allow downloading scripts
     'abort_on_example_error': False,             # Continue on errors

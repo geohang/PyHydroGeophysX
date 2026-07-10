@@ -36,7 +36,8 @@ import sys
 
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
-spec_dir = os.path.dirname(os.path.abspath(SPECPATH))  # noqa: F821 - injected by PyInstaller
+# SPECPATH (injected by PyInstaller) is the directory CONTAINING this spec file.
+spec_dir = os.path.abspath(SPECPATH)  # noqa: F821 - .../packaging
 repo_root = os.path.dirname(spec_dir)
 launcher = os.path.join(repo_root, "PyHydroGeophysX", "qt_apps", "launcher.py")
 
@@ -59,8 +60,15 @@ for _name in sorted(os.listdir(_modules_dir)):
 
 binaries = []
 
-# Always excluded: alternative Qt bindings and dead weight.
-excludes = ["tkinter", "matplotlib.tests", "PyQt5", "PyQt6", "PySide2"]
+# Always excluded: alternative Qt bindings and dead weight. The Google/grpc
+# stack gets traced in from optional integrations of the LLM SDKs (openai /
+# anthropic) when it happens to be installed in the build environment; the
+# desktop app never uses it, and googleapiclient's discovery-cache JSON files
+# have names long enough to break Windows MAX_PATH during COLLECT.
+excludes = [
+    "tkinter", "matplotlib.tests", "PyQt5", "PyQt6", "PySide2",
+    "googleapiclient", "google", "grpc",
+]
 
 if variant == "light":
     excludes += ["pygimli", "pgcore", "simpeg", "resipy", "pyvista", "pyvistaqt", "vtk", "vtkmodules"]

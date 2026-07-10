@@ -25,11 +25,12 @@ This example demonstrates a complete 1D FDEM workflow:
 1. Build synthetic FDEM data from hydrological properties.
 2. Invert the synthetic data with `FDEMInversion`.
 
-.. GENERATED FROM PYTHON SOURCE LINES 9-60
+.. GENERATED FROM PYTHON SOURCE LINES 9-69
 
 .. code-block:: Python
 
 
+    from typing import Any
 
     import numpy as np
 
@@ -37,7 +38,15 @@ This example demonstrates a complete 1D FDEM workflow:
     from PyHydroGeophysX.inversion.fdem_inversion import FDEMInversion
 
 
-    def run_example():
+
+
+
+    def run_example() -> Any:
+        """Run the synthetic FDEM forward-and-inversion example.
+
+        Returns:
+            Tuple containing the inversion result and the clean synthetic response.
+        """
         water_content = np.array([0.12, 0.16, 0.22, 0.28])
         porosity = np.array([0.30, 0.32, 0.35, 0.38])
         thicknesses = np.array([5.0, 10.0, 15.0])

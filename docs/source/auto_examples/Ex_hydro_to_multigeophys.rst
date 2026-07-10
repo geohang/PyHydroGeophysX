@@ -31,30 +31,32 @@ simulated on the same profile:
 4. Simulate pseudo-2D TDEM, FDEM, and gravity using ``hydro_to_tdem``,
    ``hydro_to_fdem``, and ``hydro_to_gravity``.
 
-.. GENERATED FROM PYTHON SOURCE LINES 15-17
-
-.. code-block:: Python
-   :dedent: 1
-
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 19-20
-
-## Step 1: Imports
-
-.. GENERATED FROM PYTHON SOURCE LINES 22-51
+.. GENERATED FROM PYTHON SOURCE LINES 17-29
 
 .. code-block:: Python
 
     import os
     import sys
-    import numpy as np
+    from typing import Any
+
     import matplotlib.pyplot as plt
+    import numpy as np
     import pygimli as pg
-    from pygimli.physics import ert
     import pygimli.physics.traveltime as tt
+    from pygimli.physics import ert
     from scipy.interpolate import griddata
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 31-32
+
+## Step 1: Imports
+
+.. GENERATED FROM PYTHON SOURCE LINES 32-54
+
+.. code-block:: Python
+
+
 
     # Setup package path for development
     try:
@@ -70,14 +72,14 @@ simulated on the same profile:
     from PyHydroGeophysX.core.mesh_utils import MeshCreator
     from PyHydroGeophysX.Hydro_modular import (
         hydro_to_ert,
-        hydro_to_srt,
-        hydro_to_tdem,
         hydro_to_fdem,
         hydro_to_gravity,
+        hydro_to_srt,
+        hydro_to_tdem,
     )
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 52-58
+.. GENERATED FROM PYTHON SOURCE LINES 55-61
 
 .. code-block:: Python
 
@@ -88,15 +90,17 @@ simulated on the same profile:
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 59-60
+.. GENERATED FROM PYTHON SOURCE LINES 62-63
 
 ## Step 2: Helper Functions
 
-.. GENERATED FROM PYTHON SOURCE LINES 62-148
+.. GENERATED FROM PYTHON SOURCE LINES 65-179
 
 .. code-block:: Python
 
-    def fill_profile_nans(values):
+    def fill_profile_nans(
+        values: Any,
+    ) -> Any:
         """Fill NaNs along profile direction for each layer."""
         arr = np.asarray(values, dtype=float).copy()
         if arr.ndim != 2:
@@ -118,7 +122,9 @@ simulated on the same profile:
         return arr
 
 
-    def get_mesh_xy(mesh):
+    def get_mesh_xy(
+        mesh: Any,
+    ) -> Any:
         """Return mesh cell-center x/y arrays."""
         centers = np.asarray(mesh.cellCenters(), dtype=float)
         if centers.ndim == 2 and centers.shape[1] >= 2:
@@ -129,7 +135,14 @@ simulated on the same profile:
         return x, y
 
 
-    def assign_three_layer_markers(mesh, line1, line2, top_marker=0, mid_marker=3, bot_marker=2):
+    def assign_three_layer_markers(
+        mesh: Any,
+        line1: Any,
+        line2: Any,
+        top_marker: Any = 0,
+        mid_marker: Any = 3,
+        bot_marker: Any = 2,
+    ) -> Any:
         """Assign top/middle/bottom markers from two interface lines."""
         x_cell, y_cell = get_mesh_xy(mesh)
 
@@ -144,7 +157,12 @@ simulated on the same profile:
         return markers
 
 
-    def interpolate_profile_to_mesh(profile_values, layer_boundaries, x_profile, mesh):
+    def interpolate_profile_to_mesh(
+        profile_values: Any,
+        layer_boundaries: Any,
+        x_profile: Any,
+        mesh: Any,
+    ) -> Any:
         """Interpolate profile matrix (layers x distance) to mesh cells."""
         values = np.asarray(profile_values, dtype=float)
         bounds = np.asarray(layer_boundaries, dtype=float)
@@ -173,7 +191,19 @@ simulated on the same profile:
         return out
 
 
-    def relative_l2(noisy, clean):
+    def relative_l2(
+        noisy: Any,
+        clean: Any,
+    ) -> Any:
+        """Compute the relative L2 error between noisy and reference arrays.
+
+        Args:
+            noisy: Perturbed or noisy array.
+            clean: Reference array.
+
+        Returns:
+            Relative L2 error, or ``np.nan`` when the reference norm is zero.
+        """
         noisy_arr = np.asarray(noisy)
         clean_arr = np.asarray(clean)
         denom = np.linalg.norm(clean_arr)
@@ -183,11 +213,11 @@ simulated on the same profile:
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 149-150
+.. GENERATED FROM PYTHON SOURCE LINES 180-181
 
 ## Step 3: Load Real Model Outputs and Build One 2D Profile
 
-.. GENERATED FROM PYTHON SOURCE LINES 152-216
+.. GENERATED FROM PYTHON SOURCE LINES 183-247
 
 .. code-block:: Python
 
@@ -256,7 +286,7 @@ simulated on the same profile:
     print(f"Porosity range:         {np.nanmin(porosity_profile):.4f} - {np.nanmax(porosity_profile):.4f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 217-232
+.. GENERATED FROM PYTHON SOURCE LINES 248-263
 
 .. code-block:: Python
 
@@ -276,11 +306,11 @@ simulated on the same profile:
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 233-234
+.. GENERATED FROM PYTHON SOURCE LINES 264-265
 
 ## Step 4: ERT and SRT from the Same 2D Profile (`hydro_to_ert`, `hydro_to_srt`)
 
-.. GENERATED FROM PYTHON SOURCE LINES 236-309
+.. GENERATED FROM PYTHON SOURCE LINES 267-340
 
 .. code-block:: Python
 
@@ -358,7 +388,7 @@ simulated on the same profile:
     print(f"SRT data count: {srt_data.size()}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 310-343
+.. GENERATED FROM PYTHON SOURCE LINES 341-374
 
 .. code-block:: Python
 
@@ -396,11 +426,11 @@ simulated on the same profile:
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 344-345
+.. GENERATED FROM PYTHON SOURCE LINES 375-376
 
 ## Step 5: Pseudo-2D TDEM / FDEM / Gravity from the Same Profile
 
-.. GENERATED FROM PYTHON SOURCE LINES 347-409
+.. GENERATED FROM PYTHON SOURCE LINES 378-440
 
 .. code-block:: Python
 
@@ -467,7 +497,7 @@ simulated on the same profile:
     print(f"Gravity range (mGal): {np.min(grav_clean):.5f} to {np.max(grav_clean):.5f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 410-452
+.. GENERATED FROM PYTHON SOURCE LINES 441-483
 
 .. code-block:: Python
 
@@ -514,7 +544,7 @@ simulated on the same profile:
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 453-458
+.. GENERATED FROM PYTHON SOURCE LINES 484-489
 
 Summary:
 This workflow uses one real MODFLOW snapshot and one 2D extracted profile.

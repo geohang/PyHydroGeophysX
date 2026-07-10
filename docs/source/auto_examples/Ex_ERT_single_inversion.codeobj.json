@@ -8,13 +8,13 @@
    "name": "Dict"
   }
  ],
- "Iterable": [
+ "ERTInversion": [
   {
    "is_class": false,
    "is_explicit": false,
-   "module": "typing",
-   "module_short": "typing",
-   "name": "Iterable"
+   "module": "PyHydroGeophysX.inversion.ert_inversion",
+   "module_short": "PyHydroGeophysX.inversion.ert_inversion",
+   "name": "ERTInversion"
   }
  ],
  "LocalRef": [
@@ -62,6 +62,15 @@
    "name": "str"
   }
  ],
+ "argparse.ArgumentParser": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "argparse",
+   "module_short": "argparse",
+   "name": "ArgumentParser"
+  }
+ ],
  "export_for_inversion": [
   {
    "is_class": false,
@@ -71,6 +80,15 @@
    "name": "export_for_inversion"
   }
  ],
+ "json.dump": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "json",
+   "module_short": "json",
+   "name": "dump"
+  }
+ ],
  "load_ert_resipy": [
   {
    "is_class": false,
@@ -78,6 +96,33 @@
    "module": "PyHydroGeophysX.data_processing.ert_data_agent",
    "module_short": "PyHydroGeophysX.data_processing.ert_data_agent",
    "name": "load_ert_resipy"
+  }
+ ],
+ "matplotlib.use": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "use"
+  }
+ ],
+ "np.asarray": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "asarray"
+  }
+ ],
+ "np.save": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "save"
   }
  ],
  "os.getcwd": [
@@ -107,6 +152,33 @@
    "name": "dirname"
   }
  ],
+ "pg.show": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli",
+   "module_short": "pygimli",
+   "name": "show"
+  }
+ ],
+ "plt.close": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "close"
+  }
+ ],
+ "plt.subplots": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplots"
+  }
+ ],
  "qc_and_visualize": [
   {
    "is_class": false,
@@ -132,6 +204,15 @@
    "module": "sys.path",
    "module_short": "sys.path",
    "name": "append"
+  }
+ ],
+ "warnings.filterwarnings": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "warnings",
+   "module_short": "warnings",
+   "name": "filterwarnings"
   }
  ]
 }

@@ -1,4 +1,13 @@
 {
+ "Any": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "typing",
+   "module_short": "typing",
+   "name": "Any"
+  }
+ ],
  "BlueDarkRed18_18.mpl_colormap": [
   {
    "is_class": false,
@@ -24,15 +33,6 @@
    "module": "pygimli.physics.ert",
    "module_short": "pygimli.physics.ert",
    "name": "load"
-  }
- ],
- "np.arange": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "arange"
   }
  ],
  "np.array": [
@@ -141,6 +141,15 @@
    "module": "os.path",
    "module_short": "os.path",
    "name": "join"
+  }
+ ],
+ "pg.viewer.mpl.addCoverageAlpha": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.viewer.mpl",
+   "module_short": "pygimli.viewer.mpl",
+   "name": "addCoverageAlpha"
   }
  ],
  "pg.viewer.mpl.drawModel": [

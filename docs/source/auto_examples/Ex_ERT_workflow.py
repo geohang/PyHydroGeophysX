@@ -64,12 +64,22 @@ os.makedirs(output_dir, exist_ok=True)
 # ## Loading domain information...
 
 # %%
-# These would be your actual data files
+# These would be your actual data files.
 data_dir = "data/"
-modflow_dir = os.path.join(data_dir, "modflow")
+
+# This example expects the workflow demonstration dataset (id.txt, top.txt,
+# Porosity.npy, Watercontent.npy), which ships in ``examples/data``. Run the
+# script from the ``examples`` directory, or point ``data_dir`` at your own
+# MODFLOW-derived arrays.
+_required = ["id.txt", "top.txt", "Porosity.npy", "Watercontent.npy"]
+_missing = [n for n in _required if not os.path.exists(os.path.join(data_dir, n))]
+if _missing:
+    raise SystemExit(
+        f"Missing example data in '{os.path.abspath(data_dir)}': {', '.join(_missing)}. "
+        "Provide your own MODFLOW-derived arrays or update data_dir."
+    )
 
 # Load domain information from files
-# (Replace with your actual file paths)
 idomain = np.loadtxt(os.path.join(data_dir, "id.txt"))
 top = np.loadtxt(os.path.join(data_dir, "top.txt"))
 porosity = np.load(os.path.join(data_dir, "Porosity.npy"))

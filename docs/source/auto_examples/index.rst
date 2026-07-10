@@ -36,29 +36,16 @@ The examples are organized to show the complete workflow from loading hydrologic
 Each example includes detailed comments and demonstrates best practices for watershed geophysical monitoring applications.
 
 
+.. raw:: html
+
+  <div id='sg-tag-list' class='sphx-glr-tag-list'></div>
+
 
 .. raw:: html
 
     <div class="sphx-glr-thumbnails">
 
 .. thumbnail-parent-div-open
-
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load, quality control, and export field ERT data using PyHydroGeophysX&#x27;s data_processing module with RESIPY integration.">
-
-.. only:: html
-
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_ERT_data_process_thumb.png
-    :alt:
-
-  :ref:`sphx_glr_auto_examples_Ex_ERT_data_process.py`
-
-.. raw:: html
-
-      <div class="sphx-glr-thumbnail-title">ERT Field Data Processing with RESIPY</div>
-    </div>
-
 
 .. raw:: html
 
@@ -69,7 +56,7 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_FDEM_workflow_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_FDEM_workflow.py`
+  :doc:`/auto_examples/Ex_FDEM_workflow`
 
 .. raw:: html
 
@@ -86,7 +73,7 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_cross_constraints_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_cross_constraints.py`
+  :doc:`/auto_examples/Ex_cross_constraints`
 
 .. raw:: html
 
@@ -103,7 +90,7 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_Structure_resinv_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_Structure_resinv.py`
+  :doc:`/auto_examples/Ex_Structure_resinv`
 
 .. raw:: html
 
@@ -120,7 +107,7 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_model_output_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_model_output.py`
+  :doc:`/auto_examples/Ex_model_output`
 
 .. raw:: html
 
@@ -137,11 +124,28 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_structure_TLresinv_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_structure_TLresinv.py`
+  :doc:`/auto_examples/Ex_structure_TLresinv`
 
 .. raw:: html
 
       <div class="sphx-glr-thumbnail-title">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load, quality-control, and export field ERT data using PyHydroGeophysX&#x27;s data processing functions.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_ERT_data_process_thumb.png
+    :alt:
+
+  :doc:`/auto_examples/Ex_ERT_data_process`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">ERT Field Data Processing with RESIPY</div>
     </div>
 
 
@@ -154,28 +158,11 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_TL_inversion_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_TL_inversion.py`
+  :doc:`/auto_examples/Ex_TL_inversion`
 
 .. raw:: html
 
       <div class="sphx-glr-thumbnail-title">Ex. Time-Lapse ERT Inversion Techniques</div>
-    </div>
-
-
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to perform a 2D seismic refraction tomography (SRT)  inversion and interpret the results to define subsurface structures.">
-
-.. only:: html
-
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_SRT_inv_thumb.png
-    :alt:
-
-  :ref:`sphx_glr_auto_examples_Ex_SRT_inv.py`
-
-.. raw:: html
-
-      <div class="sphx-glr-thumbnail-title">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</div>
     </div>
 
 
@@ -188,11 +175,28 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_joint_inversion_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_joint_inversion.py`
+  :doc:`/auto_examples/Ex_joint_inversion`
 
 .. raw:: html
 
       <div class="sphx-glr-thumbnail-title">Joint ERT-SRT Inversion: Cross-Gradient vs Geostatistics</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to perform a 2D seismic refraction tomography (SRT)  inversion and interpret the results to define subsurface structures.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_SRT_inv_thumb.png
+    :alt:
+
+  :doc:`/auto_examples/Ex_SRT_inv`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</div>
     </div>
 
 
@@ -205,7 +209,7 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_hydro_to_multigeophys_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_hydro_to_multigeophys.py`
+  :doc:`/auto_examples/Ex_hydro_to_multigeophys`
 
 .. raw:: html
 
@@ -222,11 +226,28 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_TDEM_workflow_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_TDEM_workflow.py`
+  :doc:`/auto_examples/Ex_TDEM_workflow`
 
 .. raw:: html
 
       <div class="sphx-glr-thumbnail-title">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example shows a minimal, robust workflow for one ERT survey:">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_ERT_single_inversion_thumb.png
+    :alt:
+
+  :doc:`/auto_examples/Ex_ERT_single_inversion`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex. Single ERT File Inversion (No Time-Lapse)</div>
     </div>
 
 
@@ -239,7 +260,7 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_EX_SRT_forward_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_EX_SRT_forward.py`
+  :doc:`/auto_examples/EX_SRT_forward`
 
 .. raw:: html
 
@@ -256,7 +277,7 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_Time_lapse_measurement_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_Time_lapse_measurement.py`
+  :doc:`/auto_examples/Ex_Time_lapse_measurement`
 
 .. raw:: html
 
@@ -273,7 +294,7 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_ERT_workflow_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_ERT_workflow.py`
+  :doc:`/auto_examples/Ex_ERT_workflow`
 
 .. raw:: html
 
@@ -290,7 +311,7 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_MC_Hydro_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_MC_Hydro.py`
+  :doc:`/auto_examples/Ex_MC_Hydro`
 
 .. raw:: html
 
@@ -307,7 +328,7 @@ Each example includes detailed comments and demonstrates best practices for wate
   .. image:: /auto_examples/images/thumb/sphx_glr_Ex_3D_ERT_forward_thumb.png
     :alt:
 
-  :ref:`sphx_glr_auto_examples_Ex_3D_ERT_forward.py`
+  :doc:`/auto_examples/Ex_3D_ERT_forward`
 
 .. raw:: html
 
@@ -325,17 +346,18 @@ Each example includes detailed comments and demonstrates best practices for wate
 .. toctree::
    :hidden:
 
-   /auto_examples/Ex_ERT_data_process
    /auto_examples/Ex_FDEM_workflow
    /auto_examples/Ex_cross_constraints
    /auto_examples/Ex_Structure_resinv
    /auto_examples/Ex_model_output
    /auto_examples/Ex_structure_TLresinv
+   /auto_examples/Ex_ERT_data_process
    /auto_examples/Ex_TL_inversion
-   /auto_examples/Ex_SRT_inv
    /auto_examples/Ex_joint_inversion
+   /auto_examples/Ex_SRT_inv
    /auto_examples/Ex_hydro_to_multigeophys
    /auto_examples/Ex_TDEM_workflow
+   /auto_examples/Ex_ERT_single_inversion
    /auto_examples/EX_SRT_forward
    /auto_examples/Ex_Time_lapse_measurement
    /auto_examples/Ex_ERT_workflow

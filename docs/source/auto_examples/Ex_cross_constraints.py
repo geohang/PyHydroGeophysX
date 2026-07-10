@@ -8,12 +8,16 @@ This example shows how to:
 3. Build a cross-gradient operator between two models.
 """
 
-# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_cross_constraints_fig_01.png'
+from typing import Any
 
 import numpy as np
 from scipy.sparse import diags
 
 from PyHydroGeophysX.inversion.cross_constraints import StructuralConstraint
+
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_cross_constraints_fig_01.png'
+
+
 
 
 class _DummyMesh:
@@ -31,7 +35,12 @@ class _DummyMesh:
         return np.column_stack((x, z))
 
 
-def run_example():
+def run_example() -> Any:
+    """Run the structural-constraint demonstration workflow.
+
+    Returns:
+        Tuple containing the weighted smoothness matrix and cross-gradient operator.
+    """
     n_cells = 60
     mesh = _DummyMesh(n_cells)
 

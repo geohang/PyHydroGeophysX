@@ -27,8 +27,10 @@ if exist docs\source\auto_examples\images\*.png (
     echo ⚠️  No figures found in docs\source\auto_examples\images\
 )
 
-REM Generate API documentation
-sphinx-apidoc -f -o docs\source\api PyHydroGeophysX
+REM Generate API documentation (qt_apps is excluded: the desktop GUI is covered
+REM by the user guide docs\source\agents\desktop_workbench.rst, matching the
+REM docs CI in .github\workflows\docs.yml)
+sphinx-apidoc -f -o docs\source\api PyHydroGeophysX PyHydroGeophysX\qt_apps
 
 REM Build documentation
 cd docs

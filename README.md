@@ -104,7 +104,7 @@ python -m PyHydroGeophysX.qt_apps.launcher
 pyhydrogeophysx-workbench
 ```
 
-Desktop dependencies come from the `desktop` extra (`pip install "pyhydrogeophysx[desktop]"`) or `requirements-desktop.txt`. See `docs/desktop_workbench.md` for details.
+Desktop dependencies come from the `desktop` extra (`pip install "pyhydrogeophysx[desktop]"`) or `requirements-desktop.txt`. Prebuilt Windows/macOS bundles (light and full variants) are on [GitHub Releases](https://github.com/geohang/PyHydroGeophysX/releases/latest); the usage guide is at [Desktop Workbench documentation](https://geohang.github.io/PyHydroGeophysX/agents/desktop_workbench.html).
 
 ---
 

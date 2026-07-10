@@ -1,4 +1,13 @@
 {
+ "Any": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "typing",
+   "module_short": "typing",
+   "name": "Any"
+  }
+ ],
  "BlueDarkRed18_18.mpl_colormap": [
   {
    "is_class": false,

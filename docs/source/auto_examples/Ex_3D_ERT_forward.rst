@@ -24,14 +24,18 @@
 This example demonstrates the complete workflow for 3D ERT forward modeling
 using PyHydroGeophysX, integrating hydrological model outputs.
 
-.. GENERATED FROM PYTHON SOURCE LINES 9-10
+.. GENERATED FROM PYTHON SOURCE LINES 8-10
 
 .. code-block:: Python
-   :dedent: 1
+
+    from typing import Any
 
 
+.. GENERATED FROM PYTHON SOURCE LINES 11-12
 
-.. GENERATED FROM PYTHON SOURCE LINES 12-82
+sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_3D_ERT_forward_fig_01.png'
+
+.. GENERATED FROM PYTHON SOURCE LINES 14-84
 
 # 3D ERT Forward Modeling Workflow with Topography
 
@@ -104,16 +108,24 @@ mesh = creator.create_3d_mesh_with_topography(
 )
 ```
 
-.. GENERATED FROM PYTHON SOURCE LINES 84-130
+.. GENERATED FROM PYTHON SOURCE LINES 84-87
+
+.. code-block:: Python
+
+
+    import importlib
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 88-135
 
 .. code-block:: Python
 
     import os
     import sys
-    import numpy as np
+
     import matplotlib.pyplot as plt
+    import numpy as np
     import pandas as pd
-    import importlib
 
     # PyGIMLi imports
     import pygimli as pg
@@ -132,12 +144,13 @@ mesh = creator.create_3d_mesh_with_topography(
 
     # Import and reload PyHydroGeophysX modules (ensures latest code is used)
     import PyHydroGeophysX.core.mesh_3d as mesh_3d_module
+
     importlib.reload(mesh_3d_module)
 
     from PyHydroGeophysX.core.mesh_3d import (
         Mesh3DCreator,
         create_3d_ert_data_container,
-        interpolate_modflow_to_3d_mesh
+        interpolate_modflow_to_3d_mesh,
     )
     from PyHydroGeophysX.petrophysics.resistivity_models import WS_Model
 
@@ -155,12 +168,12 @@ mesh = creator.create_3d_mesh_with_topography(
     print(f"Mesh3DCreator methods: {[m for m in dir(Mesh3DCreator) if not m.startswith('_')]}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 131-133
+.. GENERATED FROM PYTHON SOURCE LINES 136-138
 
 Analyze MODFLOW data to find regions with active cells (non-NaN)
 This helps us position the forward modeling domain optimally
 
-.. GENERATED FROM PYTHON SOURCE LINES 133-190
+.. GENERATED FROM PYTHON SOURCE LINES 138-195
 
 .. code-block:: Python
 
@@ -222,7 +235,7 @@ This helps us position the forward modeling domain optimally
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 191-199
+.. GENERATED FROM PYTHON SOURCE LINES 196-204
 
 MODFLOW Active Cells Analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -233,7 +246,7 @@ regions with >80% active cells, helping identify optimal domain placement.
 
 *Figure saved to: modflow_active_cells.png*
 
-.. GENERATED FROM PYTHON SOURCE LINES 199-214
+.. GENERATED FROM PYTHON SOURCE LINES 204-219
 
 .. code-block:: Python
 
@@ -253,12 +266,12 @@ regions with >80% active cells, helping identify optimal domain placement.
         print(f"  Y offset: {center_row - suggested_size//2} to {center_row + suggested_size//2}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 215-217
+.. GENERATED FROM PYTHON SOURCE LINES 220-222
 
 Find the optimal placement for a smaller domain that is 100% within active cells
 We need ALL cells in the domain to be active (non-NaN)
 
-.. GENERATED FROM PYTHON SOURCE LINES 217-280
+.. GENERATED FROM PYTHON SOURCE LINES 222-285
 
 .. code-block:: Python
 
@@ -326,7 +339,7 @@ We need ALL cells in the domain to be active (non-NaN)
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 281-291
+.. GENERATED FROM PYTHON SOURCE LINES 286-296
 
 Proposed Domain Placement
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -339,7 +352,7 @@ indicates the 80% active cell boundary.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 291-302
+.. GENERATED FROM PYTHON SOURCE LINES 296-307
 
 .. code-block:: Python
 
@@ -355,11 +368,11 @@ indicates the 80% active cell boundary.
     print(f"  This gives 20m coverage with electrodes at x=[0, 4, 8, 12, 16] and y=[0, 4, 8, 12, 16]")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 303-304
+.. GENERATED FROM PYTHON SOURCE LINES 308-309
 
 Create output directory
 
-.. GENERATED FROM PYTHON SOURCE LINES 304-307
+.. GENERATED FROM PYTHON SOURCE LINES 309-312
 
 .. code-block:: Python
 
@@ -367,19 +380,19 @@ Create output directory
     os.makedirs(output_dir, exist_ok=True)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 308-312
+.. GENERATED FROM PYTHON SOURCE LINES 313-317
 
 ## Step 1: Define Domain Geometry and Create Electrodes on Topographic Surface
 
 We'll create a 3D domain with a surface electrode array that follows realistic topography.
 This is essential for accurate ERT modeling in areas with significant terrain variation.
 
-.. GENERATED FROM PYTHON SOURCE LINES 314-316
+.. GENERATED FROM PYTHON SOURCE LINES 319-321
 
 Define domain dimensions (in meters)
 Using smaller domain (20m x 20m) centered in the active MODFLOW region
 
-.. GENERATED FROM PYTHON SOURCE LINES 316-351
+.. GENERATED FROM PYTHON SOURCE LINES 321-356
 
 .. code-block:: Python
 
@@ -419,18 +432,21 @@ Using smaller domain (20m x 20m) centered in the active MODFLOW region
     print(electrode_positions.head(10))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 352-355
+.. GENERATED FROM PYTHON SOURCE LINES 357-360
 
 Define topography function
 This example creates a sloping surface with some undulation
 Replace with your actual topography data or function
 
-.. GENERATED FROM PYTHON SOURCE LINES 355-384
+.. GENERATED FROM PYTHON SOURCE LINES 360-392
 
 .. code-block:: Python
 
 
-    def topography_function(x, y):
+    def topography_function(
+        x: Any,
+        y: Any,
+    ) -> Any:
         """
         Example topography function returning elevation for (x, y) coordinates.
     
@@ -459,11 +475,11 @@ Replace with your actual topography data or function
     print(electrode_positions.head(10))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 385-386
+.. GENERATED FROM PYTHON SOURCE LINES 393-394
 
 Visualize electrode layout with topography
 
-.. GENERATED FROM PYTHON SOURCE LINES 386-424
+.. GENERATED FROM PYTHON SOURCE LINES 394-432
 
 .. code-block:: Python
 
@@ -506,7 +522,7 @@ Visualize electrode layout with topography
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 425-435
+.. GENERATED FROM PYTHON SOURCE LINES 433-443
 
 Electrode Layout with Topography
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -519,7 +535,7 @@ illustrates how electrodes follow the topographic surface.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 437-446
+.. GENERATED FROM PYTHON SOURCE LINES 445-454
 
 ## Step 2: Create 3D Mesh with Topography Using mesh_3d.py
 
@@ -531,12 +547,12 @@ in terrain with elevation changes.
 - `use_prism_mesh=True`: Creates efficient prism mesh (good for layered structures)
 - `use_prism_mesh=False`: Creates tetrahedral mesh using PyGIMLi's PLC approach
 
-.. GENERATED FROM PYTHON SOURCE LINES 448-450
+.. GENERATED FROM PYTHON SOURCE LINES 456-458
 
 Method 1: Create 3D mesh WITH topography using mesh_3d.py
 This creates a mesh that follows the surface elevation
 
-.. GENERATED FROM PYTHON SOURCE LINES 450-478
+.. GENERATED FROM PYTHON SOURCE LINES 458-486
 
 .. code-block:: Python
 
@@ -569,11 +585,11 @@ This creates a mesh that follows the surface elevation
     print(f"  Boundaries: {mesh.boundaryCount()}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 479-480
+.. GENERATED FROM PYTHON SOURCE LINES 487-488
 
 Create ERT data container using mesh_3d.py helper function
 
-.. GENERATED FROM PYTHON SOURCE LINES 480-493
+.. GENERATED FROM PYTHON SOURCE LINES 488-501
 
 .. code-block:: Python
 
@@ -591,11 +607,11 @@ Create ERT data container using mesh_3d.py helper function
     print(f"Geometric factors calculated for 3D")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 494-495
+.. GENERATED FROM PYTHON SOURCE LINES 502-503
 
 Save mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 495-499
+.. GENERATED FROM PYTHON SOURCE LINES 503-507
 
 .. code-block:: Python
 
@@ -604,7 +620,7 @@ Save mesh
     print(f"Mesh saved to {output_dir}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 500-505
+.. GENERATED FROM PYTHON SOURCE LINES 508-513
 
 ## Step 3: Load and Prepare Hydrological Data
 
@@ -612,12 +628,12 @@ Load MODFLOW output (water content, porosity) and prepare for interpolation
 to the 3D mesh. The data needs to be defined in the same coordinate system
 as the mesh, with z-values relative to the topographic surface.
 
-.. GENERATED FROM PYTHON SOURCE LINES 507-509
+.. GENERATED FROM PYTHON SOURCE LINES 515-517
 
 Load hydrological data (example using synthetic data)
 Replace with actual MODFLOW data loading
 
-.. GENERATED FROM PYTHON SOURCE LINES 509-595
+.. GENERATED FROM PYTHON SOURCE LINES 517-603
 
 .. code-block:: Python
 
@@ -708,11 +724,11 @@ Replace with actual MODFLOW data loading
         print(f"Synthetic porosity shape: {porosity_3d.shape}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 596-597
+.. GENERATED FROM PYTHON SOURCE LINES 604-605
 
 Visualize a vertical slice of the synthetic data
 
-.. GENERATED FROM PYTHON SOURCE LINES 597-630
+.. GENERATED FROM PYTHON SOURCE LINES 605-638
 
 .. code-block:: Python
 
@@ -750,7 +766,7 @@ Visualize a vertical slice of the synthetic data
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 631-641
+.. GENERATED FROM PYTHON SOURCE LINES 639-649
 
 Hydrological Data Slices
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -763,7 +779,7 @@ mesh and converted to resistivity using the Waxman-Smits model.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 643-648
+.. GENERATED FROM PYTHON SOURCE LINES 651-656
 
 ## Step 4: Interpolate Hydrological Properties to 3D Mesh
 
@@ -771,7 +787,7 @@ Interpolate the MODFLOW data to mesh cell centers. Since our mesh follows
 topography, we need to account for the local surface elevation when
 determining the depth of each mesh cell.
 
-.. GENERATED FROM PYTHON SOURCE LINES 650-668
+.. GENERATED FROM PYTHON SOURCE LINES 658-676
 
 .. code-block:: Python
 
@@ -794,12 +810,12 @@ determining the depth of each mesh cell.
     print(f"\nCell depths range: {cell_depths.min():.2f} to {cell_depths.max():.2f} m")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 669-671
+.. GENERATED FROM PYTHON SOURCE LINES 677-679
 
 Create grid coordinates for interpolation
 Using depth-relative coordinates (depth below local surface)
 
-.. GENERATED FROM PYTHON SOURCE LINES 671-707
+.. GENERATED FROM PYTHON SOURCE LINES 679-715
 
 .. code-block:: Python
 
@@ -840,12 +856,12 @@ Using depth-relative coordinates (depth below local surface)
     print(f"  Depth: {depth_coords[0]:.2f} to {depth_coords[-1]:.2f} ({nlay} points)")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 708-710
+.. GENERATED FROM PYTHON SOURCE LINES 716-718
 
 Create interpolators for water content and porosity
 Handle NaN values in MODFLOW data (inactive cells)
 
-.. GENERATED FROM PYTHON SOURCE LINES 710-768
+.. GENERATED FROM PYTHON SOURCE LINES 718-776
 
 .. code-block:: Python
 
@@ -908,18 +924,18 @@ Handle NaN values in MODFLOW data (inactive cells)
     print(f"  Saturation: min={saturation_mesh.min():.3f}, max={saturation_mesh.max():.3f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 769-773
+.. GENERATED FROM PYTHON SOURCE LINES 777-781
 
 ## Step 5: Convert Water Content to Resistivity
 
 Use the Waxman-Smits petrophysical model to convert saturation and
 porosity to electrical resistivity.
 
-.. GENERATED FROM PYTHON SOURCE LINES 775-776
+.. GENERATED FROM PYTHON SOURCE LINES 783-784
 
 Petrophysical parameters (Waxman-Smits model)
 
-.. GENERATED FROM PYTHON SOURCE LINES 776-797
+.. GENERATED FROM PYTHON SOURCE LINES 784-805
 
 .. code-block:: Python
 
@@ -945,11 +961,11 @@ Petrophysical parameters (Waxman-Smits model)
     print(f"Resistivity on mesh: min={resistivity_mesh.min():.1f} Ohm-m, max={resistivity_mesh.max():.1f} Ohm-m")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 798-799
+.. GENERATED FROM PYTHON SOURCE LINES 806-807
 
 Visualize resistivity distribution
 
-.. GENERATED FROM PYTHON SOURCE LINES 799-809
+.. GENERATED FROM PYTHON SOURCE LINES 807-817
 
 .. code-block:: Python
 
@@ -964,7 +980,7 @@ Visualize resistivity distribution
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 810-820
+.. GENERATED FROM PYTHON SOURCE LINES 818-828
 
 Resistivity Distribution
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -977,15 +993,15 @@ x-axis reveals the range of resistivity values in the model.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 822-823
+.. GENERATED FROM PYTHON SOURCE LINES 830-831
 
 ## Step 6: Perform 3D ERT Forward Modeling
 
-.. GENERATED FROM PYTHON SOURCE LINES 825-826
+.. GENERATED FROM PYTHON SOURCE LINES 833-834
 
 Create forward modeling operator
 
-.. GENERATED FROM PYTHON SOURCE LINES 826-834
+.. GENERATED FROM PYTHON SOURCE LINES 834-842
 
 .. code-block:: Python
 
@@ -998,11 +1014,11 @@ Create forward modeling operator
     print(f"  Model cells: {mesh.cellCount()}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 835-836
+.. GENERATED FROM PYTHON SOURCE LINES 843-844
 
 Perform forward modeling
 
-.. GENERATED FROM PYTHON SOURCE LINES 836-841
+.. GENERATED FROM PYTHON SOURCE LINES 844-849
 
 .. code-block:: Python
 
@@ -1012,11 +1028,11 @@ Perform forward modeling
     print(f"Response: min={np.min(response):.2f}, max={np.max(response):.2f} Ohm-m")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 842-843
+.. GENERATED FROM PYTHON SOURCE LINES 850-851
 
 Add noise to create synthetic "measured" data
 
-.. GENERATED FROM PYTHON SOURCE LINES 843-857
+.. GENERATED FROM PYTHON SOURCE LINES 851-865
 
 .. code-block:: Python
 
@@ -1035,11 +1051,11 @@ Add noise to create synthetic "measured" data
     print(f"Synthetic data with {noise_level*100:.0f}% noise added")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 858-859
+.. GENERATED FROM PYTHON SOURCE LINES 866-867
 
 Save synthetic data
 
-.. GENERATED FROM PYTHON SOURCE LINES 859-862
+.. GENERATED FROM PYTHON SOURCE LINES 867-870
 
 .. code-block:: Python
 
@@ -1047,15 +1063,15 @@ Save synthetic data
     print(f"Synthetic data saved to {output_dir}/synthetic_3d_data.dat")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 863-864
+.. GENERATED FROM PYTHON SOURCE LINES 871-872
 
 ## Step 7: Visualize Results
 
-.. GENERATED FROM PYTHON SOURCE LINES 866-867
+.. GENERATED FROM PYTHON SOURCE LINES 874-875
 
 Visualize apparent resistivity data
 
-.. GENERATED FROM PYTHON SOURCE LINES 867-882
+.. GENERATED FROM PYTHON SOURCE LINES 875-890
 
 .. code-block:: Python
 
@@ -1075,7 +1091,7 @@ Visualize apparent resistivity data
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 883-893
+.. GENERATED FROM PYTHON SOURCE LINES 891-901
 
 Apparent Resistivity Matrix
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1088,11 +1104,11 @@ pair vs MN measurement pair) in the dipole-dipole survey.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 895-896
+.. GENERATED FROM PYTHON SOURCE LINES 903-904
 
 3D visualization with PyVista (if available)
 
-.. GENERATED FROM PYTHON SOURCE LINES 896-985
+.. GENERATED FROM PYTHON SOURCE LINES 904-993
 
 .. code-block:: Python
 
@@ -1186,7 +1202,7 @@ pair vs MN measurement pair) in the dipole-dipole survey.
         pl.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 986-996
+.. GENERATED FROM PYTHON SOURCE LINES 994-1004
 
 3D Resistivity Model
 ~~~~~~~~~~~~~~~~~~~~
@@ -1199,7 +1215,7 @@ electrode positions on the topographic surface.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 996-1001
+.. GENERATED FROM PYTHON SOURCE LINES 1004-1009
 
 .. code-block:: Python
 
@@ -1209,11 +1225,11 @@ electrode positions on the topographic surface.
         print("Install with: pip install pyvista")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1002-1003
+.. GENERATED FROM PYTHON SOURCE LINES 1010-1011
 
 Create 2D slices for visualization - Multiple cross-sections
 
-.. GENERATED FROM PYTHON SOURCE LINES 1003-1113
+.. GENERATED FROM PYTHON SOURCE LINES 1011-1121
 
 .. code-block:: Python
 
@@ -1328,7 +1344,7 @@ Create 2D slices for visualization - Multiple cross-sections
         pl.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1114-1124
+.. GENERATED FROM PYTHON SOURCE LINES 1122-1132
 
 2D Property Slices
 ~~~~~~~~~~~~~~~~~~
@@ -1341,7 +1357,7 @@ of the electrode array to show the vertical distribution of properties.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1124-1169
+.. GENERATED FROM PYTHON SOURCE LINES 1132-1177
 
 .. code-block:: Python
    :dedent: 1
@@ -1392,7 +1408,7 @@ of the electrode array to show the vertical distribution of properties.
         pl2.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1170-1180
+.. GENERATED FROM PYTHON SOURCE LINES 1178-1188
 
 Multiple Y Cross-Sections
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1405,7 +1421,7 @@ along the electrode array.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1180-1184
+.. GENERATED FROM PYTHON SOURCE LINES 1188-1192
 
 .. code-block:: Python
 
@@ -1414,7 +1430,7 @@ along the electrode array.
         print("PyVista not available for slice visualization.")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1185-1203
+.. GENERATED FROM PYTHON SOURCE LINES 1193-1211
 
 ## Step 8: Alternative Mesh Creation Methods
 
@@ -1435,12 +1451,12 @@ The `mesh_3d.py` module supports multiple mesh creation approaches:
 
 Below we show the manual approach for comparison:
 
-.. GENERATED FROM PYTHON SOURCE LINES 1205-1207
+.. GENERATED FROM PYTHON SOURCE LINES 1213-1215
 
 Alternative: Manual 2D mesh creation for prism extrusion
 This gives you more control over the 2D base mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 1207-1227
+.. GENERATED FROM PYTHON SOURCE LINES 1215-1235
 
 .. code-block:: Python
 
@@ -1465,11 +1481,11 @@ This gives you more control over the 2D base mesh
     print(f"2D base mesh: {mesh2d_with_bnd}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1228-1229
+.. GENERATED FROM PYTHON SOURCE LINES 1236-1237
 
 Visualize 2D mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 1229-1238
+.. GENERATED FROM PYTHON SOURCE LINES 1237-1246
 
 .. code-block:: Python
 
@@ -1483,7 +1499,7 @@ Visualize 2D mesh
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1239-1249
+.. GENERATED FROM PYTHON SOURCE LINES 1247-1257
 
 2D Base Mesh for Prism Extrusion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1496,11 +1512,11 @@ near electrodes and coarser at boundaries.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1251-1252
+.. GENERATED FROM PYTHON SOURCE LINES 1259-1260
 
 Create z-discretization vector
 
-.. GENERATED FROM PYTHON SOURCE LINES 1252-1262
+.. GENERATED FROM PYTHON SOURCE LINES 1260-1270
 
 .. code-block:: Python
 
@@ -1515,11 +1531,11 @@ Create z-discretization vector
     print(f"Z-vector: {len(z_vec)} levels from {z_vec.min():.1f} to {z_vec.max():.1f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1263-1264
+.. GENERATED FROM PYTHON SOURCE LINES 1271-1272
 
 Create 3D prism mesh using mesh_3d.py
 
-.. GENERATED FROM PYTHON SOURCE LINES 1264-1287
+.. GENERATED FROM PYTHON SOURCE LINES 1272-1295
 
 .. code-block:: Python
 
@@ -1547,7 +1563,7 @@ Create 3D prism mesh using mesh_3d.py
     print(f"Prism mesh saved to {output_dir}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1288-1331
+.. GENERATED FROM PYTHON SOURCE LINES 1296-1339
 
 ## Summary
 
@@ -1593,7 +1609,7 @@ This notebook demonstrated:
 - Analyze resolution and sensitivity
 - Time-lapse monitoring applications
 
-.. GENERATED FROM PYTHON SOURCE LINES 1333-1351
+.. GENERATED FROM PYTHON SOURCE LINES 1341-1359
 
 .. code-block:: Python
 

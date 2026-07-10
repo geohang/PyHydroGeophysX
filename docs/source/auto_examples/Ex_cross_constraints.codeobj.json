@@ -1,4 +1,13 @@
 {
+ "Any": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "typing",
+   "module_short": "typing",
+   "name": "Any"
+  }
+ ],
  "StructuralConstraint.apply_structural_weights_to_Wm": [
   {
    "is_class": false,

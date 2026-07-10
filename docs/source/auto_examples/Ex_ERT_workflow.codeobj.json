@@ -332,6 +332,15 @@
    "name": "dirname"
   }
  ],
+ "os.path.exists": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "exists"
+  }
+ ],
  "os.path.join": [
   {
    "is_class": false,
