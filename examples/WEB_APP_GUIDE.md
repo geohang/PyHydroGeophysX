@@ -4,6 +4,18 @@
 
 The PyHydroGeophysX web application provides an intuitive interface for running geophysical workflows using natural language.
 
+## One-click start on Windows
+
+Double-click `start_webapp.bat` in this folder. The launcher automatically
+finds a compatible Python or conda environment and opens
+`http://localhost:8501` in the default browser. If the web-app dependencies
+are not installed yet, it creates a reusable `.venv-webapp` environment in
+the repository and installs them during the first launch.
+
+Python 3.8 or newer and an internet connection for the first-time dependency
+installation are required. Keep the command window open while using the app;
+press Ctrl+C in that window to stop it.
+
 ## 🚀 Quick Start
 
 ### 1. Install Requirements

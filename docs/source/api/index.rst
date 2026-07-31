@@ -13,3 +13,11 @@ This section contains the complete API reference for PyHydroGeophysX.
    inversion
    core
    agents
+   Geophy_modular
+   Hydro_modular
+   solvers
+   analysis
+   assimilation
+   data_access
+   uncertainty
+   visualization

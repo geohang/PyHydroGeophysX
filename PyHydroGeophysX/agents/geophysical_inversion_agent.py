@@ -1,13 +1,16 @@
 """Unified geophysical inversion agent for SRT and FDEM workflows."""
 
-from typing import Any, Dict, Optional
 import os
+from typing import Any, Dict, Optional
 
 import numpy as np
 
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Geophysical Inversion Agent
+# ---------------------------------------------------------------------------
 class GeophysicalInversionAgent(BaseAgent):
     """
     Agent for multi-method inversion orchestration.

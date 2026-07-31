@@ -4,9 +4,10 @@ ERT Loader Agent
 Specialized agent for loading and quality-checking ERT field data.
 """
 
+from pathlib import Path
 from typing import Dict, Any, Optional
 import numpy as np
-from .base_agent import BaseAgent
+from .base_agent import AgentResult, BaseAgent
 
 
 class ERTLoaderAgent(BaseAgent):
@@ -44,10 +45,6 @@ different data formats, coordinate systems, and common data quality issues."""
         self._log_execution("Starting ERT data loading")
         
         try:
-            from PyHydroGeophysX.data_processing.ert_data_agent import (
-                load_ert_resipy, qc_and_visualize, export_for_inversion, LocalRef
-            )
-            
             # Extract parameters
             data_file = input_data.get('data_file')
             instrument = input_data.get('instrument', 'E4D')
@@ -55,10 +52,57 @@ different data formats, coordinate systems, and common data quality issues."""
             electrode_file = input_data.get('electrode_file')  # Extract electrode file
             crs = input_data.get('crs', 'local')
             quality_check = input_data.get('quality_check', True)
+
+            if data_file and not Path(str(data_file)).expanduser().is_absolute():
+                project_candidate = Path(str(project_dir)) / str(data_file)
+                if project_candidate.exists():
+                    data_file = str(project_candidate)
+
+            if electrode_file and not Path(str(electrode_file)).expanduser().is_absolute():
+                project_candidate = Path(str(project_dir)) / str(electrode_file)
+                if project_candidate.exists():
+                    electrode_file = str(project_candidate)
+
+            validation_error = self.validate_input_file(
+                data_file,
+                supported_extensions=[".ohm", ".bin", ".dat", ".stg", ".txt", ".data"],
+                field_name="data_file",
+                max_size_mb=input_data.get("max_file_size_mb"),
+            )
+            if validation_error:
+                return validation_error
+
+            if electrode_file:
+                electrode_validation = self.validate_input_file(
+                    electrode_file,
+                    supported_extensions=[".dat", ".txt", ".csv"],
+                    field_name="electrode_file",
+                    max_size_mb=input_data.get("max_file_size_mb"),
+                )
+                if electrode_validation:
+                    return electrode_validation
+
+            detected_instrument = self._detect_instrument_from_header(data_file)
+            if detected_instrument and instrument and detected_instrument != instrument:
+                return AgentResult(
+                    status="needs_review",
+                    summary="The declared ERT instrument does not match the file header.",
+                    data={
+                        "declared_instrument": instrument,
+                        "detected_instrument": detected_instrument,
+                        "data_file": data_file,
+                    },
+                error_fix_hint=(
+                    f"Change instrument to '{detected_instrument}' or verify that "
+                    f"the file really uses '{instrument}' format. See: "
+                    "https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#wrong-ert-instrument"
+                ),
+            )
             
-            if not data_file:
-                raise ValueError("data_file is required")
-            
+            from PyHydroGeophysX.data_processing.ert_data_agent import (
+                load_ert_resipy, qc_and_visualize, export_for_inversion, LocalRef
+            )
+
             self._log_execution(f"Loading data from {data_file} ({instrument} format)")
             if electrode_file:
                 self._log_execution(f"Using electrode file: {electrode_file}")
@@ -126,11 +170,60 @@ different data formats, coordinate systems, and common data quality issues."""
             
         except Exception as e:
             self._log_execution(f"Error loading ERT data: {str(e)}", level='ERROR')
-            self.results = {
-                'status': 'failed',
-                'error': str(e)
-            }
-            raise
+            self.results = AgentResult(
+                status="failed",
+                summary="ERT data could not be loaded.",
+                data={},
+                error=str(e),
+                error_fix_hint=(
+                    "Check the file path, instrument name, electrode file, and file format. See: "
+                    "https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#data-file-not-found"
+                ),
+            )
+            return self.results
+
+    def _detect_instrument_from_header(self, data_file: str) -> Optional[str]:
+        """Detect a likely ERT instrument from the first two text lines.
+
+        Parameters
+        ----------
+        data_file : str
+            Path to an ERT data file.
+
+        Returns
+        -------
+        str or None
+            Detected canonical instrument name.
+
+        Raises
+        ------
+        None
+
+        Examples
+        --------
+        >>> ERTLoaderAgent()._detect_instrument_from_header("")
+        """
+        try:
+            with open(data_file, "r", encoding="utf-8", errors="ignore") as handle:
+                header = " ".join([handle.readline(), handle.readline()]).lower()
+        except Exception:
+            return None
+
+        if "e4d" in header:
+            return "E4D"
+        if "syscal" in header:
+            return "Syscal"
+        if "abem" in header or "terameter" in header:
+            return "ABEM-Lund"
+        if "das" in header or "das-1" in header:
+            return "DAS-1"
+        if "bert" in header:
+            return "BERT"
+        if "sting" in header:
+            return "Sting"
+        if "ares" in header:
+            return "ARES"
+        return None
     
     def _analyze_data_quality(self, ert_data) -> Dict[str, Any]:
         """
@@ -157,7 +250,7 @@ different data formats, coordinate systems, and common data quality issues."""
             }
             
             return metrics
-        except:
+        except Exception:
             return {'error': 'Could not compute quality metrics'}
     
     def _get_llm_insights(self, data_summary: str) -> str:
@@ -180,7 +273,7 @@ Provide concise, practical insights (2-3 sentences)."""
             
             insights = self.query_llm(prompt, self.system_message, temperature=0.5, max_tokens=200)
             return insights
-        except:
+        except Exception:
             return "Could not generate LLM insights"
     
     def _log_execution(self, message: str, level: str = 'INFO'):

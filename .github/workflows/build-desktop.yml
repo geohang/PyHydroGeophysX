@@ -1,0 +1,134 @@
+# Build the Qt desktop workbench bundles (Windows + macOS, light + full) and,
+# on version tags, attach them to the GitHub Release.
+#
+# - light: pip-only PySide6 stack; small, reliable; forward modeling / inversion /
+#   3D viewer show an install message (the app degrades gracefully).
+# - full: conda-forge engines (pygimli, pyvista/vtk) + SimPEG; best-effort
+#   (continue-on-error) because freezing the compiled engine stack is fragile.
+#
+# The Streamlit app and the docs point users at .../releases/latest, so any
+# tagged release automatically becomes the live download target.
+
+name: Build desktop apps
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.os-name }} ${{ matrix.variant }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.variant == 'full' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, os-name: windows, variant: light }
+          - { os: windows-latest, os-name: windows, variant: full }
+          - { os: macos-latest, os-name: macos, variant: light }
+          - { os: macos-latest, os-name: macos, variant: full }
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v5
+
+      # ---- light: plain pip Python ----
+      - uses: actions/setup-python@v6
+        if: matrix.variant == 'light'
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (light)
+        if: matrix.variant == 'light'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-desktop.txt scipy matplotlib pyinstaller pillow
+
+      # ---- full: conda-forge for the compiled engines ----
+      - uses: conda-incubator/setup-miniconda@v3
+        if: matrix.variant == 'full'
+        with:
+          miniforge-version: latest
+          python-version: "3.11"
+          activate-environment: build
+
+      - name: Install dependencies (full)
+        if: matrix.variant == 'full'
+        # pygimli is published on the project's own "gimli" channel, not
+        # conda-forge (same channel the installation docs use). On macOS the
+        # whole Qt stack must come from conda too: mixing pip PySide6 with the
+        # conda Qt pulled in by the engines produces a frozen app without the
+        # "offscreen" platform plugin. The pip/conda mix is fine on Windows.
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            conda install -y -c gimli -c conda-forge pygimli pyvista vtk pyside6 pyqtgraph qtawesome numpy pandas scipy matplotlib
+            python -m pip install simpeg pymatsolver pyinstaller pillow
+          else
+            conda install -y -c gimli -c conda-forge pygimli pyvista vtk
+            python -m pip install -r requirements-desktop.txt scipy matplotlib simpeg pymatsolver pyinstaller pillow
+          fi
+
+      # ---- build, smoke-test, package ----
+      - name: Build bundle
+        env:
+          PHGX_BUILD_VARIANT: ${{ matrix.variant }}
+          # Qt must not try to open a display if anything imports it during
+          # PyInstaller's module collection on the headless runner.
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python packaging/make_icons.py
+          pyinstaller --noconfirm packaging/pyinstaller_workbench.spec
+
+      - name: Smoke test (--self-test, offscreen)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            ./dist/PyHydroGeophysX-Workbench/PyHydroGeophysX-Workbench.exe --self-test
+          else
+            ./dist/PyHydroGeophysX-Workbench/PyHydroGeophysX-Workbench --self-test
+          fi
+
+      - name: Package bundle (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: >
+          Compress-Archive -Path dist/PyHydroGeophysX-Workbench
+          -DestinationPath "PyHydroGeophysX-Workbench-${{ matrix.os-name }}-${{ matrix.variant }}.zip" -Force
+
+      - name: Package bundle (macOS)
+        if: runner.os == 'macOS'
+        run: >
+          ditto -c -k --keepParent dist/PyHydroGeophysX-Workbench.app
+          "PyHydroGeophysX-Workbench-${{ matrix.os-name }}-${{ matrix.variant }}.zip"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: PyHydroGeophysX-Workbench-${{ matrix.os-name }}-${{ matrix.variant }}
+          path: PyHydroGeophysX-Workbench-${{ matrix.os-name }}-${{ matrix.variant }}.zip
+          if-no-files-found: error
+
+  release:
+    name: Attach bundles to the release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: assets
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: assets/*.zip
+          fail_on_unmatched_files: false
+          generate_release_notes: true

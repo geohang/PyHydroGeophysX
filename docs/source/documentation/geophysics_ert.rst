@@ -31,6 +31,5 @@ Forward Modeling
 Examples
 --------
 
-- :doc:`/auto_examples/Ex_ERT_data_process`
 - :doc:`/auto_examples/Ex_ERT_workflow`
 - :doc:`/auto_examples/Ex_3D_ERT_forward`

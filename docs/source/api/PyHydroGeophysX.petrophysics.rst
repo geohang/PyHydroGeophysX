@@ -4,6 +4,14 @@ PyHydroGeophysX.petrophysics package
 Submodules
 ----------
 
+PyHydroGeophysX.petrophysics.monte\_carlo module
+------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.petrophysics.monte_carlo
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.petrophysics.resistivity\_models module
 -------------------------------------------------------
 

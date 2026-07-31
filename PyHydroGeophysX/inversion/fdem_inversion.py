@@ -8,14 +8,25 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import numpy as np
-from discretize import TensorMesh
-from simpeg import data, data_misfit, directives, inverse_problem, inversion, maps
-from simpeg import optimization, regularization
 import simpeg.electromagnetics.frequency_domain as fdem
+from discretize import TensorMesh
+from simpeg import (
+    data,
+    data_misfit,
+    directives,
+    inverse_problem,
+    inversion,
+    maps,
+    optimization,
+    regularization,
+)
 
 from PyHydroGeophysX.forward.fdem_forward import FDEMSurveyConfig
 
 
+# ---------------------------------------------------------------------------
+# FDEMInversion Result
+# ---------------------------------------------------------------------------
 @dataclass
 class FDEMInversionResult:
     """Container for FDEM inversion results."""
@@ -31,6 +42,9 @@ class FDEMInversionResult:
     frequencies: np.ndarray = None
 
 
+# ---------------------------------------------------------------------------
+# FDEMInversion
+# ---------------------------------------------------------------------------
 class FDEMInversion:
     """
     1D FDEM inversion using SimPEG.
@@ -278,6 +292,13 @@ class FDEMInversion:
             thicknesses=self.thicknesses,
             sigmaMap=self.model_mapping,
         )
+        # The default Pardiso solver can terminate the Windows process with a
+        # delay-load exception when MKL/Pardiso is unavailable.  Use the
+        # portable SciPy-backed pymatsolver implementation explicitly.
+        import pymatsolver
+
+        self.simulation.solver = pymatsolver.Solver
+        self.simulation.solver_opts = {}
 
         self._setup_complete = True
 
@@ -334,8 +355,8 @@ class FDEMInversion:
         opt = optimization.ProjectedGNCG(
             maxIter=int(self.parameters["max_iterations"]),
             maxIterLS=20,
-            cg_maxiter=int(self.parameters["cg_maxiter"]),
-            cg_rtol=1e-3,
+            maxIterCG=int(self.parameters["cg_maxiter"]),
+            tolCG=1e-3,
         )
 
         lower_bound = max(float(self.parameters["lower_bound"]), 1e-12)

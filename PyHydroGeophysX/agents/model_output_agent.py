@@ -5,15 +5,19 @@ Loads hydrological model outputs (MODFLOW and ParFlow) and provides
 basic summaries and visualization artifacts.
 """
 
-from typing import Dict, Any, Optional, Tuple
 import os
 from pathlib import Path
-import numpy as np
+from typing import Any, Dict, Optional, Tuple
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Model Output Agent
+# ---------------------------------------------------------------------------
 class ModelOutputAgent(BaseAgent):
     """
     Agent for loading hydrological model outputs.
@@ -292,7 +296,7 @@ class ModelOutputAgent(BaseAgent):
                 results["warnings"].append(f"ParFlow velocity conversion failed: {exc}")
 
     def _load_modflow(self, input_data: Dict[str, Any], output_dir: Path) -> Dict[str, Any]:
-        from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent, MODFLOWPorosity
+        from PyHydroGeophysX.model_output.modflow_output import MODFLOWPorosity, MODFLOWWaterContent
 
         modflow_dir = input_data.get("modflow_dir") or input_data.get("model_directory")
         if not modflow_dir:
@@ -385,7 +389,11 @@ class ModelOutputAgent(BaseAgent):
         }
 
     def _load_parflow(self, input_data: Dict[str, Any], output_dir: Path) -> Dict[str, Any]:
-        from PyHydroGeophysX.model_output.parflow_output import ParflowSaturation, ParflowPorosity, read_pfb
+        from PyHydroGeophysX.model_output.parflow_output import (
+            ParflowPorosity,
+            ParflowSaturation,
+            read_pfb,
+        )
 
         parflow_dir = input_data.get("parflow_dir") or input_data.get("model_directory")
         uploaded_files = input_data.get("uploaded_files", {})

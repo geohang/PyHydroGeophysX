@@ -1,19 +1,24 @@
 """
 3D Kriging utilities for seismic velocity interpolation.
 """
+from typing import Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pyvista as pv
 from scipy.interpolate import griddata
-from typing import Tuple, Optional, Dict, List, Union
+
 try:
-    from gstools import Exponential, krige, vario_estimate_unstructured, vario_estimate
     import gstools as gs
+    from gstools import Exponential, krige, vario_estimate, vario_estimate_unstructured
     GSTOOLS_AVAILABLE = True
 except ImportError:
     GSTOOLS_AVAILABLE = False
     print("Warning: gstools not installed. 3D kriging functionality will be limited.")
 
 
+# ---------------------------------------------------------------------------
+# create 3d structured grid
+# ---------------------------------------------------------------------------
 def create_3d_structured_grid(topography_data: np.ndarray, 
                             grid_resolution: int = 50,
                             z_cells: Optional[np.ndarray] = None) -> pv.StructuredGrid:
@@ -57,6 +62,9 @@ def create_3d_structured_grid(topography_data: np.ndarray,
     return mesh
 
 
+# ---------------------------------------------------------------------------
+# estimate directional variograms
+# ---------------------------------------------------------------------------
 def estimate_directional_variograms(data_points: np.ndarray,
                                   values: np.ndarray,
                                   dip_angles: List[float] = [90, 85, 80],
@@ -118,6 +126,9 @@ def estimate_directional_variograms(data_points: np.ndarray,
     }
 
 
+# ---------------------------------------------------------------------------
+# optimize variogram model
+# ---------------------------------------------------------------------------
 def optimize_variogram_model(bins: np.ndarray,
                            variograms: np.ndarray,
                            n_samples: int = 10000,
@@ -187,6 +198,9 @@ def optimize_variogram_model(bins: np.ndarray,
     return sample_results[:n_best]
 
 
+# ---------------------------------------------------------------------------
+# krige seismic velocity 3d
+# ---------------------------------------------------------------------------
 def krige_seismic_velocity_3d(topography_file: Union[str, np.ndarray],
                              velocity_data: Union[str, np.ndarray],
                              grid_resolution: int = 50,
@@ -328,6 +342,10 @@ def krige_seismic_velocity_3d(topography_file: Union[str, np.ndarray],
 
 
 # Convenience functions for common use cases
+
+# ---------------------------------------------------------------------------
+# krige from 2d profiles
+# ---------------------------------------------------------------------------
 def krige_from_2d_profiles(profile_velocities: Dict[str, np.ndarray],
                          topography_data: np.ndarray,
                          profile_locations: Dict[str, Tuple[Tuple[float, float], Tuple[float, float]]],

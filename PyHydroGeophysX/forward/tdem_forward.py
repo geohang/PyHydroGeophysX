@@ -5,17 +5,21 @@ This module provides classes for 1D TDEM forward modeling using SimPEG,
 including support for layered Earth models derived from hydrological data.
 """
 
-import numpy as np
-from typing import Optional, Tuple, List, Union
 from dataclasses import dataclass
+from typing import List, Optional, Tuple, Union
+
+import numpy as np
+import simpeg.electromagnetics.time_domain as tdem
 
 # SimPEG imports
 from discretize import TensorMesh
-import simpeg.electromagnetics.time_domain as tdem
 from simpeg import maps
 from simpeg.utils import mkvc
 
 
+# ---------------------------------------------------------------------------
+# TDEMSurvey Config
+# ---------------------------------------------------------------------------
 @dataclass
 class TDEMSurveyConfig:
     """Configuration for TDEM survey geometry.
@@ -32,8 +36,10 @@ class TDEMSurveyConfig:
     source_location: np.ndarray = None
     source_radius: float = 10.0
     source_current: float = 1.0
+    source_turns: int = 1
     receiver_location: np.ndarray = None
     receiver_orientation: str = "z"
+    receiver_type: str = "b"
     times: np.ndarray = None
     waveform_type: str = "step_off"
     
@@ -46,6 +52,9 @@ class TDEMSurveyConfig:
             self.times = np.logspace(-5, -2, 31)
 
 
+# ---------------------------------------------------------------------------
+# TDEMForward Modeling
+# ---------------------------------------------------------------------------
 class TDEMForwardModeling:
     """Class for forward modeling of Time-Domain Electromagnetic (TDEM) data.
     
@@ -108,8 +117,13 @@ class TDEMForwardModeling:
             SimPEG TDEM Survey object
         """
         # Create receiver
+        receiver_cls = (
+            tdem.receivers.PointMagneticFluxTimeDerivative
+            if str(config.receiver_type).lower() in {"dbdt", "db/dt", "time_derivative"}
+            else tdem.receivers.PointMagneticFluxDensity
+        )
         receiver_list = [
-            tdem.receivers.PointMagneticFluxDensity(
+            receiver_cls(
                 config.receiver_location,
                 config.times,
                 orientation=config.receiver_orientation
@@ -124,16 +138,38 @@ class TDEMForwardModeling:
         else:
             waveform = tdem.sources.StepOffWaveform()
         
-        # Create source
-        source_list = [
-            tdem.sources.CircularLoop(
+        # SimPEG's 1D CircularLoop implementation only supports a central-loop
+        # receiver. Ground TEM systems such as TEM2Go use a small transmitter loop
+        # and an offset receiver; represent that loop by its equivalent magnetic
+        # dipole moment (I * N * area) when an offset is present.
+        offset = np.linalg.norm(
+            np.asarray(config.receiver_location, dtype=float)[:2]
+            - np.asarray(config.source_location, dtype=float)[:2]
+        )
+        if offset > 1e-9:
+            magnetic_moment = (
+                float(config.source_current)
+                * max(1, int(config.source_turns))
+                * np.pi
+                * float(config.source_radius) ** 2
+            )
+            source = tdem.sources.MagDipole(
+                receiver_list=receiver_list,
+                location=config.source_location,
+                waveform=waveform,
+                moment=magnetic_moment,
+                orientation=config.receiver_orientation,
+            )
+        else:
+            source = tdem.sources.CircularLoop(
                 receiver_list=receiver_list,
                 location=config.source_location,
                 waveform=waveform,
                 current=config.source_current,
                 radius=config.source_radius,
+                n_turns=max(1, int(config.source_turns)),
             )
-        ]
+        source_list = [source]
         
         return tdem.Survey(source_list)
     
@@ -203,6 +239,9 @@ class TDEMForwardModeling:
         return self.survey.nD
 
 
+# ---------------------------------------------------------------------------
+# create tdem survey
+# ---------------------------------------------------------------------------
 def create_tdem_survey(
     times: np.ndarray,
     source_radius: float = 10.0,
@@ -246,7 +285,10 @@ def create_tdem_survey(
     return fwd.survey
 
 
-def hydro_to_tdem(
+# ---------------------------------------------------------------------------
+# hydro to tdem
+# ---------------------------------------------------------------------------
+def simulate_tdem_sounding_from_hydro(
     water_content: np.ndarray,
     porosity: np.ndarray,
     layer_thicknesses: np.ndarray,
@@ -350,3 +392,18 @@ def hydro_to_tdem(
         print(f"Generated {len(noisy_data)} data points")
     
     return noisy_data, clean_data, uncertainties, conductivity
+
+
+def hydro_to_tdem(*args, **kwargs):
+    """Deprecated alias for :func:`simulate_tdem_sounding_from_hydro`."""
+    import warnings
+
+    warnings.warn(
+        "forward.tdem_forward.hydro_to_tdem is deprecated; use "
+        "simulate_tdem_sounding_from_hydro for a single column or "
+        "Hydro_modular.hydro_to_tdem for a profile. This compatibility shim is "
+        "deprecated in 0.4.0 and will be removed in 0.5.0.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return simulate_tdem_sounding_from_hydro(*args, **kwargs)

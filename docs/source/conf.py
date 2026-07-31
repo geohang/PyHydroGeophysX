@@ -2,6 +2,7 @@
 
 import os
 import sys
+import importlib.util
 
 # Add project to path
 sys.path.insert(0, os.path.abspath('../../'))
@@ -11,7 +12,7 @@ sys.path.insert(0, os.path.abspath('../../PyHydroGeophysX'))
 project = 'PyHydroGeophysX'
 copyright = '2025, Hang Chen'
 author = 'Hang Chen'
-release = '0.1.0'
+release = '0.3.0'
 
 # Extensions
 extensions = [
@@ -19,15 +20,19 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'sphinx_gallery.gen_gallery',
-    'sphinx_copybutton',
-    'sphinx_design',
 ]
+
+# Optional extensions (build should still work if unavailable)
+for _ext in ['sphinx_copybutton', 'sphinx_design']:
+    if importlib.util.find_spec(_ext):
+        extensions.append(_ext)
 
 # Sphinx Gallery configuration - FINAL WORKING VERSION
 sphinx_gallery_conf = {
     'examples_dirs': '../../examples',           # Path to example scripts
     'gallery_dirs': 'auto_examples',             # Output gallery directory
-    'filename_pattern': '/(Ex|EX).*\.py$',
+    'filename_pattern': r'/(Ex|EX)_.*\.py$',
+    'ignore_pattern': r'(app_.*|aquah_web|generate_synthetic_examples)\.py$',
     'plot_gallery': False,                       # Don't execute scripts (use pre-generated figures)
     'download_all_examples': True,               # Allow downloading scripts
     'abort_on_example_error': False,             # Continue on errors
@@ -41,7 +46,10 @@ sphinx_gallery_conf = {
 }
 
 # HTML theme
-html_theme = 'pydata_sphinx_theme'
+if importlib.util.find_spec('pydata_sphinx_theme'):
+    html_theme = 'pydata_sphinx_theme'
+else:
+    html_theme = 'alabaster'
 html_title = 'PyHydroGeophysX Documentation'
 html_logo = '_static/logo.png'
 
@@ -54,6 +62,11 @@ html_theme_options = {
             'name': 'GitHub',
             'url': 'https://github.com/geohang/PyHydroGeophysX',
             'icon': 'fa-brands fa-github',
+        },
+        {
+            'name': 'Environmental Geophysics Course',
+            'url': 'https://geohang.github.io/environmental-geophysics/',
+            'icon': 'fa-solid fa-graduation-cap',
         },
     ],
     'use_edit_page_button': True,
@@ -83,3 +96,10 @@ autodoc_mock_imports = [
 
 # GitHub Pages
 html_baseurl = 'https://geohang.github.io/PyHydroGeophysX/'
+
+# External links known to return 403 to automated linkcheck clients
+linkcheck_ignore = [
+    r'https://ssrn\.com/abstract=6238293',
+    r'https://doi\.org/10\.2139/ssrn\.6238293',
+    r'https://papers\.ssrn\.com/sol3/papers\.cfm\?abstract_id=6238293',
+]

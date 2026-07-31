@@ -28,4 +28,4 @@ Related Examples
 - :doc:`/auto_examples/EX_SRT_forward`
 - :doc:`/auto_examples/Ex_SRT_inv`
 - :doc:`/auto_examples/Ex_Structure_resinv`
-- :doc:`/auto_examples/Ex_cross_constraints`
+- :doc:`/auto_examples/Ex_joint_inversion`

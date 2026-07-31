@@ -1,15 +1,21 @@
-# PyHydroGeophysX/core/data_processing/ert_data_agent.py
+"""ERT field-data loading, fallback parsing, QC, and export helpers."""
+
 from __future__ import annotations
-from dataclasses import dataclass, asdict
-from pathlib import Path
+
 import io
-from typing import Optional, Dict, Any, List, Literal, NamedTuple
 import json
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+import re
+import struct
+import sys
 import tempfile
 import warnings
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Literal, NamedTuple, Optional
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 # =============================================================================
 # ERT Data Loading with Fallback Parsers
@@ -36,8 +42,16 @@ import warnings
 #   Documentation: https://hkex.gitlab.io/resipy/
 # =============================================================================
 
-import re
-import struct
+def _notify(message: str) -> None:
+    """Write a package status line to stderr.
+
+    These lines are diagnostics, not results. On stdout they corrupted the
+    output of generated workflow scripts, whose contract is a single JSON
+    document on stdout, so ``python run_<workflow>.py > result.json`` produced a
+    file that no JSON parser would accept.
+    """
+    print(message, file=sys.stderr)
+
 
 _RESIPY_ERROR = None
 _HAS_RESIPY = False
@@ -48,20 +62,31 @@ _HAS_PYGIMLI = False
 try:
     from resipy import Project
     _HAS_RESIPY = True
-    print("[PyHydroGeophysX] RESIPY loaded successfully")
+    _notify("[PyHydroGeophysX] RESIPY loaded successfully")
 except Exception as e:
     _HAS_RESIPY = False
     _RESIPY_ERROR = str(e)
-    print(f"[PyHydroGeophysX] RESIPY import failed: {e}, using embedded parsers (modified from ResIPy)")
+    _notify(f"[PyHydroGeophysX] RESIPY import failed: {e}, using embedded parsers (modified from ResIPy)")
 
 # Try pygimli as additional fallback
 try:
     import pygimli as pg
     from pygimli.physics import ert as pgert
     _HAS_PYGIMLI = True
-    print("[PyHydroGeophysX] PyGIMLi loaded successfully")
+    _notify("[PyHydroGeophysX] PyGIMLi loaded successfully")
 except Exception as e:
-    print(f"[PyHydroGeophysX] PyGIMLi import failed: {e}")
+    _notify(f"[PyHydroGeophysX] PyGIMLi import failed: {e}")
+
+# Check SimPEG availability
+try:
+    import simpeg as _simpeg
+    _notify(f"[PyHydroGeophysX] SimPEG loaded successfully (version {_simpeg.__version__})")
+except Exception as e:
+    try:
+        import SimPEG as _simpeg
+        _notify(f"[PyHydroGeophysX] SimPEG loaded successfully (version {_simpeg.__version__})")
+    except Exception as fallback_error:
+        _notify(f"[PyHydroGeophysX] SimPEG not available: {fallback_error or e}")
 
 
 # =============================================================================
@@ -91,9 +116,11 @@ def _geom_fac(C1, C2, P1, P2):
     return k
 
 
-def _bertParser(fname):
+def _bertParser_legacy(fname):
     """
-    Parse BERT/Unified Data Format (.ohm, .dat files).
+    Legacy BERT/Unified parser (CSV / positional fallback for plain files).
+    ``_bertParser`` prefers ``_unified_ert_parser`` and only falls back here when a
+    file is not the count-prefixed unified/E4D format.
     Modified from ResIPy project (GPL-3.0).
     Original authors: Guillaume Blanchy, Jimmy Boyd, et al.
     """
@@ -119,7 +146,7 @@ def _bertParser(fname):
                 if len(vals) >= 4:  # A B M N minimum
                     data_start_line = i
                     break
-            except:
+            except Exception:
                 continue
 
     if data_start_line is None:
@@ -207,6 +234,187 @@ def _bertParser(fname):
     return elec, df
 
 
+def _is_index_column(col0) -> bool:
+    """True if ``col0`` is a 1..n or 0..n-1 integer sequence (a row-index column)."""
+    a = np.asarray(col0, dtype=float)
+    if a.size == 0 or not np.all(np.isfinite(a)):
+        return False
+    if not np.allclose(a, np.round(a)):
+        return False
+    r = np.round(a).astype(int)
+    n = a.size
+    return np.array_equal(r, np.arange(1, n + 1)) or np.array_equal(r, np.arange(0, n))
+
+
+def _parse_elec_rows(rows, names):
+    """Return an (N, 3) x/y/z electrode array from unified-format electrode rows."""
+    w = min(len(r) for r in rows)
+    arr = np.array([r[:w] for r in rows], dtype=float)
+    lownames = [str(s).lower() for s in names] if names else None
+    if lownames and 'x' in lownames:
+        # Header names the columns explicitly (no leading index column).
+        def pick(key, default_idx):
+            if key in lownames and lownames.index(key) < w:
+                return arr[:, lownames.index(key)]
+            return arr[:, default_idx] if default_idx < w else np.zeros(len(arr))
+        x = pick('x', 0)
+        y = pick('y', 1)
+        z = pick('z', 2) if 'z' in lownames else np.zeros(len(arr))
+        return np.column_stack([x, y, z]).astype(float)
+    # No usable header: detect an optional leading electrode-index column.
+    offset = 1 if (w >= 4 and _is_index_column(arr[:, 0])) else 0
+    body = arr[:, offset:]
+    bw = body.shape[1]
+    x = body[:, 0]
+    y = body[:, 1] if bw > 1 else np.zeros(len(arr))
+    z = body[:, 2] if bw > 2 else np.zeros(len(arr))
+    return np.column_stack([x, y, z]).astype(float)
+
+
+def _parse_data_rows(rows, names):
+    """Return a DataFrame (a,b,m,n + rhoa/resist/dev/...) from unified data rows."""
+    w = min(len(r) for r in rows)
+    arr = np.array([r[:w] for r in rows], dtype=float)
+    lownames = [str(s).lower() for s in names] if names else None
+    if lownames and all(k in lownames for k in ('a', 'b', 'm', 'n')):
+        col = {k: arr[:, lownames.index(k)] for k in lownames if lownames.index(k) < w}
+        out = {'a': col['a'], 'b': col['b'], 'm': col['m'], 'n': col['n']}
+        for k in ('rhoa', 'app', 'app_res'):
+            if k in col:
+                out['rhoa'] = col[k]
+                break
+        for k in ('r', 'resist', 'resistance'):
+            if k in col:
+                out['resist'] = col[k]
+                break
+        for k in ('err', 'dev', 'std', 'error'):
+            if k in col:
+                out['dev'] = col[k]
+                break
+        # Keep the file's geometric factors. When the file also reports rhoa,
+        # these are the factors it was built with, and the inversion needs them
+        # to check that its own k describes the same measurement.
+        for k in ('k', 'geom', 'geom_factor'):
+            if k in col:
+                out['k'] = col[k]
+                break
+        for k in ('u', 'i', 'ip'):
+            if k in col:
+                out[k] = col[k]
+        if 'rhoa' in out or 'resist' in out:
+            df = pd.DataFrame(out)
+            if 'ip' not in df.columns:
+                df['ip'] = np.nan
+            return df
+    # Positional layout: detect an optional leading measurement-index column.
+    offset = 1 if (w >= 6 and _is_index_column(arr[:, 0])) else 0
+    body = arr[:, offset:]
+    bw = body.shape[1]
+    if bw < 4:
+        raise ValueError("unified ERT parser: data rows need at least a, b, m, n")
+    out = {'a': body[:, 0], 'b': body[:, 1], 'm': body[:, 2], 'n': body[:, 3]}
+    if bw >= 5:
+        out['resist'] = body[:, 4]
+    if bw >= 6:
+        out['dev'] = body[:, 5]
+    df = pd.DataFrame(out)
+    df['ip'] = np.nan
+    return df
+
+
+def _unified_ert_parser(fname):
+    """Parse the pyGIMLi / BERT / E4D unified ERT format (no resipy required).
+
+    Handles count-prefixed blocks (n_electrodes / electrode rows / n_data / data
+    rows), optional ``# token`` header lines, optional leading index columns, and
+    electrode rows of 2-5 columns. Returns ``(elec, df)`` like the other embedded
+    parsers, with real electrode coordinates (including topography) and correctly
+    named value columns, so apparent-resistivity vs resistance is detected right.
+    """
+    with open(fname, "r", encoding="utf-8", errors="ignore") as fh:
+        raw = fh.read().splitlines()
+
+    num_re = re.compile(r'[-+]?\d*\.\d+(?:[eE][-+]?\d+)?|[-+]?\d+')
+    seq = []  # ("header", [names]) | ("nums", [floats])
+    for ln in raw:
+        s = ln.strip()
+        if not s or s[0] in "!*":
+            continue
+        if s[0] == '#':
+            names = [t for t in re.split(r'[\s,]+', s[1:].strip()) if t]
+            if names:
+                seq.append(("header", names))
+            continue
+        body = s.split('#')[0].split('!')[0]
+        nums = num_re.findall(body)
+        if nums:
+            seq.append(("nums", [float(x) for x in nums]))
+    if not seq:
+        raise ValueError("unified ERT parser: no numeric content found")
+
+    idx = 0
+
+    def next_count():
+        nonlocal idx
+        while idx < len(seq) and seq[idx][0] != "nums":
+            idx += 1
+        if idx >= len(seq):
+            return None
+        val = int(round(seq[idx][1][0]))
+        idx += 1
+        return val
+
+    def maybe_header():
+        nonlocal idx
+        if idx < len(seq) and seq[idx][0] == "header":
+            h = seq[idx][1]
+            idx += 1
+            return h
+        return None
+
+    def take_rows(count):
+        nonlocal idx
+        rows = []
+        limit = count if (count and count > 0) else len(seq)
+        while idx < len(seq) and len(rows) < limit:
+            if seq[idx][0] == "nums":
+                rows.append(seq[idx][1])
+            idx += 1
+        return rows
+
+    n_elec = next_count()
+    if not n_elec or n_elec <= 0:
+        raise ValueError("unified ERT parser: missing/invalid electrode count")
+    elec_header = maybe_header()
+    elec_rows = take_rows(n_elec)
+    if len(elec_rows) < n_elec:
+        raise ValueError(f"unified ERT parser: found {len(elec_rows)}/{n_elec} electrode rows")
+    elec = _parse_elec_rows(elec_rows, elec_header)
+
+    n_data = next_count()
+    if n_data is None:
+        raise ValueError("unified ERT parser: missing data block")
+    data_header = maybe_header()
+    data_rows = take_rows(n_data)
+    if not data_rows:
+        raise ValueError("unified ERT parser: no measurement rows")
+    df = _parse_data_rows(data_rows, data_header)
+    return elec, df
+
+
+def _bertParser(fname):
+    """BERT / E4D / unified ERT parser.
+
+    Tries the robust :func:`_unified_ert_parser` first (count-prefixed blocks with
+    topography and header-aware columns) and falls back to the legacy CSV /
+    positional reader for plain files.
+    """
+    try:
+        return _unified_ert_parser(fname)
+    except Exception:
+        return _bertParser_legacy(fname)
+
+
 def _syscalParser(fname):
     """
     Parse Syscal format (CSV from IRIS Instruments).
@@ -265,7 +473,7 @@ def _syscalParser(fname):
         if col in df.columns:
             try:
                 df[col] = df[col].astype(int)
-            except:
+            except Exception:
                 # If conversion fails, keep as is
                 pass
 
@@ -372,7 +580,7 @@ def _protocolParser(fname, ip=False):
         if col in df.columns:
             try:
                 df[col] = df[col].astype(int)
-            except:
+            except Exception:
                 pass  # Keep as float if conversion fails
 
     # Build electrode array
@@ -396,6 +604,71 @@ def _protocolParser(fname, ip=False):
 
     if 'ip' not in df.columns:
         df['ip'] = np.nan
+
+    return elec, df
+
+
+def _abem_lund_parser(fname):
+    """
+    Parse ABEM/Lund Terameter LS style .dat files.
+
+    Common data row structure (12+ numeric columns) is:
+      type xA yA xB yB xM yM xN yN <meta...>
+    We extract ABMN from x-coordinates (xA, xB, xM, xN), and use the last
+    two trailing numeric columns as resistivity-like values.
+    """
+    num_str = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+'
+    rows = []
+    try:
+        with open(fname, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                vals = re.findall(num_str, line.strip())
+                if len(vals) < 11:
+                    continue
+                nums = [float(v) for v in vals]
+                kind = int(round(nums[0]))
+                # ABEM LS measurement rows are typically flagged as type=4.
+                if kind != 4:
+                    continue
+
+                a = nums[1]
+                b = nums[3]
+                m = nums[5]
+                n = nums[7]
+
+                tail = nums[9:]
+                if len(tail) >= 3:
+                    dev = tail[0]
+                    resist = tail[-2]
+                    app = tail[-1]
+                elif len(tail) == 2:
+                    dev = np.nan
+                    resist = tail[0]
+                    app = tail[1]
+                else:
+                    dev = np.nan
+                    resist = tail[0]
+                    app = np.nan
+
+                rows.append((a, b, m, n, resist, app, dev))
+    except Exception as e:
+        raise ValueError(f"Could not parse ABEM-Lund file {fname}: {e}")
+
+    if not rows:
+        raise ValueError("No ABEM-Lund measurement rows detected")
+
+    df = pd.DataFrame(rows, columns=["a", "b", "m", "n", "resist", "app", "dev"])
+    for col in ["a", "b", "m", "n"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    if df[["a", "b", "m", "n"]].isna().all().any():
+        raise ValueError("ABEM-Lund parser failed to extract ABMN coordinates.")
+
+    unique_elec = np.sort(np.unique(df[["a", "b", "m", "n"]].values.astype(float).flatten()))
+    elec = np.c_[unique_elec, np.zeros_like(unique_elec), np.zeros_like(unique_elec)]
+
+    if "ip" not in df.columns:
+        df["ip"] = np.nan
 
     return elec, df
 
@@ -579,23 +852,34 @@ Instrument = Literal[
 ]
 
 class LocalRef(NamedTuple):
+    """Local coordinate reference information for profile-based ERT data."""
+
     origin_x: float = 0.0   # optional world X of profile start
     origin_y: float = 0.0   # optional world Y of profile start
     azimuth_deg: float = 0.0  # profile direction (deg clockwise from north)
 
+
 @dataclass
 class Electrode:
+    """Electrode position and identifier for standardized ERT datasets."""
+
     id: int
     x: float
     y: float = 0.0
     z: float = 0.0
 
+
 @dataclass
 class Quadruplet:
+    """Current and potential electrode indices for one ERT measurement."""
+
     A: int; B: int; M: int; N: int
+
 
 @dataclass
 class Observation:
+    """Single apparent-resistivity observation and its supporting metadata."""
+
     quad: Quadruplet
     app_res: float | None = None   # apparent resistivity (ohm·m)
     dV: float | None = None        # potential difference (V)
@@ -604,8 +888,11 @@ class Observation:
     K: float | None = None         # geometric factor
     fid: str | None = None         # field id/record id
 
+
 @dataclass
 class StandardERT:
+    """Standardized ERT container with coordinates, observations, and metadata."""
+
     # "local" or "EPSG:xxxx"
     crs: str = "local"
     instrument: str = "Syscal"
@@ -631,6 +918,38 @@ class StandardERT:
             json.dump(obj, f, indent=2)
 
 
+def _normalize_elevation_axis(electrodes_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalize 2D electrode coordinates so elevation is carried in `y`.
+
+    Some loaders provide 2D profile coordinates as (x, 0, z_elev).
+    PyGIMLi ERT workflows in this project treat `y` as elevation.
+    This helper preserves the original elevation values and only remaps
+    axes when it is clearly a 2D case (flat y, varying z).
+    """
+    if electrodes_df is None or len(electrodes_df) == 0:
+        return electrodes_df
+
+    out = electrodes_df.copy()
+    if 'y' not in out.columns:
+        out['y'] = 0.0
+    if 'z' not in out.columns:
+        out['z'] = 0.0
+
+    y_vals = pd.to_numeric(out['y'], errors='coerce').fillna(0.0).to_numpy(dtype=float)
+    z_vals = pd.to_numeric(out['z'], errors='coerce').fillna(0.0).to_numpy(dtype=float)
+
+    y_span = float(np.nanmax(y_vals) - np.nanmin(y_vals)) if len(y_vals) else 0.0
+    z_span = float(np.nanmax(z_vals) - np.nanmin(z_vals)) if len(z_vals) else 0.0
+
+    # Only remap when elevation is clearly carried by z and y is effectively flat.
+    if y_span < 1e-8 and z_span > 1e-8:
+        out['y'] = z_vals
+        out['z'] = 0.0
+
+    return out
+
+
 # ---------------------------
 # Instrument mapping
 # ---------------------------
@@ -652,10 +971,73 @@ _FTYPE_MAP = {
     "Merged": "Merged",
 }
 
+_INSTRUMENT_ALIAS_MAP = {
+    "abem": "ABEM-Lund",
+    "abem lund": "ABEM-Lund",
+    "abem-lund": "ABEM-Lund",
+    "abem terameter": "ABEM-Lund",
+    "abem terameter ls": "ABEM-Lund",
+    "terameter": "ABEM-Lund",
+    "terameter ls": "ABEM-Lund",
+    "das": "DAS-1",
+    "das 1": "DAS-1",
+    "das-1": "DAS-1",
+    "syscal": "Syscal",
+    "syscal pro": "Syscal",
+    "bert": "BERT",
+    "e4d": "E4D",
+}
+
+def _normalize_instrument_name(instrument: str) -> str:
+    """
+    Normalize user- or LLM-provided instrument aliases to supported canonical names.
+    """
+    if instrument in _FTYPE_MAP:
+        return instrument
+    token = re.sub(r'[^a-z0-9]+', ' ', str(instrument).strip().lower()).strip()
+    if token in _INSTRUMENT_ALIAS_MAP:
+        return _INSTRUMENT_ALIAS_MAP[token]
+    if "abem" in token or ("terameter" in token and "ls" in token):
+        return "ABEM-Lund"
+    if token.startswith("das"):
+        return "DAS-1"
+    if "syscal" in token:
+        return "Syscal"
+    return instrument
+
+
+def _looks_like_abem_lund_file(data_file_path: Path) -> bool:
+    """
+    Heuristically detect ABEM Terameter/Lund-style exports.
+    """
+    try:
+        with open(data_file_path, "r", encoding="utf-8", errors="ignore") as f:
+            lines = [f.readline().strip() for _ in range(60)]
+    except Exception:
+        return False
+
+    lines = [ln for ln in lines if ln]
+    if not lines:
+        return False
+
+    header = "\n".join(lines[:25]).lower()
+    has_abem_tag = "type of measurement" in header
+
+    type4_rows = 0
+    for ln in lines:
+        parts = ln.split()
+        if parts and parts[0] == "4":
+            type4_rows += 1
+
+    # ABEM exports usually contain the explicit "Type of measurement" line
+    # and many data rows starting with "4".
+    return bool(has_abem_tag and type4_rows >= 3)
+
 def _to_ftype(instrument: Instrument) -> str:
-    if instrument not in _FTYPE_MAP:
+    normalized = _normalize_instrument_name(str(instrument))
+    if normalized not in _FTYPE_MAP:
         raise ValueError(f"Unsupported instrument: {instrument}")
-    return _FTYPE_MAP[instrument]
+    return _FTYPE_MAP[normalized]
 
 
 # Parser mapping for embedded parsers (modified from ResIPy)
@@ -666,7 +1048,7 @@ _EMBEDDED_PARSER_MAP = {
     "BERT": _bertParser,
     "E4D": _bertParser,
     "DAS-1": _dasParser,
-    "ABEM-Lund": _bertParser,  # Use BERT parser as fallback
+    "ABEM-Lund": _abem_lund_parser,
     "Lippmann": _bertParser,   # Use BERT parser as fallback
     "ARES": _bertParser,       # Use BERT parser as fallback
 }
@@ -822,12 +1204,26 @@ def _load_ert_embedded_parsers(
 
     All credit for original parsing algorithms goes to the ResIPy developers.
     """
+    requested_instrument = str(instrument)
+    instrument = _normalize_instrument_name(requested_instrument)
+    if instrument != requested_instrument:
+        _notify(f"[PyHydroGeophysX] Normalized instrument '{requested_instrument}' -> '{instrument}'")
+
     data_file_path = Path(data_file)
     if not data_file_path.is_absolute():
         data_file_path = Path.cwd() / data_file_path
     
     if not data_file_path.exists():
         raise FileNotFoundError(f"Data file not found: {data_file_path}")
+
+    # Guardrail: if the file clearly looks like ABEM-Lund but the instrument was
+    # specified differently (common in quick mode), override to the safer parser.
+    if instrument != "ABEM-Lund" and _looks_like_abem_lund_file(data_file_path):
+        print(
+            f"[PyHydroGeophysX] Detected ABEM-Lund style file; "
+            f"overriding instrument '{instrument}' -> 'ABEM-Lund'"
+        )
+        instrument = "ABEM-Lund"
     
     # Select appropriate parser based on instrument
     parser_func = _EMBEDDED_PARSER_MAP.get(instrument, _bertParser)
@@ -839,17 +1235,17 @@ def _load_ert_embedded_parsers(
 
     # Parse the data file
     try:
-        print(f"[PyHydroGeophysX] Attempting to parse ERT data with {parser_name} parser...")
+        _notify(f"[PyHydroGeophysX] Attempting to parse ERT data with {parser_name} parser...")
         elec_array, df = parser_func(str(data_file_path))
-        print(f"[PyHydroGeophysX] Successfully parsed {len(df)} measurements and {len(elec_array)} electrodes")
+        _notify(f"[PyHydroGeophysX] Successfully parsed {len(df)} measurements and {len(elec_array)} electrodes")
     except Exception as e:
-        print(f"[PyHydroGeophysX] Parser {parser_name} failed: {e}")
+        _notify(f"[PyHydroGeophysX] Parser {parser_name} failed: {e}")
         # Try fallback parsers if this one fails
         if parser_func != _bertParser:
-            print(f"[PyHydroGeophysX] Trying BERT parser as fallback...")
+            _notify(f"[PyHydroGeophysX] Trying BERT parser as fallback...")
             try:
                 elec_array, df = _bertParser(str(data_file_path))
-                print(f"[PyHydroGeophysX] BERT parser fallback succeeded")
+                _notify(f"[PyHydroGeophysX] BERT parser fallback succeeded")
                 parser_name = "BERT (fallback)"
             except Exception as e2:
                 raise ValueError(f"Failed to parse ERT data with {parser_name} (primary) and BERT (fallback): {e} // {e2}")
@@ -877,6 +1273,10 @@ def _load_ert_embedded_parsers(
             electrodes_df['label'] = elec_array['label']
             label_map = {str(lbl).strip(): idx + 1 for idx, lbl in enumerate(pd.unique(elec_array['label']))}
 
+    # Keep original elevation from data when no external electrode file is provided.
+    if electrode_file is None:
+        electrodes_df = _normalize_elevation_axis(electrodes_df)
+
     # Override electrode positions from external file if provided
     # This matches ResIPy behavior: external electrode file takes priority
     if electrode_file is not None:
@@ -903,13 +1303,58 @@ def _load_ert_embedded_parsers(
     
     # Build observations dataframe with standardized columns
     observations = pd.DataFrame()
+    n_elec = int(len(electrodes_df))
+    elec_x = pd.to_numeric(electrodes_df['x'], errors='coerce').to_numpy(dtype=float)
+    elec_valid = np.isfinite(elec_x)
+    elec_x_valid = elec_x[elec_valid]
+    elec_idx_valid = np.arange(1, n_elec + 1, dtype=int)[elec_valid]
+
     def _coerce_indices(col_name: str, fallback_value: int) -> pd.Series:
         if col_name not in df.columns:
             return pd.Series(np.full(len(df), fallback_value, dtype=int))
         series = df[col_name]
         numeric = pd.to_numeric(series, errors='coerce')
         if numeric.notna().all():
-            return numeric.astype(int)
+            values = numeric.to_numpy(dtype=float)
+            rounded = np.rint(values)
+
+            # Case 1: already 1-based electrode indices
+            if np.all(np.abs(values - rounded) < 1e-8):
+                ints = rounded.astype(int)
+                if ints.min() >= 1 and ints.max() <= n_elec:
+                    return pd.Series(ints, index=series.index, dtype=int)
+                # Case 2: 0-based indices
+                if ints.min() >= 0 and ints.max() <= (n_elec - 1) and np.any(ints == 0):
+                    return pd.Series(ints + 1, index=series.index, dtype=int)
+
+            # Case 3: ABMN are coordinate-like values (e.g., ABEM Terameter exports)
+            if len(elec_x_valid) > 0:
+                # Derive matching tolerance from electrode spacing.
+                tol = 1e-6
+                uniq = np.unique(np.sort(elec_x_valid))
+                if len(uniq) > 1:
+                    diffs = np.diff(uniq)
+                    diffs = diffs[diffs > 1e-8]
+                    if len(diffs) > 0:
+                        tol = max(tol, float(np.min(diffs)) * 0.25)
+
+                dist = np.abs(values[:, None] - elec_x_valid[None, :])
+                nearest_pos = np.argmin(dist, axis=1)
+                nearest_dist = dist[np.arange(len(values)), nearest_pos]
+                if np.all(np.isfinite(nearest_dist)) and np.max(nearest_dist) <= tol:
+                    mapped = elec_idx_valid[nearest_pos]
+                    return pd.Series(mapped.astype(int), index=series.index, dtype=int)
+
+            # Case 4: numeric labels that are neither direct indices nor coordinates.
+            # Map sorted unique values to sequential electrode IDs.
+            uniq_vals = np.unique(values)
+            if len(uniq_vals) <= n_elec:
+                rank_map = {v: i + 1 for i, v in enumerate(np.sort(uniq_vals))}
+                mapped = np.array([rank_map[v] for v in values], dtype=int)
+                return pd.Series(mapped, index=series.index, dtype=int)
+
+            # Last fallback: preserve previous behavior.
+            return pd.Series(rounded.astype(int), index=series.index, dtype=int)
         labels = series.astype(str).str.strip()
         if label_map:
             mapped = labels.map(label_map)
@@ -937,49 +1382,99 @@ def _load_ert_embedded_parsers(
         observations = _compute_reciprocal_errors(observations, max_reciprocal_error=0.05)
 
     # Get apparent resistivity / resistance
+    app_res_source = "unknown"
     rho_cols = ['app', 'rhoa', 'rhoA', 'Rhoa', 'app_res']
     if any(c in df.columns for c in rho_cols):
         rho_col = next(c for c in rho_cols if c in df.columns)
         observations['rhoa'] = pd.to_numeric(df[rho_col], errors='coerce')
+        app_res_source = "rhoa"
     elif 'resist' in observations.columns:
         # Use resistance values (will be converted to rhoa with K later)
         observations['rhoa'] = observations['resist']
+        app_res_source = "resistance"
     else:
         observations['rhoa'] = 100.0  # Default
     observations['rhoa'] = pd.to_numeric(observations['rhoa'], errors='coerce')
     if observations['rhoa'].isna().all():
         observations['rhoa'] = 100.0
 
-    # Compute error estimates based on reciprocal data or standard deviation
-    # Priority: 1) reciprocalErrRel from reciprocal processing, 2) dev/std column, 3) default 5%
-    if 'reciprocalErrRel' in observations.columns:
-        # Use reciprocal-based error estimates (best option)
-        # For measurements without reciprocals or with zero error, use 5% default
-        # IMPORTANT: fillna only handles NaN, need to also replace zeros and infinities
-        observations['error'] = observations['reciprocalErrRel'].fillna(0.05)
-        # Replace zeros and infinities with 5% default
-        observations['error'] = observations['error'].replace([0, np.inf, -np.inf], 0.05)
-        # Ensure all values are positive and at least 1% (avoid division by zero in inversion)
-        observations['error'] = np.maximum(np.abs(observations['error']), 0.01)
-        print(f"   Using reciprocal-based error estimates (mean: {observations['error'].mean():.4f})")
-    else:
-        # Fallback to dev/std column or default
-        err_col = next((c for c in ['error', 'err', 'dev', 'std', 'std_res'] if c in df.columns), None)
-        if err_col:
-            err_vals = pd.to_numeric(df[err_col], errors='coerce')
-            rho_vals = pd.to_numeric(observations['rhoa'], errors='coerce')
-            rel_err = np.where(
-                (np.isfinite(err_vals)) & (np.isfinite(rho_vals)) & (rho_vals != 0),
-                np.abs(err_vals) / np.abs(rho_vals),
-                np.nan
-            )
-            median_err = np.nanmedian(err_vals)
-            if np.isfinite(median_err) and median_err > 1 and np.nanmedian(rel_err) > 1:
-                rel_err = rel_err / 100.0
-            observations['error'] = np.where(np.isfinite(rel_err), rel_err, 0.05)
-            print(f"   Using standard deviation-based error estimates (mean: {observations['error'].mean():.4f})")
+    # Compute error estimates using reciprocal pairs when available and robustly
+    # fallback to source error columns (e.g., ABEM "dev") when reciprocal pairs
+    # are missing.
+    err_col = next((c for c in ['error', 'err', 'dev', 'std', 'std_res'] if c in df.columns), None)
+
+    def _normalize_source_error(err_series: pd.Series, rho_series: pd.Series) -> np.ndarray:
+        err_raw = pd.to_numeric(err_series, errors='coerce').to_numpy(dtype=float)
+        rho_raw = pd.to_numeric(rho_series, errors='coerce').to_numpy(dtype=float)
+        rel = np.full(err_raw.shape, np.nan, dtype=float)
+
+        finite_pos = err_raw[np.isfinite(err_raw) & (err_raw > 0)]
+        if finite_pos.size == 0:
+            return rel
+
+        med = float(np.nanmedian(finite_pos))
+        q95 = float(np.nanpercentile(finite_pos, 95))
+
+        # Heuristic:
+        #  - <=2   : likely already relative fraction (e.g., 0.12)
+        #  - <=200 : likely percent (e.g., 12.0 -> 0.12)
+        #  - else  : likely absolute error in data units -> convert with rho
+        if q95 <= 2.0:
+            rel = np.abs(err_raw)
+        elif q95 <= 200.0:
+            rel = np.abs(err_raw) / 100.0
         else:
-            observations['error'] = 0.05  # Default 5%
+            rel = np.where(
+                np.isfinite(rho_raw) & (np.abs(rho_raw) > 1e-12),
+                np.abs(err_raw) / np.abs(rho_raw),
+                np.nan,
+            )
+
+        rel = np.where(np.isfinite(rel) & (rel > 0), rel, np.nan)
+        return np.clip(rel, 0.01, 0.50)
+
+    # Reciprocal filtering preserves the original parser row index but can
+    # remove rows. Align source error columns to the retained observations so
+    # fallback error estimates have the same length as reciprocal estimates.
+    source_error_series = df[err_col].reindex(observations.index) if err_col else None
+    source_rel = (
+        _normalize_source_error(source_error_series, observations['rhoa'])
+        if source_error_series is not None
+        else None
+    )
+
+    if 'reciprocalErrRel' in observations.columns:
+        recip_rel = pd.to_numeric(observations['reciprocalErrRel'], errors='coerce').to_numpy(dtype=float)
+        recip_rel = np.where(np.isfinite(recip_rel) & (np.abs(recip_rel) > 0), np.abs(recip_rel), np.nan)
+        n_recip_finite = int(np.sum(np.isfinite(recip_rel)))
+
+        if n_recip_finite > 0:
+            merged_err = recip_rel
+            if source_rel is not None:
+                merged_err = np.where(np.isfinite(merged_err), merged_err, source_rel)
+            merged_err = np.where(np.isfinite(merged_err), merged_err, 0.05)
+            observations['error'] = np.clip(merged_err, 0.01, 0.50)
+            print(
+                f"   Using reciprocal-based error estimates "
+                f"(finite={n_recip_finite}/{len(recip_rel)}, mean: {observations['error'].mean():.4f})"
+            )
+        elif source_rel is not None and np.any(np.isfinite(source_rel)):
+            observations['error'] = np.where(np.isfinite(source_rel), source_rel, 0.05)
+            observations['error'] = np.clip(observations['error'], 0.01, 0.50)
+            print(
+                f"   No reciprocal pairs found; using source '{err_col}' error estimates "
+                f"(mean: {observations['error'].mean():.4f})"
+            )
+        else:
+            observations['error'] = 0.05
+            print("   No reciprocal/source error available; using default 5% error estimates")
+    else:
+        if source_rel is not None and np.any(np.isfinite(source_rel)):
+            observations['error'] = np.where(np.isfinite(source_rel), source_rel, 0.05)
+            observations['error'] = np.clip(observations['error'], 0.01, 0.50)
+            print(f"   Using source '{err_col}' error estimates (mean: {observations['error'].mean():.4f})")
+        else:
+            observations['error'] = 0.05
             print("   Using default 5% error estimates")
 
     observations['valid'] = True
@@ -990,17 +1485,30 @@ def _load_ert_embedded_parsers(
         for i, row in electrodes_df.iterrows()
     ]
 
+    # Carry the file's own geometric factors. When the file reported apparent
+    # resistivity, those are the factors rhoa was built with, and the inversion
+    # needs them to tell "k disagrees with the geometry" apart from "rhoa was
+    # formed under a different convention". Both scale the section; neither
+    # shows up in chi2.
+    k_col = next((c for c in ['k', 'K', 'geom', 'geom_factor'] if c in df.columns), None)
+    file_k = (pd.to_numeric(df[k_col], errors='coerce').to_numpy(dtype=float)
+              if k_col is not None else None)
+
     obs_list: List[Observation] = []
-    for idx, row in observations.iterrows():
+    for pos, (idx, row) in enumerate(observations.iterrows()):
         app_res_val = float(row['rhoa']) if np.isfinite(row['rhoa']) else None
         rel_err_val = float(row['error']) if np.isfinite(row['error']) else 0.05
+        k_val = 1.0
+        if file_k is not None and pos < file_k.size and np.isfinite(file_k[pos]) \
+                and file_k[pos] != 0.0:
+            k_val = float(file_k[pos])
         obs_list.append(Observation(
             quad=Quadruplet(int(row['a']), int(row['b']), int(row['m']), int(row['n'])),
             app_res=app_res_val,
             dV=None,
             I=None,
             rel_err=rel_err_val,
-            K=1.0,
+            K=k_val,
             fid=str(idx)
         ))
     
@@ -1010,6 +1518,8 @@ def _load_ert_embedded_parsers(
         'loader': 'local_parsers_resipy_fallback',
         'parser_used': parser_name,
         'instrument': instrument,
+        'requested_instrument': requested_instrument,
+        'app_res_source': app_res_source,
         'n_electrodes': len(electrodes_list),
         'n_measurements': len(obs_list),
         'acknowledgement': 'Parsing logic adapted from ResIPy (https://gitlab.com/hkex/resipy) under GPL-3.0',
@@ -1050,6 +1560,11 @@ def _load_ert_pygimli(
     Fallback ERT data loader using PyGIMLi when RESIPY is unavailable.
     Supports common formats: .ohm, .dat, .data files.
     """
+    requested_instrument = str(instrument)
+    instrument = _normalize_instrument_name(requested_instrument)
+    if instrument != requested_instrument:
+        _notify(f"[PyHydroGeophysX] Normalized instrument '{requested_instrument}' -> '{instrument}'")
+
     import pygimli as pg
     
     data_file_path = Path(data_file)
@@ -1094,6 +1609,10 @@ def _load_ert_pygimli(
         'z': sensors[:, 2] if sensors.shape[1] > 2 else 0.0,
     })
 
+    # Keep original elevation from data when no external electrode file is provided.
+    if electrode_file is None:
+        electrodes_df = _normalize_elevation_axis(electrodes_df)
+
     # Override electrode positions from external file if provided
     # This matches ResIPy behavior: external electrode file takes priority
     if electrode_file is not None:
@@ -1126,13 +1645,32 @@ def _load_ert_pygimli(
     b = np.array(data('b')) if 'b' in data.dataMap() else np.zeros(n_data, dtype=int)
     m = np.array(data('m')) if 'm' in data.dataMap() else np.zeros(n_data, dtype=int)
     n = np.array(data('n')) if 'n' in data.dataMap() else np.zeros(n_data, dtype=int)
+
+    # Some BERT-style files load through PyGIMLi with indices shifted by -1
+    # (e.g., [0..N-1] becomes [-1..N-2]). Normalize back to non-negative
+    # indexing so downstream export and validation keep all valid measurements.
+    abmn_all = np.concatenate([a, b, m, n]).astype(float)
+    finite_abmn = abmn_all[np.isfinite(abmn_all)]
+    if finite_abmn.size > 0:
+        min_idx = int(np.min(finite_abmn))
+        max_idx = int(np.max(finite_abmn))
+        n_elec = len(electrodes_df)
+        if min_idx < 0 and max_idx <= max(n_elec - 2, 0):
+            a = a + 1
+            b = b + 1
+            m = m + 1
+            n = n + 1
+            print("   Detected shifted ABMN indices from PyGIMLi loader; applied +1 correction.")
     
     # Get apparent resistivity or resistance
+    app_res_source = "unknown"
     if 'rhoa' in data.dataMap():
         rhoa = np.array(data('rhoa'))
+        app_res_source = "rhoa"
     elif 'r' in data.dataMap():
         # Convert resistance to apparent resistivity using geometric factor
         r = np.array(data('r'))
+        app_res_source = "resistance"
         if 'k' in data.dataMap():
             k = np.array(data('k'))
             rhoa = r * k
@@ -1183,6 +1721,8 @@ def _load_ert_pygimli(
         'source_file': str(data_file_path),
         'loader': 'pygimli_fallback',
         'instrument': instrument,
+        'requested_instrument': requested_instrument,
+        'app_res_source': app_res_source,
         'n_electrodes': len(electrodes_list),
         'n_measurements': len(observations_list),
     }
@@ -1247,11 +1787,16 @@ def load_ert_resipy(
     StandardERT
         Standardized dataset with electrodes, observations, CRS, instrument, and metadata.
     """
+    requested_instrument = str(instrument)
+    instrument = _normalize_instrument_name(requested_instrument)
+    if instrument != requested_instrument:
+        _notify(f"[PyHydroGeophysX] Normalized instrument '{requested_instrument}' -> '{instrument}'")
+
     # Try resipy first, then local parsers, then pygimli
     if not _HAS_RESIPY:
         # Fallback 1: Embedded parsers (modified from ResIPy, GPL-3.0)
         if _HAS_EMBEDDED_PARSERS:
-            print(f"[PyHydroGeophysX] Using embedded parsers (modified from ResIPy) - RESIPY unavailable: {_RESIPY_ERROR}")
+            _notify(f"[PyHydroGeophysX] Using embedded parsers (modified from ResIPy) - RESIPY unavailable: {_RESIPY_ERROR}")
             return _load_ert_embedded_parsers(
                 data_file=data_file,
                 electrode_file=electrode_file,
@@ -1263,7 +1808,7 @@ def load_ert_resipy(
             )
         # Fallback 2: PyGIMLi
         elif _HAS_PYGIMLI:
-            print(f"[PyHydroGeophysX] Using PyGIMLi fallback for ERT data loading (RESIPY unavailable: {_RESIPY_ERROR})")
+            _notify(f"[PyHydroGeophysX] Using PyGIMLi fallback for ERT data loading (RESIPY unavailable: {_RESIPY_ERROR})")
             return _load_ert_pygimli(
                 data_file=data_file,
                 electrode_file=electrode_file,
@@ -1286,12 +1831,23 @@ def load_ert_resipy(
     if not data_file_path.exists():
         raise FileNotFoundError(f"Data file not found: {data_file_path}")
 
+    # Guardrail: if file content clearly indicates ABEM/Lund export, switch
+    # parser target even when user/LLM selected a different instrument.
+    if instrument != "ABEM-Lund" and _looks_like_abem_lund_file(data_file_path):
+        print(
+            f"[PyHydroGeophysX] Detected ABEM-Lund style file; "
+            f"overriding instrument '{instrument}' -> 'ABEM-Lund'"
+        )
+        instrument = "ABEM-Lund"
+        ftype = _to_ftype(instrument)
+
     # Prefer to use the requested project_dir, but RESIPY may attempt to
     # remove/recreate the directory (calling shutil.rmtree) which can fail
     # on Windows (OneDrive or open handles). Try to instantiate Project and
     # if a PermissionError (or OSError with permission) occurs, fall back to
     # a temporary directory and warn the user.
     chosen_dir = project_dir
+    Path(chosen_dir).mkdir(parents=True, exist_ok=True)
     try:
         prj = Project(chosen_dir)
     except PermissionError:
@@ -1337,13 +1893,15 @@ def load_ert_resipy(
                 pass
             break
 
-    # Use explicit ftype for robust parsing. RESIPY's Project class uses 
+    # Use explicit ftype for robust parsing. RESIPY's Project class uses
     # method name 'createSurvey' to load data files and create a survey object.
     try:
         prj.createSurvey(fname=str(data_file_path), ftype=ftype)
-    except ValueError as e:
+    except Exception as e:
         # Check for NumPy compatibility issues with pyGIMLi
-        if "Buffer dtype mismatch" in str(e) or "dtype mismatch" in str(e).lower():
+        if isinstance(e, ValueError) and (
+            "Buffer dtype mismatch" in str(e) or "dtype mismatch" in str(e).lower()
+        ):
             raise RuntimeError(
                 f"NumPy compatibility error with pyGIMLi/RESIPY: {str(e)}\n\n"
                 "This is a known issue with NumPy 2.x and pyGIMLi. Try:\n"
@@ -1353,8 +1911,78 @@ def load_ert_resipy(
                 "If the error persists, you may also need to reinstall pygimli:\n"
                 "  conda install -c gimli -c conda-forge pygimli"
             ) from e
-        else:
+
+        warnings.warn(
+            f"RESIPY failed to parse '{data_file_path.name}' ({e}). "
+            "Falling back to embedded parsers/PyGIMLi loader.",
+            UserWarning
+        )
+
+        instrument_upper = str(instrument).strip().upper()
+        # For BERT/unified files, prefer PyGIMLi fallback first because it preserves
+        # native electrode coordinates/topography more reliably than the lightweight parser.
+        if instrument_upper == "BERT":
+            if _HAS_PYGIMLI:
+                try:
+                    return _load_ert_pygimli(
+                        data_file=data_file,
+                        electrode_file=electrode_file,
+                        project_dir=project_dir,
+                        instrument=instrument,
+                        crs=crs,
+                        epsg=epsg,
+                        local_ref=local_ref
+                    )
+                except Exception as pygimli_err:
+                    warnings.warn(
+                        f"PyGIMLi fallback failed after RESIPY parse failure: {pygimli_err}. "
+                        "Trying embedded parser fallback.",
+                        UserWarning
+                    )
+            if _HAS_EMBEDDED_PARSERS:
+                return _load_ert_embedded_parsers(
+                    data_file=data_file,
+                    electrode_file=electrode_file,
+                    project_dir=project_dir,
+                    instrument=instrument,
+                    crs=crs,
+                    epsg=epsg,
+                    local_ref=local_ref
+                )
             raise
+
+        # Default fallback order for non-BERT instruments:
+        # 1) Embedded parsers (ResIPy-derived) -> 2) PyGIMLi
+        if _HAS_EMBEDDED_PARSERS:
+            try:
+                return _load_ert_embedded_parsers(
+                    data_file=data_file,
+                    electrode_file=electrode_file,
+                    project_dir=project_dir,
+                    instrument=instrument,
+                    crs=crs,
+                    epsg=epsg,
+                    local_ref=local_ref
+                )
+            except Exception as embedded_err:
+                if _HAS_PYGIMLI:
+                    warnings.warn(
+                        f"Embedded parser fallback failed: {embedded_err}. Trying PyGIMLi fallback.",
+                        UserWarning
+                    )
+                else:
+                    raise
+        if _HAS_PYGIMLI:
+            return _load_ert_pygimli(
+                data_file=data_file,
+                electrode_file=electrode_file,
+                project_dir=project_dir,
+                instrument=instrument,
+                crs=crs,
+                epsg=epsg,
+                local_ref=local_ref
+            )
+        raise
     
     # After createSurvey, data is stored in prj.surveys[0] (the first/only survey)
     if not prj.surveys:
@@ -1514,8 +2142,25 @@ def load_ert_resipy(
     # Electrodes - access from survey object
     elec_arr = np.array(survey.elec) if survey.elec is not None else \
                np.zeros((int(df[['a','b','m','n']].values.max())+1, 3))
-    electrodes = [Electrode(i+1, float(elec_arr[i,0]), float(elec_arr[i,1]), float(elec_arr[i,2]))
-                  for i in range(elec_arr.shape[0])]
+    if elec_arr.ndim == 1:
+        elec_arr = elec_arr.reshape(-1, 1)
+    if elec_arr.shape[1] < 3:
+        pad = np.zeros((elec_arr.shape[0], 3 - elec_arr.shape[1]))
+        elec_arr = np.hstack([elec_arr, pad])
+
+    electrodes_df = pd.DataFrame({
+        'x': elec_arr[:, 0],
+        'y': elec_arr[:, 1],
+        'z': elec_arr[:, 2],
+    })
+    # If no external electrode file is provided, preserve source elevation.
+    if electrode_file is None:
+        electrodes_df = _normalize_elevation_axis(electrodes_df)
+
+    electrodes = [
+        Electrode(i + 1, float(row['x']), float(row['y']), float(row['z']))
+        for i, row in electrodes_df.iterrows()
+    ]
 
     # Observations
     idx_to_pos = {idx: k for k, idx in enumerate(df.index)}
@@ -1527,6 +2172,12 @@ def load_ert_resipy(
     r_col = next((c for c in ['resist', 'R', 'r', 'resistance'] if c in df.columns), None)
     # BERT/PyGIMLi format uses 'rhoa' for apparent resistivity directly
     rhoa_col = next((c for c in ['rhoa', 'rhoA', 'Rhoa', 'app_res'] if c in df.columns), None)
+    if rhoa_col is not None:
+        app_res_source = "rhoa"
+    elif r_col is not None or (v_col is not None and i_col is not None):
+        app_res_source = "resistance"
+    else:
+        app_res_source = "unknown"
     
     for idx, row in df.iterrows():
         app_resistivity = None
@@ -1568,6 +2219,7 @@ def load_ert_resipy(
         "project_dir": str(Path(chosen_dir).resolve()),
         "data_file": str(data_file_path.resolve()),
         "electrode_file": str(Path(electrode_file).resolve()) if electrode_file else None,
+        "app_res_source": app_res_source,
         "epsg": epsg,
         "local_ref": (local_ref._asdict() if isinstance(local_ref, LocalRef) else None)
     }
@@ -1641,243 +2293,931 @@ def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> 
         "standard_json": str(outdir_path/"ert_standard.json"),
     }
 
-def export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert", fmt: str = "pgimli") -> str:
+
+def calculate_reciprocal_errors(ert: StandardERT) -> pd.DataFrame:
+    """
+    Estimate reciprocal error for each standardized ERT observation.
+
+    Reciprocal pairs are matched by comparing the current pair ``(A, B)`` and
+    potential pair ``(M, N)`` after sorting within each pair. Measurements where
+    those two pair roles are swapped are treated as reciprocal observations.
+    The returned error is a percentage,
+    ``200 * |R_normal - R_recip| / (|R_normal| + |R_recip|)``.
+
+    Parameters
+    ----------
+    ert : StandardERT
+        Standardized ERT dataset.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per observation with reciprocal metadata and error estimates.
+        Unmatched observations have ``NaN`` reciprocal errors.
+    """
+
+    if ert is None or not ert.observations:
+        return pd.DataFrame(
+            columns=[
+                "observation_index",
+                "reciprocal_group",
+                "reciprocal_pair_count",
+                "reciprocal_error_percent",
+                "reciprocal_mean_value",
+                "reciprocal_partner_value",
+            ]
+        )
+
+    records: List[Dict[str, Any]] = []
+    groups: Dict[tuple[tuple[int, int], tuple[int, int]], List[int]] = {}
+    directions: List[tuple[tuple[int, int], tuple[int, int]]] = []
+    values: List[float] = []
+
+    for idx, obs in enumerate(ert.observations):
+        a = int(obs.quad.A)
+        b = int(obs.quad.B)
+        m = int(obs.quad.M)
+        n = int(obs.quad.N)
+        ab = tuple(sorted((a, b)))
+        mn = tuple(sorted((m, n)))
+        direction = (ab, mn)
+        group_key = tuple(sorted((ab, mn)))
+        value = np.nan if obs.app_res is None else float(obs.app_res)
+        directions.append(direction)
+        values.append(value)
+        groups.setdefault(group_key, []).append(idx)
+        records.append(
+            {
+                "observation_index": idx,
+                "A": a,
+                "B": b,
+                "M": m,
+                "N": n,
+                "value": value,
+                "reciprocal_group": f"{group_key[0][0]}-{group_key[0][1]}|{group_key[1][0]}-{group_key[1][1]}",
+                "reciprocal_pair_count": 0,
+                "reciprocal_error_percent": np.nan,
+                "reciprocal_mean_value": np.nan,
+                "reciprocal_partner_value": np.nan,
+            }
+        )
+
+    for group_indices in groups.values():
+        direction_to_indices: Dict[tuple[tuple[int, int], tuple[int, int]], List[int]] = {}
+        for idx in group_indices:
+            direction_to_indices.setdefault(directions[idx], []).append(idx)
+
+        if len(direction_to_indices) < 2:
+            continue
+
+        direction_medians: Dict[tuple[tuple[int, int], tuple[int, int]], float] = {}
+        for direction, indices in direction_to_indices.items():
+            direction_values = np.asarray([values[i] for i in indices], dtype=float)
+            direction_values = direction_values[np.isfinite(direction_values)]
+            if direction_values.size:
+                direction_medians[direction] = float(np.nanmedian(np.abs(direction_values)))
+
+        for idx in group_indices:
+            ab, mn = directions[idx]
+            opposite_direction = (mn, ab)
+            if opposite_direction not in direction_medians:
+                continue
+            value = abs(float(values[idx]))
+            partner_value = float(direction_medians[opposite_direction])
+            if not (np.isfinite(value) and np.isfinite(partner_value)):
+                continue
+            denom = value + abs(partner_value)
+            if denom <= 1e-12:
+                continue
+            reciprocal_error = 200.0 * abs(value - abs(partner_value)) / denom
+            reciprocal_mean = 0.5 * (value + abs(partner_value))
+            partner_count = len(direction_to_indices.get(opposite_direction, []))
+            records[idx]["reciprocal_pair_count"] = int(partner_count)
+            records[idx]["reciprocal_error_percent"] = float(reciprocal_error)
+            records[idx]["reciprocal_mean_value"] = float(reciprocal_mean)
+            records[idx]["reciprocal_partner_value"] = float(partner_value)
+
+    return pd.DataFrame.from_records(records)
+
+def export_for_inversion(
+    ert: StandardERT,
+    outdir: str = "examples/results/ert",
+    fmt: str = "pgimli",
+    use_source_error: bool = False,
+    export_strategy: str = "default",
+    default_relative_error: float = 0.01,
+    default_absolute_error: float = 0.001,
+    default_rhoa_limits: tuple[float, float] = (0.1, 10000.0),
+    default_reciprocal_percent: float = 10.0,
+    default_fit_error_lin: bool = True,
+) -> str:
     """
     Export to inversion-ready formats:
     - fmt='pgimli': Unified data format for pyGIMLi/BERT with electrode coordinates and measurements
     - fmt='resipy': return the RESIPY project directory for running prj.start().
+    - export_strategy='default' (default): rebuild the raw survey in ResIPy,
+      keep only reciprocal-paired measurements, export recipMean as resistance,
+      and use abs((relative * resist + absolute) / recipMean) for the error.
+      If that path is unavailable, the function falls back to the legacy export.
+    - export_strategy='legacy': use the older full-dataset export path.
+    - use_source_error only affects the legacy export path.
     """
+    def _coord_stats(x_vals: np.ndarray, y_vals: np.ndarray, z_vals: np.ndarray) -> str:
+        return (
+            f"x=[{np.nanmin(x_vals):.3f}, {np.nanmax(x_vals):.3f}], "
+            f"y=[{np.nanmin(y_vals):.3f}, {np.nanmax(y_vals):.3f}], "
+            f"z=[{np.nanmin(z_vals):.3f}, {np.nanmax(z_vals):.3f}]"
+        )
+
+    def _infer_elevation_axis(y_vals: np.ndarray, z_vals: np.ndarray) -> str:
+        y_span = float(np.nanmax(y_vals) - np.nanmin(y_vals))
+        z_span = float(np.nanmax(z_vals) - np.nanmin(z_vals))
+        eps = 1e-8
+        if y_span > eps and z_span <= eps:
+            return "y"
+        if z_span > eps and y_span <= eps:
+            return "z"
+        if y_span > 2.0 * max(z_span, eps):
+            return "y"
+        if z_span > 2.0 * max(y_span, eps):
+            return "z"
+        return "ambiguous"
+
+    def _estimate_reciprocal_error(
+        abmn: np.ndarray,
+        resist: np.ndarray,
+        default_err: float = 0.05,
+        min_err: float = 0.01,
+        max_err: float = 0.10,
+    ) -> tuple[np.ndarray, int]:
+        """
+        Estimate relative data errors from reciprocal pairs using resistance values.
+        For unmatched measurements, use a conservative default error.
+        """
+        n_obs = int(len(resist))
+        if n_obs == 0:
+            return np.zeros(0, dtype=float), 0
+
+        errs = np.full(n_obs, float(default_err), dtype=float)
+        if abmn.shape[0] != n_obs:
+            errs = np.clip(errs, min_err, max_err)
+            return errs, 0
+
+        groups: Dict[tuple[int, int, int, int], List[int]] = {}
+        for idx in range(n_obs):
+            a, b, m, n = [int(v) for v in abmn[idx]]
+            key = (min(a, b), max(a, b), min(m, n), max(m, n))
+            groups.setdefault(key, []).append(idx)
+
+        paired_measurements = 0
+        visited: set[tuple[int, int, int, int]] = set()
+        for key, left_idx in groups.items():
+            if key in visited:
+                continue
+            recip = (key[2], key[3], key[0], key[1])
+            right_idx = groups.get(recip, [])
+            visited.add(key)
+            visited.add(recip)
+
+            if recip == key:
+                continue
+            if len(left_idx) == 0 or len(right_idx) == 0:
+                continue
+
+            n_pair = min(len(left_idx), len(right_idx))
+            for li, ri in zip(left_idx[:n_pair], right_idx[:n_pair]):
+                r_left = abs(float(resist[li]))
+                r_right = abs(float(resist[ri]))
+                denom = 0.5 * (r_left + r_right)
+                if not (np.isfinite(r_left) and np.isfinite(r_right) and denom > 1e-12):
+                    continue
+                recip_err = abs(r_left - r_right) / denom
+                if not np.isfinite(recip_err):
+                    continue
+                recip_err = float(np.clip(recip_err, min_err, max_err))
+                errs[li] = recip_err
+                errs[ri] = recip_err
+                paired_measurements += 2
+
+        errs = np.where(np.isfinite(errs) & (errs > 0), errs, default_err)
+        errs = np.clip(errs, min_err, max_err)
+        return errs.astype(float), int(paired_measurements)
+
+    def _sanitize_source_error(
+        err_vals: np.ndarray,
+        default_err: float,
+        min_err: float,
+        max_err: float,
+    ) -> np.ndarray:
+        """
+        Normalize source error values to a robust relative-error fraction.
+        If values appear to be percentages, convert by dividing by 100.
+        """
+        arr = np.array(err_vals, dtype=float)
+        finite_pos = arr[np.isfinite(arr) & (arr > 0)]
+        if finite_pos.size > 0:
+            med = float(np.nanmedian(finite_pos))
+            q95 = float(np.nanpercentile(finite_pos, 95))
+            if med > 1.0 or q95 > 2.0:
+                arr = arr / 100.0
+        arr = np.where(np.isfinite(arr) & (arr > 0), arr, default_err)
+        return np.clip(arr, min_err, max_err).astype(float)
+
     # Handle paths starting with / on Windows by converting to relative path
-    outdir_str = str(outdir)  # Convert to string first
+    outdir_str = str(outdir)
     outdir_path = Path(outdir)
     if outdir_str.startswith('/') and not outdir_path.is_absolute():
-        # Remove leading / and treat as relative to cwd
         outdir_path = Path.cwd() / outdir_str.lstrip('/')
-    
-    outdir_path.mkdir(parents=True, exist_ok=True)
-    
+
+    try:
+        outdir_path.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        raise OSError(f"Unable to create export directory '{outdir_path}': {e}") from e
+
     if fmt == "pgimli":
-        path = outdir_path / "bert_data.dat"
-        
-        with open(path, 'w', encoding='utf-8') as f:
-            # Write number of electrodes
-            f.write(f"{len(ert.electrodes)}\n")
-            
-            # Write electrode coordinates header and data
-            f.write("# x y z\n")
-            for elec in ert.electrodes:
-                f.write(f"{elec.x} {elec.y} {elec.z}\n")
+        if ert is None:
+            raise ValueError("ERT dataset is None")
+        if not ert.electrodes:
+            raise ValueError("ERT dataset has no electrodes; cannot export.")
+        if not ert.observations:
+            raise ValueError("ERT dataset has no observations; cannot export.")
 
-            # DEBUG: Print electrode information being written
-            print(f"   DEBUG: Writing {len(ert.electrodes)} electrodes to file")
-            if len(ert.electrodes) > 0:
-                y_vals = [e.y for e in ert.electrodes]
-                print(f"   DEBUG: First electrode: x={ert.electrodes[0].x:.3f}, y={ert.electrodes[0].y:.3f}, z={ert.electrodes[0].z:.3f}")
-                print(f"   DEBUG: Last electrode: x={ert.electrodes[-1].x:.3f}, y={ert.electrodes[-1].y:.3f}, z={ert.electrodes[-1].z:.3f}")
-                print(f"   DEBUG: Y-range (elevation) being written: [{min(y_vals):.3f}, {max(y_vals):.3f}]")
+        strategy_raw = str(export_strategy).strip().lower()
+        if strategy_raw in {"", "default", "native", "recommended"}:
+            requested_export_mode = "default"
+        elif strategy_raw in {"legacy", "standard", "classic"}:
+            requested_export_mode = "legacy"
+        else:
+            raise ValueError(
+                f"Unsupported export_strategy: {export_strategy}. "
+                "Expected 'default' or 'legacy'."
+            )
 
-            # Write number of measurements
-            f.write(f"{len(ert.observations)}\n")
-            
-            # Check if error data exists (use rel_err attribute)
-            has_error_data = any(obs.rel_err is not None and obs.rel_err > 0 for obs in ert.observations)
-            
-            # Write measurement data header (matching reference format)
-            if has_error_data:
-                f.write("# a b m n r rhoa k err\n")
-            else:
-                f.write("# a b m n r rhoa k\n")
-            
-            # Write measurement data
-            # Format: a b m n r rhoa k [err]
-            # r = raw resistance (V/I from instrument)
-            # rhoa = apparent resistivity (r * K)
-            # k = geometric factor
-            # err = relative error (optional)
-            rho_min = 0.1
-            rho_max = 1e6
-            for obs in ert.observations:
-                # Determine if we have true apparent resistivity or raw resistance
-                # For BERT/PyGIMLi format: obs.K > 1 means app_res is already apparent resistivity
-                # For DAS-1 and others: obs.K == 1 means app_res is raw resistance
-                
-                # Extract raw resistance from voltage and current if available
-                if obs.I is not None and obs.dV is not None and obs.I != 0:
-                    R = abs(obs.dV / obs.I)
-                    rhoa = R  # Will be recomputed below
-                    k = 1  # PyGIMLi will compute K
-                elif obs.app_res is not None:
-                    # Check if K was stored (BERT format has K > 1)
-                    if obs.K is not None and obs.K > 1:
-                        # app_res is already apparent resistivity (rhoa = R * K)
-                        # Compute R by dividing by K
-                        R = obs.app_res / obs.K
-                        rhoa = obs.app_res  # Keep original rhoa
-                        k = obs.K  # Keep original K
+        path_name = "bert_data.dat" if requested_export_mode == "default" else "bert_data_legacy.dat"
+        path = outdir_path / path_name
+
+        x_vals = np.array([float(e.x) for e in ert.electrodes], dtype=float)
+        y_vals = np.array([float(e.y) for e in ert.electrodes], dtype=float)
+        z_vals = np.array([float(e.z) for e in ert.electrodes], dtype=float)
+        if not (np.all(np.isfinite(x_vals)) and np.all(np.isfinite(y_vals)) and np.all(np.isfinite(z_vals))):
+            raise ValueError("Non-finite electrode coordinates found. Please clean input data first.")
+
+        n_elec = len(ert.electrodes)
+        if n_elec < 2:
+            raise ValueError(f"Need at least 2 electrodes to export, got {n_elec}.")
+        inferred_axis = _infer_elevation_axis(y_vals, z_vals)
+        print(f"   DEBUG: Writing {n_elec} electrodes to file")
+        print(f"   DEBUG: First electrode: x={x_vals[0]:.3f}, y={y_vals[0]:.3f}, z={z_vals[0]:.3f}")
+        print(f"   DEBUG: Last electrode: x={x_vals[-1]:.3f}, y={y_vals[-1]:.3f}, z={z_vals[-1]:.3f}")
+        print(f"   DEBUG: Coordinate ranges: {_coord_stats(x_vals, y_vals, z_vals)}")
+        print(f"   DEBUG: Inferred elevation axis: {inferred_axis}")
+        app_res_source = str((ert.metadata or {}).get("app_res_source", "")).strip().lower()
+        app_res_is_apparent = app_res_source in {"rhoa", "apparent", "apparent_resistivity"}
+        if app_res_source:
+            print(f"   DEBUG: app_res source metadata: {app_res_source}")
+        if app_res_is_apparent:
+            print("   DEBUG: Treating app_res as apparent resistivity (rhoa) for K-handling.")
+
+        rho_min = 0.1
+        rho_max = 1e6
+        reciprocal_default_err = 0.05
+        reciprocal_min_err = 0.01
+        reciprocal_max_err = 0.10
+        source_default_err = 0.08
+        source_min_err = 0.01
+        source_max_err = 0.50
+        metadata = ert.metadata or {}
+        source_file = metadata.get("data_file") or metadata.get("source_file")
+        source_path = None
+        if source_file:
+            source_path = Path(source_file)
+            if not source_path.is_absolute():
+                source_path = Path.cwd() / source_path
+
+        can_use_default_export = bool(
+            _HAS_RESIPY and source_path is not None and source_path.exists()
+        )
+        use_default_export = requested_export_mode == "default" and can_use_default_export
+        if requested_export_mode == "default" and not use_default_export:
+            reason = []
+            if not _HAS_RESIPY:
+                reason.append("ResIPy unavailable")
+            if source_path is None:
+                reason.append("raw source file missing from metadata")
+            elif not source_path.exists():
+                reason.append(f"raw source file not found: {source_path}")
+            reason_text = "; ".join(reason) if reason else "default export unavailable"
+            print(f"   DEBUG: Default reciprocal-pair export unavailable ({reason_text}); falling back to legacy export.")
+
+        if use_default_export:
+            print("   DEBUG: Export strategy: default reciprocal-pair path")
+            print(
+                "   DEBUG: Error mode: abs((relative * resist + absolute) / recipMean) "
+                f"with relative={default_relative_error:.4f}, absolute={default_absolute_error:.4f}"
+            )
+        else:
+            print("   DEBUG: Export strategy: legacy full-dataset path")
+            print(
+                "   DEBUG: Error mode: "
+                + ("source (dataset-provided)" if use_source_error else "reciprocal (auto-estimated)")
+            )
+        valid_rows = []
+        skipped_counts = {
+            "invalid_abmn": 0,
+            "index_out_of_range": 0,
+            "degenerate_quad": 0,
+            "missing_resistivity": 0,
+            "non_finite_values": 0,
+        }
+        _fallback_to_legacy = False
+        if use_default_export:
+            ftype = str(metadata.get("ftype") or _to_ftype(ert.instrument))
+            elec_xyz = np.column_stack((x_vals, y_vals, z_vals))
+            if elec_xyz.shape[1] < 3:
+                elec_xyz = np.pad(elec_xyz, ((0, 0), (0, 3 - elec_xyz.shape[1])), constant_values=0.0)
+
+            try:
+                with tempfile.TemporaryDirectory(prefix="phgx_default_export_") as tmp_project_dir:
+                    prj = Project(tmp_project_dir)
+                    prj.createSurvey(fname=str(source_path), ftype=ftype)
+                    if not prj.surveys:
+                        raise RuntimeError("ResIPy did not create a survey from the raw data file.")
+
+                    survey = prj.surveys[0]
+                    if hasattr(survey, "setElec"):
+                        survey.setElec(elec_xyz)
                     else:
-                        # app_res is raw resistance (K was 1 or not stored)
-                        R = obs.app_res
-                        rhoa = R  # Will be recomputed by PyGIMLi
-                        k = 1  # PyGIMLi will compute K
+                        survey.elec = elec_xyz
+
+                    rhoa_min, rhoa_max = default_rhoa_limits
+                    filter_app_resist = getattr(prj, "filterAppResist", None)
+                    if callable(filter_app_resist):
+                        filter_app_resist(vmin=float(rhoa_min), vmax=float(rhoa_max))
+
+                    filter_recip = getattr(prj, "filterRecip", None)
+                    if not callable(filter_recip):
+                        raise RuntimeError("ResIPy Project.filterRecip is not available in this environment.")
+                    filter_recip(percent=float(default_reciprocal_percent))
+
+                    if default_fit_error_lin:
+                        fit_error_lin = getattr(prj, "fitErrorLin", None)
+                        if callable(fit_error_lin):
+                            fit_error_lin()
+
+                    df = prj.surveys[0].df.copy()
+            except Exception as e:
+                if "no reciprocal" in str(e).lower():
+                    print(
+                        f"   Warning: No reciprocal measurements detected in survey data; "
+                        f"falling back to legacy export. ({e})"
+                    )
+                    _fallback_to_legacy = True
+                    use_default_export = False
                 else:
-                    # Skip measurements without valid data
+                    raise RuntimeError(
+                        f"Failed to rebuild the default reciprocal-pair export with ResIPy: {e}"
+                    ) from e
+
+            if use_default_export:
+                required_cols = {"a", "b", "m", "n", "irecip", "recipMean", "resist"}
+                missing_cols = sorted(required_cols.difference(df.columns))
+                if missing_cols:
+                    raise ValueError(
+                        "Default reciprocal-pair export requires ResIPy columns "
+                        f"{missing_cols}, but they were not found in the rebuilt survey."
+                    )
+
+                recip_mask = pd.to_numeric(df["irecip"], errors="coerce").fillna(0).to_numpy(dtype=float) > 0
+                default_df = df.loc[recip_mask].copy()
+                if len(default_df) == 0:
+                    raise ValueError("Default reciprocal-pair export found no reciprocal-paired measurements after filtering.")
+
+                print(f"   DEBUG: Default export retained {len(default_df)} reciprocal-paired measurements")
+                skipped_counts["missing_resistivity"] = 0
+                for _, row in default_df.iterrows():
+                    try:
+                        a = int(row["a"])
+                        b = int(row["b"])
+                        m = int(row["m"])
+                        n = int(row["n"])
+                    except Exception:
+                        skipped_counts["invalid_abmn"] += 1
+                        continue
+
+                    if min(a, b, m, n) < 0 or max(a, b, m, n) > n_elec:
+                        skipped_counts["index_out_of_range"] += 1
+                        continue
+                    if a == b or m == n:
+                        skipped_counts["degenerate_quad"] += 1
+                        continue
+
+                    recip_mean = float(row["recipMean"])
+                    resist_val = float(row["resist"])
+                    if not (np.isfinite(recip_mean) and np.isfinite(resist_val)):
+                        skipped_counts["non_finite_values"] += 1
+                        continue
+
+                    R = abs(recip_mean)
+                    if R <= 1e-12:
+                        skipped_counts["missing_resistivity"] += 1
+                        continue
+
+                    err_val = abs(((float(default_relative_error) * resist_val) + float(default_absolute_error)) / recip_mean)
+                    if not (np.isfinite(err_val) and err_val > 0):
+                        skipped_counts["non_finite_values"] += 1
+                        continue
+
+                    valid_rows.append((a, b, m, n, R, R, 1.0, float(err_val)))
+        if not use_default_export:
+            for obs in ert.observations:
+                try:
+                    a = int(obs.quad.A)
+                    b = int(obs.quad.B)
+                    m = int(obs.quad.M)
+                    n = int(obs.quad.N)
+                except Exception:
+                    skipped_counts["invalid_abmn"] += 1
                     continue
 
-                # Enforce positivity and reasonable bounds before writing
-                if not np.isfinite(R) or not np.isfinite(rhoa):
+                # Allow 0 for remote electrodes, but disallow negative or > n_elec indices.
+                if min(a, b, m, n) < 0 or max(a, b, m, n) > n_elec:
+                    skipped_counts["index_out_of_range"] += 1
                     continue
-                R = abs(R)
-                rhoa = abs(rhoa)
+                if a == b or m == n:
+                    skipped_counts["degenerate_quad"] += 1
+                    continue
+
+                R = None
+                rhoa = None
+                k = 1.0
+                if (
+                    obs.I is not None
+                    and obs.dV is not None
+                    and np.isfinite(obs.I)
+                    and np.isfinite(obs.dV)
+                    and obs.I != 0
+                ):
+                    R = abs(float(obs.dV) / float(obs.I))
+                    rhoa = R
+                    k = 1.0
+                elif obs.app_res is not None and np.isfinite(obs.app_res):
+                    if obs.K is not None and np.isfinite(obs.K) and float(obs.K) > 1:
+                        k = float(obs.K)
+                        R = float(obs.app_res) / k
+                        rhoa = float(obs.app_res)
+                    else:
+                        R = float(obs.app_res)
+                        rhoa = float(obs.app_res)
+                        k = 1.0
+                else:
+                    skipped_counts["missing_resistivity"] += 1
+                    continue
+
+                if not (np.isfinite(R) and np.isfinite(rhoa) and np.isfinite(k)):
+                    skipped_counts["non_finite_values"] += 1
+                    continue
+
+                R = abs(float(R))
+                rhoa = abs(float(rhoa))
+                k = abs(float(k)) if k != 0 else 1.0
                 if R <= 0 or rhoa <= 0:
+                    skipped_counts["missing_resistivity"] += 1
                     continue
+
                 rhoa = float(np.clip(rhoa, rho_min, rho_max))
                 R = float(max(R, rho_min))
-                
-                # Format: a b m n r rhoa k [err]
-                # Note: obs.quad uses 1-based electrode indices (matching PyGIMLi format)
-                f.write(f"{obs.quad.A} {obs.quad.B} {obs.quad.M} {obs.quad.N} ")
-                if has_error_data:
-                    err_val = obs.rel_err if (obs.rel_err is not None and obs.rel_err > 0) else 0.05  # Default 5% error
-                    f.write(f"{R} {rhoa} {k} {err_val}\n")
-                else:
-                    f.write(f"{R} {rhoa} {k}\n")
-        
+
+                src_err_val = np.nan
+                if obs.rel_err is not None and np.isfinite(obs.rel_err) and obs.rel_err > 0:
+                    src_err_val = float(obs.rel_err)
+
+                valid_rows.append((a, b, m, n, R, rhoa, k, src_err_val))
+
+        if len(valid_rows) == 0:
+            total_obs = len(ert.observations)
+            details = ", ".join(f"{k}={v}" for k, v in skipped_counts.items())
+            hint = ""
+            if (
+                total_obs > 0
+                and skipped_counts.get("missing_resistivity", 0) >= int(0.8 * total_obs)
+            ):
+                hint = " Likely instrument/format mismatch (e.g., wrong instrument type selected)."
+            raise ValueError(
+                "No valid observations remained after validation; export aborted. "
+                f"Diagnostics: {details}.{hint}"
+            )
+
+        if use_default_export:
+            source_err_rows = np.array([r[7] for r in valid_rows], dtype=float)
+            err_rows = np.where(
+                np.isfinite(source_err_rows) & (source_err_rows > 0),
+                source_err_rows,
+                source_default_err,
+            ).astype(float)
+            n_source_valid = int(np.sum(np.isfinite(source_err_rows) & (source_err_rows > 0)))
+            print(
+                f"   DEBUG: Preserved default export errors on rows: "
+                f"valid={n_source_valid}/{len(valid_rows)}, "
+                f"err_range=[{np.nanmin(err_rows):.3f}, {np.nanmax(err_rows):.3f}]"
+            )
+        elif use_source_error:
+            source_err_rows = np.array([r[7] for r in valid_rows], dtype=float)
+            err_rows = _sanitize_source_error(
+                source_err_rows,
+                default_err=source_default_err,
+                min_err=source_min_err,
+                max_err=source_max_err,
+            )
+            n_source_valid = int(np.sum(np.isfinite(source_err_rows) & (source_err_rows > 0)))
+            print(
+                f"   DEBUG: Source-error use on export rows: "
+                f"valid={n_source_valid}/{len(valid_rows)}, "
+                f"err_range=[{np.nanmin(err_rows):.3f}, {np.nanmax(err_rows):.3f}]"
+            )
+        else:
+            abmn_rows = np.array([(r[0], r[1], r[2], r[3]) for r in valid_rows], dtype=int)
+            resist_rows = np.array([r[4] for r in valid_rows], dtype=float)
+            err_rows, paired_meas = _estimate_reciprocal_error(
+                abmn=abmn_rows,
+                resist=resist_rows,
+                default_err=reciprocal_default_err,
+                min_err=reciprocal_min_err,
+                max_err=reciprocal_max_err,
+            )
+            print(
+                f"   DEBUG: Reciprocal-error estimate on export rows: "
+                f"paired={paired_meas}/{len(valid_rows)}, "
+                f"err_range=[{np.nanmin(err_rows):.3f}, {np.nanmax(err_rows):.3f}]"
+            )
+
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(f"{n_elec}\n")
+            f.write("# x y z\n")
+            for elec in ert.electrodes:
+                f.write(f"{float(elec.x)} {float(elec.y)} {float(elec.z)}\n")
+
+            f.write(f"{len(valid_rows)}\n")
+            f.write("# a b m n r rhoa k err\n")
+
+            for idx_row, row in enumerate(valid_rows):
+                a, b, m, n, R, rhoa, k, _src_err = row
+                err_val = float(err_rows[idx_row])
+                f.write(f"{a} {b} {m} {n} {R} {rhoa} {k} {err_val}\n")
+
+        if any(v > 0 for v in skipped_counts.values()):
+            print(f"   DEBUG: Skipped invalid observations: {skipped_counts}")
+        print(f"   DEBUG: Wrote {len(valid_rows)} valid observations")
         print(f"   Exported data to {path}")
-        
-        # Step 4: Load and validate the exported data
-        # Only recompute K if it was not already provided (k=1 placeholder)
-        print("   Validating geometric factors... [CODE-VERSION: 2026-01-20-v3-RECIPROCAL-AFTER-K]")
+
+        print("   Validating geometric factors... [CODE-VERSION: 2026-02-20-v4-safe-export]")
         try:
             import pygimli as pg
             import pygimli.physics.ert as ert_pg
-            
-            # Load the file we just created
-            data = ert_pg.load(str(path))
 
-            # DEBUG: Print electrode positions loaded by PyGIMLi
+            data = ert_pg.load(str(path))
+            if data.size() == 0:
+                raise RuntimeError("Exported file loaded but contains 0 measurements.")
+            required_fields = ("a", "b", "m", "n", "r")
+            missing_fields = [k for k in required_fields if k not in data.dataMap()]
+            if missing_fields:
+                raise RuntimeError(f"Missing required fields after load: {missing_fields}")
+
             sensors = data.sensorPositions()
             print(f"   DEBUG: PyGIMLi loaded {len(sensors)} electrode positions")
             if len(sensors) > 0:
-                print(f"   DEBUG: First electrode: x={sensors[0].x():.3f}, y={sensors[0].y():.3f}, z={sensors[0].z():.3f}")
-                print(f"   DEBUG: Last electrode: x={sensors[-1].x():.3f}, y={sensors[-1].y():.3f}, z={sensors[-1].z():.3f}")
-                y_vals = [s.y() for s in sensors]
-                print(f"   DEBUG: Y-range (elevation): [{min(y_vals):.3f}, {max(y_vals):.3f}]")
+                sx = np.array([s.x() for s in sensors], dtype=float)
+                sy = np.array([s.y() for s in sensors], dtype=float)
+                sz = np.array([s.z() for s in sensors], dtype=float)
+                inferred_loaded_axis = _infer_elevation_axis(sy, sz)
+                print(f"   DEBUG: Loaded coordinate ranges: {_coord_stats(sx, sy, sz)}")
+                print(f"   DEBUG: Inferred elevation axis (loaded): {inferred_loaded_axis}")
 
-            # Check if K was already provided (not all k=1)
-            k_vals = np.array(data['k'])
-            has_valid_k = np.any(k_vals > 1.5)  # If any K > 1.5, assume K was provided
+            has_k = 'k' in data.dataMap() and np.array(data['k']).size == data.size()
+            if has_k:
+                k_vals = np.array(data['k'], dtype=float)
+                finite_k = np.isfinite(k_vals)
+                has_valid_k = np.any(finite_k & (np.abs(k_vals) > 1.5))
+            else:
+                k_vals = np.array([])
+                has_valid_k = False
 
             if has_valid_k:
-                print(f"   K factors already provided (range: [{k_vals.min():.1f}, {k_vals.max():.1f}])")
-                # No need to recompute - just validate
+                print(f"   K factors already provided (range: [{np.nanmin(k_vals):.1f}, {np.nanmax(k_vals):.1f}])")
             else:
-                # Compute geometric factors with topography using PyGIMLi
                 print("   Computing geometric factors with PyGIMLi...")
                 data['k'] = ert_pg.createGeometricFactors(data, numerical=True)
-                k_vals = np.array(data['k'])
-                print(f"   Computed K range: [{k_vals.min():.1f}, {k_vals.max():.1f}]")
+                k_vals = np.array(data['k'], dtype=float)
+                print(f"   Computed K range: [{np.nanmin(k_vals):.1f}, {np.nanmax(k_vals):.1f}]")
 
-            # Filter by geometric factor threshold (for DAS data)
-            k_threshold = 1000  # max geometric factor, m
-            k_vals = np.array(data['k'])
-            k_valid = np.abs(k_vals) < k_threshold
-            n_k_filtered = np.sum(~k_valid)
-            if n_k_filtered > 0:
-                print(f"   Filtered {n_k_filtered} measurements with |K| >= {k_threshold} m")
-                remove_indices = np.where(~k_valid)[0]
-                for idx in sorted(remove_indices, reverse=True):
-                    data.remove(int(idx))
+            keep_mask = np.ones(data.size(), dtype=bool)
+            k_vals = np.array(data['k'], dtype=float)
+            if use_default_export:
+                k_valid = np.isfinite(k_vals) & (np.abs(k_vals) > 1e-12)
+                n_k_filtered = int(np.sum(~k_valid))
+                if n_k_filtered > 0:
+                    print(f"   Filtered {n_k_filtered} measurements with invalid K")
+            else:
+                k_threshold = 1000
+                k_valid = np.isfinite(k_vals) & (np.abs(k_vals) < k_threshold)
+                n_k_filtered = int(np.sum(~k_valid))
+                if n_k_filtered > 0:
+                    print(f"   Filtered {n_k_filtered} measurements with invalid/large |K| (threshold={k_threshold})")
+            keep_mask = keep_mask & k_valid
 
-            # Recompute apparent resistivity with correct K
-            # rhoa = R * K
-            data['rhoa'] = data['r'] * data['k']
+            if not np.any(keep_mask):
+                raise RuntimeError("All measurements removed after K filtering.")
 
-            # NOTE: Reciprocal filtering should have already been done during data loading:
-            # - With ResIPy: reciprocalProcessing() is called automatically
-            # - With embedded parser: reciprocal error filter is applied (line 1243-1246)
-            # We do NOT call reciprocalProcessing() here because:
-            # 1. It would be redundant (filtering already done)
-            # 2. After computing K, reciprocal pairs have different rhoa even with identical R
-            #    because K depends on electrode geometry, making reciprocal error artificially high
+            if app_res_is_apparent and not has_valid_k:
+                # Source observations already represent apparent resistivity.
+                # Avoid rhoa <- r * k double-application when K is newly computed.
+                print("   DEBUG: Preserving source rhoa and back-calculating r from computed K.")
+                rhoa_raw = np.array(data['rhoa'], dtype=float) if 'rhoa' in data.dataMap() else np.array(data['r'], dtype=float)
+                r_raw = np.array(data['r'], dtype=float)
+                k_raw = np.array(data['k'], dtype=float)
+                rhoa_fallback = r_raw * k_raw
+                rhoa_vals_preserved = np.where(
+                    np.isfinite(rhoa_raw) & (rhoa_raw > 0),
+                    rhoa_raw,
+                    rhoa_fallback
+                )
+                k_safe = np.where(np.isfinite(k_raw) & (np.abs(k_raw) > 1e-12), k_raw, np.nan)
+                r_backcalc = np.divide(
+                    rhoa_vals_preserved,
+                    k_safe,
+                    out=np.full_like(rhoa_vals_preserved, np.nan),
+                    where=np.isfinite(k_safe)
+                )
+                r_backcalc = np.where(np.isfinite(r_backcalc) & (r_backcalc > 0), r_backcalc, r_raw)
+                data['r'] = r_backcalc
+                data['rhoa'] = rhoa_vals_preserved
+            else:
+                data['rhoa'] = data['r'] * data['k']
 
-            # Filter extreme apparent resistivity values
-            rhoa_vals = np.array(data['rhoa'])
-            valid_mask = (np.isfinite(rhoa_vals)) & (rhoa_vals > 0.1) & (rhoa_vals < 1e6)
-            
-            # Calculate statistics for outlier detection
-            valid_rhoa = rhoa_vals[valid_mask]
-            if len(valid_rhoa) > 0:
-                rhoa_median = np.median(valid_rhoa)
-                rhoa_std = np.std(valid_rhoa)
-                # Filter outliers: keep values within median ± 3*std
-                lower_bound = max(0.1, rhoa_median - 3 * rhoa_std)
-                upper_bound = min(1e6, rhoa_median + 3 * rhoa_std)
-                valid_mask = valid_mask & (rhoa_vals >= lower_bound) & (rhoa_vals <= upper_bound)
-                
-                n_total = data.size()
-                n_filtered = n_total - np.sum(valid_mask)
+            rhoa_vals = np.array(data['rhoa'], dtype=float)
+            if use_default_export:
+                rhoa_valid = np.isfinite(rhoa_vals) & (rhoa_vals > 0)
+                n_filtered = int(np.sum(keep_mask & ~rhoa_valid))
+                if n_filtered > 0:
+                    print(f"   Filtered {n_filtered} measurements with invalid apparent resistivity")
+            else:
+                rhoa_valid = np.isfinite(rhoa_vals) & (rhoa_vals > 0.1) & (rhoa_vals < 1e6)
+                stat_mask = keep_mask & rhoa_valid
+                valid_rhoa = rhoa_vals[stat_mask]
+                if len(valid_rhoa) > 0:
+                    rhoa_median = float(np.median(valid_rhoa))
+                    rhoa_std = float(np.std(valid_rhoa))
+                    lower_bound = max(0.1, rhoa_median - 3 * rhoa_std)
+                    upper_bound = min(1e6, rhoa_median + 3 * rhoa_std)
+                    rhoa_valid = rhoa_valid & (rhoa_vals >= lower_bound) & (rhoa_vals <= upper_bound)
+
+                n_filtered = int(np.sum(keep_mask & ~rhoa_valid))
                 if n_filtered > 0:
                     print(f"   Filtered {n_filtered} measurements with extreme apparent resistivity")
-                    # Apply filter using PyGIMLi's remove method
-                    # Get indices to remove (where valid_mask is False)
-                    remove_indices = np.where(~valid_mask)[0]
-                    for idx in sorted(remove_indices, reverse=True):
-                        data.remove(int(idx))
-            
-            # Save the updated file with correct K values
-            print(f"   Final dataset: {data.size()} measurements with computed K")
-            
-            # Rewrite the file with updated K and rhoa values
+            keep_mask = keep_mask & rhoa_valid
+
+            if not np.any(keep_mask):
+                raise RuntimeError("All measurements removed after rhoa filtering.")
+
+            n_kept = int(np.sum(keep_mask))
+            print(f"   Final dataset: {n_kept} measurements with computed K")
+
             temp_path = path.parent / (path.name + '.tmp')
             with open(temp_path, 'w', encoding='utf-8') as f:
-                # Write number of electrodes
-                f.write(f"{len(ert.electrodes)}\n")
-                
-                # Write electrode coordinates
+                f.write(f"{n_elec}\n")
                 f.write("# x y z\n")
                 for elec in ert.electrodes:
-                    f.write(f"{elec.x} {elec.y} {elec.z}\n")
-                
-                # Write number of measurements
-                f.write(f"{data.size()}\n")
-                
-                # Write measurement data with computed K and error
-                # Check if error data exists in PyGIMLi data object
-                has_err = 'err' in data.dataMap()
-                if has_err:
-                    err_vals = np.array(data['err'])
-                    # Validate error data: check if non-zero and correct size
-                    has_valid_err = (len(err_vals) == data.size()) and np.any(err_vals > 0)
-                else:
-                    has_valid_err = False
+                    f.write(f"{float(elec.x)} {float(elec.y)} {float(elec.z)}\n")
 
-                # Always write error column (default to 5% if not available)
-                f.write("# a b m n r rhoa k err\n")
-
+                rows_written = 0
+                skipped_rewrite = 0
+                row_records = []
+                has_err_data = 'err' in data.dataMap() and np.array(data['err']).size == data.size()
+                err_data_all = np.array(data['err'], dtype=float) if has_err_data else np.array([])
                 for i in range(data.size()):
-                    # PyGIMLi uses 0-based indices internally, but file format uses 1-based
-                    f.write(f"{int(data['a'][i]) + 1} {int(data['b'][i]) + 1} {int(data['m'][i]) + 1} {int(data['n'][i]) + 1} ")
+                    if not keep_mask[i]:
+                        skipped_rewrite += 1
+                        continue
+                    a = int(data['a'][i]) + 1
+                    b = int(data['b'][i]) + 1
+                    m = int(data['m'][i]) + 1
+                    n = int(data['n'][i]) + 1
+                    if min(a, b, m, n) < 0 or max(a, b, m, n) > n_elec:
+                        skipped_rewrite += 1
+                        continue
+                    if a == b or m == n:
+                        skipped_rewrite += 1
+                        continue
+                    r_val = float(data['r'][i])
+                    rhoa_val = float(data['rhoa'][i])
+                    k_val = float(data['k'][i])
+                    if not (np.isfinite(r_val) and np.isfinite(rhoa_val) and np.isfinite(k_val)):
+                        skipped_rewrite += 1
+                        continue
+                    if r_val <= 0 or rhoa_val <= 0:
+                        skipped_rewrite += 1
+                        continue
+                    src_err_val = float(err_data_all[i]) if has_err_data else np.nan
+                    row_records.append((a, b, m, n, r_val, rhoa_val, k_val, src_err_val))
+                    rows_written += 1
 
-                    # Write error value (use data['err'] if available, otherwise default to 5%)
-                    if has_valid_err:
-                        err_val = data['err'][i]
-                    else:
-                        err_val = 0.05  # Default 5% relative error
+                if rows_written == 0:
+                    raise RuntimeError("No valid measurements remained for final rewrite.")
 
-                    f.write(f"{data['r'][i]} {data['rhoa'][i]} {data['k'][i]} {err_val}\n")
-            
-            # Replace original file with updated version
+                if use_default_export:
+                    source_err_final = np.array([r[7] for r in row_records], dtype=float)
+                    err_final = np.where(
+                        np.isfinite(source_err_final) & (source_err_final > 0),
+                        source_err_final,
+                        source_default_err,
+                    ).astype(float)
+                    n_source_valid_final = int(np.sum(np.isfinite(source_err_final) & (source_err_final > 0)))
+                    print(
+                        f"   DEBUG: Preserved default export errors on final rows: "
+                        f"valid={n_source_valid_final}/{rows_written}, "
+                        f"err_range=[{np.nanmin(err_final):.3f}, {np.nanmax(err_final):.3f}]"
+                    )
+                elif use_source_error:
+                    source_err_final = np.array([r[7] for r in row_records], dtype=float)
+                    err_final = _sanitize_source_error(
+                        source_err_final,
+                        default_err=source_default_err,
+                        min_err=source_min_err,
+                        max_err=source_max_err,
+                    )
+                    n_source_valid_final = int(np.sum(np.isfinite(source_err_final) & (source_err_final > 0)))
+                    print(
+                        f"   DEBUG: Source-error use on final rows: "
+                        f"valid={n_source_valid_final}/{rows_written}, "
+                        f"err_range=[{np.nanmin(err_final):.3f}, {np.nanmax(err_final):.3f}]"
+                    )
+                else:
+                    abmn_final = np.array([(r[0], r[1], r[2], r[3]) for r in row_records], dtype=int)
+                    resist_final = np.array([r[4] for r in row_records], dtype=float)
+                    err_final, paired_final = _estimate_reciprocal_error(
+                        abmn=abmn_final,
+                        resist=resist_final,
+                        default_err=reciprocal_default_err,
+                        min_err=reciprocal_min_err,
+                        max_err=reciprocal_max_err,
+                    )
+                    print(
+                        f"   DEBUG: Reciprocal-error estimate on final rows: "
+                        f"paired={paired_final}/{rows_written}, "
+                        f"err_range=[{np.nanmin(err_final):.3f}, {np.nanmax(err_final):.3f}]"
+                    )
+
+                f.write(f"{rows_written}\n")
+                f.write("# a b m n r rhoa k err\n")
+                for idx_row, row in enumerate(row_records):
+                    a, b, m, n, r_val, rhoa_val, k_val, _src_err = row
+                    err_val = float(err_final[idx_row])
+                    f.write(f"{a} {b} {m} {n} {r_val} {rhoa_val} {k_val} {err_val}\n")
+
             temp_path.replace(path)
+            if skipped_rewrite > 0:
+                print(f"   DEBUG: Skipped {skipped_rewrite} non-finite rows during final rewrite")
             print(f"   Saved data with computed K to {path}")
-            
+
         except Exception as e:
             import traceback
             print(f"   Warning: Could not recompute K with PyGIMLi: {e}")
             print(f"   Traceback: {traceback.format_exc()}")
-            print(f"   File kept with k=1 placeholder values")
-        
+            print(f"   File kept with original exported values")
+
         return str(path)
     elif fmt == "resipy":
         return ert.metadata.get("project_dir", "")
     else:
         raise ValueError(f"Unsupported fmt: {fmt}")
+
+
+def export_ert_dataset(
+    ert: StandardERT,
+    outdir: str = "examples/results/ert",
+    formats: Iterable[str] = ("standard_json", "observations_csv", "electrodes_csv"),
+    export_strategy: str = "legacy",
+) -> Dict[str, str]:
+    """
+    Export standardized ERT data to one or more user-facing formats.
+
+    Parameters
+    ----------
+    ert : StandardERT
+        Standardized ERT dataset to export.
+    outdir : str
+        Destination directory.
+    formats : iterable of str
+        Requested formats. Supported values are ``standard_json``,
+        ``observations_csv``, ``electrodes_csv``, ``observations_parquet``,
+        ``reciprocal_csv``, ``pygimli_bert``, and ``resipy_project``.
+    export_strategy : str
+        Strategy passed to :func:`export_for_inversion` for ``pygimli_bert``.
+
+    Returns
+    -------
+    dict
+        Mapping from format key to exported file path or project directory.
+    """
+
+    if ert is None:
+        raise ValueError("ERT dataset is None")
+
+    outdir_path = Path(outdir)
+    outdir_path.mkdir(parents=True, exist_ok=True)
+    requested = {str(fmt).strip().lower() for fmt in formats}
+    outputs: Dict[str, str] = {}
+
+    electrode_rows = [asdict(e) for e in (ert.electrodes or [])]
+    observation_rows = []
+    for index, obs in enumerate(ert.observations or []):
+        observation_rows.append(
+            {
+                "observation_index": index,
+                "A": obs.quad.A,
+                "B": obs.quad.B,
+                "M": obs.quad.M,
+                "N": obs.quad.N,
+                "value": obs.app_res,
+                "dV": obs.dV,
+                "I": obs.I,
+                "rel_err": obs.rel_err,
+                "K": obs.K,
+                "fid": obs.fid,
+            }
+        )
+
+    electrodes_df = pd.DataFrame(electrode_rows)
+    observations_df = pd.DataFrame(observation_rows)
+    reciprocal_df = calculate_reciprocal_errors(ert)
+
+    if not observations_df.empty and not reciprocal_df.empty:
+        reciprocal_cols = [
+            "observation_index",
+            "reciprocal_group",
+            "reciprocal_pair_count",
+            "reciprocal_error_percent",
+            "reciprocal_mean_value",
+            "reciprocal_partner_value",
+        ]
+        observations_df = observations_df.merge(
+            reciprocal_df[reciprocal_cols],
+            on="observation_index",
+            how="left",
+        )
+
+    if "standard_json" in requested:
+        path = outdir_path / "ert_standard.json"
+        ert.to_json(path)
+        outputs["standard_json"] = str(path)
+
+    if "observations_csv" in requested:
+        path = outdir_path / "observations.csv"
+        observations_df.to_csv(path, index=False)
+        outputs["observations_csv"] = str(path)
+
+    if "electrodes_csv" in requested:
+        path = outdir_path / "electrodes.csv"
+        electrodes_df.to_csv(path, index=False)
+        outputs["electrodes_csv"] = str(path)
+
+    if "observations_parquet" in requested:
+        path = outdir_path / "observations.parquet"
+        observations_df.to_parquet(path, index=False)
+        outputs["observations_parquet"] = str(path)
+
+    if "reciprocal_csv" in requested:
+        path = outdir_path / "reciprocal_qc.csv"
+        reciprocal_df.to_csv(path, index=False)
+        outputs["reciprocal_csv"] = str(path)
+
+    if "pygimli_bert" in requested:
+        outputs["pygimli_bert"] = export_for_inversion(
+            ert,
+            outdir=str(outdir_path),
+            fmt="pgimli",
+            export_strategy=export_strategy,
+        )
+
+    if "resipy_project" in requested:
+        outputs["resipy_project"] = export_for_inversion(
+            ert,
+            outdir=str(outdir_path),
+            fmt="resipy",
+        )
+
+    unsupported = requested.difference(
+        {
+            "standard_json",
+            "observations_csv",
+            "electrodes_csv",
+            "observations_parquet",
+            "reciprocal_csv",
+            "pygimli_bert",
+            "resipy_project",
+        }
+    )
+    if unsupported:
+        raise ValueError(f"Unsupported ERT export format(s): {sorted(unsupported)}")
+
+    return outputs
+

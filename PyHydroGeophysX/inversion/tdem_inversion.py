@@ -5,18 +5,30 @@ This module provides classes for 1D TDEM inversion using SimPEG,
 with support for both L2 and sparse (IRLS) regularization.
 """
 
-import numpy as np
-from typing import Optional, Tuple, List, Dict, Any, Union
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import numpy as np
+import simpeg.electromagnetics.time_domain as tdem
 
 # SimPEG imports
 from discretize import TensorMesh
-import simpeg.electromagnetics.time_domain as tdem
-from simpeg import maps, data, data_misfit, inverse_problem
-from simpeg import regularization, optimization, directives, inversion
+from simpeg import (
+    data,
+    data_misfit,
+    directives,
+    inverse_problem,
+    inversion,
+    maps,
+    optimization,
+    regularization,
+)
 from simpeg.utils import mkvc
 
 
+# ---------------------------------------------------------------------------
+# TDEMInversion Result
+# ---------------------------------------------------------------------------
 @dataclass
 class TDEMInversionResult:
     """Container for TDEM inversion results.
@@ -45,6 +57,9 @@ class TDEMInversionResult:
     convergence_history: List[float] = field(default_factory=list)
 
 
+# ---------------------------------------------------------------------------
+# TDEMInversion
+# ---------------------------------------------------------------------------
 class TDEMInversion:
     """Class for 1D TDEM inversion using SimPEG.
     
@@ -190,6 +205,12 @@ class TDEMInversion:
             thicknesses=self.inv_thicknesses,
             sigmaMap=self.model_mapping
         )
+        # Avoid the default Pardiso backend on Windows: missing MKL/Pardiso
+        # symbols cause a native delay-load crash rather than a Python error.
+        import pymatsolver
+
+        self.simulation.solver = pymatsolver.Solver
+        self.simulation.solver_opts = {}
         
         self._setup_complete = True
         
@@ -256,8 +277,8 @@ class TDEMInversion:
         opt = optimization.ProjectedGNCG(
             maxIter=self.parameters['max_iterations'],
             maxIterLS=20,
-            cg_maxiter=self.parameters['cg_maxiter'],
-            cg_rtol=1e-3
+            maxIterCG=self.parameters['cg_maxiter'],
+            tolCG=1e-3
         )
         
         # Inverse problem
@@ -389,6 +410,9 @@ class TDEMInversion:
         plt.show()
 
 
+# ---------------------------------------------------------------------------
+# run tdem inversion
+# ---------------------------------------------------------------------------
 def run_tdem_inversion(
     times: np.ndarray,
     dobs: np.ndarray,

@@ -2,7 +2,7 @@ Quickstart
 ==========
 
 This page gives a fast path to the most important workflows added in the current package architecture:
-single-method inversion, joint inversion, EM workflows, and agent usage.
+single-method inversion, joint inversion, EM workflows, agent usage, and the 3D Mesh Builder.
 
 Install
 -------
@@ -11,6 +11,24 @@ Install
 
    pip install pyhydrogeophysx
    pip install "pyhydrogeophysx[geophysics]"   # PyGIMLi + SimPEG + RESIPY stack
+
+3D Mesh Builder GUI
+-------------------
+
+Build and export 3D ERT meshes interactively — no API key required:
+
+.. code-block:: bash
+
+   # Recommended
+   python -m PyHydroGeophysX.gui_mesh3d
+
+   # Or directly
+   streamlit run examples/app_mesh3d.py
+
+The app opens three tabs: **Electrode View** (interactive 3D scatter), **Generate
+Mesh** (runs ``Mesh3DCreator``), and **Export** (.bms / .vtk download).
+
+For the full step-by-step guide see :ref:`agents/webapp:3D Mesh Builder App`.
 
 Quick Petrophysics Check
 ------------------------

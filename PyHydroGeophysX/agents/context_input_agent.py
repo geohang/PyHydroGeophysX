@@ -5,11 +5,15 @@ Translates user's natural language requests into structured workflow configurati
 Supports multiple LLM providers (OpenAI GPT, Google Gemini, Anthropic Claude).
 """
 
-from typing import Dict, Any, Optional, List
 import json
-from .base_agent import BaseAgent
+from typing import Any, Dict, List, Optional
+
+from .base_agent import AgentResult, BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Context Input Agent
+# ---------------------------------------------------------------------------
 class ContextInputAgent(BaseAgent):
     """
     Agent that interprets natural language requests and generates workflow configurations.
@@ -35,8 +39,109 @@ class ContextInputAgent(BaseAgent):
             llm_provider: Provider ('openai', 'gemini', 'claude')
         """
         super().__init__("ContextInputAgent", api_key, model, llm_provider)
+        self.system_message = (
+            "You are an expert workflow configuration interpreter for PyHydroGeophysX. "
+            "Translate natural-language geophysical workflow requests into structured JSON "
+            "configuration dictionaries. Identify data files, instrument types, inversion "
+            "parameters, and petrophysical parameters from user descriptions."
+        )
+
+    def preview_config(
+        self,
+        user_request: str,
+        available_data: Optional[Dict[str, Any]] = None,
+    ) -> AgentResult:
+        """Build a deterministic preview config without calling an LLM.
+
+        Parameters
+        ----------
+        user_request : str
+            Natural-language workflow request.
+        available_data : dict, optional
+            Optional file and instrument hints supplied by the caller.
+
+        Returns
+        -------
+        AgentResult
+            Preview configuration with missing-field warnings.
+
+        Raises
+        ------
+        None
+
+        Examples
+        --------
+        >>> agent = ContextInputAgent(api_key=None)
+        >>> result = agent.preview_config("Run ERT inversion on data.ohm")
+        >>> result.get("workflow_config")["data_file"]
+        'data.ohm'
+        """
+        config: Dict[str, Any] = {"user_request": user_request}
+        text = user_request or ""
+        lower = text.lower()
+
+        extracted_files = self._extract_files_regex(text)
+        if extracted_files:
+            if len(extracted_files) > 1 or "time-lapse" in lower or "timelapse" in lower:
+                config["inversion_mode"] = "time-lapse"
+                config["time_lapse_files"] = extracted_files
+            else:
+                config["data_file"] = extracted_files[0]
+                config["ert_file"] = extracted_files[0]
+
+        electrode_file = self._extract_electrode_file_regex(text)
+        if electrode_file:
+            config["electrode_file"] = electrode_file
+
+        raw_seismic_file = self._extract_file_by_extension(text, [".sgy", ".segy"])
+        seismic_file = self._extract_file_by_extension(text, [".dat", ".txt"])
+        if raw_seismic_file or seismic_file or "seismic" in lower or "srt" in lower:
+            if raw_seismic_file:
+                config["raw_seismic_file"] = raw_seismic_file
+            elif seismic_file and ("seismic" in lower or "srt" in lower or "travel time" in lower):
+                config["seismic_file"] = seismic_file
+            config["seismic_only"] = "ert" not in lower and "resistivity" not in lower
+
+        tdem_file = self._extract_file_by_extension(text, [".csv", ".txt", ".dat"])
+        if "tdem" in lower or "time-domain electromagnetic" in lower:
+            if tdem_file:
+                config["tdem_file"] = tdem_file
+
+        instrument = self._infer_instrument_from_text(text)
+        if instrument:
+            config["instrument"] = instrument
+
+        params = self._extract_params_regex(text)
+        if params:
+            config["petrophysical_params"] = params
+
+        if available_data:
+            for key, value in available_data.items():
+                config.setdefault(key, value)
+
+        config = self._validate_and_complete_config(config)
+        missing = self._missing_or_ambiguous_fields(config, text)
+        status = "needs_review" if missing else "success"
+        return AgentResult(
+            status=status,
+            summary=(
+                "Request preview needs user review."
+                if missing
+                else "Request preview produced a runnable configuration."
+            ),
+            data={"workflow_config": config, "missing_fields": missing},
+            warnings=[
+                "This preview used deterministic rules only; no LLM call was made."
+            ],
+            error_fix_hint=(
+                "Provide or confirm: " + ", ".join(missing)
+                + ". See: https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#ambiguous-natural-language-request"
+                if missing
+                else None
+            ),
+        )
     
-    def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input_data: Dict[str, Any]) -> AgentResult:
         """
         Execute the context input agent (parse natural language request).
         
@@ -61,19 +166,46 @@ class ContextInputAgent(BaseAgent):
             # Parse the request
             workflow_config = self.parse_request(user_request, available_data)
             
-            # Generate explanation
+            missing = self._missing_or_ambiguous_fields(workflow_config, user_request)
             explanation = self.explain_config(workflow_config)
-            
-            return {
-                'status': 'success',
-                'workflow_config': workflow_config,
-                'explanation': explanation
-            }
+
+            if missing:
+                return AgentResult(
+                    status="needs_review",
+                    summary="The request was parsed, but some fields need review before execution.",
+                    data={
+                        "workflow_config": workflow_config,
+                        "explanation": explanation,
+                        "missing_fields": missing,
+                    },
+                    next_suggested_action="Confirm or edit the parsed configuration before running.",
+                    error_fix_hint=(
+                        "Provide or confirm: " + ", ".join(missing)
+                        + ". See: https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#ambiguous-natural-language-request"
+                    ),
+                )
+
+            return AgentResult(
+                status="success",
+                summary="The request was parsed into a workflow configuration.",
+                data={
+                    "workflow_config": workflow_config,
+                    "explanation": explanation,
+                },
+                next_suggested_action="Review the parsed configuration before execution.",
+            )
         except Exception as e:
-            return {
-                'status': 'failed',
-                'error': str(e)
-            }
+            return AgentResult(
+                status="failed",
+                summary="The request could not be parsed.",
+                data={},
+                error=str(e),
+                error_fix_hint=(
+                    "Check that the request names the workflow type, data files, "
+                    "instrument, and required parameters. See: "
+                    "https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#ambiguous-natural-language-request"
+                ),
+            )
     
     def parse_request(self, user_request: str, available_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -168,7 +300,7 @@ class ContextInputAgent(BaseAgent):
             electrode_file = self._extract_electrode_file_regex(user_request)
             if electrode_file:
                 workflow_config['electrode_file'] = electrode_file
-                print(f"  ⚠️  LLM did not extract electrode file. Using regex fallback: {electrode_file}")
+                print(f"  [WARN] LLM did not extract electrode file. Using regex fallback: {electrode_file}")
 
         # Fallback: Extract hydrological model config using regex if LLM missed it
         if any(kw in user_request_lower for kw in ['modflow', 'parflow', 'par flow']):
@@ -186,12 +318,18 @@ class ContextInputAgent(BaseAgent):
         if extracted_files and len(extracted_files) > 1:
             # Multiple files suggest time-lapse workflow
             if workflow_config.get('inversion_mode') != 'time-lapse':
-                print(f"  ⚠️  Detected {len(extracted_files)} data files in request - setting inversion_mode to 'time-lapse'")
+                print(
+                    f"  [WARN] Detected {len(extracted_files)} data files in request - "
+                    "setting inversion_mode to 'time-lapse'"
+                )
                 workflow_config['inversion_mode'] = 'time-lapse'
             
             if not workflow_config.get('time_lapse_files') or len(workflow_config.get('time_lapse_files', [])) == 0:
                 workflow_config['time_lapse_files'] = extracted_files
-                print(f"  ⚠️  LLM did not extract file list. Using regex fallback: found {len(extracted_files)} files")
+                print(
+                    f"  [WARN] LLM did not extract file list. "
+                    f"Using regex fallback: found {len(extracted_files)} files"
+                )
         
         # Normalize time-lapse file paths if in time-lapse mode
         if workflow_config.get('inversion_mode') == 'time-lapse':
@@ -205,7 +343,7 @@ class ContextInputAgent(BaseAgent):
         if workflow_config.get('fusion_pattern'):
             workflow_config = self._normalize_fusion_config(workflow_config)
         
-        print("✓ Multi-stage extraction complete")
+        print("[OK] Multi-stage extraction complete")
         return workflow_config
     
     def _extract_params_regex(self, text: str) -> Dict[str, float]:
@@ -250,7 +388,7 @@ class ContextInputAgent(BaseAgent):
         - "electrodes at path/electrodes.dat"
         """
         import re
-        
+
         # Pattern 1: "electrode file in/at/: <path>"
         patterns = [
             r'electrode[s]?\s+file\s+(?:in|at|:)\s+([^\s,]+\.dat)',
@@ -284,6 +422,9 @@ class ContextInputAgent(BaseAgent):
             r'[-*•]\s+([^\s]+\.ohm)',  # Bullet + .ohm files
             r'[-*•]\s+([^\s]+\.dat)',  # Bullet + .dat files
             r'[-*•]\s+([^\s]+\.Data)',  # Bullet + .Data files
+            r'([^\s,;:]+\.ohm)\b',  # Plain .ohm file references
+            r'([^\s,;:]+\.bin)\b',  # Plain binary ERT exports
+            r'([^\s,;:]+\.stg)\b',  # Plain SuperSting-style exports
             r'(\d{4}-\d{2}-\d{2}[^\s]*\.ohm)',  # Date-based .ohm files (anywhere)
             r'(\d{4}-\d{2}-\d{2}[^\s]*\.dat)',  # Date-based .dat files (anywhere)
         ]
@@ -291,10 +432,192 @@ class ContextInputAgent(BaseAgent):
         for pattern in patterns:
             matches = re.findall(pattern, text, re.MULTILINE | re.IGNORECASE)
             for match in matches:
-                if match not in files:  # Avoid duplicates
+                normalized = match.replace("\\", "/")
+                duplicate = any(
+                    existing.replace("\\", "/") == normalized
+                    or existing.replace("\\", "/").endswith("/" + normalized)
+                    or normalized.endswith("/" + existing.replace("\\", "/"))
+                    for existing in files
+                )
+                if not duplicate:
                     files.append(match)
         
         return files
+
+    def _extract_file_by_extension(self, text: str, extensions: List[str]) -> Optional[str]:
+        """Extract the first file path matching one of the extensions.
+
+        Parameters
+        ----------
+        text : str
+            Text to scan.
+        extensions : list of str
+            File extensions to match, including the leading dot.
+
+        Returns
+        -------
+        str or None
+            First matched file path.
+
+        Raises
+        ------
+        None
+
+        Examples
+        --------
+        >>> agent = ContextInputAgent(api_key=None)
+        >>> agent._extract_file_by_extension("Use line.sgy", [".sgy"])
+        'line.sgy'
+        """
+        import re
+
+        suffixes = "|".join(re.escape(ext.lstrip(".")) for ext in extensions)
+        match = re.search(rf"([^\s,;:]+\.({suffixes}))\b", text, re.IGNORECASE)
+        return match.group(1) if match else None
+
+    def _infer_instrument_from_text(self, text: str) -> Optional[str]:
+        """Infer ERT instrument name from text.
+
+        Parameters
+        ----------
+        text : str
+            Natural-language request.
+
+        Returns
+        -------
+        str or None
+            Canonical instrument name if detected.
+
+        Raises
+        ------
+        None
+
+        Examples
+        --------
+        >>> ContextInputAgent(api_key=None)._infer_instrument_from_text("DAS-1 data")
+        'DAS-1'
+        """
+        import re
+
+        lower = (text or "").lower()
+        if "abem" in lower or "terameter" in lower:
+            return "ABEM-Lund"
+        if "syscal" in lower:
+            return "Syscal"
+        if re.search(r"\be4d\b", lower):
+            return "E4D"
+        if re.search(r"\bdas\b", lower) or "das-1" in lower or "das 1" in lower:
+            return "DAS-1"
+        if "bert" in lower:
+            return "BERT"
+        if "sting" in lower:
+            return "Sting"
+        if "ares" in lower:
+            return "ARES"
+        if "protocol dc" in lower:
+            return "Protocol DC"
+        return None
+
+    def _missing_or_ambiguous_fields(
+        self,
+        workflow_config: Dict[str, Any],
+        user_request: str,
+    ) -> List[str]:
+        """Return fields that should be reviewed before execution.
+
+        Parameters
+        ----------
+        workflow_config : dict
+            Parsed workflow configuration.
+        user_request : str
+            Original request.
+
+        Returns
+        -------
+        list of str
+            Missing or ambiguous field names.
+
+        Raises
+        ------
+        None
+
+        Examples
+        --------
+        >>> agent = ContextInputAgent(api_key=None)
+        >>> agent._missing_or_ambiguous_fields({}, "run ERT inversion")
+        ['data_file or ert_file', 'instrument']
+        """
+        lower = (user_request or "").lower()
+        missing: List[str] = []
+
+        wants_ert = (
+            "ert" in lower
+            or "resistivity" in lower
+            or bool(workflow_config.get("ert_file") or workflow_config.get("data_file"))
+            or bool(workflow_config.get("time_lapse_files") or workflow_config.get("timelapse_files"))
+        )
+        wants_time_lapse = (
+            "time-lapse" in lower
+            or "timelapse" in lower
+            or workflow_config.get("inversion_mode") == "time-lapse"
+        )
+        wants_seismic = (
+            "seismic" in lower
+            or "srt" in lower
+            or bool(workflow_config.get("seismic_file") or workflow_config.get("raw_seismic_file"))
+        )
+        wants_tdem = "tdem" in lower or bool(workflow_config.get("tdem_file"))
+        instrument_is_explicit = any(
+            token in lower
+            for token in [
+                "syscal",
+                "e4d",
+                "abem",
+                "das-1",
+                "das1",
+                "bert",
+                "sting",
+                "ares",
+                "protocol dc",
+            ]
+        )
+        instrument_needs_review = (
+            not workflow_config.get("instrument")
+            or (workflow_config.get("instrument") == "Syscal" and not instrument_is_explicit)
+        )
+
+        if wants_time_lapse:
+            files = workflow_config.get("time_lapse_files") or workflow_config.get("timelapse_files") or []
+            if len(files) < 2:
+                missing.append("at least two time_lapse_files")
+            if instrument_needs_review:
+                missing.append("instrument")
+        elif wants_ert:
+            if not (workflow_config.get("ert_file") or workflow_config.get("data_file")):
+                missing.append("data_file or ert_file")
+            if instrument_needs_review:
+                missing.append("instrument")
+
+        if (
+            wants_seismic
+            and not workflow_config.get("seismic_file")
+            and not workflow_config.get("raw_seismic_file")
+            and not wants_ert
+        ):
+            missing.append("seismic_file or raw_seismic_file")
+
+        if wants_tdem and not workflow_config.get("tdem_file") and not workflow_config.get("data_file"):
+            missing.append("tdem_file")
+
+        if not any([wants_ert, wants_time_lapse, wants_seismic, wants_tdem]):
+            missing.append("workflow type")
+
+        # Keep order stable and remove duplicates.
+        deduped: List[str] = []
+        for item in missing:
+            if item not in deduped:
+                deduped.append(item)
+        return deduped
 
     def _extract_hydro_model_regex(self, text: str) -> Dict[str, Any]:
         """
@@ -813,11 +1136,13 @@ Generate JSON now:"""
                     pass
         
         # If all fails, return minimal config and log warning
-        print(f"⚠️  Warning: Could not parse JSON from LLM response. Using minimal config.")
+        print("[WARN] Could not parse JSON from LLM response. Using minimal config.")
         return {}
     
     def _validate_and_complete_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Validate configuration and add missing defaults."""
+        from pathlib import Path
+
         # First, flatten nested structures if present
         # Handle 'data_source' nested structure
         if 'data_source' in config and isinstance(config['data_source'], dict):
@@ -840,6 +1165,54 @@ Generate JSON now:"""
                 config['run_uncertainty'] = uncertainty['run_uncertainty']
             if 'n_realizations' in uncertainty and 'n_realizations' not in config:
                 config['n_realizations'] = uncertainty['n_realizations']
+
+        # Raw SEG-Y/SEGY files are preprocessing inputs, not PyGIMLi travel-time
+        # files. Keep them separate so the workflow inserts first-break picking.
+        seismic_file = config.get("seismic_file")
+        if seismic_file and Path(str(seismic_file)).suffix.lower() in {".sgy", ".segy"}:
+            config["raw_seismic_file"] = seismic_file
+            config.pop("seismic_file", None)
+
+        seismic_only = bool(config.get("seismic_only")) and not any(
+            [
+                config.get("ert_file"),
+                config.get("data_file"),
+                config.get("time_lapse_files"),
+                config.get("timelapse_files"),
+            ]
+        )
+        if config.get("raw_seismic_file") and not (config.get("ert_file") or config.get("data_file")):
+            seismic_only = True
+
+        if seismic_only:
+            seismic_defaults = {
+                "crs": "local",
+                "seismic_only": True,
+                "extract_interfaces": True,
+                "velocity_threshold": 1200,
+                "inversion_params": {
+                    "lam": 50,
+                    "zWeight": 0.2,
+                    "vTop": 500,
+                    "vBottom": 5000,
+                    "paraDepth": 30.0,
+                    "limits": [300.0, 8000.0],
+                },
+                "raw_seismic_processing": bool(config.get("raw_seismic_file")),
+                "first_break_params": {
+                    "threshold": 0.2,
+                    "noise_multiplier": 5.0,
+                    "max_time": 0.15,
+                    "agc_window": 0.05,
+                },
+            }
+            for key, value in seismic_defaults.items():
+                if key not in config:
+                    config[key] = value
+                elif isinstance(value, dict) and isinstance(config[key], dict):
+                    for subkey, subvalue in value.items():
+                        config[key].setdefault(subkey, subvalue)
+            return config
         
         # Set defaults
         defaults = {
@@ -872,7 +1245,7 @@ Generate JSON now:"""
         # Validate time-lapse specific fields
         if config.get('inversion_mode') == 'time-lapse':
             if 'time_lapse_files' not in config or not config['time_lapse_files']:
-                print("⚠️  Warning: time-lapse mode requested but no time_lapse_files provided")
+                print("[WARN] time-lapse mode requested but no time_lapse_files provided")
                 config['inversion_mode'] = 'standard'
             else:
                 # Set defaults for time-lapse
@@ -924,7 +1297,7 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
             Updated configuration with normalized paths
         """
         from pathlib import Path
-        
+
         # Extract or set base data directory
         if 'project_dir' in config:
             base_data_dir = Path(config['project_dir'])
@@ -994,9 +1367,9 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
         Returns:
             Updated configuration with normalized climate_config
         """
-        from pathlib import Path
         from datetime import datetime, timedelta
-        
+        from pathlib import Path
+
         # Ensure use_climate flag is set
         if 'climate_config' in config and not config.get('use_climate'):
             config['use_climate'] = True
@@ -1059,8 +1432,8 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
         Returns:
             [start_date, end_date] in "YYYY-MM-DD" format, or None if cannot infer
         """
-        from datetime import datetime, timedelta
         import re
+        from datetime import datetime, timedelta
         
         dates = []
         
@@ -1104,7 +1477,7 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
             Updated configuration with normalized fusion parameters
         """
         from pathlib import Path
-        
+
         # Set default fusion parameters
         fusion_defaults = {
             'coverage_threshold': -1.0,

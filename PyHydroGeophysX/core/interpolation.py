@@ -1,11 +1,80 @@
 """
 Interpolation utilities for geophysical data processing.
 """
+from typing import Any, List, Optional, Tuple, Union
+
 import numpy as np
 from scipy.interpolate import griddata
-from typing import Tuple, List, Optional, Union
+from scipy.ndimage import map_coordinates
 
 
+# ---------------------------------------------------------------------------
+# fast regular-grid sampling helpers
+# ---------------------------------------------------------------------------
+def _detect_regular_grid(X_grid: np.ndarray, Y_grid: np.ndarray):
+    """Return ``(x0, dx, y0, dy)`` if (X_grid, Y_grid) is a uniform meshgrid.
+
+    Returns ``None`` for any non-uniform / irregular grid so callers can fall
+    back to general scattered interpolation.
+    """
+    try:
+        X_grid = np.asarray(X_grid, dtype=float)
+        Y_grid = np.asarray(Y_grid, dtype=float)
+        if X_grid.ndim != 2 or Y_grid.ndim != 2 or X_grid.shape != Y_grid.shape:
+            return None
+        x = X_grid[0, :]
+        y = Y_grid[:, 0]
+        if x.size < 2 or y.size < 2:
+            return None
+        if not (np.allclose(X_grid, x[np.newaxis, :]) and np.allclose(Y_grid, y[:, np.newaxis])):
+            return None
+        dx = np.diff(x)
+        dy = np.diff(y)
+        if not (np.allclose(dx, dx[0]) and np.allclose(dy, dy[0])):
+            return None
+        if dx[0] == 0 or dy[0] == 0:
+            return None
+        return float(x[0]), float(dx[0]), float(y[0]), float(dy[0])
+    except Exception:
+        return None
+
+
+def _sample_grid_along_profile(data: np.ndarray,
+                               X_grid: np.ndarray,
+                               Y_grid: np.ndarray,
+                               X_pro: np.ndarray,
+                               Y_pro: np.ndarray,
+                               method: str = 'linear') -> np.ndarray:
+    """Sample ``data`` along a profile line.
+
+    When (X_grid, Y_grid) form a uniform regular grid -- the usual case for data
+    produced by :func:`setup_profile_coordinates` -- this uses fast
+    bilinear/nearest :func:`scipy.ndimage.map_coordinates` sampling, which is
+    exact for a regular grid and orders of magnitude faster than Delaunay-based
+    :func:`scipy.interpolate.griddata` on large grids. For irregular grids it
+    falls back to ``griddata`` so the function remains general.
+    """
+    x_pro = np.asarray(X_pro, dtype=float).ravel()
+    y_pro = np.asarray(Y_pro, dtype=float).ravel()
+    grid = _detect_regular_grid(X_grid, Y_grid)
+    if grid is None:
+        return griddata((np.asarray(X_grid).ravel(), np.asarray(Y_grid).ravel()),
+                        np.asarray(data, dtype=float).ravel(),
+                        (x_pro, y_pro), method=method)
+    x0, dx, y0, dy = grid
+    cols = (x_pro - x0) / dx
+    rows = (y_pro - y0) / dy
+    data_arr = np.asarray(data, dtype=float)
+    if method == 'nearest':
+        return map_coordinates(data_arr, [rows, cols], order=0, mode='nearest')
+    # 'linear' (and anything else): bilinear, NaN outside the grid to mirror the
+    # convex-hull behavior of griddata on a regular grid.
+    return map_coordinates(data_arr, [rows, cols], order=1, mode='constant', cval=np.nan)
+
+
+# ---------------------------------------------------------------------------
+# interpolate to profile
+# ---------------------------------------------------------------------------
 def interpolate_to_profile(data: np.ndarray, 
                          X_grid: np.ndarray, 
                          Y_grid: np.ndarray,
@@ -27,14 +96,12 @@ def interpolate_to_profile(data: np.ndarray,
         Interpolated values along profile
     """
     
-    X_new = X_grid.ravel()
-    Y_new = Y_grid.ravel()
-    
-    return griddata((X_new, Y_new), np.array(data).ravel(),
-                   (np.array(X_pro).ravel(), np.array(Y_pro).ravel()),
-                   method=method)
+    return _sample_grid_along_profile(data, X_grid, Y_grid, X_pro, Y_pro, method=method)
 
 
+# ---------------------------------------------------------------------------
+# setup profile coordinates
+# ---------------------------------------------------------------------------
 def setup_profile_coordinates(point1: List[int], 
                             point2: List[int],
                             surface_data: np.ndarray,
@@ -89,6 +156,9 @@ def setup_profile_coordinates(point1: List[int],
     return X_pro, Y_pro, L_profile, XX, YY
 
 
+# ---------------------------------------------------------------------------
+# interpolate structure to profile
+# ---------------------------------------------------------------------------
 def interpolate_structure_to_profile(structure_data: List[np.ndarray],
                                    X_grid: np.ndarray,
                                    Y_grid: np.ndarray,
@@ -115,6 +185,9 @@ def interpolate_structure_to_profile(structure_data: List[np.ndarray],
     return np.array(structure)
 
 
+# ---------------------------------------------------------------------------
+# prepare 2 D profile data
+# ---------------------------------------------------------------------------
 def prepare_2D_profile_data(data: np.ndarray, 
                           XX: np.ndarray, 
                           YY: np.ndarray,
@@ -133,28 +206,27 @@ def prepare_2D_profile_data(data: np.ndarray,
     """
     n_layers = data.shape[0]
     profile_values = []
-    
-    X_new = XX.ravel()
-    Y_new = YY.ravel()
-    
+
     for i in range(n_layers):
-        layer_values = griddata((X_new, Y_new), 
-                              data[i].ravel(), 
-                              (X_pro.ravel(), Y_pro.ravel()), 
-                              method='linear')
+        layer_values = _sample_grid_along_profile(data[i], XX, YY, X_pro, Y_pro, method='linear')
         profile_values.append(layer_values)
-    
+
     return np.array(profile_values)
 
 
-def interpolate_to_mesh(property_values: np.ndarray,
-                       profile_distance: np.ndarray,
-                       depth_values: np.ndarray,
-                       mesh_x: np.ndarray,
-                       mesh_y: np.ndarray,
-                       mesh_markers: np.ndarray,
-                       ID,
-                       layer_markers: list = [3, 0, 2]) -> np.ndarray:
+# ---------------------------------------------------------------------------
+# interpolate to mesh
+# ---------------------------------------------------------------------------
+def interpolate_to_mesh(
+    property_values: np.ndarray,
+    profile_distance: np.ndarray,
+    depth_values: np.ndarray,
+    mesh_x: np.ndarray,
+    mesh_y: np.ndarray,
+    mesh_markers: np.ndarray,
+    ID: Any,
+    layer_markers: list = [3, 0, 2],
+) -> np.ndarray:
     """
     Interpolate property values from profile to mesh with layer-specific handling.
     
@@ -208,6 +280,9 @@ def interpolate_to_mesh(property_values: np.ndarray,
     return result
 
 
+# ---------------------------------------------------------------------------
+# Profile Interpolator
+# ---------------------------------------------------------------------------
 class ProfileInterpolator:
     """Class for handling interpolation of data to/from profiles."""
     
@@ -301,6 +376,9 @@ class ProfileInterpolator:
         )
 
 
+# ---------------------------------------------------------------------------
+# create surface lines
+# ---------------------------------------------------------------------------
 def create_surface_lines(L_profile: np.ndarray,
                         structure: np.ndarray,
                         top_idx: int = 0,

@@ -1,0 +1,39 @@
+{
+  "n_timesteps": 365,
+  "source_shape": [
+    1095,
+    14,
+    194,
+    157
+  ],
+  "source_start_index": 730,
+  "source_end_index_exclusive": 1095,
+  "profile_point1_col_row": [
+    115,
+    70
+  ],
+  "profile_point2_col_row": [
+    95,
+    180
+  ],
+  "noise_standard_deviation": 0.05,
+  "noise_seed_base": 1000,
+  "water_content_mesh_file": "water_content_mesh.npy",
+  "resistivity_mesh_file": "resistivity_mesh.npy",
+  "porosity_mesh_file": "porosity_mesh.npy",
+  "apparent_resistivity_file": "apparent_resistivity.npy",
+  "monthly_ert_days": [
+    30,
+    60,
+    90,
+    120,
+    150,
+    180,
+    210,
+    240,
+    270,
+    300,
+    330,
+    360
+  ]
+}

@@ -6,17 +6,22 @@ from PyDaymet and computes potential evapotranspiration (PET) using multiple
 methods for integration with ERT resistivity imaging and moisture analysis.
 """
 
-from typing import Dict, Any, Optional, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
+
 try:
     import xarray as xr
 except ImportError:
     xr = None
 
-from .base_agent import BaseAgent
+from .base_agent import AgentResult, BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Climate Data Agent
+# ---------------------------------------------------------------------------
 class ClimateDataAgent(BaseAgent):
     """
     Agent for retrieving meteorological data and computing PET.
@@ -80,8 +85,8 @@ class ClimateDataAgent(BaseAgent):
                 - message: Status or error message
                 - stdout: Command output
         """
-        import subprocess
         import os
+        import subprocess
         from pathlib import Path
         
         self._log("Fetching climate data using conda environment")
@@ -176,11 +181,23 @@ class ClimateDataAgent(BaseAgent):
         # Fetch the data
         self._log("Fetching climate data (this may take 1-2 minutes)...")
         
-        python_script = Path("fetch_climate_data.py").absolute()
-        if not python_script.exists():
+        # Prefer the copy bundled with the package; fall back to the working
+        # directory for user-supplied overrides. Resolving only against the
+        # working directory broke whenever the app was launched from elsewhere.
+        script_candidates = [
+            Path(__file__).resolve().parent / "fetch_climate_data.py",
+            Path("fetch_climate_data.py").absolute(),
+        ]
+        python_script = next((p for p in script_candidates if p.exists()), None)
+        if python_script is None:
+            searched = "; ".join(str(p) for p in script_candidates)
             return {
                 "success": False,
-                "message": f"Climate fetch script not found: {python_script}",
+                "message": (
+                    "Climate fetch script not found. Searched: "
+                    f"{searched}. Reinstall the package or place a "
+                    "fetch_climate_data.py in the working directory."
+                ),
                 "csv_path": None,
                 "stdout": ""
             }
@@ -255,6 +272,14 @@ class ClimateDataAgent(BaseAgent):
         # Check if pre-fetched CSV file is provided
         csv_file = input_data.get('csv_file')
         if csv_file:
+            validation_error = self.validate_input_file(
+                csv_file,
+                supported_extensions=[".csv"],
+                field_name="csv_file",
+                max_size_mb=input_data.get("max_file_size_mb"),
+            )
+            if validation_error:
+                return validation_error
             return self._load_from_csv(csv_file, input_data)
         
         # Extract parameters
@@ -270,10 +295,22 @@ class ClimateDataAgent(BaseAgent):
         
         # Validate inputs
         if dates is None:
-            raise ValueError("dates parameter is required")
+            return AgentResult(
+                status="failed",
+                summary="Climate data request is missing the date range.",
+                data={},
+                error="dates parameter is required",
+                error_fix_hint="Provide dates as (start_date, end_date), for example ('2022-03-01', '2022-06-30').",
+            )
         
         if coords is None and geometry is None:
-            raise ValueError("Either coords or geometry must be provided")
+            return AgentResult(
+                status="failed",
+                summary="Climate data request is missing a location.",
+                data={},
+                error="Either coords or geometry must be provided",
+                error_fix_hint="Provide coords for a point site or geometry for a polygon/bounding box.",
+            )
         
         # Retrieve climate data
         if coords is not None:
@@ -596,8 +633,8 @@ class ClimateDataAgent(BaseAgent):
         Returns:
             Dictionary containing climate data and derived features
         """
-        import os
         import json
+        import os
         from pathlib import Path
         
         self._log(f"Loading pre-fetched climate data from CSV: {csv_file}")

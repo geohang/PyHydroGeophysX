@@ -6,13 +6,17 @@ using structure-constrained petrophysical models with Monte Carlo uncertainty qu
 Implements the workflow from Ex_MC_Hydro.py.
 """
 
-from typing import Dict, Any, Optional
-import numpy as np
 import os
-from tqdm import tqdm
+from typing import Any, Dict, Optional
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Petrophysics Agent
+# ---------------------------------------------------------------------------
 class PetrophysicsAgent(BaseAgent):
     """
     Agent for converting resistivity to hydrological properties with uncertainty.
@@ -70,10 +74,8 @@ different geological materials and quantify uncertainties."""
         self._log_execution("Starting petrophysical conversion with uncertainty analysis")
         
         try:
-            from PyHydroGeophysX.petrophysics.resistivity_models import (
-                resistivity_to_saturation
-            )
-            
+            from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_saturation
+
             # Extract parameters
             resistivity_model = input_data.get('resistivity_model')
             mesh = input_data.get('mesh')
@@ -83,6 +85,7 @@ different geological materials and quantify uncertainties."""
             petrophysical_params = input_data.get('petrophysical_params', None) or input_data.get('petrophysical_parameters', None)
             geological_context = input_data.get('geological_context', 'generic')
             n_realizations = input_data.get('n_realizations', 100)
+            seed = int(input_data.get('seed', 7))
             output_dir = input_data.get('output_dir', 'results/petrophysics')
             
             os.makedirs(output_dir, exist_ok=True)
@@ -155,7 +158,8 @@ different geological materials and quantify uncertainties."""
                 resistivity_array,
                 cell_markers,
                 layer_params,
-                n_realizations
+                n_realizations,
+                seed=seed,
             )
             
             # Calculate statistics
@@ -489,10 +493,15 @@ different geological materials and quantify uncertainties."""
         
         return layer_params
     
-    def _run_monte_carlo(self, resistivity_array: np.ndarray, 
-                        cell_markers: np.ndarray,
-                        layer_params: Dict,
-                        n_realizations: int) -> Dict:
+    def _run_monte_carlo(
+        self,
+        resistivity_array: np.ndarray,
+        cell_markers: np.ndarray,
+        layer_params: Dict,
+        n_realizations: int,
+        *,
+        seed: int = 7,
+    ) -> Dict:
         """
         Run Monte Carlo uncertainty quantification.
         
@@ -505,117 +514,25 @@ different geological materials and quantify uncertainties."""
         Returns:
             Dictionary with MC results
         """
-        from PyHydroGeophysX.petrophysics.resistivity_models import (
-            resistivity_to_saturation
+        from PyHydroGeophysX.petrophysics.monte_carlo import (
+            run_petrophysics_monte_carlo,
         )
-        
-        n_cells, n_timesteps = resistivity_array.shape
-        unique_layers = np.unique(cell_markers)
-        
-        # Initialize storage
-        water_content_all = np.zeros((n_realizations, n_cells, n_timesteps))
-        saturation_all = np.zeros((n_realizations, n_cells, n_timesteps))
-        
-        # Store parameters used for each realization
-        params_used = {int(layer_id): {
-            'm': np.zeros(n_realizations),
-            'rho_fluid': np.zeros(n_realizations),
-            'rho_sat': np.zeros(n_realizations),
-            'n': np.zeros(n_realizations),
-            'sigma_sur': np.zeros(n_realizations),
-            'porosity': np.zeros(n_realizations),
-        } for layer_id in unique_layers}
-        
-        # Monte Carlo loop
-        for mc_idx in tqdm(range(n_realizations), desc="MC Realizations"):
-            # Sample parameters for each layer
-            sampled_params = {}
-            for layer_id in unique_layers:
-                lp = layer_params[int(layer_id)]
-                use_rho_sat = lp.get('use_rho_sat', False)
-                
-                if use_rho_sat:
-                    # Use rho_sat directly - no need for m or rho_fluid
-                    sampled = {
-                        'rho_sat': max(0.0, np.random.normal(lp['rho_sat']['mean'], lp['rho_sat']['std'])),
-                        'n': max(0.0, np.random.normal(lp['n']['mean'], lp['n']['std'])),
-                        'sigma_sur': max(0.0, np.random.normal(lp['sigma_sur']['mean'], 
-                                                               lp['sigma_sur']['std'])),
-                        'porosity': max(0.0, np.random.normal(lp['porosity']['mean'], 
-                                                             lp['porosity']['std'])),
-                        'use_rho_sat': True
-                    }
-                else:
-                    # Traditional approach using m and rho_fluid
-                    sampled = {
-                        'm': max(0.0, np.random.normal(lp['m']['mean'], lp['m']['std'])),
-                        'n': max(0.0, np.random.normal(lp['n']['mean'], lp['n']['std'])),
-                        'sigma_sur': max(0.0, np.random.normal(lp['sigma_sur']['mean'], 
-                                                               lp['sigma_sur']['std'])),
-                        'porosity': max(0.0, np.random.normal(lp['porosity']['mean'], 
-                                                             lp['porosity']['std'])),
-                        'rho_fluid': lp['rho_fluid'],
-                        'use_rho_sat': False
-                    }
-                
-                sampled_params[layer_id] = sampled
-                
-                # Store used parameters
-                if use_rho_sat:
-                    params_used[int(layer_id)]['rho_sat'][mc_idx] = sampled['rho_sat']
-                else:
-                    params_used[int(layer_id)]['m'][mc_idx] = sampled['m']
-                    params_used[int(layer_id)]['rho_fluid'][mc_idx] = sampled['rho_fluid']
-                params_used[int(layer_id)]['n'][mc_idx] = sampled['n']
-                params_used[int(layer_id)]['sigma_sur'][mc_idx] = sampled['sigma_sur']
-                params_used[int(layer_id)]['porosity'][mc_idx] = sampled['porosity']
-            
-            # Create porosity array
-            porosity = np.zeros(n_cells)
-            for layer_id in unique_layers:
-                mask = cell_markers == layer_id
-                porosity[mask] = sampled_params[layer_id]['porosity']
-            
-            # Process each timestep
-            saturation = np.zeros((n_cells, n_timesteps))
-            for t in range(n_timesteps):
-                resistivity_t = resistivity_array[:, t]
-                
-                # Process each layer
-                for layer_id in unique_layers:
-                    mask = cell_markers == layer_id
-                    if np.any(mask):
-                        params = sampled_params[layer_id]
-                        
-                        if params.get('use_rho_sat', False):
-                            # Direct calculation using rho_sat: S = (rho_sat / rho)^(1/n)
-                            rho_sat = params['rho_sat']
-                            n = params['n']
-                            # Clip saturation to [0, 1]
-                            saturation[mask, t] = np.clip((rho_sat / resistivity_t[mask])**(1.0/n), 0.0, 1.0)
-                        else:
-                            # Traditional approach using resistivity_to_saturation
-                            saturation[mask, t] = resistivity_to_saturation(
-                                resistivity=resistivity_t[mask],
-                                porosity=params['porosity'],
-                                m=params['m'],
-                                rho_fluid=params['rho_fluid'],
-                                n=params['n'],
-                                sigma_sur=params['sigma_sur']
-                            )
-            
-            # Convert to water content
-            water_content = saturation * porosity[:, np.newaxis]
-            
-            # Store results
-            water_content_all[mc_idx] = water_content
-            saturation_all[mc_idx] = saturation
-        
-        return {
-            'water_content_all': water_content_all,
-            'saturation_all': saturation_all,
-            'params_used': params_used
-        }
+
+        layers = []
+        for marker in np.unique(cell_markers):
+            parameters = dict(layer_params[int(marker)])
+            parameters["marker"] = int(marker)
+            layers.append(parameters)
+        return run_petrophysics_monte_carlo(
+            resistivity_array,
+            cell_markers,
+            layers,
+            products=("water_content",),
+            n_realizations=n_realizations,
+            seed=seed,
+            progress=self._log_execution,
+            return_realizations=True,
+        )
     
     def _get_recommended_params(self, resistivity_array: np.ndarray,
                                cell_markers: np.ndarray,
@@ -663,7 +580,7 @@ For bottom layers (bedrock): Lower porosity, higher m"""
             # Use defaults if parsing fails
             return self._get_default_layer_params(cell_markers)
             
-        except:
+        except Exception:
             return self._get_default_layer_params(cell_markers)
     
     def _interpret_results(self, water_content_mean: np.ndarray,
@@ -703,7 +620,7 @@ Provide a brief interpretation (2-3 sentences) about:
             interpretation = self.query_llm(prompt, self.system_message,
                                            temperature=0.5, max_tokens=200)
             return interpretation
-        except:
+        except Exception:
             return "Petrophysical conversion completed with uncertainty quantification"
     
     def _log_execution(self, message: str, level: str = 'INFO'):

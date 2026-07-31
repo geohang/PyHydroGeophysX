@@ -1,11 +1,15 @@
 """Posterior covariance and uncertainty propagation helpers."""
 
-from typing import Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import numpy as np
 
 
-def linearized_posterior(J, Cd, Cm_prior):
+def linearized_posterior(
+    J: Any,
+    Cd: Any,
+    Cm_prior: Any,
+) -> Any:
     """
     Compute linearized Gaussian posterior covariance:
 
@@ -27,7 +31,9 @@ def linearized_posterior(J, Cd, Cm_prior):
     return Cm_post
 
 
-def model_resolution_spread(R):
+def model_resolution_spread(
+    R: Any,
+) -> Any:
     """Return diagonal resolution spread metrics from a resolution matrix."""
     R = np.asarray(R, dtype=float)
     diag = np.diag(R)
@@ -39,8 +45,8 @@ def model_resolution_spread(R):
 
 
 def propagate_petro_uncertainty(
-    rho,
-    rho_cov,
+    rho: Any,
+    rho_cov: Any,
     petro_func: Callable[[np.ndarray], np.ndarray],
     n_samples: int = 500,
     seed: Optional[int] = None,

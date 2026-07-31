@@ -17,9 +17,37 @@ The abstract base class that all agents inherit from.
             self.api_key = api_key
             self.model = model
             self.llm_provider = llm_provider
+            self.llm_usage_ledger = []   # one dict per LLM call
 
         def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
             raise NotImplementedError
+
+**Key utility methods** added in v0.3:
+
+``query_llm(prompt, system_message=None)``
+    Sends a prompt to the configured LLM provider.  On the **first call**,
+    the agent lazily loads ``.github/agents/<name>.agent.md`` and appends its
+    body to the system message (YAML frontmatter is stripped automatically).
+
+``save_results(output_dir)``
+    Persists all agent outputs to *output_dir*.  Type-aware serialisation:
+
+    * NumPy arrays → ``<name>_<key>.npy``
+    * PyGIMLi meshes / ``DataContainer`` → ``<name>_<key>.bms``
+    * Pandas DataFrames → ``<name>_<key>.csv``
+    * Plain JSON-serialisable values → ``results.json``
+    * Anything else → stub entry in ``results.json`` with ``{__type__, repr}``
+
+``_retry_llm_call(fn, max_retries=3)`` *(static)*
+    Wraps any callable that performs one LLM call.  Retries up to
+    ``max_retries`` times with exponential back-off (sleep 2^attempt seconds)
+    for transient rate-limit errors.  Non-transient errors are propagated
+    immediately without retry.
+
+``_load_agent_md_for_name(name)`` *(static)*
+    Reads ``.github/agents/<name>.agent.md`` relative to the repo root and
+    returns the Markdown body with YAML frontmatter stripped.  Returns ``""``
+    if the file is missing.
 
 AgentCoordinator
 ----------------
@@ -30,27 +58,88 @@ This is not a processing agent but an orchestration layer that:
 
 * Registers agents
 * Manages workflow state
-* Coordinates agent execution
-* Handles data flow between agents
-* Logs execution history
+* Coordinates agent execution (with optional checkpoint / resume)
+* Aggregates LLM cost across all registered agents
+* Validates environment dependencies before running
 
-**Key Methods**:
+**Key Methods** (v0.3):
 
 .. code-block:: python
 
-    register_agent(name, instance)  # Add agent to workflow
-    execute_workflow(config)        # Run complete workflow
-    get_workflow_state()           # Get current state
-    save_workflow_results()        # Persist results
+    register_agent(name, instance)
+    # Add an agent to the workflow.
+
+    execute_workflow(config, dry_run=False, resume=False)
+    # Run the complete workflow.
+    # dry_run=True — validate, plan, and estimate cost without running agents.
+    # resume=True  — skip steps for which a checkpoint already exists.
+
+    preview_workflow(config)
+    # Equivalent to execute_workflow(..., dry_run=True).
+    # Returns validation_warnings (including dependency checks), execution_plan,
+    # and cost_estimate_usd.
+
+    get_workflow_state()
+    # Return current status dict.
+
+    get_workflow_summary()
+    # Return aggregated statistics after (or during) a run:
+    # {
+    #   'status': ...,
+    #   'completed_steps': [...],
+    #   'total_steps': N,
+    #   'current_step': ...,
+    #   'available_results': [...],
+    #   'total_llm_cost_estimate_usd': 0.0034,
+    #   'total_llm_tokens': 8200,
+    #   'llm_calls': 12,
+    # }
+
+    save_workflow_results()
+    # Persist all agent outputs via each agent's save_results().
+
+**Checkpoint / Resume Example**:
+
+.. code-block:: python
+
+    from PyHydroGeophysX.agents import AgentCoordinator
+
+    coordinator = AgentCoordinator(api_key=api_key, output_dir='./results')
+    # ... register agents ...
+
+    # First attempt — may fail at step 3 of 5
+    try:
+        results = coordinator.execute_workflow(config)
+    except Exception as exc:
+        print(f"Workflow failed: {exc}")
+
+    # Resume — steps 1 and 2 are loaded from checkpoints
+    results = coordinator.execute_workflow(config, resume=True)
+
+**Dependency Pre-check**:
+
+``preview_workflow()`` automatically calls ``_check_dependencies(plan)`` to
+test whether required packages (``pygimli``, ``gmsh``, ``anthropic``,
+``google-generativeai``) are importable **before** the workflow runs.  Missing
+dependencies appear in ``validation_warnings``.
 
 ContextInputAgent
 -----------------
 
 **Purpose**: Translates natural language workflow descriptions into structured configurations.
 
-**System Prompt**:
-    You are an expert in geophysical workflow design. You translate natural language
-    descriptions of geophysical workflows into structured JSON configurations.
+``ContextInputAgent`` always sets a detailed ``self.system_message`` in
+``__init__`` so that it correctly guides the LLM from the very first call,
+even before the ``.agent.md`` augmentation hook fires:
+
+.. code-block:: python
+
+    # excerpt from __init__
+    self.system_message = (
+        "You are an expert workflow configuration interpreter for "
+        "PyHydroGeophysX.  Translate natural-language geophysical workflow "
+        "requests into structured JSON configuration dictionaries..."
+    )
 
 **Inputs**:
 
@@ -381,3 +470,85 @@ ReportAgent
 * ``report_path`` (str): Path to generated report
 * ``figures`` (list): Generated figure paths
 * ``summary_stats`` (dict): Key statistics
+
+WorkflowOrchestratorAgent
+--------------------------
+
+**Purpose**: Detects workflow type and generates the agent execution plan.
+
+``_detect_workflow_type(config)`` is the **single authoritative** workflow
+classifier.  ``AgentCoordinator`` and the ``run_unified_agent_workflow()``
+convenience function both delegate to this method.
+
+**Detection priority order**:
+
+1. ``tdem`` — config contains TDEM data/survey keys
+2. ``seismic`` — standalone seismic refraction (no ERT keys)
+3. ``model_output`` — hydrological model (MODFLOW/ParFlow) export
+4. ``time_lapse`` — multiple ERT datasets over time
+5. ``data_fusion`` — both ERT and seismic keys present
+6. ``ert_data_process`` — raw ERT file present but no inversion requested
+7. ``direct_ert`` — ERT data with inversion
+8. ``custom`` — fallback when no pattern matches
+
+**Inputs**: ``workflow_config`` dict (the same dict passed to
+``AgentCoordinator.execute_workflow``).
+
+**Outputs**:
+
+* ``workflow_type`` (str): One of the eight values above
+* ``execution_plan`` (list): Ordered list of agent names to run
+* ``workflow_config`` (dict): Possibly-enriched configuration
+
+Mesh3DBuilderAgent
+------------------
+
+**Purpose**: Builds and exports 3D tetrahedral meshes for ERT forward modeling
+and inversion using ``PyHydroGeophysX.core.mesh_3d.Mesh3DCreator``.
+
+This agent is primarily invoked through the **3D Mesh Builder Streamlit app**
+(``python -m PyHydroGeophysX.gui_mesh3d``) but can also be used programmatically:
+
+.. code-block:: python
+
+    from PyHydroGeophysX.agents import Mesh3DBuilderAgent
+    import os
+
+    agent = Mesh3DBuilderAgent(api_key=os.environ.get('OPENAI_API_KEY'))
+    result = agent.execute({
+        'array_type': 'surface_grid',
+        'grid_nx': 10,
+        'grid_ny': 6,
+        'spacing': 5.0,
+        'topography': 'linear_tilt',
+        'max_cell_size': 5.0,
+        'depth': 30.0,
+        'output_filename': 'ert_mesh',
+    })
+    # result['mesh'] — PyGIMLi Mesh object
+    # result['mesh_path'] — path to saved .bms file
+
+**Supported array types**: ``surface_grid``, ``borehole``, ``crosshole``.
+
+**Supported topography types**: ``flat``, ``linear_tilt``, ``gaussian_hill``,
+``custom`` (provide a ``topography_expression`` Python/NumPy string using ``x``
+and ``y``).
+
+**Inputs**:
+
+* ``array_type`` (str): Electrode array configuration
+* ``grid_nx`` / ``grid_ny`` (int): Grid dimensions for surface array
+* ``spacing`` (float): Electrode spacing in metres
+* ``topography`` (str): Topography type
+* ``topography_expression`` (str, optional): Custom NumPy expression
+* ``max_cell_size`` (float): Maximum tetrahedral cell size
+* ``depth`` (float): Mesh depth below surface
+* ``output_filename`` (str): Base name for exported files
+
+**Outputs**:
+
+* ``mesh`` (object): Generated PyGIMLi 3D mesh
+* ``mesh_path`` (str): Path to saved ``.bms`` file
+* ``vtk_path`` (str): Path to saved ``.vtk`` file
+* ``statistics`` (dict): Cell count, node count, quality metrics
+

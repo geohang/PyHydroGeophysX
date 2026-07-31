@@ -3,7 +3,7 @@ Module for processing model outputs from various hydrological models.
 """
 
 from .base import HydroModelOutput
-from .modflow_output import (
+from .water_content import (
     MODFLOWWaterContent,
     MODFLOWPorosity,
     binaryread

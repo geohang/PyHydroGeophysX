@@ -397,7 +397,6 @@ See Also
 
 * :doc:`../documentation/getting_started`: Getting started guide
 * :doc:`inversion`: ERT inversion module
-* :doc:`../auto_examples/Ex_ERT_data_process`: Complete example notebook
 
 Acknowledgments
 ~~~~~~~~~~~~~~~

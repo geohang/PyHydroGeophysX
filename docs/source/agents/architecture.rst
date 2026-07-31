@@ -5,6 +5,9 @@ This document provides a comprehensive overview of the PyHydroGeophysX multi-age
 system architecture, including agent relationships, data flow, and communication
 protocols.
 
+This page is for contributors. If you just want to use the system, start with
+:doc:`quick_start` or the :doc:`webapp`.
+
 Agent Communication Protocol
 ----------------------------
 
@@ -15,7 +18,7 @@ All agents follow a standardized I/O pattern:
 
 .. code-block:: python
 
-    def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input_data: Dict[str, Any]) -> AgentResult:
         """
         Standard agent execution method.
 
@@ -23,11 +26,8 @@ All agents follow a standardized I/O pattern:
             input_data: Dictionary with agent-specific inputs
 
         Returns:
-            Dictionary containing:
-                - status: 'success', 'failed', or 'needs_improvement'
-                - [agent-specific outputs]
-                - error: Error message (if status='failed')
-                - interpretation: AI interpretation (if LLM available)
+            AgentResult containing user-facing status, summary, data,
+            warnings, optional AI interpretation, timing, and fix hints.
         """
 
 Standard Output Keys
@@ -35,9 +35,29 @@ Standard Output Keys
 
 All agents include these common output keys:
 
-* ``status`` (str): 'success', 'failed', or 'needs_improvement'
-* ``error`` (str): Error message if failed
-* ``interpretation`` (str): AI interpretation (if LLM available)
+* ``status`` (str): ``success``, ``failed``, or ``needs_review``
+* ``summary`` (str): one-sentence human-readable summary, always populated
+* ``data`` (dict): numerical results, file paths, models, or other structured outputs
+* ``warnings`` (list[str]): non-fatal issues the user should review
+* ``next_suggested_action`` (str, optional): a practical next step
+* ``llm_interpretation`` (str, optional): AI-generated text that must be labeled at render time
+* ``elapsed_seconds`` (float): wall-clock execution time for the agent
+* ``cost_estimate_usd`` (float, optional): approximate LLM cost when known
+* ``error`` (str, optional): error message when failed
+* ``error_fix_hint`` (str, optional): specific guidance for how to fix the error
+
+``AgentResult`` remains dict-like for older calling code, so expressions such as
+``result["status"]`` and ``result.get("summary")`` still work. Legacy dictionary
+returns are wrapped by ``AgentCoordinator`` with a ``DeprecationWarning``.
+
+LLM Cost Ledger
+^^^^^^^^^^^^^^^
+
+Agents that call an LLM record ``provider``, ``model``, ``prompt_tokens``,
+``completion_tokens``, and ``cost_estimate_usd`` in ``llm_usage_ledger``. The
+coordinator and unified workflow expose ``total_llm_cost_estimate_usd`` as an
+approximate value. Pricing rates live in ``PyHydroGeophysX/agents/_pricing.py``
+and should be checked before public cost claims.
 
 Data Flow Patterns
 ------------------
@@ -153,24 +173,103 @@ Monte Carlo Uncertainty Propagation
 Workflow State Management
 -------------------------
 
-The AgentCoordinator maintains workflow state:
+The ``AgentCoordinator`` maintains workflow state and supports **checkpoint /
+resume** so a run that fails mid-way can continue from the last completed step:
+
+.. code-block:: python
+
+    from PyHydroGeophysX.agents import AgentCoordinator
+
+    coordinator = AgentCoordinator(api_key=api_key, output_dir='./results')
+
+    # First run — saves a pickle checkpoint after each step
+    results = coordinator.execute_workflow(config)
+
+    # If a step fails, restart with resume=True to skip completed steps
+    results = coordinator.execute_workflow(config, resume=True)
+
+Checkpoint files are stored as ``<output_dir>/checkpoints/<step>.pkl`` with a
+``<step>.json`` sidecar for quick inspection.  The state dict structure is:
 
 .. code-block:: python
 
     {
         'status': 'initialized' | 'running' | 'completed' | 'failed',
         'current_step': 'agent_name',
-        'completed_steps': ['agent1', 'agent2', ...],
+        'completed_steps': ['fetch_climate', 'load_ert', 'invert_ert', ...],
         'data': {
-            'agent1': {...},
-            'agent2': {...}
+            'ert_data': ...,
+            'inversion_results': ...,
         }
     }
+
+LLM Usage Ledger and Cost Tracking
+-----------------------------------
+
+Every LLM call appends an entry to ``agent.llm_usage_ledger``:
+
+.. code-block:: python
+
+    {
+        'agent': 'ert_inversion',
+        'provider': 'openai',
+        'model': 'gpt-4o-mini',
+        'prompt_tokens': 320,
+        'completion_tokens': 85,
+        'total_tokens': 405,
+        'cost_estimate_usd': 0.000121,
+        'timestamp': 1714500000.0,
+    }
+
+The ``AgentCoordinator`` aggregates entries from all agents.  After a run,
+call ``get_workflow_summary()`` to see totals:
+
+.. code-block:: python
+
+    summary = coordinator.get_workflow_summary()
+    # {
+    #   'status': 'completed',
+    #   'completed_steps': [...],
+    #   'total_llm_cost_estimate_usd': 0.0034,
+    #   'total_llm_tokens': 8200,
+    #   'llm_calls': 12,
+    # }
+
+Pricing rates are defined in ``PyHydroGeophysX/agents/_pricing.py`` and should
+be checked before reporting exact figures in publications.
+
+LLM Retry with Exponential Back-off
+------------------------------------
+
+All three LLM providers (OpenAI, Gemini, Claude) automatically retry on
+transient rate-limit errors via ``BaseAgent._retry_llm_call``:
+
+.. code-block:: text
+
+    Attempt 1 → rate-limit? → wait 1 s → Attempt 2
+    Attempt 2 → rate-limit? → wait 2 s → Attempt 3
+    Attempt 3 → rate-limit? → raise (propagate to caller)
+    Non-transient error → raise immediately (no retry)
+
+Errors matching ``rate limit``, ``resource exhausted``, ``quota``,
+``too many requests``, or ``429`` trigger a retry.  All other exceptions
+propagate immediately.
+
+Agent System Prompt Augmentation
+---------------------------------
+
+On the first ``query_llm()`` call each agent lazily loads its ``.agent.md`` file
+from ``.github/agents/<name>.agent.md`` (relative to the repository root) and
+appends the Markdown body to ``self.system_message``.  This keeps agent personas
+editable as plain Markdown without modifying Python source.
+
+``ContextInputAgent`` initialises ``self.system_message`` explicitly in
+``__init__`` so the augmentation hook fires correctly on the first call.
 
 Fusion Patterns
 ---------------
 
-The DataFusionAgent supports several pre-defined fusion patterns:
+The ``DataFusionAgent`` supports several pre-defined fusion patterns:
 
 Pattern 1: structure_constraint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

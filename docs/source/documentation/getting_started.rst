@@ -61,6 +61,5 @@ Tutorials
 
 Best examples
 
-- :doc:`/auto_examples/Ex_ERT_data_process`
 - :doc:`/auto_examples/Ex_model_output`
 - :doc:`/auto_examples/Ex_TL_inversion`

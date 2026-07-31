@@ -1,21 +1,41 @@
 """
 Time-lapse ERT inversion functionality.
 """
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
-from pygimli.physics import ert
 import scipy.sparse as sp
-from scipy.sparse import diags, csr_matrix, block_diag as sparse_block_diag, lil_matrix
-from scipy.sparse.linalg import lsqr
-from typing import Optional, Union, List, Dict, Any, Tuple
+from pygimli.physics import ert
 from scipy.linalg import block_diag as dense_block_diag
+from scipy.sparse import block_diag as sparse_block_diag
+from scipy.sparse import csr_matrix, diags
+from scipy.sparse.linalg import lsqr
 
-
+from ..forward.ert_forward import ertforandjac2, ertforward2
+from ..solvers.linear_solvers import generalized_solver
 from .base import InversionBase, TimeLapseInversionResult
-from ..forward.ert_forward import ertforward2, ertforandjac2
-from ..solvers.solver import generalized_solver
 
 
+def _sparse_temporal_difference_matrix(cell_count: int, size: int, dtype):
+    """Build sparse first differences between adjacent model blocks."""
+    time_difference = diags(
+        (np.ones(size - 1, dtype=dtype), -np.ones(size - 1, dtype=dtype)),
+        (0, 1),
+        shape=(size - 1, size),
+        format="csr",
+        dtype=dtype,
+    )
+    return sp.kron(
+        time_difference,
+        sp.eye(cell_count, format="csr", dtype=dtype),
+        format="csr",
+    )
+
+
+# ---------------------------------------------------------------------------
+# calculate jacobian
+# ---------------------------------------------------------------------------
 def _calculate_jacobian(fwd_operators, model, mesh, size, as_sparse: bool = False,
                         dtype=np.float64):
     """
@@ -53,6 +73,9 @@ def _calculate_jacobian(fwd_operators, model, mesh, size, as_sparse: bool = Fals
     return obs_stacked, J
 
 
+# ---------------------------------------------------------------------------
+# calculate forward
+# ---------------------------------------------------------------------------
 def _calculate_forward(fwd_operators, model, mesh, size):
     """
     Calculate forward response for multi-time model.
@@ -74,13 +97,12 @@ def _calculate_forward(fwd_operators, model, mesh, size):
         obs.append(dr)
     
     # Stack observations
-    obs_stacked = obs[0].reshape(-1, 1)
-    for i in range(size - 1):
-        obs_stacked = np.vstack((obs_stacked, obs[i + 1].reshape(-1, 1)))
-    
-    return obs_stacked
+    return np.vstack([response.reshape(-1, 1) for response in obs])
 
 
+# ---------------------------------------------------------------------------
+# calculate forward separate
+# ---------------------------------------------------------------------------
 def _calculate_forward_separate(fwd_operators, model, mesh, size):
     """
     Calculate forward response for multi-time model without stacking.
@@ -104,6 +126,9 @@ def _calculate_forward_separate(fwd_operators, model, mesh, size):
     return obs
 
 
+# ---------------------------------------------------------------------------
+# Time Lapse ERTInversion
+# ---------------------------------------------------------------------------
 class TimeLapseERTInversion(InversionBase):
     """Time-lapse ERT inversion class."""
     
@@ -123,7 +148,7 @@ class TimeLapseERTInversion(InversionBase):
                 - method: Solver method ('cgls', 'lsqr', etc.)
                 - model_constraints: (min, max) model parameter bounds
                 - max_iterations: Maximum iterations
-                - absoluteUError: Absolute data error
+                - absoluteError: Absolute resistance error floor [Ohm] (default 0.0001)
                 - relativeError: Relative data error
                 - lambda_rate: Lambda reduction rate
                 - lambda_min: Minimum lambda value
@@ -149,13 +174,23 @@ class TimeLapseERTInversion(InversionBase):
             'alpha': 10.0,
             'decay_rate': 0.0,
             'method': 'cgls',
-            'absoluteUError': 0.0,
+            'absoluteError': 0.0001,
             'relativeError': 0.05,
-            'lambda_rate': 0.8,
+            # Cooling is off by default. It used to be 0.8, which moved lambda on
+            # every iteration and left the final chi2 attributable to no single
+            # value; the caller relaxes lambda between converged runs instead.
+            'lambda_rate': 1.0,
             'lambda_min': 1.0,
             'inversion_type': 'L2',  # 'L1', 'L2', or 'L1L2'
             'model_constraints':(0.0001,10000.0),  # min and max resistivity
             'save_memory': False,  # use sparse operators to reduce RAM
+            # Stopping. Both were hard-coded (chi2 < 1.5, dPhi < 0.01 after 5
+            # iterations); a lambda sweep needs them configurable so a flattened
+            # misfit means the lambda is spent, not that the budget ran out.
+            'target_chi_squared': 1.0,
+            'convergence_tolerance': 0.01,
+            'min_iterations': 5,
+            'verbose': True,
         }
         
         # Update parameters with time-lapse defaults
@@ -210,15 +245,21 @@ class TimeLapseERTInversion(InversionBase):
             
             # Get or estimate data errors
             if np.all(dataert['err']) != 0.0:
-                dataerr.append(dataert['err'].array())
+                dataerr.append(np.clip(dataert['err'].array(), 0.01, 0.50))
             else:
-                ert1 = ert.ERTManager(dataert)
-                dataert['err'] = ert1.estimateError(
-                    dataert,
-                    absoluteUError=self.parameters['absoluteUError'],
-                    relativeError=self.parameters['relativeError']
-                )
-                dataerr.append(dataert['err'].array())
+                # Seb's per-measurement formula: err_i = relativeError + absoluteError / |r_i|
+                abs_e = float(self.parameters['absoluteError'])
+                rel_e = float(self.parameters['relativeError'])
+                if 'r' in dataert.dataMap():
+                    r_abs = np.abs(dataert['r'].array())
+                elif 'k' in dataert.dataMap():
+                    r_abs = np.abs(dataert['rhoa'].array()) / np.maximum(
+                        np.abs(dataert['k'].array()), 1e-10)
+                else:
+                    raise RuntimeError(
+                        f"Dataset {fname}: cannot estimate error without 'r' or 'k'.")
+                err_i = rel_e + abs_e / np.maximum(r_abs, 1e-10)
+                dataerr.append(np.clip(err_i, 0.01, 0.50))
             
             # Create forward operator
             fwd_operator = ert.ERTModelling()
@@ -268,31 +309,32 @@ class TimeLapseERTInversion(InversionBase):
         # Create temporal regularization matrix
         cell_count = self.fwd_operators[0].paraDomain.cellCount()
         tdiff = np.diff(self.measurement_times)
-        w_temp = (np.ones(cell_count) * np.exp(-self.parameters['decay_rate'] * tdiff[0])).astype(self.dtype, copy=False)
-        
-        for i in range(self.size - 2):
-            w_temp = np.hstack((
-                w_temp,
-                (np.ones(cell_count) * np.exp(-self.parameters['decay_rate'] * tdiff[i + 1])).astype(self.dtype, copy=False)
-            ))
-        
+        temporal_weights = np.repeat(
+            np.exp(-self.parameters['decay_rate'] * tdiff),
+            cell_count,
+        ).astype(self.dtype, copy=False)
         if self.use_sparse:
-            Wt = lil_matrix((cell_count * (self.size - 1), cell_count * self.size), dtype=self.dtype)
-            for i in range(self.size - 1):
-                idx = i * cell_count
-                Wt[idx:idx + cell_count, idx:idx + cell_count] = np.eye(cell_count, dtype=self.dtype)
-                Wt[idx:idx + cell_count, idx + cell_count:idx + 2*cell_count] = -np.eye(cell_count, dtype=self.dtype)
-            self.Wt = diags(w_temp, dtype=self.dtype).dot(Wt.tocsr())
+            Wt = _sparse_temporal_difference_matrix(
+                cell_count,
+                self.size,
+                self.dtype,
+            )
         else:
-            Wt = np.zeros((cell_count * (self.size - 1), cell_count * self.size), dtype=self.dtype)
+            # Dense mode remains faster when constructed directly. Converting
+            # a very large sparse Kronecker product back to dense is costly.
+            Wt = np.zeros(
+                (cell_count * (self.size - 1), cell_count * self.size),
+                dtype=self.dtype,
+            )
+            identity = np.eye(cell_count, dtype=self.dtype)
             for i in range(self.size - 1):
                 idx = i * cell_count
-                Wt[idx:idx + cell_count, idx:idx + 2*cell_count] = np.hstack([
-                    np.eye(cell_count, dtype=self.dtype),
-                    -np.eye(cell_count, dtype=self.dtype)
-                ])
-            
-            self.Wt = diags(w_temp).dot(Wt)
+                Wt[idx:idx + cell_count, idx:idx + cell_count] = identity
+                Wt[
+                    idx:idx + cell_count,
+                    idx + cell_count:idx + 2 * cell_count,
+                ] = -identity
+        self.Wt = diags(temporal_weights, dtype=self.dtype).dot(Wt)
     
     def run(self, initial_model: Optional[np.ndarray] = None) -> TimeLapseInversionResult:
         """
@@ -330,7 +372,7 @@ class TimeLapseERTInversion(InversionBase):
             return _matvec(self.Wd.transpose(), weighted)
 
         def _quad(weighted_vec, vec):
-            return float(_as_col(vec).T @ _as_col(weighted_vec))
+            return (_as_col(vec).T @ _as_col(weighted_vec)).item()
         
         # Initialize result object
         result = TimeLapseInversionResult()
@@ -370,16 +412,24 @@ class TimeLapseERTInversion(InversionBase):
         min_mr = np.log(min_mr)
         max_mr = np.log(max_mr)
 
-        print(min_mr, max_mr)
+        target_chi2 = float(self.parameters.get('target_chi_squared', 1.0))
+        dphi_tol = float(self.parameters.get('convergence_tolerance', 0.01))
+        min_iterations = int(self.parameters.get('min_iterations', 5))
+        verbose = bool(self.parameters.get('verbose', True))
+        stop_reason = 'iteration_cap'
+
+        if verbose:
+            print(min_mr, max_mr)
 
         # Track errors for each iteration
         Err_tot = []
         chi2_old = np.inf
-        
+
         # Choose inversion type
         inversion_type = self.parameters['inversion_type'].upper()
         if inversion_type not in ['L1', 'L2', 'L1L2']:
-            print(f"Invalid inversion type {inversion_type}, defaulting to L2")
+            if verbose:
+                print(f"Invalid inversion type {inversion_type}, defaulting to L2")
             inversion_type = 'L2'
         
         # L1-specific parameters
@@ -391,12 +441,13 @@ class TimeLapseERTInversion(InversionBase):
         
         # IRLS iterations for L1-norm
         for irls_iter in range(1 if inversion_type == 'L2' else irls_iter_max):
-            if inversion_type in ['L1', 'L1L2']:
+            if inversion_type in ['L1', 'L1L2'] and verbose:
                 print(f'------------------- IRLS Iteration: {irls_iter + 1} ---------------------------')
-            
+
             # Main inversion loop
             for nn in range(self.parameters['max_iterations']):
-                print(f'-------------------ERT Iteration: {nn} ---------------------------')
+                if verbose:
+                    print(f'-------------------ERT Iteration: {nn} ---------------------------')
                 
                 # Forward modeling and Jacobian computation
                 dr, Jr = _calculate_jacobian(
@@ -456,14 +507,15 @@ class TimeLapseERTInversion(InversionBase):
                 else:  # L1L2 hybrid
                     # Compute hybrid L1-L2 weights for data misfit
                     effective_epsilon = l1_epsilon * (1 + 10*np.exp(-nn/5))
-                    data_weights = []
-                    
-                    for val in dataerror_ert.flatten():
-                        norm_val = np.abs(val) / np.sqrt(effective_epsilon)
-                        if norm_val > threshold_c:
-                            data_weights.append(threshold_c / norm_val)
-                        else:
-                            data_weights.append(1.0)
+                    norm_values = (
+                        np.abs(dataerror_ert.flatten())
+                        / np.sqrt(effective_epsilon)
+                    )
+                    data_weights = np.ones_like(norm_values)
+                    outlier_mask = norm_values > threshold_c
+                    data_weights[outlier_mask] = (
+                        threshold_c / norm_values[outlier_mask]
+                    )
                     
                     Rd = diags(data_weights)
                     
@@ -504,16 +556,24 @@ class TimeLapseERTInversion(InversionBase):
                 dPhi = abs(chi2_ert - chi2_old) / chi2_old if nn > 0 else 1.0
                 chi2_old = chi2_ert
                 
-                print(f'ERT chi2: {chi2_ert}')
-                print(f'dPhi: {dPhi}')
-                print(f'ERTphi_d: {fdert}, ERTphi_m: {fmert}, ERTphi_t: {ftert}')
-                
+                if verbose:
+                    print(f'ERT chi2: {chi2_ert}')
+                    print(f'dPhi: {dPhi}')
+                    print(f'ERTphi_d: {fdert}, ERTphi_m: {fmert}, ERTphi_t: {ftert}')
+
                 # Store iteration data
                 Err_tot.append([chi2_ert, fmert, ftert])
-                
+
                 # Check for convergence
-                if (chi2_ert < 1.5) or (dPhi < 0.01 and nn > 5):
-                    print(f"Convergence reached at iteration {nn}")
+                if chi2_ert < target_chi2:
+                    stop_reason = 'target'
+                    if verbose:
+                        print(f"Convergence reached at iteration {nn}")
+                    break
+                if dPhi < dphi_tol and nn > min_iterations:
+                    stop_reason = 'plateau'
+                    if verbose:
+                        print(f"Convergence reached at iteration {nn}")
                     break
                 
                 # Compute Hessian (or approximation)
@@ -617,8 +677,9 @@ class TimeLapseERTInversion(InversionBase):
                                 break
                                 
                         except Exception as e:
-                            print(f"Line search iteration {iarm} failed: {str(e)}")
-                        
+                            if verbose:
+                                print(f"Line search iteration {iarm} failed: {str(e)}")
+
                         mu_LS *= 0.5
                 
                 # Update model
@@ -634,9 +695,11 @@ class TimeLapseERTInversion(InversionBase):
             # Check IRLS convergence
             if inversion_type in ['L1', 'L1L2'] and irls_iter > 0:
                 irls_change = np.linalg.norm(mr - mr_previous) / np.linalg.norm(mr_previous)
-                print(f"IRLS relative change: {irls_change}")
-                if irls_change < irls_tol or chi2_ert < 1.5:
-                    print(f"IRLS converged after {irls_iter + 1} iterations")
+                if verbose:
+                    print(f"IRLS relative change: {irls_change}")
+                if irls_change < irls_tol or chi2_ert < target_chi2:
+                    if verbose:
+                        print(f"IRLS converged after {irls_iter + 1} iterations")
                     break
             
             if inversion_type in ['L1', 'L1L2']:
@@ -671,6 +734,26 @@ class TimeLapseERTInversion(InversionBase):
         result.all_coverage = [FinalJ.copy() for _ in range(self.size)]
         result.mesh = mesh2
         result.all_chi2 = Err_tot
-        
-        print('End of inversion')
+        # Why the loop ended, so a caller driving lambda can tell "this lambda is
+        # spent" apart from "this run ran out of iterations".
+        result.meta['stop_reason'] = stop_reason
+        result.meta['iterations'] = len(Err_tot)
+        result.meta['chi2'] = float(Err_tot[-1][0]) if Err_tot else float('nan')
+        result.meta['lambda'] = float(self.parameters['lambda_val'])
+        result.meta['final_lambda'] = float(Lambda)
+        result.meta['chi2_history'] = [float(row[0]) for row in Err_tot]
+
+        if verbose:
+            print('End of inversion')
         return result
+
+
+# Artifact/export orchestration promoted from qt_apps. This public module owns
+# the API while the private sibling keeps those helpers separate from the
+# numerical TimeLapseERTInversion class.
+from ._time_lapse_workflow import (  # noqa: E402
+    BackendUnavailable,
+    build_timelapse_config,
+    default_times,
+    run_timelapse_ert,
+)

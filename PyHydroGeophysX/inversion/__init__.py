@@ -1,86 +1,134 @@
-"""
-Inversion framework for geophysical applications.
-"""
+"""Lazy inversion-framework exports."""
 
-# Import inversion base classes
-from PyHydroGeophysX.inversion.base import (
-    InversionBase,
-    InversionResult,
-    TimeLapseInversionResult
-)
+from __future__ import annotations
 
-# Import ERT inversion classes
-from PyHydroGeophysX.inversion.ert_inversion import (
-    ERTInversion
-)
+import importlib
+from typing import Dict, Tuple
 
-# Import TDEM inversion classes
-from PyHydroGeophysX.inversion.tdem_inversion import (
-    TDEMInversion,
-    TDEMInversionResult,
-    run_tdem_inversion
-)
+from PyHydroGeophysX._internal.optional_dependencies import optional_import_error
 
-# Import time-lapse inversion classes
-from PyHydroGeophysX.inversion.time_lapse import (
-    TimeLapseERTInversion
-)
+_EXPORTS: Dict[str, Tuple[str, str]] = {
+    "InversionBase": ("PyHydroGeophysX.inversion.base", "InversionBase"),
+    "InversionResult": ("PyHydroGeophysX.inversion.base", "InversionResult"),
+    "TimeLapseInversionResult": (
+        "PyHydroGeophysX.inversion.base",
+        "TimeLapseInversionResult",
+    ),
+    "ERTInversion": ("PyHydroGeophysX.inversion.ert_inversion", "ERTInversion"),
+    "TDEMInversion": ("PyHydroGeophysX.inversion.tdem_inversion", "TDEMInversion"),
+    "TDEMInversionResult": (
+        "PyHydroGeophysX.inversion.tdem_inversion",
+        "TDEMInversionResult",
+    ),
+    "run_tdem_inversion": (
+        "PyHydroGeophysX.inversion.tdem_inversion",
+        "run_tdem_inversion",
+    ),
+    "FDEMInversion": ("PyHydroGeophysX.inversion.fdem_inversion", "FDEMInversion"),
+    "FDEMInversionResult": (
+        "PyHydroGeophysX.inversion.fdem_inversion",
+        "FDEMInversionResult",
+    ),
+    "TimeLapseERTInversion": (
+        "PyHydroGeophysX.inversion.time_lapse",
+        "TimeLapseERTInversion",
+    ),
+    "WindowedTimeLapseERTInversion": (
+        "PyHydroGeophysX.inversion.windowed",
+        "WindowedTimeLapseERTInversion",
+    ),
+    "SRTInversion": ("PyHydroGeophysX.inversion.srt_inversion", "SRTInversion"),
+    "TimeLapseSRTInversion": (
+        "PyHydroGeophysX.inversion.srt_time_lapse",
+        "TimeLapseSRTInversion",
+    ),
+    "GeophysicalInversion": (
+        "PyHydroGeophysX.inversion.multi_method",
+        "GeophysicalInversion",
+    ),
+    "StructuralConstraint": (
+        "PyHydroGeophysX.inversion.cross_constraints",
+        "StructuralConstraint",
+    ),
+    "PetrophysicalCoupling": (
+        "PyHydroGeophysX.inversion.cross_constraints",
+        "PetrophysicalCoupling",
+    ),
+    "JointERTSRTInversion": (
+        "PyHydroGeophysX.inversion.joint_ert_srt",
+        "JointERTSRTInversion",
+    ),
+    "JointERTSRTResult": (
+        "PyHydroGeophysX.inversion.joint_ert_srt",
+        "JointERTSRTResult",
+    ),
+    "JointFDEMTDEMInversion": (
+        "PyHydroGeophysX.inversion.joint_fdem_tdem",
+        "JointFDEMTDEMInversion",
+    ),
+    "JointFDEMTDEMResult": (
+        "PyHydroGeophysX.inversion.joint_fdem_tdem",
+        "JointFDEMTDEMResult",
+    ),
+    "JointGravityMagneticsInversion": (
+        "PyHydroGeophysX.inversion.joint_gravity_magnetics",
+        "JointGravityMagneticsInversion",
+    ),
+    "GravityMagneticsJointResult": (
+        "PyHydroGeophysX.inversion.joint_gravity_magnetics",
+        "GravityMagneticsJointResult",
+    ),
+    "JointInversionRequest": (
+        "PyHydroGeophysX.inversion.joint_api",
+        "JointInversionRequest",
+    ),
+    "JointInversionResult": (
+        "PyHydroGeophysX.inversion.joint_api",
+        "JointInversionResult",
+    ),
+    "JointPairCapability": (
+        "PyHydroGeophysX.inversion.joint_api",
+        "JointPairCapability",
+    ),
+    "get_joint_capabilities": (
+        "PyHydroGeophysX.inversion.joint_api",
+        "get_joint_capabilities",
+    ),
+    "run_joint_inversion": (
+        "PyHydroGeophysX.inversion.joint",
+        "run_joint_inversion",
+    ),
+    "fdem_invert": ("PyHydroGeophysX.inversion.em1d", "fdem_invert"),
+    "tdem_invert": ("PyHydroGeophysX.inversion.em1d", "tdem_invert"),
+    "tdem_joint_invert": (
+        "PyHydroGeophysX.inversion.em1d",
+        "tdem_joint_invert",
+    ),
+    "InversionBackendUnavailable": (
+        "PyHydroGeophysX.inversion.gravmag",
+        "InversionBackendUnavailable",
+    ),
+    "invert_gravmag": (
+        "PyHydroGeophysX.inversion.gravmag",
+        "invert_gravmag",
+    ),
+}
 
-# Import windowed inversion classes
-from PyHydroGeophysX.inversion.windowed import (
-    WindowedTimeLapseERTInversion
-)
+__all__ = list(_EXPORTS)
 
-__all__ = [
-    # Base classes
-    'InversionBase',
-    'InversionResult',
-    'TimeLapseInversionResult',
-    
-    # ERT inversion
-    'ERTInversion',
-    
-    # TDEM inversion
-    'TDEMInversion',
-    'TDEMInversionResult',
-    'run_tdem_inversion',
-    
-    # Time-lapse inversion
-    'TimeLapseERTInversion',
-    
-    # Windowed inversion
-    'WindowedTimeLapseERTInversion'
-]
 
-# SRT inversion
-from PyHydroGeophysX.inversion.srt_inversion import SRTInversion
+def __getattr__(name: str):
+    target = _EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attribute = target
+    try:
+        value = getattr(importlib.import_module(module_name), attribute)
+    except ImportError as exc:
+        raise optional_import_error(name, exc) from exc
+    globals()[name] = value
+    return value
 
-# SRT time-lapse inversion
-from PyHydroGeophysX.inversion.srt_time_lapse import TimeLapseSRTInversion
 
-# FDEM inversion
-from PyHydroGeophysX.inversion.fdem_inversion import FDEMInversion, FDEMInversionResult
-
-# Multi-method interface
-from PyHydroGeophysX.inversion.multi_method import GeophysicalInversion
-
-# Cross-method constraints
-from PyHydroGeophysX.inversion.cross_constraints import StructuralConstraint, PetrophysicalCoupling
-
-__all__ += [
-    'SRTInversion',
-    'TimeLapseSRTInversion',
-    'FDEMInversion',
-    'FDEMInversionResult',
-    'GeophysicalInversion',
-    'StructuralConstraint',
-    'PetrophysicalCoupling',
-]
-
-# Joint ERT-SRT inversion
-from PyHydroGeophysX.inversion.joint_ert_srt import JointERTSRTInversion, JointERTSRTResult
-
-__all__ += [
-    'JointERTSRTInversion',
-    'JointERTSRTResult',
-]
+def __dir__():
+    return sorted(set(globals()) | set(__all__))

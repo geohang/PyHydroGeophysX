@@ -25,6 +25,11 @@ MANIFEST
 # PyInstaller
 *.manifest
 *.spec
+# ...but keep the hand-authored desktop workbench build spec
+!packaging/pyinstaller_workbench.spec
+# Generated app icons (packaging/make_icons.py builds them from logo.png)
+packaging/app_icon.ico
+packaging/app_icon.icns
 
 # Unit test / coverage reports
 htmlcov/
@@ -38,10 +43,41 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+# Scratch directories some tests create next to the repo root
+.pytest_tmp_*/
+
+# Local-only tests, kept out of the published repository by choice.
+# CI runs `pytest -q`, so these do not run there; they are for local checks.
+# Listed one by one rather than ignoring tests/ wholesale, so a new test file
+# still shows up in `git status` and gets a deliberate decision.
+tests/test_agent_vision_contract.py
+tests/test_architecture_boundaries.py
+tests/test_core_pipeline_exports.py
+tests/test_coupled_example_data.py
+tests/test_em_solver_config.py
+tests/test_em_synthetic_benchmark.py
+tests/test_interaction_artifact_roundtrips.py
+tests/test_joint_inversion_framework.py
+tests/test_layout_fit.py
+tests/test_modflow_water_content.py
+tests/test_monte_carlo_canonical.py
+tests/test_qt_utils_shared.py
+tests/test_readme_install_paths.py
+tests/test_reproduce_bar.py
+tests/test_srt_workflow_roundtrip.py
+tests/test_stall_watch.py
+tests/test_start_workbench_launcher.py
+tests/test_streamlit_guided_tutorials.py
+tests/test_walkthroughs.py
+tests/test_windowed_parallel.py
+tests/test_workflows.py
 
 # Environments
 .env
 .venv
+.venv-webapp/
+# Created by examples/start_workbench.bat when no suitable Python is found
+.venv-workbench/
 env/
 venv/
 ENV/
@@ -66,3 +102,21 @@ Thumbs.db
 
 # PyPI publishing
 .twine/
+
+# Sphinx temporary files
+*.rst.new
+
+# Sphinx build output (published via CI, not tracked)
+docs/build/
+
+# Example and app run outputs
+examples/results/
+# Default --output of scripts/benchmark_em_synthetic_cases.py,
+# scripts/compare_temcompany_lci.py and scripts/compare_temcompany_results.py
+results/
+# Workflow recipe + generated runner written next to a GravMag run
+gravmag_results/
+cache/
+
+# Notebook checkpoints
+.ipynb_checkpoints/

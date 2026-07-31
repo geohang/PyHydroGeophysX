@@ -26,8 +26,3 @@ Steps
    qc_and_visualize(ert, outdir="results/ert_data_process")
    export_for_inversion(ert, outdir="results/ert_data_process", fmt="pgimli")
 
-Related Example
----------------
-
-- :doc:`/auto_examples/Ex_ERT_data_process`
-

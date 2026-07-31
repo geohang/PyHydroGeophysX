@@ -12,6 +12,14 @@ PyHydroGeophysX.Geophy\_modular.ERT\_to\_WC module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.Geophy\_modular.ert\_to\_wc\_model module
+---------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.Geophy_modular.ert_to_wc_model
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.Geophy\_modular.seismic\_processor module
 ---------------------------------------------------------
 

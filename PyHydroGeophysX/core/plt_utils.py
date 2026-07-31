@@ -1,11 +1,20 @@
 """
 Plotting utilities for PyHydroGeophysX.
 """
-import pygimli as pg
-import numpy as np
-import matplotlib.pyplot as plt
+from typing import Any
 
-def drawFirstPicks(ax, data, tt=None, plotva=False, **kwargs):
+import matplotlib.pyplot as plt
+import numpy as np
+import pygimli as pg
+
+
+def drawFirstPicks(
+    ax: Any,
+    data: Any,
+    tt: Any = None,
+    plotva: Any = False,
+    **kwargs: Any,
+) -> Any:
     """Plot first arrivals as lines.
     
     Parameters

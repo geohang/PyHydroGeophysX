@@ -20,6 +20,22 @@ PyHydroGeophysX.core.kriging\_3d module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.core.mesh\_3d module
+------------------------------------
+
+.. automodule:: PyHydroGeophysX.core.mesh_3d
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.core.mesh\_serialization module
+-----------------------------------------------
+
+.. automodule:: PyHydroGeophysX.core.mesh_serialization
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.core.mesh\_utils module
 ---------------------------------------
 

@@ -5,13 +5,18 @@ Agent for processing Time-Domain Electromagnetic data using SimPEG.
 Supports forward modeling, inversion, and integration with hydrological models.
 """
 
-from typing import Dict, Any, Optional, Tuple, List
-import numpy as np
 import os
 from pathlib import Path
-from .base_agent import BaseAgent
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+
+from .base_agent import AgentResult, BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# TDEMAgent
+# ---------------------------------------------------------------------------
 class TDEMAgent(BaseAgent):
     """
     Agent for Time-Domain Electromagnetic (TDEM) data processing.
@@ -86,10 +91,13 @@ and can interpret conductivity structures in terms of geological and hydrologica
                 
         except Exception as e:
             self._log_execution(f"Error in TDEM workflow: {str(e)}", level='ERROR')
-            return {
-                'status': 'failed',
-                'error': str(e)
-            }
+            return AgentResult(
+                status="failed",
+                summary="TDEM workflow could not be completed.",
+                data={},
+                error=str(e),
+                error_fix_hint="Check the TDEM mode, data_file path, and required inversion or forward-modeling inputs.",
+            )
     
     def _run_inversion(self, input_data: Dict[str, Any], output_dir: str) -> Dict[str, Any]:
         """Run TDEM inversion workflow."""
@@ -99,8 +107,14 @@ and can interpret conductivity structures in terms of geological and hydrologica
         
         # Load data
         data_file = input_data.get('data_file')
-        if data_file is None:
-            raise ValueError("data_file is required for inversion mode")
+        validation_error = self.validate_input_file(
+            data_file,
+            supported_extensions=[".dat", ".txt", ".csv"],
+            field_name="data_file",
+            max_size_mb=input_data.get("max_file_size_mb"),
+        )
+        if validation_error:
+            return validation_error
         
         times, dobs, uncertainties = self._load_tdem_data(data_file)
         self._log_execution(f"Loaded {len(times)} time channels from {Path(data_file).name}")
@@ -373,8 +387,8 @@ and can interpret conductivity structures in terms of geological and hydrologica
     def _generate_inversion_plots(self, tdem_inv, result, times, dobs, uncertainties, 
                                    output_dir: str) -> str:
         """Generate inversion result plots."""
-        import matplotlib.pyplot as plt
         import matplotlib
+        import matplotlib.pyplot as plt
         
         matplotlib.rcParams['font.family'] = 'Arial'
         matplotlib.rcParams['font.size'] = 12

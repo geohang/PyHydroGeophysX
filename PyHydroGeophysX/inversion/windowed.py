@@ -1,22 +1,29 @@
 """
 Windowed time-lapse ERT inversion for handling large temporal datasets.
 """
+import os
+import sys
+import tempfile
+from multiprocessing import Lock
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
-import os
-import tempfile
-import sys
-from multiprocessing import Pool, Lock, Manager
-from functools import partial
-from typing import List, Optional, Union, Tuple, Dict, Any, Callable
+from joblib import Parallel, delayed
 
 from .base import TimeLapseInversionResult
 from .time_lapse import TimeLapseERTInversion
 
 
+# ---------------------------------------------------------------------------
+# process window
+# ---------------------------------------------------------------------------
 def _process_window(start_idx: int, print_lock, data_dir: str, ert_files: List[str],
-                  measurement_times: List[float], window_size: int, mesh: str,
-                  inversion_params: Dict[str, Any]) -> Tuple[int, Dict[str, Any]]:
+                  measurement_times: List[float], window_size: int,
+                  mesh: Optional[Union[pg.Mesh, str]],
+                  inversion_params: Dict[str, Any],
+                  include_mesh: bool = True,
+                  result_mesh_path: Optional[str] = None) -> Tuple[int, Dict[str, Any]]:
     """
     Process a single window for parallel execution.
     
@@ -29,25 +36,32 @@ def _process_window(start_idx: int, print_lock, data_dir: str, ert_files: List[s
         window_size: Size of the window
         mesh: mesh
         inversion_params: Dictionary of inversion parameters
+        include_mesh: Include the non-pickleable PyGIMLi mesh in the result
+        result_mesh_path: Optional filename for returning the inversion mesh
         
     Returns:
         Tuple of (window index, result dictionary)
     """
-    import pygimli as pg
     import sys
-    
+
+    import pygimli as pg
+
     # Extract inversion type
     inversion_type = inversion_params.get('inversion_type', 'L2')
     
-    # Load mesh for each process
-    if mesh:
-        mesh = mesh
-    else:
-        mesh = None
+    # PyGIMLi meshes cannot be pickled. Parallel callers therefore pass a
+    # temporary mesh filename and each worker loads its own local instance.
+    if isinstance(mesh, (str, os.PathLike)):
+        mesh = pg.load(str(mesh))
     
-    with print_lock:
+    if print_lock is not None:
+        print_lock.acquire()
+    try:
         print(f"\nStarting {inversion_type} inversion for window {start_idx}")
         sys.stdout.flush()
+    finally:
+        if print_lock is not None:
+            print_lock.release()
     
     try:
         # Get data file paths for this window
@@ -64,33 +78,49 @@ def _process_window(start_idx: int, print_lock, data_dir: str, ert_files: List[s
         
         # Run inversion
         window_result = inversion.run()
+        if result_mesh_path is not None and window_result.mesh is not None:
+            window_result.mesh.save(result_mesh_path)
         
         # Extract relevant information for the result dictionary
         result_dict = {
             'final_model': window_result.final_models,
             'coverage': window_result.all_coverage[0] if window_result.all_coverage else None,
             'all_chi2': window_result.all_chi2,
-            'mesh': window_result.mesh,
+            'mesh': window_result.mesh if include_mesh else None,
+            'mesh_path': result_mesh_path,
             'mesh_cells': window_result.mesh.cellCount() if window_result.mesh else None,
             'mesh_nodes': window_result.mesh.nodeCount() if window_result.mesh else None
         }
         
-        with print_lock:
+        if print_lock is not None:
+            print_lock.acquire()
+        try:
             print(f"\nWindow {start_idx} results:")
             print(f"Model shape: {window_result.final_models.shape if window_result.final_models is not None else None}")
             print(f"Coverage available: {window_result.all_coverage is not None}")
             print(f"Number of iterations: {len(window_result.all_chi2) if window_result.all_chi2 is not None else 0}")
             sys.stdout.flush()
+        finally:
+            if print_lock is not None:
+                print_lock.release()
         
         return start_idx, result_dict
         
     except Exception as e:
-        with print_lock:
+        if print_lock is not None:
+            print_lock.acquire()
+        try:
             print(f"Error in process {start_idx}: {str(e)}")
             sys.stdout.flush()
+        finally:
+            if print_lock is not None:
+                print_lock.release()
         raise
 
 
+# ---------------------------------------------------------------------------
+# Windowed Time Lapse ERTInversion
+# ---------------------------------------------------------------------------
 class WindowedTimeLapseERTInversion:
     """
     Class for windowed time-lapse ERT inversion to handle large temporal datasets.
@@ -150,36 +180,62 @@ class WindowedTimeLapseERTInversion:
         result = TimeLapseInversionResult()
         result.timesteps = self.measurement_times
         
-        # Create temporary mesh file for parallel processing
+        # Create a temporary mesh file because PyGIMLi meshes are not
+        # pickleable across worker processes.
         mesh_file = None
+        result_mesh_file = None
         try:
-            mesh_file = self.mesh
-            
             # Process all windows
             if window_parallel:
+                if max_window_workers is not None and max_window_workers < 1:
+                    raise ValueError("max_window_workers must be at least 1")
+                if self.mesh is None:
+                    raise ValueError(
+                        "window_parallel=True requires an explicit mesh or mesh filename"
+                    )
+                if isinstance(self.mesh, pg.Mesh):
+                    handle = tempfile.NamedTemporaryFile(suffix=".bms", delete=False)
+                    mesh_file = handle.name
+                    handle.close()
+                    self.mesh.save(mesh_file)
+                else:
+                    mesh_file = str(self.mesh)
+
+                handle = tempfile.NamedTemporaryFile(suffix=".bms", delete=False)
+                result_mesh_file = handle.name
+                handle.close()
+
                 print(f"\nProcessing {len(self.window_indices)} windows in parallel with {max_window_workers} workers...")
                 print(f"Using {self.inversion_params.get('inversion_type', 'L2')} inversion")
-                
-                with Manager() as manager:
-                    print_lock = manager.Lock()
-                    
-                    process_window_partial = partial(
-                        _process_window,
-                        print_lock=print_lock,
-                        data_dir=self.data_dir,
-                        ert_files=self.ert_files,
-                        measurement_times=self.measurement_times,
-                        window_size=self.window_size,
-                        mesh_file=mesh_file,
-                        inversion_params=self.inversion_params
-                    )
-                    
-                    with Pool(processes=max_window_workers) as pool:
-                        window_results = sorted(
-                            pool.map(process_window_partial, self.window_indices),
-                            key=lambda x: x[0]
+
+                # A real ERT window can use several GB of RAM. Keep automatic
+                # parallelism conservative; callers with more memory can opt
+                # into a larger worker count explicitly.
+                n_jobs = (
+                    min(2, len(self.window_indices))
+                    if max_window_workers is None
+                    else max_window_workers
+                )
+                window_results = sorted(
+                    Parallel(n_jobs=n_jobs, backend="loky")(
+                        delayed(_process_window)(
+                            idx,
+                            None,
+                            self.data_dir,
+                            self.ert_files,
+                            self.measurement_times,
+                            self.window_size,
+                            mesh_file,
+                            self.inversion_params,
+                            False,
+                            result_mesh_file if idx == self.window_indices[0] else None,
                         )
+                        for idx in self.window_indices
+                    ),
+                    key=lambda x: x[0],
+                )
             else:
+                mesh_file = self.mesh
                 print(f"\nProcessing {len(self.window_indices)} windows sequentially...")
                 print(f"Using {self.inversion_params.get('inversion_type', 'L2')} inversion")
                 
@@ -193,7 +249,7 @@ class WindowedTimeLapseERTInversion:
                         self.measurement_times,
                         self.window_size,
                         mesh_file,
-                        self.inversion_params
+                        self.inversion_params,
                     )
                     window_results.append(result_tuple)
             
@@ -201,51 +257,30 @@ class WindowedTimeLapseERTInversion:
             if not window_results:
                 raise ValueError("No results produced from window processing")
             
+            result_by_start = dict(window_results)
+            temp_mesh = window_results[0][1]['mesh']
+            if temp_mesh is None and result_mesh_file is not None:
+                temp_mesh = pg.load(result_mesh_file)
             all_models = []
             all_coverage = []
-            all_chi2 = []
-            
-            # Process first window
-            _, first_result = window_results[0]
-            if first_result['final_model'] is None:
-                raise ValueError("First window produced no model results")
-            
-            # Store first two timesteps from first window
-            all_models.append(first_result['final_model'][:, 0])
-            all_models.append(first_result['final_model'][:, 1])
-            temp_mesh = first_result['mesh']
-            if first_result['all_chi2'] is not None:
-                all_chi2.extend(first_result['all_chi2'])
-            
-            if first_result['coverage'] is not None:
-                all_coverage.extend([first_result['coverage']] * 2)
-            
-            # Process middle windows
-            for i, (win_idx, window_result) in enumerate(window_results[1:-1], 1):
+
+            # Select the most centered available window for every global time
+            # step. This handles any valid window size, including one window.
+            last_start = self.window_indices[-1]
+            for timestep in range(self.total_steps):
+                start_idx = min(max(timestep - self.mid_idx, 0), last_start)
+                window_result = result_by_start[start_idx]
                 if window_result['final_model'] is None:
-                    print(f"Warning: Window {win_idx} produced no model results. Using previous window.")
-                    continue
-                    
-                # Extract middle timestep from each window
-                all_models.append(window_result['final_model'][:, self.mid_idx])
-                
-                if window_result['all_chi2'] is not None:
-                    all_chi2.extend(window_result['all_chi2'])
-                    
+                    raise ValueError(f"Window {start_idx} produced no model results")
+                local_idx = timestep - start_idx
+                all_models.append(window_result['final_model'][:, local_idx])
                 if window_result['coverage'] is not None:
                     all_coverage.append(window_result['coverage'])
-            
-            # Process last window
-            _, last_result = window_results[-1]
-            if last_result['final_model'] is not None:
-                all_models.append(last_result['final_model'][:, -2])
-                all_models.append(last_result['final_model'][:, -1])
-                
-                if last_result['all_chi2'] is not None:
-                    all_chi2.extend(last_result['all_chi2'])
-                    
-                if last_result['coverage'] is not None:
-                    all_coverage.extend([last_result['coverage']] * 2)
+
+            all_chi2 = []
+            for _, window_result in window_results:
+                if window_result['all_chi2'] is not None:
+                    all_chi2.extend(window_result['all_chi2'])
             
             # Convert models to 2D arrays
             all_models = [m.reshape(-1, 1) if len(m.shape) == 1 else m for m in all_models]
@@ -257,7 +292,7 @@ class WindowedTimeLapseERTInversion:
             result.final_models = np.hstack(all_models)
             result.all_coverage = all_coverage
             result.all_chi2 = all_chi2
-            result.mesh = temp_mesh if isinstance(self.mesh, pg.Mesh) else None
+            result.mesh = temp_mesh
             
             print("\nFinal result summary:")
             print(f"Model shape: {result.final_models.shape if result.final_models is not None else None}")
@@ -267,10 +302,15 @@ class WindowedTimeLapseERTInversion:
             
         finally:
             # Clean up temporary mesh file
-            if window_parallel and mesh_file and not isinstance(self.mesh, str):
+            if window_parallel and mesh_file and isinstance(self.mesh, pg.Mesh):
                 try:
                     os.unlink(mesh_file)
-                except:
+                except Exception:
+                    pass
+            if result_mesh_file:
+                try:
+                    os.unlink(result_mesh_file)
+                except Exception:
                     pass
         
         return result

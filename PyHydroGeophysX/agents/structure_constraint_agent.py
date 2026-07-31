@@ -6,12 +6,17 @@ Implements the workflow from Ex_Structure_resinv.py for creating structure-const
 resistivity models.
 """
 
-from typing import Dict, Any, Optional
-import numpy as np
 import os
+from typing import Any, Dict, Optional
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Structure Constraint Agent
+# ---------------------------------------------------------------------------
 class StructureConstraintAgent(BaseAgent):
     """
     Agent for applying structural constraints from seismic data to ERT inversion.
@@ -50,11 +55,15 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
         self._log_execution("Starting structure-constrained ERT inversion")
         
         try:
-            from pygimli.physics import ert
-            from PyHydroGeophysX.core.mesh_utils import add_velocity_interface, extract_velocity_interface
             import pygimli as pg
             import pygimli.physics.traveltime as tt
-            
+            from pygimli.physics import ert
+
+            from PyHydroGeophysX.core.mesh_utils import (
+                add_velocity_interface,
+                extract_velocity_interface,
+            )
+
             # Extract parameters
             ert_data = input_data.get('ert_data')
             seismic_data = input_data.get('seismic_data')  # Optional traveltime data
@@ -111,6 +120,14 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
                 )
                 
                 velocity_model = TT.model.array()
+                try:
+                    seismic_predicted = np.asarray(TT.inv.response, dtype=float)
+                except Exception:
+                    seismic_predicted = None
+                try:
+                    seismic_chi2 = float(TT.inv.chi2())
+                except Exception:
+                    seismic_chi2 = float("nan")
                 self._log_execution(f"Seismic inversion completed")
                 self._log_execution(f"  Velocity range: {np.min(velocity_model):.0f} - {np.max(velocity_model):.0f} m/s")
                 
@@ -133,7 +150,9 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
                 seismic_results = {
                     'velocity_model': velocity_model,
                     'mesh': initial_mesh,
-                    'coverage': TT.standardizedCoverage()
+                    'coverage': TT.standardizedCoverage(),
+                    'predicted': seismic_predicted,
+                    'chi2': seismic_chi2,
                 }
             else:
                 interface_x, interface_z = interface_coords
@@ -214,6 +233,16 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
             # Get results
             resistivity_model = mgr_constrained.model
             para_domain = mgr_constrained.paraDomain
+            try:
+                ert_predicted = np.asarray(mgr_constrained.inv.response, dtype=float)
+            except Exception:
+                ert_predicted = np.asarray(
+                    mgr_constrained.fop.response(resistivity_model), dtype=float
+                )
+            try:
+                ert_chi2 = float(mgr_constrained.inv.chi2())
+            except Exception:
+                ert_chi2 = float("nan")
             
             # Calculate coverage - coverage() returns numeric values for ERT
             coverage = mgr_constrained.coverage()
@@ -317,6 +346,8 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
                 'mesh': para_domain,
                 'constrained_mesh': mesh_with_interface,
                 'coverage': coverage_filtered,
+                'predicted': ert_predicted,
+                'chi2': ert_chi2,
                 'cell_markers': para_layer_markers,  # Mapped layer markers (2, 3) matching resistivity_model size
                 'interface_coords': interface_coords,
                 'seismic_results': seismic_results,  # Include seismic results if computed
@@ -337,7 +368,9 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
                 'output_dir': output_dir
             }
             
-            self._log_execution(f"Resistivity range: {res_range[0]:.1f} - {res_range[1]:.1f} Ωm")
+            self._log_execution(
+                f"Resistivity range: {res_range[0]:.1f} - {res_range[1]:.1f} Ohm-m"
+            )
             self._log_execution(f"Number of layers: {len(np.unique(markers))}")
             
             return self.results
@@ -392,6 +425,7 @@ Return as: lambda=XX, max_iterations=XX, limits=[XX, XX]"""
             
             try:
                 import re
+
                 # Parse lambda
                 match = re.search(r'lambda[=:\s]+(\d+\.?\d*)', response, re.IGNORECASE)
                 if match:
@@ -451,7 +485,7 @@ Provide a brief interpretation (2-3 sentences) about:
             interpretation = self.query_llm(prompt, self.system_message,
                                            temperature=0.5, max_tokens=200)
             return interpretation
-        except:
+        except Exception:
             return "Structure-constrained inversion completed with seismic-derived boundaries"
     
     def _log_execution(self, message: str, level: str = 'INFO'):

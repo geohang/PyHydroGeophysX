@@ -14,13 +14,23 @@ where:
 
 The resistivity is the reciprocal of conductivity: ρ = 1/σ
 """
+from typing import Any
+
 import numpy as np
-from scipy.optimize import fsolve
-from scipy.optimize import root_scalar
+from scipy.optimize import fsolve, root_scalar
 
 
-
-def WS_Model(saturation, porosity, sigma_w, m, n, sigma_s=0):
+# ---------------------------------------------------------------------------
+# WS Model
+# ---------------------------------------------------------------------------
+def WS_Model(
+    saturation: Any,
+    porosity: Any,
+    sigma_w: Any,
+    m: Any,
+    n: Any,
+    sigma_s: Any = 0,
+) -> Any:
     """
     Convert water content to resistivity using Waxman-Smits model.
 
@@ -62,7 +72,16 @@ def WS_Model(saturation, porosity, sigma_w, m, n, sigma_s=0):
 
 
 
-def water_content_to_resistivity(water_content, rhos, n, porosity, sigma_sur=0):
+# ---------------------------------------------------------------------------
+# water content to resistivity
+# ---------------------------------------------------------------------------
+def water_content_to_resistivity(
+    water_content: Any,
+    rhos: Any,
+    n: Any,
+    porosity: Any,
+    sigma_sur: Any = 0,
+) -> Any:
     """
     Convert water content to resistivity using Waxman-Smits model.
 
@@ -97,7 +116,16 @@ def water_content_to_resistivity(water_content, rhos, n, porosity, sigma_sur=0):
     return resistivity
 
 
-def resistivity_to_water_content(resistivity, rhos, n, porosity, sigma_sur=0):
+# ---------------------------------------------------------------------------
+# resistivity to water content
+# ---------------------------------------------------------------------------
+def resistivity_to_water_content(
+    resistivity: Any,
+    rhos: Any,
+    n: Any,
+    porosity: Any,
+    sigma_sur: Any = 0,
+) -> Any:
     """
     Convert resistivity to water content using Waxman-Smits model.
     
@@ -111,18 +139,39 @@ def resistivity_to_water_content(resistivity, rhos, n, porosity, sigma_sur=0):
     Returns:
         array: Volumetric water content values
     """
-    # Calculate saturation
-    saturation = resistivity_to_saturation(resistivity, rhos, n, sigma_sur)
-    
+    # Calculate saturation. ``resistivity_to_saturation`` derives the saturated
+    # resistivity from Archie's law (a * rho_fluid * porosity^-m); passing
+    # rho_fluid=rhos with m=0 collapses that expression to the ``rhos`` given
+    # here, so the same Waxman-Smits solver applies unchanged. The previous
+    # positional call passed the wrong arguments and raised a TypeError.
+    saturation = resistivity_to_saturation(
+        resistivity,
+        porosity=porosity,
+        m=0.0,
+        rho_fluid=rhos,
+        n=n,
+        sigma_sur=sigma_sur,
+    )
+
     # Convert saturation to water content
     water_content = saturation * porosity
-    
+
     return water_content
 
 
 
-def resistivity_to_saturation(resistivity, porosity, m, rho_fluid,
-                              n, sigma_sur=0, a=1.0):
+# ---------------------------------------------------------------------------
+# resistivity to saturation
+# ---------------------------------------------------------------------------
+def resistivity_to_saturation(
+    resistivity: Any,
+    porosity: Any,
+    m: Any,
+    rho_fluid: Any,
+    n: Any,
+    sigma_sur: Any = 0,
+    a: Any = 1.0,
+) -> Any:
     """
     Convert resistivity to saturation using Waxman-Smits model.
     
@@ -185,7 +234,7 @@ def resistivity_to_saturation(resistivity, porosity, m, rho_fluid,
                               xtol=tol,
                               maxiter=maxiter)
             return sol.root if sol.converged else S0[i]
-        except:
+        except Exception:
             return S0[i]
 
     # Compute saturation for each point
@@ -198,7 +247,18 @@ def resistivity_to_saturation(resistivity, porosity, m, rho_fluid,
     return sat
 
 
-def resistivity_to_porosity(resistivity, saturation, m, rho_fluid, n, sigma_sur=0, a=1.0):
+# ---------------------------------------------------------------------------
+# resistivity to porosity
+# ---------------------------------------------------------------------------
+def resistivity_to_porosity(
+    resistivity: Any,
+    saturation: Any,
+    m: Any,
+    rho_fluid: Any,
+    n: Any,
+    sigma_sur: Any = 0,
+    a: Any = 1.0,
+) -> Any:
     """
     Convert resistivity to porosity using Waxman-Smits model, given known saturation.
     
@@ -288,7 +348,7 @@ def resistivity_to_porosity(resistivity, saturation, m, rho_fluid, n, sigma_sur=
                 try:
                     solution = fsolve(func, initial_guess)
                     porosity_val = solution[0]
-                except:
+                except Exception:
                     # If numerical solution fails, use simplified formula
                     porosity_val = ((a * rho_fluid) / (rho_val * S_val**n_val))**(1.0/m_val)
         
@@ -305,7 +365,15 @@ def resistivity_to_porosity(resistivity, saturation, m, rho_fluid, n, sigma_sur=
 
 
 
-def resistivity_to_saturation2(resistivity, rhos, n, sigma_sur=0):
+# ---------------------------------------------------------------------------
+# resistivity to saturation2
+# ---------------------------------------------------------------------------
+def resistivity_to_saturation2(
+    resistivity: Any,
+    rhos: Any,
+    n: Any,
+    sigma_sur: Any = 0,
+) -> Any:
     """
     Convert resistivity to saturation using Waxman-Smits model.
     

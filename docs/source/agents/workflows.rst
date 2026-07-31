@@ -40,43 +40,43 @@ Pattern A: Basic ERT Processing
 .. code-block:: python
 
     from PyHydroGeophysX.agents import (
-        ERTLoaderAgent,
-        ERTInversionAgent,
-        InversionEvaluationAgent,
-        WaterContentAgent,
-        ReportAgent
+        AgentCoordinator, ERTLoaderAgent, ERTInversionAgent,
+        InversionEvaluationAgent, WaterContentAgent, ReportAgent,
     )
+    import os
 
-    # Load data
-    loader = ERTLoaderAgent(api_key)
-    data = loader.execute({
+    api_key = os.environ.get('OPENAI_API_KEY')
+    coordinator = AgentCoordinator(api_key=api_key, output_dir='./results')
+    coordinator.register_agent('ert_loader', ERTLoaderAgent(api_key))
+    coordinator.register_agent('ert_inversion', ERTInversionAgent(api_key))
+    coordinator.register_agent('evaluation', InversionEvaluationAgent(api_key))
+    coordinator.register_agent('water_content', WaterContentAgent(api_key))
+    coordinator.register_agent('report', ReportAgent(api_key))
+
+    config = {
         'data_file': 'field_ert.ohm',
         'instrument': 'E4D',
-        'quality_check': True
-    })
+        'inversion_params': {'lambda': 20},
+    }
 
-    # Invert
-    inverter = ERTInversionAgent(api_key)
-    inv_result = inverter.execute({
-        'ert_data': data['ert_data'],
-        'inversion_mode': 'standard',
-        'inversion_params': {'lambda': 20}
-    })
+    # Run — checkpoints saved after each step
+    results = coordinator.execute_workflow(config)
 
-    # Evaluate and optimize
-    evaluator = InversionEvaluationAgent(api_key)
-    eval_result = evaluator.execute({
-        'inversion_results': inv_result,
-        'ert_data': data['ert_data'],
-        'auto_adjust': True
-    })
+    # Review cost and token usage
+    summary = coordinator.get_workflow_summary()
+    print(f"Total cost:   ${summary['total_llm_cost_estimate_usd']:.4f}")
+    print(f"Total tokens: {summary['total_llm_tokens']}")
 
-    # Convert to water content
-    converter = WaterContentAgent(api_key)
-    wc = converter.execute({
-        'inversion_results': eval_result['final_results'],
-        'petrophysical_params': {'porosity': 0.35, 'n': 2.0}
-    })
+    # Save all agent outputs (numpy arrays → .npy, meshes → .bms)
+    coordinator.save_workflow_results()
+
+**Recovering from a failed run**:
+
+.. code-block:: python
+
+    # If the workflow crashes at, say, the inversion step, restart with:
+    results = coordinator.execute_workflow(config, resume=True)
+    # Steps already saved as checkpoints are skipped automatically.
 
 Pattern B: Time-Lapse Monitoring
 --------------------------------

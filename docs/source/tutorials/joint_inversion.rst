@@ -52,6 +52,6 @@ Factory Dispatch (Unified Interface)
 Related Examples
 ----------------
 
-- :doc:`/auto_examples/Ex_SRT_custom_inversion`
-- :doc:`/auto_examples/Ex_cross_constraints`
+- :doc:`/auto_examples/Ex_joint_inversion`
+- :doc:`/auto_examples/Ex_SRT_inv`
 - :doc:`/auto_examples/Ex_hydro_to_multigeophys`

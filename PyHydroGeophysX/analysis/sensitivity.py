@@ -16,7 +16,12 @@ def _as_matrix(weights, size: Optional[int] = None) -> np.ndarray:
     return np.eye(size) * float(arr)
 
 
-def compute_resolution_matrix(J, Wd, Wm, lam):
+def compute_resolution_matrix(
+    J: Any,
+    Wd: Any,
+    Wm: Any,
+    lam: Any,
+) -> Any:
     """
     Compute model resolution matrix:
 
@@ -35,24 +40,37 @@ def compute_resolution_matrix(J, Wd, Wm, lam):
 
 
 def compute_depth_of_investigation(
-    inv_class,
+    inv_class: Any,
     data: Any,
     mesh: Any,
     scale_low: float = 0.8,
     scale_high: float = 1.2,
+    reference_resistivity: Optional[float] = None,
 ) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
     """
     Estimate DOI using two inversions with different reference/initial models.
 
     This follows the Oldenburg-Li style idea of quantifying model sensitivity
-    to reference-model choice.
+    to reference-model choice. The two starting models are
+    ``reference_resistivity * scale_low`` and ``reference_resistivity *
+    scale_high``; when ``reference_resistivity`` is None it is taken as the
+    median apparent resistivity of ``data`` so the perturbation brackets the
+    survey's actual background instead of an arbitrary absolute value.
     """
     if hasattr(mesh, "cellCount"):
         n_cells = int(mesh.cellCount())
     else:
         raise ValueError("mesh must expose cellCount() for DOI estimation.")
 
-    base = np.ones(n_cells, dtype=float)
+    if reference_resistivity is None:
+        try:
+            rhoa = np.asarray(data["rhoa"], dtype=float).ravel()
+            rhoa = rhoa[np.isfinite(rhoa) & (rhoa > 0)]
+            reference_resistivity = float(np.median(rhoa)) if rhoa.size else 100.0
+        except Exception:
+            reference_resistivity = 100.0
+
+    base = np.ones(n_cells, dtype=float) * float(reference_resistivity)
 
     result_low = inv_class.run(initial_model=base * scale_low)
     result_high = inv_class.run(initial_model=base * scale_high)
@@ -69,7 +87,9 @@ def compute_depth_of_investigation(
     return doi, {"model_low": model_low, "model_high": model_high}
 
 
-def compute_cumulative_sensitivity(J):
+def compute_cumulative_sensitivity(
+    J: Any,
+) -> Any:
     """Compute cumulative sensitivity as absolute column sums of the Jacobian."""
     J = np.asarray(J, dtype=float)
     if J.ndim != 2:
@@ -77,7 +97,11 @@ def compute_cumulative_sensitivity(J):
     return np.sum(np.abs(J), axis=0)
 
 
-def plot_sensitivity_map(sensitivity, mesh, ax=None):
+def plot_sensitivity_map(
+    sensitivity: Any,
+    mesh: Any,
+    ax: Any = None,
+) -> Any:
     """Plot a sensitivity map on a mesh (or as a simple line plot fallback)."""
     import matplotlib.pyplot as plt
 

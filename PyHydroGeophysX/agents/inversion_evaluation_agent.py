@@ -5,12 +5,18 @@ Specialized agent for evaluating ERT inversion quality and automatically
 adjusting regularization parameters to achieve optimal results.
 """
 
-from typing import Dict, Any, Optional, List, Tuple
-import numpy as np
 import os
+import sys
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Inversion Evaluation Agent
+# ---------------------------------------------------------------------------
 class InversionEvaluationAgent(BaseAgent):
     """
     Agent specialized in evaluating inversion quality and optimizing parameters.
@@ -50,7 +56,7 @@ optimal regularization parameter selection."""
             'minor_adjust': 1.2  # Fine-tune by 20%
         }
         
-        self.max_iterations = 5  # Maximum number of re-inversion attempts
+        self.max_iterations = 3  # Default number of re-inversion attempts
         self.history = []  # Track evaluation history
     
     def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -65,12 +71,14 @@ optimal regularization parameter selection."""
                 - time_lapse_data: List of ERT datasets (for time-lapse)
                 - inversion_mode: 'standard' or 'time-lapse'
                 - auto_adjust: Whether to automatically adjust and re-run (default: True)
-                - max_attempts: Maximum re-inversion attempts (default: 5)
+                - max_attempts: Maximum re-inversion attempts (default: 3)
+                - quality_threshold: Overall quality threshold (default: 70)
+                - progress_callback: Optional callback for transparent loop logs
                 - custom_thresholds: Optional custom quality thresholds
                 
         Returns:
             Dictionary containing:
-                - status: 'success', 'needs_improvement', or 'error'
+                - status: 'success', 'needs_review', or 'failed'
                 - quality_score: Overall quality score (0-100)
                 - quality_metrics: Detailed quality metrics
                 - recommendations: List of improvement recommendations
@@ -85,8 +93,11 @@ optimal regularization parameter selection."""
             inversion_results = input_data.get('inversion_results')
             original_params = input_data.get('inversion_params', {})
             auto_adjust = input_data.get('auto_adjust', True)
-            max_attempts = input_data.get('max_attempts', self.max_iterations)
+            max_attempts = int(input_data.get('max_attempts', self.max_iterations))
+            quality_threshold = float(input_data.get('quality_threshold', 70))
+            progress_callback = input_data.get('progress_callback')
             custom_thresholds = input_data.get('custom_thresholds', {})
+            transparent_log = []
             
             # Update thresholds if custom ones provided
             if custom_thresholds:
@@ -94,30 +105,50 @@ optimal regularization parameter selection."""
             
             if not inversion_results or inversion_results.get('status') != 'success':
                 return {
-                    'status': 'error',
+                    'status': 'failed',
                     'error': 'Invalid or failed inversion results provided',
-                    'quality_score': 0
+                    'quality_score': 0,
+                    'error_fix_hint': (
+                        'Run inversion successfully before quality evaluation. See: '
+                        'https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#quality-loop-never-reaches-threshold'
+                    )
                 }
             
             # Initialize history
             self.history = []
             
             # Evaluate initial results
-            evaluation = self._evaluate_quality(inversion_results, original_params)
+            evaluation = self._evaluate_quality(inversion_results, original_params, quality_threshold)
             self.history.append(evaluation)
             
             self._log_execution(f"Initial quality score: {evaluation['quality_score']:.1f}/100")
+            first_line = self._format_attempt_log(
+                attempt=1,
+                max_attempts=max_attempts,
+                evaluation=evaluation,
+                current_params=original_params,
+                adjusted_params=None,
+            )
+            transparent_log.append(first_line)
+            self._emit_progress(progress_callback, first_line)
             
             # If quality is acceptable or auto_adjust is disabled, return
             if evaluation['is_acceptable'] or not auto_adjust:
                 return {
-                    'status': 'success' if evaluation['is_acceptable'] else 'needs_improvement',
+                    'status': 'success' if evaluation['is_acceptable'] else 'needs_review',
+                    'summary': (
+                        'Inversion quality reached the configured threshold.'
+                        if evaluation['is_acceptable']
+                        else 'Inversion quality needs review before accepting results.'
+                    ),
                     'quality_score': evaluation['quality_score'],
                     'quality_metrics': evaluation['metrics'],
                     'recommendations': evaluation['recommendations'],
                     'final_results': inversion_results,
                     'evaluation_history': self.history,
-                    'attempts': 1
+                    'attempts': 1,
+                    'quality_threshold': quality_threshold,
+                    'transparent_log': transparent_log,
                 }
             
             # Attempt to improve through parameter adjustment
@@ -126,8 +157,6 @@ optimal regularization parameter selection."""
             current_params = original_params.copy()
             
             for attempt in range(1, max_attempts):
-                self._log_execution(f"Attempt {attempt + 1}/{max_attempts}: Adjusting parameters")
-                
                 # Adjust parameters based on evaluation
                 adjusted_params = self._adjust_parameters(
                     current_params, 
@@ -135,8 +164,16 @@ optimal regularization parameter selection."""
                     evaluation['recommendations']
                 )
                 
-                self._log_execution(f"Adjusted lambda: {current_params.get('lambda', 20)} → "
-                                  f"{adjusted_params.get('lambda', 20)}")
+                attempt_line = self._format_attempt_log(
+                    attempt=attempt + 1,
+                    max_attempts=max_attempts,
+                    evaluation=evaluation,
+                    current_params=current_params,
+                    adjusted_params=adjusted_params,
+                )
+                transparent_log.append(attempt_line)
+                self._log_execution(attempt_line)
+                self._emit_progress(progress_callback, attempt_line)
                 
                 # Re-run inversion with adjusted parameters
                 new_results = self._rerun_inversion(input_data, adjusted_params)
@@ -146,7 +183,7 @@ optimal regularization parameter selection."""
                     break
                 
                 # Evaluate new results
-                new_evaluation = self._evaluate_quality(new_results, adjusted_params)
+                new_evaluation = self._evaluate_quality(new_results, adjusted_params, quality_threshold)
                 self.history.append(new_evaluation)
                 
                 self._log_execution(f"New quality score: {new_evaluation['quality_score']:.1f}/100")
@@ -155,11 +192,11 @@ optimal regularization parameter selection."""
                 if new_evaluation['quality_score'] > best_score:
                     best_results = new_results
                     best_score = new_evaluation['quality_score']
-                    self._log_execution(f"✓ Improvement found! Score: {best_score:.1f}/100")
+                    self._log_execution(f"[OK] Improvement found! Score: {best_score:.1f}/100")
                 
                 # Check if acceptable quality achieved
                 if new_evaluation['is_acceptable']:
-                    self._log_execution(f"✓ Acceptable quality achieved after {attempt + 1} attempts")
+                    self._log_execution(f"[OK] Acceptable quality achieved after {attempt + 1} attempts")
                     break
                 
                 # Update current params for next iteration
@@ -179,7 +216,15 @@ optimal regularization parameter selection."""
                 interpretation = self._generate_interpretation(best_results, self.history)
             
             return {
-                'status': 'success' if best_score >= 70 else 'needs_improvement',
+                'status': 'success' if best_score >= quality_threshold else 'needs_review',
+                'summary': (
+                    'Inversion quality reached the configured threshold.'
+                    if best_score >= quality_threshold
+                    else (
+                        f'Quality optimization stopped after {len(self.history)} attempts '
+                        f'with score {best_score:.1f}, below the threshold {quality_threshold:.1f}.'
+                    )
+                ),
                 'quality_score': best_score,
                 'quality_metrics': self.history[-1]['metrics'],
                 'recommendations': self.history[-1]['recommendations'],
@@ -187,19 +232,89 @@ optimal regularization parameter selection."""
                 'final_results': best_results,
                 'evaluation_history': self.history,
                 'attempts': len(self.history),
-                'interpretation': interpretation
+                'interpretation': interpretation,
+                'quality_threshold': quality_threshold,
+                'transparent_log': transparent_log,
             }
             
         except Exception as e:
             self._log_execution(f"Error in evaluation: {str(e)}")
             return {
-                'status': 'error',
+                'status': 'failed',
                 'error': str(e),
-                'quality_score': 0
+                'quality_score': 0,
+                'error_fix_hint': (
+                    'Check inversion result fields, data fit statistics, and inversion_params. See: '
+                    'https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#quality-loop-never-reaches-threshold'
+                )
             }
+
+    def _format_attempt_log(
+        self,
+        attempt: int,
+        max_attempts: int,
+        evaluation: Dict[str, Any],
+        current_params: Dict[str, Any],
+        adjusted_params: Optional[Dict[str, Any]],
+    ) -> str:
+        """Format one transparent quality-loop status line.
+
+        Parameters
+        ----------
+        attempt : int
+            Current attempt number.
+        max_attempts : int
+            Maximum configured attempts.
+        evaluation : dict
+            Evaluation dictionary from ``_evaluate_quality``.
+        current_params : dict
+            Current inversion parameters.
+        adjusted_params : dict, optional
+            Adjusted parameters proposed for the next inversion.
+
+        Returns
+        -------
+        str
+            Plain-English status line for logs and UI progress.
+
+        Raises
+        ------
+        None
+
+        Examples
+        --------
+        >>> agent = InversionEvaluationAgent()
+        >>> agent._format_attempt_log(1, 3, {"quality_score": 60, "metrics": {}}, {}, None).startswith("Attempt")
+        True
+        """
+        metrics = evaluation.get("metrics", {})
+        chi2 = metrics.get("data_fit", {}).get("final_chi2", "N/A")
+        quality = evaluation.get("quality_score", 0.0)
+        old_lambda = current_params.get("lambda", current_params.get("lam", 20))
+        if adjusted_params:
+            new_lambda = adjusted_params.get("lambda", adjusted_params.get("lam", old_lambda))
+            change = f" Adjusting lambda {old_lambda} -> {new_lambda}."
+        else:
+            change = ""
+        chi2_text = f"{chi2:.3f}" if isinstance(chi2, (int, float)) else str(chi2)
+        return (
+            f"Attempt {attempt}/{max_attempts}: chi2 = {chi2_text}, "
+            f"quality = {quality:.1f}."
+            f"{change}"
+        )
+
+    def _emit_progress(self, progress_callback: Any, message: str) -> None:
+        """Send a progress message to a callback if one was provided."""
+        if not progress_callback:
+            return
+        try:
+            progress_callback("Evaluating inversion quality", 0.0, message)
+        except TypeError:
+            progress_callback(message)
     
     def _evaluate_quality(self, results: Dict[str, Any], 
-                         params: Dict[str, Any]) -> Dict[str, Any]:
+                         params: Dict[str, Any],
+                         quality_threshold: float = 70) -> Dict[str, Any]:
         """
         Comprehensive quality evaluation of inversion results.
         
@@ -241,7 +356,7 @@ optimal regularization parameter selection."""
         
         # Determine if results are acceptable
         is_acceptable = (
-            overall_score >= 70 and
+            overall_score >= quality_threshold and
             scores['data_fit'] >= 60 and
             scores['physical_plausibility'] >= 70
         )
@@ -537,7 +652,7 @@ optimal regularization parameter selection."""
                         adjusted_params: Dict[str, Any]) -> Dict[str, Any]:
         """Re-run inversion with adjusted parameters."""
         from .ert_inversion_agent import ERTInversionAgent
-        
+
         # Create new inversion agent
         inversion_agent = ERTInversionAgent(
             api_key=self.api_key,
@@ -621,4 +736,11 @@ hydrogeophysical interpretation:
     
     def _log_execution(self, message: str):
         """Log execution messages."""
-        print(f"[{self.name}] {message}")
+        prefix = f"[{self.name}] "
+        try:
+            print(f"{prefix}{message}")
+        except UnicodeEncodeError:
+            # Keep logging robust on Windows terminals with non-UTF-8 code pages.
+            encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+            safe_message = message.encode(encoding, errors="replace").decode(encoding, errors="replace")
+            print(f"{prefix}{safe_message}")

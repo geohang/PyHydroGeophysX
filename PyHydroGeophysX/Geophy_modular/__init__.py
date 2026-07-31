@@ -1,51 +1,63 @@
-"""
-Geophysical data processing module for watershed monitoring.
-"""
+"""Cross-modal geophysics-to-hydrology and structure integration APIs."""
 
-try:
-    from PyHydroGeophysX.Geophy_modular.seismic_processor import (
-        extract_velocity_structure,
-        process_seismic_tomography,
-        seismic_velocity_classifier
-    )
-except ImportError:
-    # Handle missing dependencies gracefully
-    extract_velocity_structure = None
-    process_seismic_tomography = None
-    seismic_velocity_classifier = None
+from __future__ import annotations
 
-try:
-    from PyHydroGeophysX.Geophy_modular.structure_integration import (
-        create_ert_mesh_with_structure,
-        integrate_velocity_interface,
-        create_joint_inversion_mesh
-    )
-except ImportError:
-    create_ert_mesh_with_structure = None
-    integrate_velocity_interface = None
-    create_joint_inversion_mesh = None
+import importlib
+from typing import Dict, Tuple
 
-try:
-    from PyHydroGeophysX.Geophy_modular.ERT_to_WC import (
-        ERTtoWC,
-        plot_time_series
-    )
-except ImportError:
-    ERTtoWC = None
-    plot_time_series = None
+from PyHydroGeophysX._internal.optional_dependencies import optional_import_error
 
-__all__ = [
-    # Seismic processing functions
-    'extract_velocity_structure',
-    'process_seismic_tomography',
-    'seismic_velocity_classifier',
-    
-    # Structure integration functions
-    'create_ert_mesh_with_structure',
-    'integrate_velocity_interface',
-    'create_joint_inversion_mesh',
+_EXPORTS: Dict[str, Tuple[str, str]] = {
+    "extract_velocity_structure": (
+        "PyHydroGeophysX.Geophy_modular.seismic_processor",
+        "extract_velocity_structure",
+    ),
+    "process_seismic_tomography": (
+        "PyHydroGeophysX.Geophy_modular.seismic_processor",
+        "process_seismic_tomography",
+    ),
+    "seismic_velocity_classifier": (
+        "PyHydroGeophysX.Geophy_modular.seismic_processor",
+        "seismic_velocity_classifier",
+    ),
+    "create_ert_mesh_with_structure": (
+        "PyHydroGeophysX.Geophy_modular.structure_integration",
+        "create_ert_mesh_with_structure",
+    ),
+    "integrate_velocity_interface": (
+        "PyHydroGeophysX.Geophy_modular.structure_integration",
+        "integrate_velocity_interface",
+    ),
+    "create_joint_inversion_mesh": (
+        "PyHydroGeophysX.Geophy_modular.structure_integration",
+        "create_joint_inversion_mesh",
+    ),
+    "ERTtoWC": ("PyHydroGeophysX.Geophy_modular.ERT_to_WC", "ERTtoWC"),
+    "plot_time_series": (
+        "PyHydroGeophysX.Geophy_modular.ERT_to_WC",
+        "plot_time_series",
+    ),
+    "run_ert_to_wc": (
+        "PyHydroGeophysX.Geophy_modular.ERT_to_WC",
+        "run_ert_to_wc",
+    ),
+}
 
-    # ERT to water content conversion
-    'ERTtoWC',
-    'plot_time_series'
-]
+__all__ = list(_EXPORTS)
+
+
+def __getattr__(name: str):
+    target = _EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(name)
+    module_name, attribute = target
+    try:
+        value = getattr(importlib.import_module(module_name), attribute)
+    except ImportError as exc:
+        raise optional_import_error(name, exc) from exc
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted(set(globals()) | set(__all__))

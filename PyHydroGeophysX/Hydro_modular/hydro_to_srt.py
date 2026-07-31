@@ -2,20 +2,23 @@
 Module for converting hydrologic model output to seismic travel times.
 """
 import os
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pygimli as pg
 import pygimli.physics.traveltime as tt
 from pygimli.physics import TravelTimeManager
-from typing import Tuple, Optional, Dict, Any, Union, List
 
 from PyHydroGeophysX.core.interpolation import ProfileInterpolator
-from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMModel
 from PyHydroGeophysX.forward.srt_forward import SeismicForwardModeling
-
+from PyHydroGeophysX.petrophysics.velocity_models import DEMModel, HertzMindlinModel
 
 # Fix for PyHydroGeophysX/Hydro_modular/hydro_to_srt.py
 # Replace the docstring with proper formatting:
 
+# ---------------------------------------------------------------------------
+# hydro to srt
+# ---------------------------------------------------------------------------
 def hydro_to_srt(
     water_content: np.ndarray,
     porosity: np.ndarray,

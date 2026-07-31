@@ -4,8 +4,10 @@ Validate /auto_examples/images references used by docs and example scripts.
 
 Checks:
 1. Source artifacts exist under docs/source/auto_examples/images/...
-2. Built artifacts exist under docs/build/html/auto_examples/images/...
+2. Every Sphinx-Gallery example includes at least one output-image directive.
+3. Built artifacts exist under docs/build/html/auto_examples/images/...
    (or a custom build directory if provided)
+4. Each built gallery page embeds at least one of its declared output images.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ from pathlib import Path
 from typing import Iterable, List, Sequence, Tuple
 
 REF_PATTERN = re.compile(r"/auto_examples/images/(?:thumb/)?[^\s'\"`<>)]+")
+GALLERY_EXAMPLE_PATTERN = re.compile(r"^(?:Ex|EX)_.*\.py$")
 
 
 @dataclass(frozen=True)
@@ -29,6 +32,14 @@ class RefOccurrence:
 
 def iter_examples(example_dir: Path) -> Iterable[Path]:
     return sorted(example_dir.glob("*.py"))
+
+
+def iter_gallery_examples(example_dir: Path) -> Iterable[Path]:
+    return sorted(
+        path
+        for path in example_dir.glob("*.py")
+        if GALLERY_EXAMPLE_PATTERN.match(path.name)
+    )
 
 
 def iter_rst_files(docs_source_dir: Path) -> Iterable[Path]:
@@ -62,6 +73,40 @@ def collect_occurrences(repo_root: Path) -> List[RefOccurrence]:
     for file_path in files:
         occurrences.extend(extract_refs(file_path))
     return occurrences
+
+
+def gallery_examples_without_images(example_dir: Path) -> List[Path]:
+    """Return gallery examples that declare no output images."""
+    return [
+        path
+        for path in iter_gallery_examples(example_dir)
+        if not extract_refs(path)
+    ]
+
+
+def gallery_pages_without_embedded_images(
+    example_dir: Path,
+    build_html_dir: Path,
+) -> List[Tuple[Path, Path]]:
+    """Return built gallery pages that omit their declared output images."""
+    missing: List[Tuple[Path, Path]] = []
+    gallery_dir = build_html_dir / "auto_examples"
+
+    for example_path in iter_gallery_examples(example_dir):
+        html_path = gallery_dir / f"{example_path.stem}.html"
+        if not html_path.is_file():
+            missing.append((example_path, html_path))
+            continue
+
+        declared_names = {
+            normalize_ref(occurrence.ref_path).name
+            for occurrence in extract_refs(example_path)
+        }
+        html = html_path.read_text(encoding="utf-8", errors="ignore")
+        if not any(name in html for name in declared_names):
+            missing.append((example_path, html_path))
+
+    return missing
 
 
 def normalize_ref(ref_path: str) -> Path:
@@ -194,6 +239,7 @@ def main() -> int:
         else script_dir.parent.resolve()
     )
     docs_source_dir = repo_root / "docs" / "source"
+    examples_dir = repo_root / "examples"
     build_html_dir = (repo_root / args.build_dir).resolve()
 
     if not docs_source_dir.is_dir():
@@ -203,11 +249,23 @@ def main() -> int:
     occurrences = unique_occurrences(collect_occurrences(repo_root))
     print(f"Found {len(occurrences)} /auto_examples/images references.")
 
+    gallery_missing_refs = gallery_examples_without_images(examples_dir)
+    if gallery_missing_refs:
+        print("Gallery examples without output images")
+        print("--------------------------------------")
+        for path in gallery_missing_refs:
+            print(path.relative_to(repo_root))
+        print()
+    else:
+        gallery_count = len(list(iter_gallery_examples(examples_dir)))
+        print(f"PASS: all {gallery_count} gallery examples declare output images.")
+
     source_missing = validate_source_paths(occurrences, docs_source_dir)
     print_missing("Missing source artifacts", source_missing, repo_root)
 
     build_missing: List[RefOccurrence] = []
     resolved_in_alt: List[Tuple[RefOccurrence, Path]] = []
+    gallery_pages_missing_images: List[Tuple[Path, Path]] = []
     if not args.skip_build_check:
         alt_build_dirs = [
             (repo_root / "docs" / "_build" / "html").resolve(),
@@ -231,6 +289,22 @@ def main() -> int:
             )
             print_missing("Missing built artifacts", build_missing, repo_root)
 
+            gallery_pages_missing_images = gallery_pages_without_embedded_images(
+                examples_dir,
+                build_html_dir,
+            )
+            if gallery_pages_missing_images:
+                print("Built gallery pages without declared output images")
+                print("--------------------------------------------------")
+                for example_path, html_path in gallery_pages_missing_images:
+                    print(
+                        f"{example_path.relative_to(repo_root)} -> "
+                        f"{html_path.relative_to(repo_root)}"
+                    )
+                print()
+            else:
+                print("PASS: every built gallery page embeds a declared output image.")
+
             if resolved_in_alt:
                 alt_dirs_used = sorted({path for _, path in resolved_in_alt})
                 alt_dirs_display = ", ".join(str(path) for path in alt_dirs_used)
@@ -243,10 +317,17 @@ def main() -> int:
                     "deterministic CI checks."
                 )
 
-    if source_missing or build_missing:
+    if (
+        gallery_missing_refs
+        or source_missing
+        or build_missing
+        or gallery_pages_missing_images
+    ):
         print(
-            f"FAIL: missing source={len(source_missing)}, "
-            f"missing build={len(build_missing)}"
+            f"FAIL: gallery without images={len(gallery_missing_refs)}, "
+            f"missing source={len(source_missing)}, "
+            f"missing build={len(build_missing)}, "
+            f"built pages without images={len(gallery_pages_missing_images)}"
         )
         return 1
 

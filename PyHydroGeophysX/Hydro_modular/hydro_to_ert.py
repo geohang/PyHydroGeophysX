@@ -175,11 +175,17 @@ def hydro_to_ert(
     fob = ert.ERTModelling()
     fob.setData(schemeert)
     fob.setMesh(grid)
-    dr = fob.response(res_model)
+    dr = np.asarray(fob.response(res_model), dtype=float)
+    if float(noise_level) > 0.0:
+        rng = np.random.default_rng(seed)
+        dr *= 1.0 + rng.normal(loc=0.0, scale=float(noise_level), size=dr.size)
 
-    dr *= 1. + pg.randn(dr.size()) * 0.05
     ert_manager = ert.ERTManager(synth_data)
     synth_data['rhoa'] = dr
-    synth_data['err'] = ert_manager.estimateError(synth_data, absoluteUError=0.0, relativeError=0.05)
+    synth_data['err'] = ert_manager.estimateError(
+        synth_data,
+        absoluteUError=float(abs_error),
+        relativeError=float(rel_error),
+    )
     
     return synth_data, res_model

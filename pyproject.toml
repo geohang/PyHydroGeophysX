@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "PyHydroGeophysX"
-version = "0.2.0"
+version = "0.4.0"
 description = "A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, featuring an automatic cross-modal geophysics agent for subsurface hydrology"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -38,41 +38,101 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "numpy>=1.19",
-    "scipy>=1.5",
-    "matplotlib>=3.2",
-    "tqdm>=4.0",
+    "numpy>=1.21,<3.0",
+    "scipy>=1.8,<3.0",
+    "matplotlib>=3.5,<4.0",
+    "palettable>=3.3,<4.0",
+    "pandas>=1.3.0",
+    "joblib>=1.2",
+    "tqdm>=4.62",
 ]
 
 [project.optional-dependencies]
 geophysics = [
-    "pygimli>=1.5",
-    "simpeg>=0.20",
-    "resipy>=3.4.0",
-    "flopy",
-    "joblib",
+    "pygimli>=1.5.5,<2.0",
+    "simpeg>=0.24,<1.0",
+    "pymatsolver>=0.2",
+    "flopy>=3.5,<4.0",
+    "pftools>=1.3",
 ]
 gpu = [
-    "cupy",
+    "cupy-cuda11x",
+]
+agents = [
+    "openai",
+    "google-generativeai",
+    "anthropic",
+]
+climate = [
+    "pydaymet>=0.16.0",
+    "pandas>=1.3.0",
+    "xarray>=0.19.0",
+]
+webapp = [
+    "streamlit>=1.35,<2.0",
+    "plotly>=5.18,<7.0",
+    "streamlit-plotly-events>=0.0.6",
+    "pyarrow>=14.0",
+]
+desktop = [
+    "PySide6>=6.5",
+    "pyqtgraph>=0.13",
+    "qtawesome>=1.2",
+    "numpy>=1.21,<3.0",
+    "pandas>=1.3.0",
+]
+# The 3D viewers (Mesh 3D, the velocity volume, the clip-plane preview). Kept
+# separate from `desktop` because vtk is a large binary wheel that a headless or
+# CI install has no use for.
+#
+# Install these with whichever tool already manages the environment's packages,
+# which is not always the one that created it: a conda-created environment whose
+# numpy came from pip is a pip environment for this purpose. `conda list numpy`
+# reports `pypi` in that case, and this extra is the right route. When it names a
+# conda channel instead, use `conda install -c conda-forge pyvista pyvistaqt`, so
+# only one VTK build ends up on the path.
+desktop-3d = [
+    "pyvista>=0.40",
+    "pyvistaqt>=0.10",
+    "vtk>=9.2",
+]
+seismic-raw = [
+    "obspy>=1.4.0",
+]
+docs = [
+    "sphinx>=5.0",
+    "sphinx-gallery",
+    "sphinx_rtd_theme",
 ]
 dev = [
-    "pytest>=6.0",
+    "pytest>=7.0",
     "pytest-cov",
     "black",
     "flake8",
 ]
 all = [
-    "pygimli>=1.5",
-    "simpeg>=0.20",
-    "resipy>=3.4.0",
-    "flopy",
-    "joblib",
-    "cupy",
-    "pytest>=6.0",
-    "pytest-cov",
-    "black",
-    "flake8",
+    "pygimli>=1.5.5,<2.0",
+    "simpeg>=0.24,<1.0",
+    "pymatsolver>=0.2",
+    "flopy>=3.5,<4.0",
+    "pftools>=1.3",
+    "cupy-cuda11x",
+    "openai", "google-generativeai", "anthropic",
+    "pydaymet>=0.16.0", "pandas>=1.3.0", "xarray>=0.19.0",
+    "streamlit>=1.35,<2.0", "plotly>=5.18,<7.0", "streamlit-plotly-events>=0.0.6", "pyarrow>=14.0",
+    "obspy>=1.4.0",
+    "PySide6>=6.5", "pyqtgraph>=0.13", "qtawesome>=1.2",
+    "pyvista>=0.40", "pyvistaqt>=0.10", "vtk>=9.2",
+    "sphinx>=5.0", "sphinx-gallery", "sphinx_rtd_theme",
+    "pytest>=7.0", "pytest-cov", "black", "flake8",
 ]
+
+[project.scripts]
+pyhydrogeophysx-gui = "PyHydroGeophysX.gui:main"
+pyhydrogeophysx-workflow = "PyHydroGeophysX.workflows.cli:main"
+
+[project.gui-scripts]
+pyhydrogeophysx-workbench = "PyHydroGeophysX.qt_apps.launcher:main"
 
 [project.urls]
 "Homepage" = "https://github.com/geohang/PyHydroGeophysX"
@@ -85,4 +145,17 @@ where = ["."]
 include = ["PyHydroGeophysX*"]
 
 [tool.setuptools.package-data]
-PyHydroGeophysX = ["data/*", "examples/*", "*.md"]
+# Ship the compact Qt examples; the larger examples/ tree remains checkout-only.
+PyHydroGeophysX = [
+    "data/*",
+    "data/qt_examples/*.md",
+    "data/qt_examples/geo_hydrology/*",
+    "data/qt_examples/seismic3d/line1/*",
+    "data/qt_examples/seismic3d/line2/*",
+    "data/qt_examples/seismic3d/line3/*",
+    "data/em_examples/*",
+    "data/em_examples/EastRiver_VTEM/*",
+    "data/em_examples/synthetic_tem_lci/*",
+    "*.md",
+    "qt_apps/modules/*.md",
+]

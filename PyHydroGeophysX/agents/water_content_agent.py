@@ -4,12 +4,17 @@ Water Content Conversion Agent
 Specialized agent for converting resistivity to water content using petrophysical models.
 """
 
-from typing import Dict, Any, Optional
-import numpy as np
 import os
+from typing import Any, Dict, Optional
+
+import numpy as np
+
 from .base_agent import BaseAgent
 
 
+# ---------------------------------------------------------------------------
+# Water Content Agent
+# ---------------------------------------------------------------------------
 class WaterContentAgent(BaseAgent):
     """
     Agent specialized in converting resistivity to water content.
@@ -46,7 +51,7 @@ different geological layers, and quantify uncertainties."""
         
         try:
             from PyHydroGeophysX.Geophy_modular.ERT_to_WC import ERTtoWC
-            
+
             # Extract parameters
             inversion_results = input_data.get('inversion_results')
             petro_params = input_data.get('petrophysical_params', {})
@@ -260,7 +265,7 @@ Provide brief recommendations."""
             response = self.query_llm(prompt, self.system_message, temperature=0.5, max_tokens=300)
             self.update_context('petro_recommendations', response)
             
-        except:
+        except Exception:
             self._log_execution("Could not get LLM recommendations for petrophysical parameters")
         
         return {}  # Return empty, will use defaults
@@ -296,7 +301,7 @@ Provide a brief interpretation (2-3 sentences) about:
             interpretation = self.query_llm(prompt, self.system_message, 
                                           temperature=0.5, max_tokens=200)
             return interpretation
-        except:
+        except Exception:
             return "Could not generate interpretation"
     
     def _log_execution(self, message: str, level: str = 'INFO'):

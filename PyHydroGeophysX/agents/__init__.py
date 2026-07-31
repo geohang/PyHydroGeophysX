@@ -1,56 +1,71 @@
 """
-Multi-Agent System for Automated Geophysical Workflows
+Multi-Agent System for Automated Geophysical Workflows.
 
-This module provides an automatic cross-modal geophysics agent system for 
-subsurface hydrology, supporting multiple LLM APIs (GPT, Gemini, Claude) to 
-automate workflows that process geophysical data (ERT, seismic, and more) 
-into hydrologic information.
-
-The workflow example: "load geophysical data → process → invert → convert to 
-hydrologic parameters → report" with optional cross-modal integration.
-
-Each agent is specialized for a specific task and communicates through
-a coordinator to execute the complete workflow.
+The package exposes lightweight entry points eagerly and loads heavier agent
+classes on demand. This keeps dry-run previews and docs examples usable even
+when optional scientific dependencies for a specific agent are not installed.
 """
 
+from importlib import import_module
+from typing import Any
+
 from .agent_coordinator import AgentCoordinator
-from .base_agent import BaseAgent
+from .base_agent import AgentResult, BaseAgent
 from .context_input_agent import ContextInputAgent
-from .ert_loader_agent import ERTLoaderAgent
-from .ert_inversion_agent import ERTInversionAgent
-from .inversion_evaluation_agent import InversionEvaluationAgent
-from .water_content_agent import WaterContentAgent
-from .report_agent import ReportAgent
-from .seismic_agent import SeismicAgent
-from .climate_data_agent import ClimateDataAgent
-from .data_fusion_agent import DataFusionAgent
-from .structure_constraint_agent import StructureConstraintAgent
-from .petrophysics_agent import PetrophysicsAgent
-from .code_generation_agent import CodeGenerationAgent
-from .tdem_agent import TDEMAgent
-from .model_output_agent import ModelOutputAgent
+
+_LAZY_IMPORTS = {
+    "ERTLoaderAgent": ".ert_loader_agent",
+    "ERTInversionAgent": ".ert_inversion_agent",
+    "InversionEvaluationAgent": ".inversion_evaluation_agent",
+    "WaterContentAgent": ".water_content_agent",
+    "ReportAgent": ".report_agent",
+    "SeismicAgent": ".seismic_agent",
+    "ClimateDataAgent": ".climate_data_agent",
+    "DataFusionAgent": ".data_fusion_agent",
+    "StructureConstraintAgent": ".structure_constraint_agent",
+    "PetrophysicsAgent": ".petrophysics_agent",
+    "CodeGenerationAgent": ".code_generation_agent",
+    "TDEMAgent": ".tdem_agent",
+    "ModelOutputAgent": ".model_output_agent",
+    "GeophysicalInversionAgent": ".geophysical_inversion_agent",
+}
 
 __all__ = [
-    'AgentCoordinator',
-    'BaseAgent',
-    'ContextInputAgent',
-    'ERTLoaderAgent',
-    'ERTInversionAgent',
-    'InversionEvaluationAgent',
-    'WaterContentAgent',
-    'ReportAgent',
-    'SeismicAgent',
-    'ClimateDataAgent',
-    'DataFusionAgent',
-    'StructureConstraintAgent',
-    'PetrophysicsAgent',
-    'CodeGenerationAgent',
-    'TDEMAgent',
-    'ModelOutputAgent'
+    "AgentCoordinator",
+    "AgentResult",
+    "BaseAgent",
+    "ContextInputAgent",
+    *_LAZY_IMPORTS.keys(),
 ]
 
-from .geophysical_inversion_agent import GeophysicalInversionAgent
 
-__all__ += [
-    'GeophysicalInversionAgent'
-]
+def __getattr__(name: str) -> Any:
+    """Lazily import optional agent classes.
+
+    Parameters
+    ----------
+    name : str
+        Public class name requested from ``PyHydroGeophysX.agents``.
+
+    Returns
+    -------
+    Any
+        Imported class object.
+
+    Raises
+    ------
+    AttributeError
+        If ``name`` is not a public agent export.
+
+    Examples
+    --------
+    >>> "AgentCoordinator" in __all__
+    True
+    """
+    module_name = _LAZY_IMPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module = import_module(module_name, __name__)
+    value = getattr(module, name)
+    globals()[name] = value
+    return value

@@ -13,10 +13,13 @@ from pygimli.physics import TravelTimeManager
 from scipy.sparse import block_diag as sparse_block_diag
 from scipy.sparse import diags, issparse, lil_matrix
 
-from .base import InversionBase, TimeLapseInversionResult
 from ..solvers.linear_solvers import generalized_solver
+from .base import InversionBase, TimeLapseInversionResult
 
 
+# ---------------------------------------------------------------------------
+# Time Lapse SRTInversion
+# ---------------------------------------------------------------------------
 class TimeLapseSRTInversion(InversionBase):
     """
     Time-lapse Seismic Refraction Tomography inversion.
