@@ -55,6 +55,10 @@ geophysics = [
     "flopy>=3.5,<4.0",
     "pftools>=1.3",
 ]
+adtlert = [
+    "adtlert[cuda12]>=0.1,<0.2; python_version >= '3.11'",
+    "pygimli>=1.5.5,<2.0; python_version >= '3.11'",
+]
 gpu = [
     "cupy-cuda11x",
 ]

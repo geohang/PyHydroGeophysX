@@ -50,6 +50,9 @@ pip install pyhydrogeophysx
 # With geophysics engines (ERT/SRT/TDEM/FDEM inversion and forward modeling)
 pip install "pyhydrogeophysx[geophysics]"
 
+# With the optional ADTLERT differentiable 2.5D ERT backend (Python 3.11+)
+pip install "pyhydrogeophysx[adtlert]"
+
 # With AI agent support
 pip install "pyhydrogeophysx[geophysics,agents]"
 
@@ -65,6 +68,26 @@ pip install "pyhydrogeophysx[all]"
 > conda install -c gimli pygimli
 > pip install "pyhydrogeophysx[agents]"  # then add other extras
 > ```
+
+The ADTLERT backend plugs into the existing single-time ERT pipeline without
+changing its default engine:
+
+```python
+from PyHydroGeophysX.inversion.ert_inversion import run_ert_manager_inversion
+
+result = run_ert_manager_inversion(
+    "survey.dat",
+    "output",
+    engine="adtlert",
+)
+```
+
+On Linux, the `adtlert` extra installs the GPU-enabled PyPI Torch distribution
+and ADTLERT's CUDA 12 CuPy/cuDSS solver stack. ADTLERT automatically falls back
+to SciPy when CUDA is unavailable.
+
+Do not combine that CUDA 12 extra with `pyhydrogeophysx[gpu]`, which currently
+installs the mutually exclusive `cupy-cuda11x` build.
 
 ### From Source
 
@@ -108,6 +131,7 @@ Verify when done:
 | Extra | Packages installed |
 |---|---|
 | `geophysics` | pygimli, simpeg, pymatsolver, flopy, pftools |
+| `adtlert` | adtlert, pygimli, GPU-enabled Torch and CUDA 12/cuDSS on Linux (Python 3.11+) |
 | `desktop` | PySide6, pyqtgraph, qtawesome, numpy, pandas |
 | `desktop-3d` | pyvista, pyvistaqt, vtk (the Mesh 3D and volume viewers) |
 | `agents` | openai, google-generativeai, anthropic |
@@ -117,7 +141,7 @@ Verify when done:
 | `gpu` | cupy-cuda11x |
 | `docs` | sphinx, sphinx-gallery, sphinx_rtd_theme |
 | `dev` | pytest, pytest-cov, black, flake8 |
-| `all` | all of the above |
+| `all` | all general-purpose groups above; ADTLERT remains opt-in |
 
 `desktop-3d` is separate because `vtk` is a large binary wheel. Without it the
 workbench runs and exports meshes as usual, and the 3D panels show an install

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added ADTLERT as an optional differentiable 2.5D ERT backend for the unified
+  single-time inversion pipeline, including GPU-enabled Torch and CUDA 12/cuDSS
+  installation plus CPU fallback integration coverage.
 - Consolidated optional-backend failures under the public
   `PyHydroGeophysX.BackendUnavailable` base class. Gravity/magnetics inversion
   failures now inherit from it, so one `except BackendUnavailable` handler can

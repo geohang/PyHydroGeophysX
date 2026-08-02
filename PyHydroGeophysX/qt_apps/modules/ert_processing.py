@@ -316,12 +316,14 @@ class ERTProcessingModule(BaseModule):
 
         self._engine = QComboBox()
         for label, value in (("In-house Gauss-Newton", "pyhydro"),
-                             ("PyGIMLi ERTManager", "pygimli")):
+                             ("PyGIMLi ERTManager", "pygimli"),
+                             ("ADTLERT differentiable 2.5D", "adtlert")):
             self._engine.addItem(label, value)
         self._engine.setToolTip(
             "Solver. The in-house Gauss-Newton inversion exposes its own stopping rule "
             "and line search, so the fit assistance below can drive it directly; the "
-            "PyGIMLi manager is kept as a cross-check.")
+            "PyGIMLi manager is kept as a cross-check. ADTLERT is an optional "
+            "Torch backend for 2D profiles.")
         iform.addRow("Engine", self._engine)
 
         self._lam = QDoubleSpinBox()
@@ -1815,7 +1817,7 @@ class ERTProcessingModule(BaseModule):
                           "above, and '' goes back to generating it). "
                           "Single-inversion error model: error_source (file/estimate/max), "
                           "absolute_error (Ohm). Convergence: plateau_tolerance (fraction), "
-                          "max_total_iterations, engine (pyhydro/pygimli). "
+                          "max_total_iterations, engine (pyhydro/pygimli/adtlert). "
                           "Geometric factors: geometric_factor_policy "
                           "('fix' recomputes k numerically when a homogeneous forward run "
                           "does not return the model resistivity, 'check' only reports, "
