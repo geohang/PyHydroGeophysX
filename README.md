@@ -82,11 +82,13 @@ result = run_ert_manager_inversion(
 )
 ```
 
-The `adtlert` extra installs CuPy CUDA 12 on both Linux and Windows. Windows is
-supported with CUDA-enabled Torch, CuPy GPU CGLS and ADTLERT's portable SciPy
-forward solver. Linux is the recommended and fastest platform because it also
-uses the cuDSS GPU forward solver. When Torch or CuPy CUDA 12 is unavailable,
-selecting ADTLERT automatically uses the original PyHydro ERT engine instead.
+The `adtlert` extra installs CuPy CUDA 12 and cuDSS on both Linux and Windows.
+Both platforms use CUDA-enabled Torch, CuPy GPU CGLS and the cuDSS GPU forward
+solver. The slower SciPy forward solver is intentionally disabled so ADTLERT
+is never reported while running an unaccelerated forward path. Linux remains
+the recommended, most thoroughly tested and generally fastest platform. When
+Torch, CuPy CUDA 12 or cuDSS is unavailable, selecting ADTLERT automatically
+uses the original PyHydro ERT engine instead.
 ADTLERT 0.1 also cannot represent remote electrodes encoded as negative ABMN
 indices; those surveys safely use the original engine without changing data.
 
@@ -161,7 +163,7 @@ Verify when done:
 | Extra | Packages installed |
 |---|---|
 | `geophysics` | pygimli, simpeg, pymatsolver, flopy, pftools |
-| `adtlert` | adtlert, pygimli, Torch and CuPy CUDA 12 on Windows/Linux; cuDSS acceleration on Linux (Python 3.11+) |
+| `adtlert` | adtlert, pygimli, Torch, CuPy CUDA 12 and cuDSS acceleration on Windows/Linux; Linux recommended (Python 3.11+) |
 | `desktop` | PySide6, pyqtgraph, qtawesome, numpy, pandas |
 | `desktop-3d` | pyvista, pyvistaqt, vtk (the Mesh 3D and volume viewers) |
 | `agents` | openai, google-generativeai, anthropic |

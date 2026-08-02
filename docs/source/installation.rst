@@ -41,11 +41,13 @@ Select it explicitly; the default ERT engine remains unchanged.
        engine="adtlert",
    )
 
-The extra installs CuPy CUDA 12 on both Linux and Windows. Windows is supported
-with CUDA-enabled Torch, CuPy GPU CGLS and ADTLERT's portable SciPy forward
-solver. Linux is the recommended and fastest platform because it also uses the
-cuDSS GPU forward solver. When Torch or CuPy CUDA 12 is unavailable, selecting
-ADTLERT automatically uses the original PyHydro ERT engine instead.
+The extra installs CuPy CUDA 12 and cuDSS on both Linux and Windows. Both
+platforms use CUDA-enabled Torch, CuPy GPU CGLS and the cuDSS GPU forward
+solver. The slower SciPy forward solver is intentionally disabled so ADTLERT
+is never reported while running an unaccelerated forward path. Linux remains
+the recommended, most thoroughly tested and generally fastest platform. When
+Torch, CuPy CUDA 12 or cuDSS is unavailable, selecting ADTLERT automatically
+uses the original PyHydro ERT engine instead.
 ADTLERT 0.1 also cannot represent remote electrodes encoded as negative ABMN
 indices; those surveys safely use the original engine without changing data.
 

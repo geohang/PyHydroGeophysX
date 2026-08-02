@@ -4,10 +4,10 @@
 
 - Added ADTLERT as an optional differentiable 2.5D ERT backend for the unified
   single-time and windowed time-lapse inversion pipelines, including shared GPU
-  state, unified CuPy CUDA 12 installation on Windows and Linux, Linux cuDSS
-  acceleration, and fallback to the original PyHydro ERT engine when CUDA is
-  unavailable. Windows uses GPU CGLS with the portable SciPy forward solver;
-  Linux remains the recommended platform for best performance. Surveys with
+  state, unified CuPy CUDA 12 installation and cuDSS acceleration on Windows
+  and Linux, and fallback to the original PyHydro ERT engine when CUDA or
+  cuDSS is unavailable. The slower SciPy forward solver is intentionally
+  disabled; Linux is recommended for the best performance. Surveys with
   remote electrodes encoded as negative ABMN indices safely retain the original
   PyHydro engine because ADTLERT 0.1 cannot represent those electrodes.
 - Consolidated optional-backend failures under the public

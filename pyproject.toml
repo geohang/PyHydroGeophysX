@@ -58,6 +58,8 @@ geophysics = [
 adtlert = [
     "adtlert[cuda12]>=0.1,<0.2; python_version >= '3.11'",
     "cupy-cuda12x[ctk]>=14,<15; python_version >= '3.11'",
+    "nvidia-cudss-cu12>=0.7.1.6,<1; python_version >= '3.11' and sys_platform == 'win32'",
+    "nvmath-python[cu12]>=0.8,<2; python_version >= '3.11' and sys_platform == 'win32'",
     "pygimli>=1.5.5,<2.0; python_version >= '3.11'",
 ]
 gpu = [

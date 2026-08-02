@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import builtins
 from pathlib import Path
-import sys
 
 import numpy as np
 import pytest
@@ -14,13 +13,13 @@ pytest.importorskip("adtlert")
 
 import pygimli.meshtools as mt  # noqa: E402
 from pygimli.physics import ert  # noqa: E402
+import PyHydroGeophysX.inversion.ert_inversion as ert_inversion  # noqa: E402
 
 from PyHydroGeophysX._internal.optional_dependencies import (  # noqa: E402
     BackendUnavailable,
 )
 from PyHydroGeophysX.inversion.ert_inversion import (  # noqa: E402
     _ADTLertEngine,
-    _adtlert_cudss_available,
     _adtlert_cuda_available,
     _adtlert_forward_solver_backend,
     _adtlert_solver_name,
@@ -309,9 +308,16 @@ def test_windowed_cgls_falls_back_without_cupy(monkeypatch) -> None:
     )
 
 
-def test_windows_adtlert_uses_portable_scipy_forward_solver(
-    monkeypatch,
-) -> None:
-    monkeypatch.setattr(sys, "platform", "win32")
-    assert not _adtlert_cudss_available()
-    assert _adtlert_forward_solver_backend() == "scipy"
+def test_adtlert_forward_solver_prefers_cudss(monkeypatch) -> None:
+    monkeypatch.setattr(
+        ert_inversion, "_adtlert_cudss_available", lambda: True
+    )
+    assert _adtlert_forward_solver_backend() == "cudss"
+
+
+def test_adtlert_forward_solver_rejects_missing_cudss(monkeypatch) -> None:
+    monkeypatch.setattr(
+        ert_inversion, "_adtlert_cudss_available", lambda: False
+    )
+    with pytest.raises(BackendUnavailable, match="cuDSS"):
+        _adtlert_forward_solver_backend()

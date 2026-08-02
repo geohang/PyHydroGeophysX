@@ -4,7 +4,6 @@ Single-time ERT inversion functionality.
 from dataclasses import dataclass, field
 import os
 from pathlib import Path
-import sys
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -605,27 +604,32 @@ def _adtlert_cuda_available() -> bool:
 
 
 def _adtlert_cudss_available() -> bool:
-    """Return whether the recommended Linux cuDSS forward solver is usable."""
-    if not sys.platform.startswith("linux") or not _adtlert_cuda_available():
+    """Return whether the cuDSS GPU forward solver is importable and usable."""
+    if not _adtlert_cuda_available():
         return False
     try:
         from nvmath.sparse.advanced import DirectSolver  # noqa: F401
-    except Exception:  # noqa: BLE001 - SciPy is the portable forward solver
+    except Exception:  # noqa: BLE001 - the original ERT engine is the fallback
         return False
     return True
 
 
 def _adtlert_forward_solver_backend() -> str:
-    """Prefer Linux cuDSS and use ADTLERT's portable SciPy solver elsewhere."""
-    return "cudss" if _adtlert_cudss_available() else "scipy"
+    """Require cuDSS so ADTLERT never silently uses its slow SciPy solver."""
+    if not _adtlert_cudss_available():
+        raise BackendUnavailable(
+            "ADTLERT requires its cuDSS CUDA 12 forward solver. Install "
+            "`pyhydrogeophysx[adtlert]` or use engine='pyhydro'."
+        )
+    return "cudss"
 
 
 def _resolve_ert_engine(name: str, *, log=_noop_log) -> str:
-    """Use ADTLERT only with CUDA; otherwise retain the original ERT path."""
+    """Use ADTLERT only with CUDA and cuDSS; otherwise retain PyHydro ERT."""
     requested = str(name).lower()
-    if requested == "adtlert" and not _adtlert_cuda_available():
+    if requested == "adtlert" and not _adtlert_cudss_available():
         log(
-            "ADTLERT CUDA 12 is unavailable; falling back to the "
+            "ADTLERT CUDA 12/cuDSS is unavailable; falling back to the "
             "original PyHydro ERT engine."
         )
         return "pyhydro"
@@ -1092,9 +1096,10 @@ def run_ert_manager_inversion(
     ``engine`` selects the solver: ``"pyhydro"`` for the in-house Gauss-Newton
     inversion (``ERTInversion``), ``"pygimli"`` for ``ert.ERTManager``, or
     ``"adtlert"`` for the optional differentiable ADTLERT 2.5D backend when
-    Torch and CuPy CUDA 12 are available. Windows uses the portable SciPy
-    forward solver; Linux additionally uses cuDSS for the best performance.
-    Without CUDA 12, ``"adtlert"`` falls back to ``"pyhydro"``.
+    Torch, CuPy CUDA 12 and cuDSS are available. Linux and Windows both use
+    cuDSS; ADTLERT's slower SciPy forward solver is intentionally disabled.
+    Linux remains the recommended platform for the best performance. Without
+    CUDA 12 or cuDSS, ``"adtlert"`` falls back to ``"pyhydro"``.
     """
     requested_engine = str(engine).lower()
     engine = _resolve_ert_engine(requested_engine, log=log)

@@ -57,7 +57,7 @@ jobs:
           tests/test_ert_mesh_import.py
 
   adtlert-windows:
-    name: "ADTLERT portable fallback (windows, py3.11)"
+    name: "ADTLERT Windows metadata and engine fallback (py3.11)"
     runs-on: windows-latest
 
     steps:
@@ -69,14 +69,14 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install portable ADTLERT test dependencies
+      - name: Install ADTLERT fallback test dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -e . pytest
           python -m pip install "adtlert>=0.1,<0.2" "pygimli>=1.5.5,<2.0"
 
-      - name: Verify CUDA 12 metadata and Windows fallback
+      - name: Verify CUDA 12 and Windows cuDSS metadata
         shell: python
         run: |
           import pathlib
@@ -86,8 +86,10 @@ jobs:
           dependencies = project["project"]["optional-dependencies"]
           assert any("cupy-cuda12x" in item for item in dependencies["gpu"])
           assert any("cupy-cuda12x" in item for item in dependencies["adtlert"])
+          assert any("nvidia-cudss-cu12" in item for item in dependencies["adtlert"])
+          assert any("nvmath-python" in item for item in dependencies["adtlert"])
 
-      - name: Run portable ADTLERT tests
+      - name: Run ADTLERT selection tests
         run: >-
           pytest -q
           tests/test_ert_backend_selection.py
