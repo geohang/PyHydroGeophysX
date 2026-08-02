@@ -27,3 +27,14 @@ def test_requested_adtlert_is_retained_with_cuda(monkeypatch) -> None:
     )
 
     assert ert_inversion._resolve_ert_engine("adtlert") == "adtlert"
+
+
+def test_adtlert_rejects_remote_electrode_indices() -> None:
+    container = {
+        "a": [0, -1],
+        "b": [1, 2],
+        "m": [2, 3],
+        "n": [3, 4],
+    }
+
+    assert not ert_inversion._adtlert_survey_supported(container)

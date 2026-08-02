@@ -2,6 +2,7 @@
 Single-time ERT inversion functionality.
 """
 from dataclasses import dataclass, field
+import os
 from pathlib import Path
 import sys
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -580,18 +581,43 @@ def _adtlert_solver_name(method: str, *, prefer_gpu: bool = False) -> str:
 
 
 def _adtlert_cuda_available() -> bool:
-    """Return whether the complete ADTLERT CUDA/cuDSS stack is usable."""
+    """Return whether ADTLERT's Torch/CuPy CUDA 12 path is usable."""
     try:
+        # ADTLERT's terrain auxiliary path promotes selected operators to
+        # float64. Starting the runtime in float64 keeps all Torch sparse
+        # operands consistent for real topographic surveys.
+        os.environ.setdefault("ADTLERT_ENABLE_FLOAT64", "1")
         import adtlert  # noqa: F401
         import cupy as cp
         import torch
-        from nvmath.sparse.advanced import DirectSolver  # noqa: F401
 
-        return bool(torch.cuda.is_available()) and int(
-            cp.cuda.runtime.getDeviceCount()
-        ) > 0
+        if not torch.cuda.is_available():
+            return False
+        if int(cp.cuda.runtime.getDeviceCount()) < 1:
+            return False
+        # Importing CuPy and enumerating devices do not prove that NVRTC and
+        # the CUDA headers are usable. Compile one tiny kernel so incomplete
+        # Windows installations fall back before an inversion starts.
+        probe = cp.arange(1, dtype=cp.float32)
+        return float(cp.sum(probe).get()) == 0.0
     except Exception:  # noqa: BLE001 - the original ERT engine is the fallback
         return False
+
+
+def _adtlert_cudss_available() -> bool:
+    """Return whether the recommended Linux cuDSS forward solver is usable."""
+    if not sys.platform.startswith("linux") or not _adtlert_cuda_available():
+        return False
+    try:
+        from nvmath.sparse.advanced import DirectSolver  # noqa: F401
+    except Exception:  # noqa: BLE001 - SciPy is the portable forward solver
+        return False
+    return True
+
+
+def _adtlert_forward_solver_backend() -> str:
+    """Prefer Linux cuDSS and use ADTLERT's portable SciPy solver elsewhere."""
+    return "cudss" if _adtlert_cudss_available() else "scipy"
 
 
 def _resolve_ert_engine(name: str, *, log=_noop_log) -> str:
@@ -599,16 +625,25 @@ def _resolve_ert_engine(name: str, *, log=_noop_log) -> str:
     requested = str(name).lower()
     if requested == "adtlert" and not _adtlert_cuda_available():
         log(
-            "ADTLERT CUDA/cuDSS is unavailable; falling back to the "
+            "ADTLERT CUDA 12 is unavailable; falling back to the "
             "original PyHydro ERT engine."
         )
         return "pyhydro"
     return requested
 
 
+def _adtlert_survey_supported(container) -> bool:
+    """Return whether ADTLERT 0.1 can represent every ABMN electrode."""
+    return all(
+        not np.any(np.asarray(container[field], dtype=int) < 0)
+        for field in ("a", "b", "m", "n")
+    )
+
+
 def _build_adtlert_forward(container, mesh, *, log=_noop_log):
     """Build one shared ADTLERT forward context for single or windowed ERT."""
     try:
+        os.environ.setdefault("ADTLERT_ENABLE_FLOAT64", "1")
         import adtlert
         from adtlert.forward import mesh_to_adtlert, survey_to_adtlert
         from adtlert.inversion import ParameterizedERTForward2p5D
@@ -646,6 +681,7 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log):
     geometric_mode = (
         "analytic" if bool(forward_mesh.is_flat_surface) else "numerical"
     )
+    forward_solver = _adtlert_forward_solver_backend()
     forward = ParameterizedERTForward2p5D.from_mesh_survey(
         forward_mesh,
         survey,
@@ -653,13 +689,13 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log):
         regularization_mesh=parameter_mesh,
         background_mode="pygimli_prolongation",
         topographic_geometric_factor_mode=geometric_mode,
-        linear_solver_backend="cudss",
+        linear_solver_backend=forward_solver,
     )
     version = str(getattr(adtlert, "__version__", ""))
     log(
         f"  ADTLERT {version or '(unknown version)'}: "
         f"{mesh.cellCount()} forward cells, {active_ids.size} parameters, "
-        "cuDSS forward solver"
+        f"{forward_solver} forward solver"
     )
     return forward, result_mesh, active_ids, version
 
@@ -688,7 +724,7 @@ class _ADTLertEngine:
         self._model_constraints = tuple(
             float(value) for value in model_constraints
         )
-        self._solver = _adtlert_solver_name(method)
+        self._solver = _adtlert_solver_name(method, prefer_gpu=True)
 
     def reference_model(self):
         return self._initial_model.copy()
@@ -1056,7 +1092,9 @@ def run_ert_manager_inversion(
     ``engine`` selects the solver: ``"pyhydro"`` for the in-house Gauss-Newton
     inversion (``ERTInversion``), ``"pygimli"`` for ``ert.ERTManager``, or
     ``"adtlert"`` for the optional differentiable ADTLERT 2.5D backend when
-    CUDA/cuDSS is available. Otherwise ``"adtlert"`` falls back to ``"pyhydro"``.
+    Torch and CuPy CUDA 12 are available. Windows uses the portable SciPy
+    forward solver; Linux additionally uses cuDSS for the best performance.
+    Without CUDA 12, ``"adtlert"`` falls back to ``"pyhydro"``.
     """
     requested_engine = str(engine).lower()
     engine = _resolve_ert_engine(requested_engine, log=log)
@@ -1065,6 +1103,13 @@ def run_ert_manager_inversion(
         absolute_error=absolute_error, error_source=error_source,
         error_floor=error_floor,
     )
+    if engine == "adtlert" and not _adtlert_survey_supported(data):
+        log(
+            "ADTLERT 0.1 cannot represent remote electrodes encoded with "
+            "negative ABMN indices; falling back to the original PyHydro "
+            "ERT engine."
+        )
+        engine = "pyhydro"
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 

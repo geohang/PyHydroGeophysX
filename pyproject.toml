@@ -57,10 +57,11 @@ geophysics = [
 ]
 adtlert = [
     "adtlert[cuda12]>=0.1,<0.2; python_version >= '3.11'",
+    "cupy-cuda12x[ctk]>=14,<15; python_version >= '3.11'",
     "pygimli>=1.5.5,<2.0; python_version >= '3.11'",
 ]
 gpu = [
-    "cupy-cuda11x",
+    "cupy-cuda12x[ctk]>=14,<15",
 ]
 agents = [
     "openai",
@@ -120,7 +121,7 @@ all = [
     "pymatsolver>=0.2",
     "flopy>=3.5,<4.0",
     "pftools>=1.3",
-    "cupy-cuda11x",
+    "cupy-cuda12x[ctk]>=14,<15",
     "openai", "google-generativeai", "anthropic",
     "pydaymet>=0.16.0", "pandas>=1.3.0", "xarray>=0.19.0",
     "streamlit>=1.35,<2.0", "plotly>=5.18,<7.0", "streamlit-plotly-events>=0.0.6", "pyarrow>=14.0",

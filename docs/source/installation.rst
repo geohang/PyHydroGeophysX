@@ -41,20 +41,30 @@ Select it explicitly; the default ERT engine remains unchanged.
        engine="adtlert",
    )
 
-On Linux, this extra installs the GPU-enabled PyPI Torch distribution and
-ADTLERT's CUDA 12 CuPy/cuDSS solver stack. When that complete CUDA stack is
-unavailable, selecting ADTLERT automatically uses the original PyHydro ERT
-engine instead.
+The extra installs CuPy CUDA 12 on both Linux and Windows. Windows is supported
+with CUDA-enabled Torch, CuPy GPU CGLS and ADTLERT's portable SciPy forward
+solver. Linux is the recommended and fastest platform because it also uses the
+cuDSS GPU forward solver. When Torch or CuPy CUDA 12 is unavailable, selecting
+ADTLERT automatically uses the original PyHydro ERT engine instead.
+ADTLERT 0.1 also cannot represent remote electrodes encoded as negative ABMN
+indices; those surveys safely use the original engine without changing data.
+
+On Windows, install the CUDA-enabled Torch wheel before the extra, for example:
+
+.. code-block:: powershell
+
+   python -m pip install torch --index-url https://download.pytorch.org/whl/cu128
+   python -m pip install "pyhydrogeophysx[adtlert]"
 
 For long monitoring sequences, select ADTLERT together with windowed
-time-lapse inversion. The backend reuses one forward operator, cuDSS context
-and Jacobian cache across overlapping windows. Every timestep must have the
+time-lapse inversion. The backend reuses one forward operator and Jacobian
+cache across overlapping windows. Every timestep must have the
 same electrode positions and ABMN ordering; process-level window parallelism
 is disabled for ADTLERT to avoid duplicating GPU memory. The default ``cgls``
 method selects CuPy CGLS on the CUDA-backed ADTLERT path.
 
-Do not combine this with ``pyhydrogeophysx[gpu]``. That extra currently uses
-``cupy-cuda11x``, and two CuPy CUDA variants cannot share one environment.
+The ``adtlert`` and ``gpu`` extras share ``cupy-cuda12x``. Do not install a
+second CuPy package such as ``cupy-cuda11x`` in the same environment.
 
 Install from Source
 -------------------
@@ -85,7 +95,7 @@ Optional Dependencies
 .. code-block:: bash
 
    pip install pygimli simpeg resipy joblib
-   pip install cupy-cuda11x  # Replace with your CUDA version
+   pip install "cupy-cuda12x[ctk]"
 
 Desktop App (Qt Workbench)
 --------------------------

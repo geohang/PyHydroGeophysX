@@ -82,13 +82,23 @@ result = run_ert_manager_inversion(
 )
 ```
 
-On Linux, the `adtlert` extra installs the GPU-enabled PyPI Torch distribution
-and ADTLERT's CUDA 12 CuPy/cuDSS solver stack. When that complete CUDA stack is
-unavailable, selecting ADTLERT automatically uses the original PyHydro ERT
-engine instead.
+The `adtlert` extra installs CuPy CUDA 12 on both Linux and Windows. Windows is
+supported with CUDA-enabled Torch, CuPy GPU CGLS and ADTLERT's portable SciPy
+forward solver. Linux is the recommended and fastest platform because it also
+uses the cuDSS GPU forward solver. When Torch or CuPy CUDA 12 is unavailable,
+selecting ADTLERT automatically uses the original PyHydro ERT engine instead.
+ADTLERT 0.1 also cannot represent remote electrodes encoded as negative ABMN
+indices; those surveys safely use the original engine without changing data.
+
+On Windows, install the CUDA-enabled Torch wheel before the extra, for example:
+
+```powershell
+python -m pip install torch --index-url https://download.pytorch.org/whl/cu128
+python -m pip install "pyhydrogeophysx[adtlert]"
+```
 
 ADTLERT can also run the windowed time-lapse workflow on one shared GPU forward
-operator and cuDSS context:
+operator:
 
 ```python
 from PyHydroGeophysX.inversion.time_lapse import run_timelapse_ert
@@ -106,8 +116,8 @@ processes overlapping windows sequentially on the GPU so solver state and
 Jacobian caches are reused without duplicating GPU memory across processes.
 The default `cgls` method selects CuPy CGLS on the CUDA-backed ADTLERT path.
 
-Do not combine that CUDA 12 extra with `pyhydrogeophysx[gpu]`, which currently
-installs the mutually exclusive `cupy-cuda11x` build.
+The `adtlert` and `gpu` extras now share `cupy-cuda12x`; do not install a second
+CuPy package such as `cupy-cuda11x` in the same environment.
 
 ### From Source
 
@@ -151,14 +161,14 @@ Verify when done:
 | Extra | Packages installed |
 |---|---|
 | `geophysics` | pygimli, simpeg, pymatsolver, flopy, pftools |
-| `adtlert` | adtlert, pygimli, GPU-enabled Torch and CUDA 12/cuDSS on Linux (Python 3.11+) |
+| `adtlert` | adtlert, pygimli, Torch and CuPy CUDA 12 on Windows/Linux; cuDSS acceleration on Linux (Python 3.11+) |
 | `desktop` | PySide6, pyqtgraph, qtawesome, numpy, pandas |
 | `desktop-3d` | pyvista, pyvistaqt, vtk (the Mesh 3D and volume viewers) |
 | `agents` | openai, google-generativeai, anthropic |
 | `climate` | pydaymet, pandas, xarray |
 | `webapp` | streamlit, plotly, streamlit-plotly-events, pyarrow |
 | `seismic-raw` | obspy |
-| `gpu` | cupy-cuda11x |
+| `gpu` | cupy-cuda12x with CUDA Toolkit components |
 | `docs` | sphinx, sphinx-gallery, sphinx_rtd_theme |
 | `dev` | pytest, pytest-cov, black, flake8 |
 | `all` | all general-purpose groups above; ADTLERT remains opt-in |

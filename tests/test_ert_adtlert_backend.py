@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import builtins
 from pathlib import Path
+import sys
 
 import numpy as np
 import pytest
@@ -19,7 +20,9 @@ from PyHydroGeophysX._internal.optional_dependencies import (  # noqa: E402
 )
 from PyHydroGeophysX.inversion.ert_inversion import (  # noqa: E402
     _ADTLertEngine,
+    _adtlert_cudss_available,
     _adtlert_cuda_available,
+    _adtlert_forward_solver_backend,
     _adtlert_solver_name,
     run_ert_manager_inversion,
 )
@@ -33,7 +36,7 @@ from PyHydroGeophysX.inversion.time_lapse import (  # noqa: E402
 
 requires_adtlert_cuda = pytest.mark.skipif(
     not _adtlert_cuda_available(),
-    reason="ADTLERT inversion requires CUDA, CuPy and nvmath/cuDSS",
+    reason="ADTLERT inversion requires Torch and CuPy CUDA 12",
 )
 
 
@@ -210,7 +213,7 @@ def test_adtlert_windowed_rejects_multiprocess_gpu_contexts(
         mesh=mesh,
         engine="adtlert",
     )
-    with pytest.raises(ValueError, match="shared GPU/cuDSS context"):
+    with pytest.raises(ValueError, match="shared GPU context"):
         inversion.run(window_parallel=True)
 
 
@@ -304,3 +307,11 @@ def test_windowed_cgls_falls_back_without_cupy(monkeypatch) -> None:
     assert (
         _adtlert_solver_name("cgls", prefer_gpu=True) == "pyhydro_cgls"
     )
+
+
+def test_windows_adtlert_uses_portable_scipy_forward_solver(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert not _adtlert_cudss_available()
+    assert _adtlert_forward_solver_backend() == "scipy"

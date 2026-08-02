@@ -423,7 +423,7 @@ class WindowedTimeLapseERTInversion:
         if self.engine == "adtlert":
             if window_parallel:
                 raise ValueError(
-                    "ADTLERT windowed inversion uses one shared GPU/cuDSS context; "
+                    "ADTLERT windowed inversion uses one shared GPU context; "
                     "window_parallel=True would duplicate GPU memory"
                 )
             return self._run_adtlert()

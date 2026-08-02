@@ -408,7 +408,7 @@ pip install openai markdown
 ### GPU Support
 ```bash
 # For GPU-accelerated inversion
-pip install cupy-cuda11x  # Match your CUDA version
+pip install "cupy-cuda12x[ctk]"
 ```
 
 ## Citation
