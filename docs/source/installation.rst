@@ -17,6 +17,45 @@ Install with geophysics engines (recommended)
 
    pip install "pyhydrogeophysx[geophysics]"
 
+Install the optional ADTLERT ERT backend
+----------------------------------------
+
+ADTLERT provides a differentiable 2.5D ERT engine for the existing
+``run_ert_manager_inversion`` pipeline. It requires Python 3.11 or newer and
+is intentionally separate from the general ``geophysics`` extra because it
+also installs PyTorch.
+
+.. code-block:: bash
+
+   pip install "pyhydrogeophysx[adtlert]"
+
+Select it explicitly; the default ERT engine remains unchanged.
+
+.. code-block:: python
+
+   from PyHydroGeophysX.inversion.ert_inversion import run_ert_manager_inversion
+
+   result = run_ert_manager_inversion(
+       "survey.dat",
+       "output",
+       engine="adtlert",
+   )
+
+On Linux, this extra installs the GPU-enabled PyPI Torch distribution and
+ADTLERT's CUDA 12 CuPy/cuDSS solver stack. When that complete CUDA stack is
+unavailable, selecting ADTLERT automatically uses the original PyHydro ERT
+engine instead.
+
+For long monitoring sequences, select ADTLERT together with windowed
+time-lapse inversion. The backend reuses one forward operator, cuDSS context
+and Jacobian cache across overlapping windows. Every timestep must have the
+same electrode positions and ABMN ordering; process-level window parallelism
+is disabled for ADTLERT to avoid duplicating GPU memory. The default ``cgls``
+method selects CuPy CGLS on the CUDA-backed ADTLERT path.
+
+Do not combine this with ``pyhydrogeophysx[gpu]``. That extra currently uses
+``cupy-cuda11x``, and two CuPy CUDA variants cannot share one environment.
+
 Install from Source
 -------------------
 
@@ -37,6 +76,7 @@ Optional Dependencies
 ---------------------
 
 - PyGIMLi for ERT/SRT forward and inversion
+- ADTLERT for differentiable 2.5D ERT inversion
 - SimPEG for TDEM/FDEM workflows
 - RESIPY for field ERT data processing
 - CuPy for GPU acceleration
