@@ -704,6 +704,81 @@ def _export_model_vtk(manager, output_dir: str | Path, filename: str) -> str:
 
 
 
+#: Mesh formats a user can hand the inversion. ``.bms`` is PyGIMLi's own,
+#: ``.msh`` is Gmsh (the usual route for a complex 3D domain), and the rest are
+#: what PyGIMLi's loader recognises.
+MESH_SUFFIXES = (".bms", ".msh", ".vtk", ".vtu", ".poly")
+
+
+def load_inversion_mesh(mesh_path: str | Path, data=None,
+                        log: Callable[[str], None] = _noop_log):
+    """Load a user-supplied inversion mesh and check it can hold this survey.
+
+    Building a mesh from the electrode line is fine for a 2D profile and
+    hopeless for a 3D domain with topography, boreholes or known structure, so
+    those are meshed externally (usually in Gmsh) and brought in here.
+
+    An imported mesh fails in ways a generated one cannot: electrodes outside
+    the domain, or every cell marked background so nothing is inverted. Both
+    surface deep inside the forward solver as errors that name nothing useful,
+    so they are checked here where the message can say what is wrong.
+    """
+    path = Path(mesh_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"No mesh file at {path}.")
+    if path.suffix.lower() == ".msh":
+        from pygimli.meshtools import readGmsh
+        mesh = readGmsh(str(path), verbose=False)
+    else:
+        mesh = pg.load(str(path))
+    if mesh is None or int(mesh.cellCount()) == 0:
+        raise ValueError(f"{path.name} loaded no cells; is it a mesh file?")
+
+    markers = np.asarray([c.marker() for c in mesh.cells()], dtype=int)
+    invertible = int((markers > 1).sum())
+    if invertible == 0:
+        counts = {int(m): int((markers == m).sum()) for m in np.unique(markers)}
+        raise ValueError(
+            f"{path.name} has no cells marked as the parameter domain "
+            f"(marker > 1); markers present: {counts}. PyGIMLi inverts marker 2 "
+            "and above and treats 0 and 1 as background, so nothing here would "
+            "be inverted. Re-tag the region to invert with marker 2.")
+
+    if data is not None:
+        sensors = np.atleast_2d(np.asarray(data.sensorPositions(), dtype=float))
+        if sensors.size:
+            outside = _sensors_outside(mesh, sensors)
+            if outside:
+                raise ValueError(
+                    f"{path.name} does not contain {len(outside)} of "
+                    f"{len(sensors)} electrodes (first at "
+                    f"{np.round(sensors[outside[0]], 2).tolist()}). A mesh that "
+                    "does not cover the array cannot be used for this survey; "
+                    "check the coordinate origin and units.")
+    log(f"  mesh: {path.name}, {mesh.cellCount()} cells "
+        f"({invertible} inverted), {mesh.nodeCount()} nodes, {mesh.dim()}D")
+    return mesh
+
+
+def _sensors_outside(mesh, sensors: np.ndarray) -> List[int]:
+    """Indices of electrodes no cell of ``mesh`` contains."""
+    missing: List[int] = []
+    for index, position in enumerate(sensors):
+        coords = list(position[:3]) + [0.0] * (3 - len(position[:3]))
+        try:
+            cell = mesh.findCell(pg.Pos(*coords[:3]))
+        except Exception:  # noqa: BLE001 - fall back to the bounding box
+            cell = None
+            lower, upper = mesh.boundingBox().min(), mesh.boundingBox().max()
+            inside = all(lower[k] - 1e-6 <= coords[k] <= upper[k] + 1e-6
+                         for k in range(mesh.dim()))
+            if inside:
+                continue
+        if cell is None:
+            missing.append(index)
+    return missing
+
+
 def run_ert_manager_inversion(
     data_path: str | Path,
     output_dir: str | Path,
@@ -715,6 +790,7 @@ def run_ert_manager_inversion(
     mesh_quality: float = 34.0,
     para_depth: float = 0.0,
     para_max_cell_size: float = 0.0,
+    mesh_file: str = "",
     lam: float = 50.0,
     max_iterations: int = 20,
     plateau_tolerance: float = 0.005,
@@ -781,16 +857,24 @@ def run_ert_manager_inversion(
     # PyGIMLi sizes the parameter domain from the array length when paraDepth is
     # left at 0, which for a long line reaches far below anything the data can
     # resolve. Capping it removes unknowns the inversion cannot constrain anyway.
-    mesh_kwargs: Dict[str, Any] = {"quality": float(mesh_quality)}
-    if float(para_depth) > 0:
-        mesh_kwargs["paraDepth"] = float(para_depth)
-    if float(para_max_cell_size) > 0:
-        mesh_kwargs["paraMaxCellSize"] = float(para_max_cell_size)
-    inversion_mesh = ert.ERTManager(data).createMesh(data=data, **mesh_kwargs)
-    para_cells = sum(1 for cell in inversion_mesh.cells() if cell.marker() > 1)
-    log(f"  mesh: {inversion_mesh.cellCount()} cells, {para_cells} of them inverted"
-        + (f" (parameter domain capped at {float(para_depth):g} m depth)"
-           if float(para_depth) > 0 else ""))
+    if str(mesh_file):
+        # A mesh built elsewhere describes its own domain, so the sizing knobs
+        # below have nothing to act on. Saying so beats silently ignoring them.
+        inversion_mesh = load_inversion_mesh(mesh_file, data=data, log=log)
+        if float(para_depth) > 0 or float(para_max_cell_size) > 0:
+            log("  (mesh quality, depth and cell size ignored: the mesh is "
+                "imported)")
+    else:
+        mesh_kwargs: Dict[str, Any] = {"quality": float(mesh_quality)}
+        if float(para_depth) > 0:
+            mesh_kwargs["paraDepth"] = float(para_depth)
+        if float(para_max_cell_size) > 0:
+            mesh_kwargs["paraMaxCellSize"] = float(para_max_cell_size)
+        inversion_mesh = ert.ERTManager(data).createMesh(data=data, **mesh_kwargs)
+        para_cells = sum(1 for cell in inversion_mesh.cells() if cell.marker() > 1)
+        log(f"  mesh: {inversion_mesh.cellCount()} cells, {para_cells} of them inverted"
+            + (f" (parameter domain capped at {float(para_depth):g} m depth)"
+               if float(para_depth) > 0 else ""))
 
     # Before anything is fitted, confirm the geometric factors agree with the
     # geometry being modelled, and repair them if they do not. A uniform error

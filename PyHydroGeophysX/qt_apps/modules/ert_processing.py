@@ -47,6 +47,7 @@ from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
     BusyStateController,
     ReproduceBar,
+    merged_row,
     select_directory,
 )
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
@@ -365,6 +366,31 @@ class ERTProcessingModule(BaseModule):
             "A λ is finished once χ² improves by less than this per iteration. Loosen it "
             "for speed, tighten it to be sure a λ has really run out of room.")
         iform.addRow("Stop below", self._plateau)
+
+        # An imported mesh. Building one from the electrode line is fine for a
+        # 2D profile and hopeless for a 3D domain with topography, boreholes or
+        # known structure, which is meshed externally (usually in Gmsh).
+        self._mesh_path = ""
+        self._mesh_btn = QPushButton("Import mesh…")
+        self._mesh_btn.setIcon(theme.icon("fa5s.project-diagram"))
+        self._mesh_btn.setToolTip(
+            "Invert on a mesh you built elsewhere instead of one generated from "
+            "the electrode positions. PyGIMLi .bms, Gmsh .msh, VTK, or .poly. "
+            "The region to invert must carry marker 2 or above; marker 0 and 1 "
+            "are treated as background and stay fixed. The file is checked "
+            "against the survey before the run starts.")
+        self._mesh_btn.clicked.connect(self._import_mesh)
+        self._mesh_clear = QPushButton("✕")
+        self._mesh_clear.setMaximumWidth(32)
+        self._mesh_clear.setToolTip("Go back to a mesh generated from the data.")
+        self._mesh_clear.setEnabled(False)
+        self._mesh_clear.clicked.connect(self._clear_mesh)
+        self._mesh_row = merged_row(self._mesh_btn, self._mesh_clear)
+        iform.addRow("Mesh", self._mesh_row)
+        self._mesh_note = QLabel("Built from the electrode positions.")
+        self._mesh_note.setWordWrap(True)
+        self._mesh_note.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        iform.addRow("", self._mesh_note)
 
         self._quality = QDoubleSpinBox(); self._quality.setRange(20.0, 40.0); self._quality.setValue(34.0)
         self._quality.setToolTip("Inversion-mesh quality (higher = finer triangulation).")
@@ -925,6 +951,7 @@ class ERTProcessingModule(BaseModule):
                 "relative_error": float(self._relerr.value()),
                 "mesh_quality": float(self._quality.value()),
                 "para_depth": float(self._para_depth.value()),
+                "mesh_file": str(self._mesh_path or ""),
                 "instrument": "BERT",
                 "engine": str(self._engine.currentData()),
                 "geometric_factor_policy": str(self._geom_policy),
@@ -1216,6 +1243,52 @@ class ERTProcessingModule(BaseModule):
             label = self.row_label(widget)
             if label is not None:
                 label.setVisible(bool(on))
+
+    # -- imported mesh --------------------------------------------------------
+    def _import_mesh(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Import inversion mesh", "",
+            "Meshes (*.bms *.msh *.vtk *.vtu *.poly);;All files (*)")
+        if path:
+            self._apply_mesh_file(path)
+
+    def _apply_mesh_file(self, path: str) -> str:
+        """Load and check the mesh now, not when the inversion starts.
+
+        A mesh whose origin or units are wrong fails deep in the forward solver,
+        minutes into a run. Checking on import turns that into an immediate
+        message next to the button that caused it.
+        """
+        from PyHydroGeophysX.inversion.ert_inversion import load_inversion_mesh
+
+        # Checked against the loaded survey when there is one; importing before
+        # loading data is allowed, and the run re-checks it either way.
+        mesh = load_inversion_mesh(path, data=self._ert_data, log=lambda m: None)
+        invertible = sum(1 for cell in mesh.cells() if cell.marker() > 1)
+        self._mesh_path = str(path)
+        self._mesh_clear.setEnabled(True)
+        summary = (f"<b>{Path(path).name}</b>: {mesh.cellCount()} cells "
+                   f"({invertible} inverted), {mesh.dim()}D.")
+        self._mesh_note.setText(summary)
+        self._sync_mesh_source()
+        self.log(f"Imported inversion mesh {Path(path).name}: "
+                 f"{mesh.cellCount()} cells, {invertible} inverted.", "success")
+        return summary
+
+    def _clear_mesh(self) -> None:
+        self._mesh_path = ""
+        self._mesh_clear.setEnabled(False)
+        self._mesh_note.setText("Built from the electrode positions.")
+        self._sync_mesh_source()
+
+    def _sync_mesh_source(self) -> None:
+        """An imported mesh describes its own domain, so the sizing knobs are dead."""
+        generated = not self._mesh_path
+        for widget in (self._quality, self._para_depth):
+            widget.setEnabled(generated)
+            label = self.row_label(widget)
+            if label is not None:
+                label.setEnabled(generated)
 
     def _on_auto_lambda(self, on: bool) -> None:
         """Show the auto-λ target and trial budget only while auto-λ is on."""
@@ -1736,6 +1809,10 @@ class ERTProcessingModule(BaseModule):
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
                  "desc": ("Set parameters. Shared by single + time-lapse inversion: lambda, "
                           "max_iterations, relative_error, mesh_quality, time_lapse (bool). "
+                          "Mesh: para_depth (m, 0 = auto), mesh_file (path to a "
+                          ".bms/.msh/.vtk/.poly mesh to invert on instead of a "
+                          "generated one; the region to invert needs marker 2 or "
+                          "above, and '' goes back to generating it). "
                           "Single-inversion error model: error_source (file/estimate/max), "
                           "absolute_error (Ohm). Convergence: plateau_tolerance (fraction), "
                           "max_total_iterations, engine (pyhydro/pygimli). "
@@ -1822,6 +1899,7 @@ class ERTProcessingModule(BaseModule):
             "timelapse_low_memory": self._tl_lowmem.isChecked(),
             "lambda": self._lam.value(),
             "lambda_bounds": list(_LAMBDA_BOUNDS),
+            "mesh_file": str(self._mesh_path or ""),
             "engine": self._engine.currentData(),
             "geometric_factor_policy": self._geom_policy,
             "error_source": self._err_source.currentData(),
@@ -2029,6 +2107,8 @@ class ERTProcessingModule(BaseModule):
             "relative_error": lambda v: self._relerr.setValue(float(v)),
             "mesh_quality": lambda v: self._quality.setValue(float(v)),
             "para_depth": lambda v: self._para_depth.setValue(float(v)),
+            "mesh_file": lambda v: (self._apply_mesh_file(str(v)) if str(v)
+                                    else self._clear_mesh()),
             "time_lapse": lambda v: self._tl_mode.setChecked(bool(v)),
             # single-inversion fit assistance
             "engine": lambda v: set_combo_data(self._engine, v),

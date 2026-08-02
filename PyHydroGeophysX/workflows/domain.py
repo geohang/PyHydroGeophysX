@@ -255,6 +255,7 @@ def run_ert_single(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult
         mesh_quality=float(parameters.get("mesh_quality", 34.0)),
         para_depth=float(parameters.get("para_depth", 0.0)),
         para_max_cell_size=float(parameters.get("para_max_cell_size", 0.0)),
+        mesh_file=str(parameters.get("mesh_file", "") or ""),
         lam=float(parameters.get("lambda", 50.0)),
         max_iterations=int(parameters.get("max_iterations", 20)),
         plateau_tolerance=float(parameters.get("plateau_tolerance", 0.005)),
