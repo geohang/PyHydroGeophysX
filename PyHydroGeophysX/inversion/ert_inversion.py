@@ -4,7 +4,7 @@ Single-time ERT inversion functionality.
 from dataclasses import dataclass, field
 from pathlib import Path
 import sys
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pygimli as pg
@@ -551,6 +551,91 @@ class _PygimliEngine:
         )
 
 
+_ADTLERT_SOLVERS: Dict[str, str] = {
+    "cgls": "pyhydro_cgls",
+    "pyhydro_cgls": "pyhydro_cgls",
+    "lsqr": "lsqr",
+    "normal_cg": "normal_cg",
+    "gpu_cgls": "gpu_cgls",
+}
+
+
+def _adtlert_solver_name(method: str, *, prefer_gpu: bool = False) -> str:
+    if prefer_gpu and str(method).lower() == "cgls":
+        try:
+            import cupy as cp
+
+            if int(cp.cuda.runtime.getDeviceCount()) > 0:
+                return "gpu_cgls"
+        except Exception:  # noqa: BLE001 - CPU fallback is intentional
+            pass
+    solver = _ADTLERT_SOLVERS.get(str(method).lower())
+    if solver is None:
+        choices = ", ".join(sorted(_ADTLERT_SOLVERS))
+        raise ValueError(
+            f"Unknown ADTLERT linearized solver {method!r}; "
+            f"choose one of {choices}."
+        )
+    return solver
+
+
+def _build_adtlert_forward(container, mesh, *, log=_noop_log):
+    """Build one shared ADTLERT forward context for single or windowed ERT."""
+    try:
+        import adtlert
+        from adtlert.forward import mesh_to_adtlert, survey_to_adtlert
+        from adtlert.inversion import ParameterizedERTForward2p5D
+    except ImportError as exc:
+        raise BackendUnavailable(
+            "The ADTLERT ERT backend is unavailable. Install it with "
+            "`pip install \"pyhydrogeophysx[adtlert]\"`."
+        ) from exc
+
+    if int(mesh.dim()) != 2:
+        raise ValueError(
+            "engine='adtlert' currently supports 2D profile meshes only; "
+            "use engine='pygimli' for this mesh"
+        )
+
+    active_ids = np.asarray(
+        [
+            int(cell.id())
+            for cell in mesh.cells()
+            if int(cell.marker()) > 1
+        ],
+        dtype=np.int32,
+    )
+    if active_ids.size == 0:
+        raise ValueError(
+            "the ADTLERT parameter domain has no cells with marker > 1"
+        )
+
+    # createMeshByCellIdx preserves the full-mesh order used by active_ids.
+    # That same order is used for ADTLERT models and the existing result viewers.
+    result_mesh = mesh.createMeshByCellIdx(pg.IVector(active_ids.tolist()))
+    forward_mesh = mesh_to_adtlert(mesh)
+    parameter_mesh = mesh_to_adtlert(result_mesh)
+    survey = survey_to_adtlert(container, dimension=2)
+    geometric_mode = (
+        "analytic" if bool(forward_mesh.is_flat_surface) else "numerical"
+    )
+    forward = ParameterizedERTForward2p5D.from_mesh_survey(
+        forward_mesh,
+        survey,
+        active_ids,
+        regularization_mesh=parameter_mesh,
+        background_mode="pygimli_prolongation",
+        topographic_geometric_factor_mode=geometric_mode,
+        linear_solver_backend="auto",
+    )
+    version = str(getattr(adtlert, "__version__", ""))
+    log(
+        f"  ADTLERT {version or '(unknown version)'}: "
+        f"{mesh.cellCount()} forward cells, {active_ids.size} parameters"
+    )
+    return forward, result_mesh, active_ids, version
+
+
 class _ADTLertEngine:
     """ADTLERT's differentiable 2.5D inversion behind the common ERT contract.
 
@@ -560,66 +645,13 @@ class _ADTLertEngine:
     """
 
     name = "adtlert"
-    _SOLVERS: ClassVar[Dict[str, str]] = {
-        "cgls": "pyhydro_cgls",
-        "pyhydro_cgls": "pyhydro_cgls",
-        "lsqr": "lsqr",
-        "normal_cg": "normal_cg",
-        "gpu_cgls": "gpu_cgls",
-    }
 
     def __init__(self, container, mesh, *, model_constraints=(1e-2, 1e5),
                  method="cgls", log=_noop_log):
-        try:
-            import adtlert
-            from adtlert.forward import mesh_to_adtlert, survey_to_adtlert
-            from adtlert.inversion import ParameterizedERTForward2p5D
-        except ImportError as exc:
-            raise BackendUnavailable(
-                "The ADTLERT ERT backend is unavailable. Install it with "
-                "`pip install \"pyhydrogeophysx[adtlert]\"`."
-            ) from exc
-
-        if int(mesh.dim()) != 2:
-            raise ValueError(
-                "engine='adtlert' currently supports 2D profile meshes only; "
-                "use engine='pygimli' for this mesh"
-            )
-
-        active_ids = np.asarray(
-            [
-                int(cell.id())
-                for cell in mesh.cells()
-                if int(cell.marker()) > 1
-            ],
-            dtype=np.int32,
-        )
-        if active_ids.size == 0:
-            raise ValueError(
-                "the ADTLERT parameter domain has no cells with marker > 1"
-            )
-
-        # createMeshByCellIdx preserves the full-mesh order used by active_ids.
-        # That same order is used for the ADTLERT model and the manager-shaped
-        # result consumed by the existing VTK and Qt paths.
-        self.mesh = mesh.createMeshByCellIdx(pg.IVector(active_ids.tolist()))
-        forward_mesh = mesh_to_adtlert(mesh)
-        parameter_mesh = mesh_to_adtlert(self.mesh)
-        survey = survey_to_adtlert(container, dimension=2)
-        geometric_mode = (
-            "analytic" if bool(forward_mesh.is_flat_surface) else "numerical"
-        )
-        self._forward = ParameterizedERTForward2p5D.from_mesh_survey(
-            forward_mesh,
-            survey,
-            active_ids,
-            regularization_mesh=parameter_mesh,
-            background_mode="pygimli_prolongation",
-            topographic_geometric_factor_mode=geometric_mode,
-            linear_solver_backend="auto",
+        self._forward, self.mesh, active_ids, self._adtlert_version = (
+            _build_adtlert_forward(container, mesh, log=log)
         )
         self.container = container
-        self._adtlert_version = str(getattr(adtlert, "__version__", ""))
         self._observed = np.asarray(container["rhoa"], dtype=float)
         self._errors = np.log1p(np.asarray(container["err"], dtype=float))
         self._initial_model = np.full(
@@ -628,18 +660,7 @@ class _ADTLertEngine:
         self._model_constraints = tuple(
             float(value) for value in model_constraints
         )
-        solver = self._SOLVERS.get(str(method).lower())
-        if solver is None:
-            choices = ", ".join(sorted(self._SOLVERS))
-            raise ValueError(
-                f"Unknown ADTLERT linearized solver {method!r}; "
-                f"choose one of {choices}."
-            )
-        self._solver = solver
-        log(
-            f"  ADTLERT {self._adtlert_version or '(unknown version)'}: "
-            f"{mesh.cellCount()} forward cells, {active_ids.size} parameters"
-        )
+        self._solver = _adtlert_solver_name(method)
 
     def reference_model(self):
         return self._initial_model.copy()

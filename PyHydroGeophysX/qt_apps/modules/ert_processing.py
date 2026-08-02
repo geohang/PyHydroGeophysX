@@ -1411,6 +1411,15 @@ class ERTProcessingModule(BaseModule):
         if len(self._tl_files) < 2:
             self.log("Add at least two ordered ERT data files (a time sequence).", "warn")
             return
+        if (
+            self._engine.currentData() == "adtlert"
+            and not self._tl_windowed.isChecked()
+        ):
+            self.log(
+                "ADTLERT time-lapse inversion requires Windowed (sliding window).",
+                "warn",
+            )
+            return
         out_dir = str(self.state.output_dir or Path.cwd())
         instrument = self._instrument.currentData()
         params = {
@@ -1418,6 +1427,7 @@ class ERTProcessingModule(BaseModule):
             "inversion_type": self._tl_type.currentText(), "max_iterations": self._iter.value(),
             "relativeError": self._relerr.value(), "mesh_quality": self._quality.value(),
             "windowed": self._tl_windowed.isChecked(), "window_size": self._tl_window.value(),
+            "engine": str(self._engine.currentData()),
             "instrument": instrument,
             # Same auto-λ switch as the single inversion; the trial budget is
             # smaller because each trial is a joint inversion over every step.
@@ -1501,12 +1511,17 @@ class ERTProcessingModule(BaseModule):
         self._quality_view.show_quality(
             {"chi2": result.get("chi2"), "iterations": len(result.get("chi2_history") or []) or None,
              "n_data": result.get("n_data"), "lambda": self._lam.value(),
-             "method": f"time-lapse {result.get('inversion_type', '')} ({result.get('n_times')} steps)",
-             "note": "Joint χ² over all time steps."},
+             "method": (f"{result.get('engine', 'pyhydro')} time-lapse "
+                        f"{result.get('inversion_type', '')} "
+                        f"({result.get('n_times')} steps)"),
+             "note": ("Joint χ² over all time steps."
+                      + (f" Solver: {result.get('linearized_solver')}."
+                         if result.get("linearized_solver") else ""))},
             result.get("chi2_history"), title="Time-lapse ERT inversion")
         lowmem = " · low-memory" if result.get("save_memory") else ""
         n_vtk = len(result.get("vtk_step_paths") or [])
-        self.log(f"Time-lapse inversion complete ({result.get('mode')}{lowmem}): "
+        self.log(f"Time-lapse inversion complete "
+                 f"({result.get('engine', 'pyhydro')}, {result.get('mode')}{lowmem}): "
                  f"{result.get('n_times')} steps, {result.get('mesh_cells')} cells. "
                  f"Saved VTK (combined + {n_vtk} per-step), npy, mesh. "
                  f"Pick a step in the Resistivity model tab; “Export results…” saves them.", "success")
@@ -1827,7 +1842,8 @@ class ERTProcessingModule(BaseModule):
                           "Auto-lambda: auto_lambda (bool), target_chi2, chi2_tolerance, "
                           "max_lambda_trials. "
                           "Time-lapse-only: tl_alpha, tl_norm (L2/L1/L1L2), tl_windowed, "
-                          "tl_window_size, tl_low_memory.")},
+                          "tl_window_size, tl_low_memory. ADTLERT time-lapse currently "
+                          "requires windowed mode and a common survey geometry.")},
                 {"name": "run_inversion", "args": {},
                  "desc": ("Run a single-time ERT inversion. Stages run in the order that "
                           "lowers chi2: fix the error model, iterate at the set lambda "

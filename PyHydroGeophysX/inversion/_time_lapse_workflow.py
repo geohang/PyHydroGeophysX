@@ -30,6 +30,7 @@ DEFAULT_TL = {
     "max_iterations": 15, "relativeError": 0.05, "absoluteUError": 0.0,
     "method": "cgls", "mesh_quality": 34.0, "rho_min": 1.0, "rho_max": 1.0e4,
     "windowed": False, "window_size": 3, "save_memory": False, "instrument": None,
+    "engine": "pyhydro",
     # Lambda relaxation. A trial here is a full joint inversion over every time
     # step, so the default budget is smaller than the single-inversion search.
     "auto_lambda": False, "target_chi2": 1.0, "chi2_tolerance": 0.2,
@@ -156,7 +157,7 @@ def build_timelapse_config(data_files: Sequence[str], measurement_times: Sequenc
         "inversion": {k: p[k] for k in (
             "lambda_val", "alpha", "inversion_type", "max_iterations",
             "relativeError", "method", "mesh_quality", "rho_min", "rho_max",
-            "windowed", "window_size", "save_memory")},
+            "windowed", "window_size", "save_memory", "engine")},
     }
 
 
@@ -190,6 +191,19 @@ def run_timelapse_ert(
     if len(source_files) < 2:
         raise ValueError("Time-lapse inversion needs at least two ERT data files.")
     p = {**DEFAULT_TL, **(params or {})}
+    engine = str(p.get("engine", "pyhydro")).lower()
+    use_windowed = (
+        bool(p.get("windowed", False))
+        and 2 <= int(p["window_size"]) <= len(source_files)
+    )
+    if engine == "adtlert" and not use_windowed:
+        raise ValueError(
+            "engine='adtlert' currently requires windowed=True for time-lapse ERT"
+        )
+    if engine not in ("pyhydro", "adtlert"):
+        raise ValueError(
+            "Time-lapse ERT engine must be 'pyhydro' or windowed 'adtlert'"
+        )
 
     # Derive measurement times + display labels. Filenames that embed dates (e.g.
     # the E4D monthly series 2021-10-08_1400.ohm) give elapsed-day times and date
@@ -219,7 +233,8 @@ def run_timelapse_ert(
     # auto-enable sparse once the dense Gauss-Newton matrices would get large.
     save_memory = bool(p.get("save_memory", False))
     n_unknowns = int(mesh.cellCount()) * len(files)
-    if "save_memory" not in (params or {}) and not save_memory and n_unknowns > _AUTO_SPARSE_UNKNOWNS:
+    if (engine == "pyhydro" and "save_memory" not in (params or {})
+            and not save_memory and n_unknowns > _AUTO_SPARSE_UNKNOWNS):
         save_memory = True
         log(f"Auto-enabling low-memory (sparse) mode: ~{n_unknowns} model unknowns "
             f"({mesh.cellCount()} cells x {len(files)} steps).")
@@ -232,16 +247,16 @@ def run_timelapse_ert(
         model_constraints=(float(p["rho_min"]), float(p["rho_max"])),
         save_memory=save_memory,
     )
-    use_windowed = bool(p.get("windowed", False)) and 2 <= int(p["window_size"]) <= len(files)
     lambda_report: Dict[str, Any] = {"enabled": False}
 
     if use_windowed:
         window_size = int(p["window_size"])
-        log(f"Running windowed {p['inversion_type']} time-lapse inversion: {len(files)} steps, "
+        log(f"Running {engine} windowed {p['inversion_type']} time-lapse "
+            f"inversion: {len(files)} steps, "
             f"window={window_size}, lambda={p['lambda_val']}, alpha={p['alpha']}")
         inversion = WindowedTimeLapseERTInversion(
             data_dir=clean_dir, ert_files=basenames, measurement_times=times,
-            window_size=window_size, mesh=mesh, **inv_kwargs)
+            window_size=window_size, mesh=mesh, engine=engine, **inv_kwargs)
         result = inversion.run(window_parallel=False)
         mode = "windowed"
     else:
@@ -370,6 +385,9 @@ def run_timelapse_ert(
         "status": "ok",
         "direction": "ert_time_lapse_inversion",
         "mode": mode,
+        "engine": engine,
+        "backend_version": str(result.meta.get("backend_version", "")),
+        "linearized_solver": str(result.meta.get("linearized_solver", "")),
         "n_times": int(n_time),
         "mesh_cells": int(res_mesh.cellCount()),
         "inversion_type": str(p["inversion_type"]),

@@ -86,6 +86,26 @@ On Linux, the `adtlert` extra installs the GPU-enabled PyPI Torch distribution
 and ADTLERT's CUDA 12 CuPy/cuDSS solver stack. ADTLERT automatically falls back
 to SciPy when CUDA is unavailable.
 
+ADTLERT can also run the windowed time-lapse workflow on one shared GPU forward
+operator and cuDSS context:
+
+```python
+from PyHydroGeophysX.inversion.time_lapse import run_timelapse_ert
+
+result = run_timelapse_ert(
+    ["survey_0.dat", "survey_1.dat", "survey_2.dat"],
+    [0.0, 1.0, 2.0],
+    {"engine": "adtlert", "windowed": True, "window_size": 3},
+    "output",
+)
+```
+
+All timesteps must use the same electrode positions and ABMN ordering. ADTLERT
+processes overlapping windows sequentially on the GPU so solver state and
+Jacobian caches are reused without duplicating GPU memory across processes.
+The default `cgls` method selects CuPy CGLS when a CUDA device is available and
+falls back to the compatible CPU implementation otherwise.
+
 Do not combine that CUDA 12 extra with `pyhydrogeophysx[gpu]`, which currently
 installs the mutually exclusive `cupy-cuda11x` build.
 
