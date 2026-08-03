@@ -283,7 +283,8 @@ def run_timelapse_ert(
             f"window={window_size}, lambda={p['lambda_val']}, alpha={p['alpha']}")
         inversion = WindowedTimeLapseERTInversion(
             data_dir=clean_dir, ert_files=basenames, measurement_times=times,
-            window_size=window_size, mesh=mesh, engine=engine, **inv_kwargs)
+            window_size=window_size, mesh=mesh, engine=engine, log=log,
+            **inv_kwargs)
         result = inversion.run(window_parallel=False)
         mode = "windowed"
     else:
@@ -383,18 +384,23 @@ def run_timelapse_ert(
     figure_paths.append(str(panel))
 
     # Exports.
-    np.save(out / "final_models.npy", final_models); data_paths.append(str(out / "final_models.npy"))
+    models_path = out / "final_models.npy"
+    np.save(models_path, final_models); data_paths.append(str(models_path))
+    coverage_path = None
     if coverage is not None:
-        np.save(out / "all_coverage.npy", coverage); data_paths.append(str(out / "all_coverage.npy"))
+        coverage_path = out / "all_coverage.npy"
+        np.save(coverage_path, coverage); data_paths.append(str(coverage_path))
     io_utils.write_csv(
         out / "measurement_times.csv",
         [(i, float(times[i]), labels[i] if i < len(labels) else "",
           Path(source_files[i]).name if i < len(source_files) else "") for i in range(n_time)],
         header=["index", "time", "label", "source_file"])
     data_paths.append(str(out / "measurement_times.csv"))
+    mesh_path = out / "timelapse_mesh.bms"
     try:
-        res_mesh.save(str(out / "timelapse_mesh.bms")); data_paths.append(str(out / "timelapse_mesh.bms"))
+        res_mesh.save(str(mesh_path)); data_paths.append(str(mesh_path))
     except Exception as exc:  # noqa: BLE001
+        mesh_path = None
         log(f"Mesh export skipped: {exc}")
     # Per-step VTKs (one resistivity field each) — a clean ParaView time series.
     vtk_step_paths: List[str] = []
@@ -460,6 +466,11 @@ def run_timelapse_ert(
         "normalized_dir": clean_dir,
         "config_path": str(out / "timelapse_config.json"),
         "output_dir": str(out),
+        "model_bundle": {
+            "mesh": str(mesh_path) if mesh_path is not None else "",
+            "models": str(models_path),
+            "coverage": str(coverage_path) if coverage_path is not None else "",
+        },
         # In-memory results for interactive per-step display (a pyGIMLi mesh +
         # arrays; not JSON-serializable, so the UI strips these before publishing).
         "mesh": res_mesh,

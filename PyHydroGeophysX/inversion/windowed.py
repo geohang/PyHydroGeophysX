@@ -5,7 +5,7 @@ import os
 import sys
 import tempfile
 from multiprocessing import Lock
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pygimli as pg
@@ -19,6 +19,138 @@ from .ert_inversion import (
     _resolve_ert_engine,
 )
 from .time_lapse import TimeLapseERTInversion
+
+
+class _ADTLERTWindowProgress:
+    """Forward ADTLERT's structured window events to workflow text logs.
+
+    The ``[progress current/total]`` prefix is deliberately readable on its
+    own and is also recognized by ``ProcessWorkflowWorker`` so the desktop can
+    turn the same line into a determinate progress bar.
+    """
+
+    def __init__(self, log: Callable[[str], None]) -> None:
+        self.log = log
+        self.iteration_chi2: List[float] = []
+        self.window_index = 0
+        self.n_windows = 0
+
+    def __call__(self, event: Dict[str, Any]) -> None:
+        name = str(event.get("event", ""))
+        if name == "windowed_start":
+            self.n_windows = int(event.get("n_windows", 0))
+            n_times = int(event.get("n_times", 0))
+            window_size = int(event.get("window_size", 0))
+            self.log(
+                f"[progress 0/{self.n_windows}] ADTLERT preparing "
+                f"{self.n_windows} windows ({n_times} steps, window={window_size})"
+            )
+        elif name == "window_start":
+            self.window_index = int(event.get("window_index", 0))
+            self.n_windows = int(event.get("n_windows", self.n_windows))
+            start = int(event.get("start_idx", 0)) + 1
+            end = int(event.get("end_idx", start - 1)) + 1
+            self.log(
+                f"ADTLERT window {self.window_index}/{self.n_windows} started "
+                f"(time steps {start}-{end})"
+            )
+        elif name == "timelapse_iteration_done":
+            value = event.get("chi2")
+            if value is None:
+                return
+            chi2 = float(value)
+            self.iteration_chi2.append(chi2)
+            iteration = int(event.get("iteration", 0))
+            maximum = int(event.get("max_iterations", 0))
+            self.log(
+                f"ADTLERT window {self.window_index}/{self.n_windows}, "
+                f"iteration {iteration}/{maximum}: chi2 {chi2:.3f}"
+            )
+        elif name == "window_done":
+            current = int(event.get("window_index", self.window_index))
+            total = int(event.get("n_windows", self.n_windows))
+            value = event.get("final_chi2")
+            suffix = "" if value is None else f", chi2 {float(value):.3f}"
+            self.log(
+                f"[progress {current}/{total}] ADTLERT window "
+                f"{current}/{total} complete{suffix}"
+            )
+        elif name == "windowed_prediction_start":
+            self.log(
+                "ADTLERT windows complete; assembling predictions for "
+                f"{int(event.get('n_times', 0))} time steps"
+            )
+        elif name == "windowed_done":
+            total = int(event.get("n_windows", self.n_windows))
+            value = event.get("final_chi2")
+            suffix = "" if value is None else f", final chi2 {float(value):.3f}"
+            self.log(f"ADTLERT windowed inversion complete: {total}/{total} windows{suffix}")
+
+
+class _PyHydroWindowProgress:
+    """Map one PyHydro window's inner iterations onto global work units."""
+
+    _OUTER_ITERATIONS = {"L1": 5, "L1L2": 8}
+
+    def __init__(
+        self,
+        *,
+        start_idx: int,
+        n_windows: int,
+        window_size: int,
+        inversion_type: str,
+        max_iterations: int,
+        log: Callable[[str], None],
+    ) -> None:
+        self.start_idx = int(start_idx)
+        self.window_index = self.start_idx + 1
+        self.n_windows = int(n_windows)
+        self.window_size = int(window_size)
+        self.inversion_type = str(inversion_type).upper()
+        self.max_iterations = int(max_iterations)
+        outer = self._OUTER_ITERATIONS.get(self.inversion_type, 1)
+        self.slots_per_window = max(1, outer * self.max_iterations)
+        self.total_units = self.n_windows * self.slots_per_window
+        self.log = log
+
+    def start(self) -> None:
+        completed = self.start_idx * self.slots_per_window
+        first_step = self.start_idx + 1
+        last_step = self.start_idx + self.window_size
+        self.log(
+            f"[progress {completed}/{self.total_units}] PyHydro window "
+            f"{self.window_index}/{self.n_windows} started "
+            f"(time steps {first_step}-{last_step})"
+        )
+
+    def __call__(self, event: Dict[str, Any]) -> None:
+        if event.get("event") != "timelapse_iteration_done":
+            return
+        iteration = int(event.get("iteration", 0))
+        irls_iteration = int(event.get("irls_iteration", 1))
+        local_unit = (irls_iteration - 1) * self.max_iterations + iteration
+        current = self.start_idx * self.slots_per_window + local_unit
+        current = max(0, min(current, self.total_units))
+        chi2 = float(event.get("chi2", float("nan")))
+        dphi = float(event.get("dphi", float("nan")))
+        irls = (
+            f", IRLS {irls_iteration}/{int(event.get('irls_iterations', 1))}"
+            if int(event.get("irls_iterations", 1)) > 1 else ""
+        )
+        self.log(
+            f"[progress {current}/{self.total_units}] PyHydro window "
+            f"{self.window_index}/{self.n_windows}{irls}, iteration "
+            f"{iteration}/{self.max_iterations}: chi2 {chi2:.3f}, dPhi {dphi:.3g}"
+        )
+
+    def done(self, *, chi2: Optional[float], iterations: int) -> None:
+        completed = self.window_index * self.slots_per_window
+        suffix = "" if chi2 is None else f", chi2 {float(chi2):.3f}"
+        self.log(
+            f"[progress {completed}/{self.total_units}] PyHydro window "
+            f"{self.window_index}/{self.n_windows} complete "
+            f"({int(iterations)} iterations{suffix})"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -60,14 +192,25 @@ def _process_window(start_idx: int, print_lock, data_dir: str, ert_files: List[s
     if isinstance(mesh, (str, os.PathLike)):
         mesh = pg.load(str(mesh))
     
-    if print_lock is not None:
-        print_lock.acquire()
-    try:
-        print(f"\nStarting {inversion_type} inversion for window {start_idx}")
-        sys.stdout.flush()
-    finally:
+    def emit(message: str) -> None:
         if print_lock is not None:
-            print_lock.release()
+            print_lock.acquire()
+        try:
+            print(message, flush=True)
+        finally:
+            if print_lock is not None:
+                print_lock.release()
+
+    n_windows = len(ert_files) - int(window_size) + 1
+    window_progress = _PyHydroWindowProgress(
+        start_idx=start_idx,
+        n_windows=n_windows,
+        window_size=window_size,
+        inversion_type=inversion_type,
+        max_iterations=int(inversion_params.get("max_iterations", 15)),
+        log=emit,
+    )
+    window_progress.start()
     
     try:
         # Get data file paths for this window
@@ -75,11 +218,17 @@ def _process_window(start_idx: int, print_lock, data_dir: str, ert_files: List[s
         window_times = measurement_times[start_idx:start_idx + window_size]
         
         # Create TimeLapseERTInversion instance
+        window_params = dict(inversion_params)
+        window_params["progress_callback"] = window_progress
+        # The callback above is flushed after every completed iteration.  Keep
+        # the legacy verbose prints off so buffered stdout does not later dump
+        # a duplicate block of the same convergence history.
+        window_params["verbose"] = False
         inversion = TimeLapseERTInversion(
             data_files=window_files,
             measurement_times=window_times,
             mesh=mesh,
-            **inversion_params
+            **window_params
         )
         
         # Run inversion
@@ -98,17 +247,13 @@ def _process_window(start_idx: int, print_lock, data_dir: str, ert_files: List[s
             'mesh_nodes': window_result.mesh.nodeCount() if window_result.mesh else None
         }
         
-        if print_lock is not None:
-            print_lock.acquire()
-        try:
-            print(f"\nWindow {start_idx} results:")
-            print(f"Model shape: {window_result.final_models.shape if window_result.final_models is not None else None}")
-            print(f"Coverage available: {window_result.all_coverage is not None}")
-            print(f"Number of iterations: {len(window_result.all_chi2) if window_result.all_chi2 is not None else 0}")
-            sys.stdout.flush()
-        finally:
-            if print_lock is not None:
-                print_lock.release()
+        history = list(window_result.all_chi2 or [])
+        final_chi2 = None
+        if history:
+            final_values = np.asarray(history[-1], dtype=float).ravel()
+            if final_values.size:
+                final_chi2 = float(final_values[0])
+        window_progress.done(chi2=final_chi2, iterations=len(history))
         
         return start_idx, result_dict
         
@@ -140,6 +285,7 @@ class WindowedTimeLapseERTInversion:
         window_size: int = 3,
         mesh: Optional[Union[pg.Mesh, str]] = None,
         engine: str = "pyhydro",
+        log: Optional[Callable[[str], None]] = None,
         **kwargs,
     ):
         """
@@ -161,6 +307,7 @@ class WindowedTimeLapseERTInversion:
         self.mesh = mesh
         self.requested_engine = str(engine).lower()
         self.engine = _resolve_ert_engine(self.requested_engine)
+        self.log = log or (lambda _message: None)
         self.inversion_params = kwargs
         
         # Validate inputs
@@ -313,17 +460,7 @@ class WindowedTimeLapseERTInversion:
             self.inversion_params.get("method", "cgls"),
             prefer_gpu=True,
         )
-        iteration_chi2: List[float] = []
-
-        def _capture_progress(event: Dict[str, Any]) -> None:
-            # ADTLERT 0.1.0's windowed result replaces the within-window
-            # iteration history with one final chi2 per window. Capture the
-            # existing progress events so the UI and exports retain the real
-            # convergence trace without patching the dependency.
-            if event.get("event") == "timelapse_iteration_done":
-                value = event.get("chi2")
-                if value is not None:
-                    iteration_chi2.append(float(value))
+        progress = _ADTLERTWindowProgress(self.log)
 
         config = InversionConfig(
             max_iterations=int(
@@ -359,7 +496,7 @@ class WindowedTimeLapseERTInversion:
             include_robin_boundary_derivative=False,
             max_log_step=1.0,
             line_search=True,
-            progress_callback=_capture_progress,
+            progress_callback=progress,
         )
         initial = np.vstack(
             [
@@ -405,8 +542,8 @@ class WindowedTimeLapseERTInversion:
         ]
         result.all_chi2 = [float(value) for value in inverted.all_chi2]
         result.iteration_chi2 = (
-            iteration_chi2
-            if iteration_chi2
+            progress.iteration_chi2
+            if progress.iteration_chi2
             else [float(value) for value in inverted.iteration_chi2]
         )
         result.meta.update(
