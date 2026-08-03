@@ -246,6 +246,15 @@ def run_ert_single(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult
     if not isinstance(source, ArtifactRef):
         raise ValueError("ert.single_inversion requires inputs.data as an ArtifactRef.")
     parameters = dict(spec.parameters)
+    # The desktop workflow has already serialized its edited/QC-filtered
+    # container in pygimli's native unified format.  Re-running the original
+    # instrument parser here is both redundant and harmful in an isolated
+    # process: the BERT parser imports pandas/pyarrow even though no tabular
+    # conversion remains to do.  On Windows Store Python, arrow.dll has crashed
+    # during that unnecessary second parse.  Raw public workflow inputs still
+    # retain the caller-selected instrument parser.
+    normalized_input = bool((source.metadata or {}).get("qc_filtered", False))
+    instrument = None if normalized_input else parameters.get("instrument")
     result = run_ert_manager_inversion(
         context.resolve_artifact(source),
         context.output_dir,
@@ -264,7 +273,7 @@ def run_ert_single(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult
         geometric_factor_policy=str(parameters.get("geometric_factor_policy", "fix")),
         geometric_factor_tolerance=float(
             parameters.get("geometric_factor_tolerance", 0.05)),
-        instrument=parameters.get("instrument"),
+        instrument=instrument,
         reject_outliers=bool(parameters.get("reject_outliers", False)),
         outlier_threshold=float(parameters.get("outlier_threshold", 3.0)),
         outlier_passes=int(parameters.get("outlier_passes", 2)),
@@ -284,10 +293,10 @@ def run_ert_single(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult
     fixed_manager = workflow_result.objects.pop("fixed_mgr", None)
     if fixed_manager is not None:
         workflow_result.objects["fixed_manager"] = fixed_manager
-    convergence = workflow_result.summary.pop("convergence", [])
+    convergence = list(workflow_result.summary.get("convergence", []) or [])
     workflow_result.objects["convergence"] = convergence
-    workflow_result.objects["fixed_convergence"] = workflow_result.summary.pop(
-        "fixed_convergence", []
+    workflow_result.objects["fixed_convergence"] = list(
+        workflow_result.summary.get("fixed_convergence", []) or []
     )
     return workflow_result
 

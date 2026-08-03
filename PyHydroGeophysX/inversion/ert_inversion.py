@@ -1006,6 +1006,32 @@ def _export_model_vtk(manager, output_dir: str | Path, filename: str) -> str:
         return ""
 
 
+def _export_model_bundle(manager, output_dir: str | Path, stem: str) -> Dict[str, str]:
+    """Persist the manager-shaped data needed by a viewer in another process."""
+    out = Path(output_dir)
+    paths = {
+        "mesh": out / f"{stem}_mesh.bms",
+        "model": out / f"{stem}_model.npy",
+        "response": out / f"{stem}_response.npy",
+        "coverage": out / f"{stem}_coverage.npy",
+    }
+    manager.paraDomain.save(str(paths["mesh"]))
+    np.save(paths["model"], np.asarray(manager.model, dtype=float))
+    response = getattr(manager, "response", None)
+    if response is None:
+        inverse = getattr(manager, "inv", None)
+        response = getattr(inverse, "response", None)
+    if response is not None:
+        np.save(paths["response"], np.asarray(response, dtype=float))
+    else:
+        paths.pop("response")
+    try:
+        np.save(paths["coverage"], np.asarray(manager.coverage(), dtype=float))
+    except Exception:  # noqa: BLE001 - coverage is optional for the viewer
+        paths.pop("coverage")
+    return {key: str(path) for key, path in paths.items()}
+
+
 
 #: Mesh formats a user can hand the inversion. ``.bms`` is PyGIMLi's own,
 #: ``.msh`` is Gmsh (the usual route for a complex 3D domain), and the rest are
@@ -1412,6 +1438,11 @@ def run_ert_manager_inversion(
         _export_model_vtk(fixed_handle, out, "resistivity_model_fixed_lambda.vtk")
         if keep_fixed else vtk_path
     )
+    model_bundle = _export_model_bundle(primary, out, "resistivity")
+    fixed_model_bundle = (
+        _export_model_bundle(fixed_handle, out, "resistivity_fixed_lambda")
+        if keep_fixed else dict(model_bundle)
+    )
 
     if result["auto_lambda_note"]:
         log(result["auto_lambda_note"])
@@ -1449,6 +1480,7 @@ def run_ert_manager_inversion(
             "mgr": primary,
             "chi2": run.chi2,
             "vtk": vtk_path,
+            "model_bundle": model_bundle,
             "metrics": metrics,
             "convergence": list(run.convergence),
             "fixed_mgr": fixed_handle if keep_fixed else primary,
@@ -1463,6 +1495,7 @@ def run_ert_manager_inversion(
             "fixed_metrics": dict(fixed_run.metrics),
             "fixed_convergence": list(fixed_run.convergence),
             "fixed_vtk_path": fixed_vtk_path,
+            "fixed_model_bundle": fixed_model_bundle,
             "target_chi2": target,
             "chi2_tolerance": tol,
         }

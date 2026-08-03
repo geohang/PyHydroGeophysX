@@ -310,6 +310,13 @@ def test_adtlert_windowed_runs_through_the_public_timelapse_workflow(
     assert result["final_models"].shape[1] == 3
     assert result["coverage"].shape == result["final_models"].T.shape
     assert result["n_data"] == 3 * datasets[0].size()
+    bundle = result["model_bundle"]
+    restored_mesh = ert_inversion.pg.load(bundle["mesh"])
+    restored_models = np.load(bundle["models"], allow_pickle=False)
+    restored_coverage = np.load(bundle["coverage"], allow_pickle=False)
+    assert restored_mesh.cellCount() == result["mesh"].cellCount()
+    np.testing.assert_allclose(restored_models, result["final_models"])
+    np.testing.assert_allclose(restored_coverage, result["coverage"])
 
 
 def test_missing_adtlert_reports_the_install_extra(

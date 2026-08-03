@@ -52,11 +52,13 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 )
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
-from PyHydroGeophysX.qt_apps.workers import TaskWorker, WorkflowWorker
+from PyHydroGeophysX.qt_apps.workers import (
+    ProcessWorkflowWorker,
+    TaskWorker,
+)
 from PyHydroGeophysX.data_processing.ert_io import save_edited_ert_container
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
-    RunContext,
     WorkflowRunResult,
     WorkflowSpec,
     export_workflow_bundle,
@@ -107,7 +109,7 @@ class ERTProcessingModule(BaseModule):
         self._ert_data = None        # pygimli DataContainerERT for inversion (filtered)
         self._ert_data_full = None   # unfiltered original
         self._qc_mask: Optional[List[bool]] = None
-        self._inv_worker: Optional[WorkflowWorker] = None
+        self._inv_worker: Optional[Any] = None
         self._inv_busy: Optional[BusyStateController] = None
         self._adtlert_probe_worker: Optional[TaskWorker] = None
         self._adtlert_probe_serial = 0
@@ -128,7 +130,7 @@ class ERTProcessingModule(BaseModule):
         self._tl_files: List[str] = []
         self._tl_labels: List[str] = []
         self._tl_times: List[float] = []
-        self._tl_worker: Optional[WorkflowWorker] = None
+        self._tl_worker: Optional[Any] = None
         self._tl_busy: Optional[BusyStateController] = None
         self._tl_recipe_path = ""
         self._tl_out: Optional[str] = None
@@ -1075,9 +1077,16 @@ class ERTProcessingModule(BaseModule):
         self._invert_btn.setText("Inverting…")
         self._inv_progress.setVisible(True)
         self._inv_progress.setRange(0, 0)
-        self._inv_worker = WorkflowWorker(
-            spec,
-            RunContext(project_root=project_root, output_dir=out_path),
+        # Every ERT engine performs long native numerical work.  Run all of
+        # them outside Qt's interpreter: PyGIMLi and the in-house Gauss-Newton
+        # path can retain the GIL, while ADTLERT owns a CUDA context.  The
+        # process-safe model bundle below restores mesh/model/response/coverage
+        # into the interactive viewer when the child exits.
+        self._inv_worker = ProcessWorkflowWorker(
+            recipe_path,
+            project_root,
+            out_path,
+            out_path / "ert_process_result.json",
         )
         self._inv_worker.logged.connect(lambda msg: self.log(msg, "info"))
         self._inv_worker.succeeded.connect(self._on_ert_workflow_ok)
@@ -1097,6 +1106,14 @@ class ERTProcessingModule(BaseModule):
 
     def _on_ert_workflow_ok(self, result: WorkflowRunResult) -> None:
         summary = dict(result.summary)
+        manager = result.objects.get("manager")
+        fixed_manager = result.objects.get("fixed_manager")
+        if manager is None and summary.get("model_bundle"):
+            manager = self._load_model_bundle(summary["model_bundle"])
+        if fixed_manager is None and summary.get("fixed_model_bundle"):
+            fixed_manager = self._load_model_bundle(
+                summary["fixed_model_bundle"]
+            )
         vtk = self._abs_path(summary.get("vtk"))
         if not vtk:
             vtk_ref = next(
@@ -1105,13 +1122,21 @@ class ERTProcessingModule(BaseModule):
             )
             vtk = self._abs_path(vtk_ref.path) if vtk_ref is not None else ""
         payload = {
-            "mgr": result.objects.get("manager"),
+            "mgr": manager,
             "chi2": result.metrics.get("chi2", float("nan")),
             "vtk": vtk,
             "metrics": dict(result.metrics),
-            "convergence": result.objects.get("convergence") or [],
-            "fixed_mgr": result.objects.get("fixed_manager"),
-            "fixed_convergence": result.objects.get("fixed_convergence") or [],
+            "convergence": (
+                result.objects.get("convergence")
+                or summary.get("convergence")
+                or []
+            ),
+            "fixed_mgr": fixed_manager,
+            "fixed_convergence": (
+                result.objects.get("fixed_convergence")
+                or summary.get("fixed_convergence")
+                or []
+            ),
             "fixed_metrics": dict(summary.get("fixed_metrics") or {}),
             "fixed_lambda": dict(summary.get("fixed_lambda") or {}),
             "fixed_vtk": self._abs_path(summary.get("fixed_vtk_path")),
@@ -1137,6 +1162,29 @@ class ERTProcessingModule(BaseModule):
                 result.to_dict(),
                 recipe_path=self._ert_recipe_path,
             )
+
+    def _load_model_bundle(self, bundle: Dict[str, Any]):
+        """Hydrate a process-safe ERT result into the viewer's manager shape."""
+        try:
+            import pygimli as pygimli
+
+            from PyHydroGeophysX.inversion.ert_inversion import ModelResult
+
+            paths = {key: Path(str(value)) for key, value in dict(bundle).items()}
+            mesh = pygimli.load(str(paths["mesh"]))
+            model = np.load(paths["model"], allow_pickle=False)
+            response = (
+                np.load(paths["response"], allow_pickle=False)
+                if "response" in paths else None
+            )
+            coverage = (
+                np.load(paths["coverage"], allow_pickle=False)
+                if "coverage" in paths else None
+            )
+            return ModelResult(mesh, model, response=response, coverage=coverage)
+        except Exception as exc:  # noqa: BLE001 - keep metrics usable on load failure
+            self.log(f"Could not load inversion model files: {exc}", "error")
+            return None
 
     def _on_inversion_ok(self, result: dict) -> None:
         metrics = dict(result.get("metrics") or {})
@@ -1604,9 +1652,16 @@ class ERTProcessingModule(BaseModule):
         self._tl_progress.setVisible(True); self._tl_progress.setRange(0, 0)
         self.log(f"Starting {params['inversion_type']} time-lapse ERT inversion "
                  f"({len(self._tl_files)} steps)…", "info")
-        self._tl_worker = WorkflowWorker(
-            spec,
-            RunContext(project_root=bundle_dir, output_dir=output_base),
+        # Both supported time-lapse engines execute long native/GPU kernels.
+        # Keep every time-lapse run outside Qt's interpreter so PyGIMLi cannot
+        # retain the GIL and ADTLERT cannot monopolize the GUI CUDA context.
+        # This also covers an unavailable ADTLERT request that falls back to
+        # the PyHydro engine inside the workflow process.
+        self._tl_worker = ProcessWorkflowWorker(
+            recipe_path,
+            bundle_dir,
+            output_base,
+            bundle_dir / "ert_timelapse_process_result.json",
         )
         self._tl_worker.logged.connect(lambda m: self.log(m, "info"))
         self._tl_worker.succeeded.connect(self._on_tl_workflow_ok)
@@ -1623,7 +1678,46 @@ class ERTProcessingModule(BaseModule):
                 result.to_dict(),
                 recipe_path=self._tl_recipe_path,
             )
-        self._on_tl_ok(result.legacy_payload())
+        payload = result.legacy_payload()
+        if payload.get("mesh") is None and payload.get("model_bundle"):
+            payload.update(self._load_timelapse_bundle(payload["model_bundle"]))
+        self._on_tl_ok(payload)
+
+    def _load_timelapse_bundle(self, bundle: Dict[str, Any]) -> Dict[str, Any]:
+        """Load process-safe time-lapse arrays for the interactive Qt viewer."""
+        try:
+            import pygimli as pygimli
+
+            base = (
+                Path(self._tl_recipe_path).resolve().parent
+                if self._tl_recipe_path else Path.cwd()
+            )
+
+            def resolve(value: Any) -> Path:
+                path = Path(str(value))
+                return path if path.is_absolute() else base / path
+
+            paths = dict(bundle)
+            mesh_path = resolve(paths.get("mesh", ""))
+            models_path = resolve(paths.get("models", ""))
+            if not mesh_path.is_file() or not models_path.is_file():
+                raise FileNotFoundError(
+                    f"missing mesh or model bundle ({mesh_path}, {models_path})"
+                )
+            coverage_path = resolve(paths.get("coverage", ""))
+            return {
+                "mesh": pygimli.load(str(mesh_path)),
+                "final_models": np.load(
+                    models_path, allow_pickle=False, mmap_mode="r"
+                ),
+                "coverage": (
+                    np.load(coverage_path, allow_pickle=False, mmap_mode="r")
+                    if coverage_path.is_file() else None
+                ),
+            }
+        except Exception as exc:  # noqa: BLE001 - retain scalar results on failure
+            self.log(f"Could not load time-lapse model files: {exc}", "error")
+            return {"mesh": None, "final_models": None, "coverage": None}
 
     def _on_tl_ok(self, result: dict) -> None:
         # Pull out the in-memory mesh + models for the interactive viewer, then
