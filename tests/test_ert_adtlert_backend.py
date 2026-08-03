@@ -14,6 +14,9 @@ pytest.importorskip("adtlert")
 import pygimli.meshtools as mt  # noqa: E402
 from pygimli.physics import ert  # noqa: E402
 import PyHydroGeophysX.inversion.ert_inversion as ert_inversion  # noqa: E402
+from PyHydroGeophysX.data_processing.ert_io import (  # noqa: E402
+    normalize_for_timelapse,
+)
 
 from PyHydroGeophysX._internal.optional_dependencies import (  # noqa: E402
     BackendUnavailable,
@@ -124,6 +127,10 @@ def test_adtlert_backend_runs_through_the_public_ert_pipeline(
     coverage = np.asarray(manager.coverage(), dtype=float)
     assert result["engine"] == "adtlert"
     assert result["metrics"]["backend"] == "adtlert"
+    assert result["metrics"]["sensitivity_profile"] == "paper"
+    assert result["metrics"]["normal_sensitivity"] is True
+    assert result["metrics"]["include_robin_boundary_derivative"] is False
+    assert result["metrics"]["linearized_solver"] == "gpu_cgls"
     assert manager.paraDomain.cellCount() == model.size == coverage.size
     assert response.shape == (data.size(),)
     assert np.all(np.isfinite(model))
@@ -187,6 +194,9 @@ def test_adtlert_windowed_timelapse_reuses_one_forward_context(
 
     expected_cells = sum(1 for cell in mesh.cells() if cell.marker() > 1)
     assert result.meta["backend"] == "adtlert"
+    assert result.meta["sensitivity_profile"] == "paper"
+    assert result.meta["normal_sensitivity"] is True
+    assert result.meta["include_robin_boundary_derivative"] is False
     assert result.meta["linearized_solver"] == _adtlert_solver_name(
         "cgls", prefer_gpu=True
     )
@@ -197,6 +207,39 @@ def test_adtlert_windowed_timelapse_reuses_one_forward_context(
     assert len(result.meta["window_reports"]) == 2
     assert np.all(np.isfinite(result.final_models))
     assert np.all(np.isfinite(result.predicted_data))
+
+
+def test_timelapse_normalization_applies_one_common_quality_mask(
+    adtlert_timelapse_case, tmp_path: Path
+) -> None:
+    root, files, datasets, _ = adtlert_timelapse_case
+    source_paths = []
+    for index, name in enumerate(files[:3]):
+        data = ert.load(str(root / name))
+        errors = np.full(data.size(), 0.03, dtype=float)
+        if index == 1:
+            errors[0] = 0.5
+        data["err"] = errors
+        path = tmp_path / f"source_{index}.dat"
+        data.save(str(path))
+        source_paths.append(str(path))
+
+    clean_dir, names, normalized = normalize_for_timelapse(
+        source_paths, None, str(tmp_path / "normalized"), max_error=0.1
+    )
+
+    assert Path(clean_dir).is_dir()
+    assert len(names) == len(normalized) == 3
+    assert {int(data.size()) for data in normalized} == {
+        int(datasets[0].size()) - 1
+    }
+    layouts = [
+        np.column_stack(
+            [np.asarray(data[key]) for key in ("a", "b", "m", "n")]
+        )
+        for data in normalized
+    ]
+    assert all(np.array_equal(layouts[0], layout) for layout in layouts[1:])
 
 
 @requires_adtlert_cuda

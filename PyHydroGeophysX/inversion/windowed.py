@@ -313,6 +313,18 @@ class WindowedTimeLapseERTInversion:
             self.inversion_params.get("method", "cgls"),
             prefer_gpu=True,
         )
+        iteration_chi2: List[float] = []
+
+        def _capture_progress(event: Dict[str, Any]) -> None:
+            # ADTLERT 0.1.0's windowed result replaces the within-window
+            # iteration history with one final chi2 per window. Capture the
+            # existing progress events so the UI and exports retain the real
+            # convergence trace without patching the dependency.
+            if event.get("event") == "timelapse_iteration_done":
+                value = event.get("chi2")
+                if value is not None:
+                    iteration_chi2.append(float(value))
+
         config = InversionConfig(
             max_iterations=int(
                 self.inversion_params.get("max_iterations", 15)
@@ -334,13 +346,20 @@ class WindowedTimeLapseERTInversion:
                     "model_constraints", (1.0e-2, 1.0e5)
                 )
             ),
-            target_chi2=float(
-                self.inversion_params.get("target_chi_squared", 1.0)
+            target_chi2=(
+                None
+                if self.inversion_params.get("target_chi_squared") is None
+                else float(self.inversion_params["target_chi_squared"])
             ),
             step_tolerance=float(
-                self.inversion_params.get("convergence_tolerance", 0.01)
+                self.inversion_params.get("convergence_tolerance", 1.0e-4)
             ),
             linearized_solver=linearized_solver,
+            normal_sensitivity=True,
+            include_robin_boundary_derivative=False,
+            max_log_step=1.0,
+            line_search=True,
+            progress_callback=_capture_progress,
         )
         initial = np.vstack(
             [
@@ -385,9 +404,11 @@ class WindowedTimeLapseERTInversion:
             for values in coverage_by_time
         ]
         result.all_chi2 = [float(value) for value in inverted.all_chi2]
-        result.iteration_chi2 = [
-            float(value) for value in inverted.iteration_chi2
-        ]
+        result.iteration_chi2 = (
+            iteration_chi2
+            if iteration_chi2
+            else [float(value) for value in inverted.iteration_chi2]
+        )
         result.meta.update(
             backend="adtlert",
             backend_version=version,
@@ -401,6 +422,9 @@ class WindowedTimeLapseERTInversion:
             window_size=int(self.window_size),
             window_step=int(self.inversion_params.get("window_step", 1)),
             linearized_solver=linearized_solver,
+            sensitivity_profile="paper",
+            normal_sensitivity=True,
+            include_robin_boundary_derivative=False,
             window_reports=list(inverted.window_reports),
         )
         return result

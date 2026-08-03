@@ -330,13 +330,18 @@ def save_edited_ert_container(
 # Normalize a sequence into clean pygimli files for the core inversion
 # ---------------------------------------------------------------------------
 def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
-                            out_dir: str, log: LogFn = _noop):
+                            out_dir: str, log: LogFn = _noop,
+                            max_error: Optional[float] = None):
     """Load each file robustly and write a clean pygimli ``.dat`` into one folder.
 
     The core :class:`TimeLapseERTInversion` reloads files with ``ert.load``; the
     normalized files are written in pygimli's native unified format (proper token
     headers, geometric factors, ``rhoa = R*k``, topography in ``z``) so that
-    reload is correct. Returns ``(clean_dir, basenames, containers)``; all clean
+    reload is correct. As in the published AD-TLERT real-data workflow, one
+    common quality mask is intersected across every time step before anything
+    is written. This guarantees that every window sees the same ABMN rows and
+    prevents a datum that is bad at one time from changing the inverse problem
+    only at that time. Returns ``(clean_dir, basenames, containers)``; all clean
     files share one folder so the windowed inversion (which takes a directory +
     filenames) works directly.
     """
@@ -347,14 +352,73 @@ def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
             stale.unlink()
         except OSError:
             pass
+    containers = [
+        load_ert_container(f, instrument=instrument, log=log)
+        for f in files
+    ]
+    if not containers:
+        raise ValueError("Time-lapse normalization needs at least one ERT file.")
+
+    def _layout(data):
+        sensors = np.asarray(
+            [[float(pos[0]), float(pos[1])] for pos in data.sensorPositions()],
+            dtype=float,
+        )
+        abmn = np.column_stack(
+            [
+                np.asarray(data[key], dtype=np.int64)
+                for key in ("a", "b", "m", "n")
+            ]
+        )
+        return sensors, abmn
+
+    reference_sensors, reference_abmn = _layout(containers[0])
+    common_mask = np.ones(reference_abmn.shape[0], dtype=bool)
+    for index, data in enumerate(containers):
+        sensors, abmn = _layout(data)
+        if sensors.shape != reference_sensors.shape or not np.allclose(
+            sensors, reference_sensors, rtol=0.0, atol=1.0e-8
+        ):
+            raise ValueError(
+                "Time-lapse ERT requires identical electrode positions; "
+                f"step {index} differs from the first file."
+            )
+        if not np.array_equal(abmn, reference_abmn):
+            raise ValueError(
+                "Time-lapse ERT requires identical ABMN ordering; "
+                f"step {index} differs from the first file."
+            )
+        rhoa = np.asarray(data["rhoa"], dtype=float)
+        quality = np.isfinite(rhoa) & (rhoa > 0.0)
+        if data.haveData("valid"):
+            quality &= np.asarray(data["valid"], dtype=float) > 0.0
+        if data.haveData("err"):
+            errors = np.asarray(data["err"], dtype=float)
+            quality &= np.isfinite(errors)
+            if max_error is not None:
+                quality &= errors <= float(max_error)
+        common_mask &= quality
+
+    kept = int(common_mask.sum())
+    if kept < 4:
+        raise ValueError(
+            "Need at least four measurements in the common time-lapse "
+            "quality mask."
+        )
+    removed = int(common_mask.size - kept)
+    log(
+        f"Common time-lapse quality mask: {kept}/{common_mask.size} "
+        f"measurements retained across {len(containers)} steps"
+        + (f" ({removed} removed)" if removed else "")
+    )
+
     basenames: List[str] = []
-    containers: List[Any] = []
-    for i, f in enumerate(files):
-        data = load_ert_container(f, instrument=instrument, log=log)
+    for i, (f, data) in enumerate(zip(files, containers)):
+        if removed:
+            data.remove(~common_mask)
         name = f"step_{i:03d}.dat"
         data.save(str(base / name))
         basenames.append(name)
-        containers.append(data)
         log(f"Prepared {i + 1}/{len(files)}: {Path(f).name} -> "
             f"{int(data.size())} data, {int(data.sensorCount())} electrodes")
     return str(base), basenames, containers

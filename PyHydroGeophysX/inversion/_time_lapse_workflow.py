@@ -31,6 +31,8 @@ DEFAULT_TL = {
     "method": "cgls", "mesh_quality": 34.0, "rho_min": 1.0, "rho_max": 1.0e4,
     "windowed": False, "window_size": 3, "save_memory": False, "instrument": None,
     "engine": "pyhydro",
+    "para_depth": 0.0,
+    "max_error": None,
     # Lambda relaxation. A trial here is a full joint inversion over every time
     # step, so the default budget is smaller than the single-inversion search.
     "auto_lambda": False, "target_chi2": 1.0, "chi2_tolerance": 0.2,
@@ -157,7 +159,8 @@ def build_timelapse_config(data_files: Sequence[str], measurement_times: Sequenc
         "inversion": {k: p[k] for k in (
             "lambda_val", "alpha", "inversion_type", "max_iterations",
             "relativeError", "method", "mesh_quality", "rho_min", "rho_max",
-            "windowed", "window_size", "save_memory", "engine")},
+            "windowed", "window_size", "save_memory", "engine", "para_depth",
+            "max_error")},
     }
 
 
@@ -190,11 +193,28 @@ def run_timelapse_ert(
     source_files = [str(f) for f in data_files]
     if len(source_files) < 2:
         raise ValueError("Time-lapse inversion needs at least two ERT data files.")
-    p = {**DEFAULT_TL, **(params or {})}
+    provided = dict(params or {})
+    p = {**DEFAULT_TL, **provided}
     from .ert_inversion import _resolve_ert_engine
 
     requested_engine = str(p.get("engine", "pyhydro")).lower()
     engine = _resolve_ert_engine(requested_engine, log=log)
+    if engine == "adtlert":
+        # Defaults from the paper branch's real-data time-lapse example.
+        # Explicit caller choices still win.
+        if "windowed" not in provided:
+            p["windowed"] = True
+        if "window_size" not in provided:
+            p["window_size"] = 3
+        if "max_iterations" not in provided:
+            p["max_iterations"] = 5
+        if "rho_min" not in provided:
+            p["rho_min"] = 1.0
+        if "rho_max" not in provided:
+            p["rho_max"] = 1.0e5
+        if "para_depth" not in provided:
+            p["para_depth"] = 90.0
+        p["method"] = "cgls"  # maps to GPU CGLS for the CUDA-only backend
     use_windowed = (
         bool(p.get("windowed", False))
         and 2 <= int(p["window_size"]) <= len(source_files)
@@ -225,12 +245,16 @@ def run_timelapse_ert(
     log(f"Preparing {len(source_files)} ERT files"
         + (f" (instrument: {instrument})" if instrument else " (auto-detect)") + " …")
     clean_dir, basenames, containers = ert_load.normalize_for_timelapse(
-        source_files, instrument, out_dir, log=log)
+        source_files, instrument, out_dir, log=log,
+        max_error=p.get("max_error"))
     files = [os.path.join(clean_dir, b) for b in basenames]
 
     log(f"Building mesh from {Path(source_files[0]).name} (quality {p['mesh_quality']})")
     data0 = containers[0]
-    mesh = pg_ert.ERTManager(data0).createMesh(data=data0, quality=float(p["mesh_quality"]))
+    mesh_kwargs: Dict[str, Any] = {"quality": float(p["mesh_quality"])}
+    if float(p.get("para_depth", 0.0)) > 0.0:
+        mesh_kwargs["paraDepth"] = float(p["para_depth"])
+    mesh = pg_ert.ERTManager(data0).createMesh(data=data0, **mesh_kwargs)
 
     # Pick dense vs. sparse (low-memory) solve. Honor an explicit choice; otherwise
     # auto-enable sparse once the dense Gauss-Newton matrices would get large.
@@ -291,11 +315,15 @@ def run_timelapse_ert(
         coverage = None
     res_mesh = getattr(result, "mesh", mesh)
 
-    # Inversion-quality history: result.all_chi2 holds [chi2, phi_m, phi_t] per
-    # iteration (full mode). Reduce to a chi2-per-iteration list for the panel.
+    # ADTLERT windowed results expose the actual iteration trace separately from
+    # ``all_chi2`` (which contains one final value per window). Prefer that trace
+    # so a one-window paper-style run does not look like a one-iteration run.
     chi2_history: List[float] = []
     try:
-        for entry in (getattr(result, "all_chi2", None) or []):
+        raw_history = getattr(result, "iteration_chi2", None)
+        if raw_history is None or len(raw_history) == 0:
+            raw_history = getattr(result, "all_chi2", None) or []
+        for entry in raw_history:
             arr = np.asarray(entry, dtype=float).ravel()
             if arr.size:
                 chi2_history.append(float(arr[0]))
@@ -315,16 +343,29 @@ def run_timelapse_ert(
 
     # Resistivity-evolution panel. Use the same per-model, logarithmic ERT
     # rendering convention as the interactive Resistivity model view.
-    finite = final_models[np.isfinite(final_models)]
-    rho_min = float(np.min(finite)) if finite.size else 1.0
-    rho_max = float(np.max(finite)) if finite.size else 1000.0
+    finite = final_models[np.isfinite(final_models) & (final_models > 0.0)]
+    if finite.size:
+        # One scale across every date, as in the paper figures. Robust limits
+        # keep a handful of poorly covered extreme cells from washing out the
+        # time-lapse signal everywhere else.
+        rho_min = float(np.nanpercentile(finite, 2.0))
+        rho_max = float(np.nanpercentile(finite, 98.0))
+    else:
+        rho_min, rho_max = 1.0, 1000.0
+    if rho_max <= rho_min:
+        rho_max = rho_min * 1.01
     ncol = min(4, n_time)
     nrow = int(np.ceil(n_time / ncol))
     fig = plt.figure(figsize=(3.6 * ncol, 3.0 * nrow))
     for i in range(n_time):
         ax = fig.add_subplot(nrow, ncol, i + 1)
         show_kw = ert_plot_style.ert_model_plot_kwargs()
-        show_kw.update(ax=ax, label=ert_plot_style.ERT_RESISTIVITY_LABEL)
+        show_kw.update(
+            ax=ax,
+            label=ert_plot_style.ERT_RESISTIVITY_LABEL,
+            cMin=rho_min,
+            cMax=rho_max,
+        )
         if coverage is not None and coverage.shape[0] > i:
             show_kw["coverage"] = coverage[i]
         try:
@@ -392,6 +433,13 @@ def run_timelapse_ert(
         "engine_requested": requested_engine,
         "backend_version": str(result.meta.get("backend_version", "")),
         "linearized_solver": str(result.meta.get("linearized_solver", "")),
+        "sensitivity_profile": str(
+            result.meta.get("sensitivity_profile", "")
+        ),
+        "normal_sensitivity": result.meta.get("normal_sensitivity"),
+        "include_robin_boundary_derivative": result.meta.get(
+            "include_robin_boundary_derivative"
+        ),
         "n_times": int(n_time),
         "mesh_cells": int(res_mesh.cellCount()),
         "inversion_type": str(p["inversion_type"]),

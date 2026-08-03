@@ -559,7 +559,6 @@ _ADTLERT_SOLVERS: Dict[str, str] = {
     "gpu_cgls": "gpu_cgls",
 }
 
-
 def _adtlert_solver_name(method: str, *, prefer_gpu: bool = False) -> str:
     if prefer_gpu and str(method).lower() == "cgls":
         try:
@@ -579,13 +578,23 @@ def _adtlert_solver_name(method: str, *, prefer_gpu: bool = False) -> str:
     return solver
 
 
+def _enable_adtlert_float64() -> None:
+    """Put ADTLERT's runtime in float64 before anything imports it.
+
+    Float32 is not a speed/accuracy trade here, it simply does not work: the
+    2.5D solve returns non-finite total fields and the forward raises
+    ``FloatingPointError``. ADTLERT reads this at import time, so it has to be
+    set before the first ``import adtlert``, and it is assigned rather than
+    defaulted because a stale ``0`` in the environment would otherwise break
+    the backend with no way to tell why.
+    """
+    os.environ["ADTLERT_ENABLE_FLOAT64"] = "1"
+
+
 def _adtlert_cuda_available() -> bool:
     """Return whether ADTLERT's Torch/CuPy CUDA 12 path is usable."""
+    _enable_adtlert_float64()
     try:
-        # ADTLERT's terrain auxiliary path promotes selected operators to
-        # float64. Starting the runtime in float64 keeps all Torch sparse
-        # operands consistent for real topographic surveys.
-        os.environ.setdefault("ADTLERT_ENABLE_FLOAT64", "1")
         import adtlert  # noqa: F401
         import cupy as cp
         import torch
@@ -646,8 +655,8 @@ def _adtlert_survey_supported(container) -> bool:
 
 def _build_adtlert_forward(container, mesh, *, log=_noop_log):
     """Build one shared ADTLERT forward context for single or windowed ERT."""
+    _enable_adtlert_float64()
     try:
-        os.environ.setdefault("ADTLERT_ENABLE_FLOAT64", "1")
         import adtlert
         from adtlert.forward import mesh_to_adtlert, survey_to_adtlert
         from adtlert.inversion import ParameterizedERTForward2p5D
@@ -729,6 +738,12 @@ class _ADTLertEngine:
             float(value) for value in model_constraints
         )
         self._solver = _adtlert_solver_name(method, prefer_gpu=True)
+        log(
+            "  ADTLERT paper configuration: "
+            "normal_sensitivity=True, "
+            "include_robin_boundary_derivative=False, "
+            f"linearized_solver={self._solver}"
+        )
 
     def reference_model(self):
         return self._initial_model.copy()
@@ -754,6 +769,10 @@ class _ADTLertEngine:
             target_chi2=float(target_chi2),
             step_tolerance=float(plateau_tolerance),
             linearized_solver=self._solver,
+            normal_sensitivity=True,
+            include_robin_boundary_derivative=False,
+            max_log_step=1.0,
+            line_search=True,
         )
         inverted = invert_single_log_resistivity(
             self._forward,
@@ -788,6 +807,10 @@ class _ADTLertEngine:
                 "lambda": float(lam),
                 "iterations": iterations,
                 "n_data": int(self.container.size()),
+                "sensitivity_profile": "paper",
+                "normal_sensitivity": True,
+                "include_robin_boundary_derivative": False,
+                "linearized_solver": self._solver,
             },
         )
 
@@ -811,6 +834,19 @@ def _make_engine(name: str, container, mesh, **kwargs):
     return factory(container, mesh, **kwargs)
 
 
+def _diverged(run) -> bool:
+    """Did this run end worse than it started?
+
+    ``stop`` can otherwise only say target / iteration_cap / plateau, so a
+    misfit that climbs every iteration is reported as a plateau and the railed
+    model it produced is handed back as a result. Comparing the ends of the
+    convergence history is enough to tell the difference, and it costs nothing.
+    """
+    history = [float(value) for value in (getattr(run, "convergence", None) or [])
+               if value == value]
+    return len(history) >= 2 and history[-1] > history[0]
+
+
 def _fit_to_plateau(engine, *, lam: float, max_iterations: int,
                     plateau_tolerance: float, target_chi2: float,
                     max_total_iterations: int, start_model=None,
@@ -832,6 +868,14 @@ def _fit_to_plateau(engine, *, lam: float, max_iterations: int,
     run = engine.fit(lam=lam, max_iterations=max_iterations,
                      plateau_tolerance=plateau_tolerance, target_chi2=target_chi2,
                      start_model=start_model, reference_model=reference)
+    if _diverged(run):
+        # Continuing a run that is climbing only buys a worse model, and the
+        # caller needs to know the number it is being handed is not a fit.
+        run.stop = "diverged"
+        log(f"    lambda = {lam:g}: the misfit rose from "
+            f"{run.convergence[0]:.3f} to {run.chi2:.3f}; this is not a "
+            "converged result")
+        return run
     while run.stop == "iteration_cap" and run.iterations < int(max_total_iterations):
         extra = min(int(max_iterations), int(max_total_iterations) - run.iterations)
         if extra <= 0:
@@ -840,24 +884,32 @@ def _fit_to_plateau(engine, *, lam: float, max_iterations: int,
             f"(chi2 = {run.chi2:.3f}) for up to {extra} more")
         if reference is None:
             reference = engine.reference_model()
-        before = run.chi2
+        previous, before = run, run.chi2
         nxt = engine.fit(lam=lam, max_iterations=extra,
                          plateau_tolerance=plateau_tolerance, target_chi2=target_chi2,
                          start_model=run.model, reference_model=reference)
         nxt.convergence = list(run.convergence) + list(nxt.convergence[1:])
         nxt.iterations = run.iterations + nxt.iterations
         nxt.metrics["iterations"] = nxt.iterations
-        run = nxt
         # Hitting the iteration cap is not proof that the misfit is still
         # falling. A heavily over-regularized lambda can oscillate instead, and
         # continuing then spends the whole ceiling to end up no better.
-        gained = before - run.chi2
-        if not (before == before and run.chi2 == run.chi2
+        gained = before - nxt.chi2
+        if not (before == before and nxt.chi2 == nxt.chi2
                 and gained > abs(before) * float(plateau_tolerance)):
+            # A continuation is allowed to stop improving. It is not allowed to
+            # hand back something worse than what it was given, which is what a
+            # diverging backend does on every extra block.
+            worse = not (nxt.chi2 == nxt.chi2 and nxt.chi2 <= before)
+            run = previous if worse else nxt
+            run.convergence = list(nxt.convergence)
             run.stop = "stalled"
             log(f"    lambda = {lam:g}: no further improvement "
-                f"({before:.3f} -> {run.chi2:.3f}); stopping here")
+                f"({before:.3f} -> {nxt.chi2:.3f}); "
+                + ("keeping the better earlier model" if worse
+                   else "stopping here"))
             break
+        run = nxt
     if run.stop == "iteration_cap":
         log(f"    lambda = {lam:g}: reached the {int(max_total_iterations)}-iteration "
             "ceiling while still improving, so its chi2 is an upper bound")
@@ -1100,6 +1152,10 @@ def run_ert_manager_inversion(
     cuDSS; ADTLERT's slower SciPy forward solver is intentionally disabled.
     Linux remains the recommended platform for the best performance. Without
     CUDA 12 or cuDSS, ``"adtlert"`` falls back to ``"pyhydro"``.
+
+    ADTLERT matches the published real-data branch: fast normal sensitivity,
+    no Robin-boundary derivative, line search, a maximum log step of one, and
+    GPU CGLS when CUDA is available.
     """
     requested_engine = str(engine).lower()
     engine = _resolve_ert_engine(requested_engine, log=log)
@@ -1175,6 +1231,9 @@ def run_ert_manager_inversion(
     result: Dict[str, Any] = {
         "engine": str(engine),
         "engine_requested": requested_engine,
+        "adtlert_sensitivity_profile": (
+            "paper" if engine == "adtlert" else None
+        ),
         "geometric_factors": geometry_info,
         "data_error": error_info,
         "lambda_requested": requested_lam,

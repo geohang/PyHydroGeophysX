@@ -109,6 +109,9 @@ class ERTProcessingModule(BaseModule):
         self._qc_mask: Optional[List[bool]] = None
         self._inv_worker: Optional[WorkflowWorker] = None
         self._inv_busy: Optional[BusyStateController] = None
+        self._adtlert_probe_worker: Optional[TaskWorker] = None
+        self._adtlert_probe_serial = 0
+        self._adtlert_runtime_ready: Optional[bool] = None
         self._ert_recipe_path: str = ""
         # Geometric factors are validated and repaired on every run, with no UI
         # control: a k that disagrees with the geometry rescales the whole section
@@ -317,14 +320,23 @@ class ERTProcessingModule(BaseModule):
         self._engine = QComboBox()
         for label, value in (("In-house Gauss-Newton", "pyhydro"),
                              ("PyGIMLi ERTManager", "pygimli"),
-                             ("ADTLERT differentiable 2.5D", "adtlert")):
+                             ("ADTLERT 2.5D (CUDA)", "adtlert")):
             self._engine.addItem(label, value)
         self._engine.setToolTip(
             "Solver. The in-house Gauss-Newton inversion exposes its own stopping rule "
             "and line search, so the fit assistance below can drive it directly; the "
-            "PyGIMLi manager is kept as a cross-check. ADTLERT is an optional "
-            "Torch backend for 2D profiles.")
+            "PyGIMLi manager is kept as a cross-check.\n\n"
+            "ADTLERT uses a CUDA-accelerated cuDSS forward solve and GPU CGLS. "
+            "CUDA 12 plus cuDSS are required. Windows is supported; Linux is "
+            "recommended for the best performance. The controls below remain "
+            "under your control when this engine is selected.")
+        self._engine.currentIndexChanged.connect(self._on_engine_changed)
         iform.addRow("Engine", self._engine)
+        self._adtlert_status = QLabel()
+        self._adtlert_status.setWordWrap(True)
+        self._adtlert_status.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self._adtlert_status.setVisible(False)
+        iform.addRow("", self._adtlert_status)
 
         self._lam = QDoubleSpinBox()
         self._lam.setDecimals(3)
@@ -644,6 +656,80 @@ class ERTProcessingModule(BaseModule):
         self._tl_panel.setVisible(bool(checked))
         self._invert_btn.setVisible(not checked)
 
+    def _on_engine_changed(self, _index: int = -1) -> None:
+        """Probe the selected CUDA backend without changing user parameters."""
+        if self._engine.currentData() != "adtlert":
+            self._adtlert_probe_serial += 1
+            self._adtlert_status.setVisible(False)
+            return
+        self._adtlert_probe_serial += 1
+        serial = self._adtlert_probe_serial
+        self._adtlert_runtime_ready = None
+        self._adtlert_status.setText("Checking CUDA, cuDSS, and GPU CGLS…")
+        self._adtlert_status.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        self._adtlert_status.setVisible(True)
+        worker = TaskWorker(self._probe_adtlert_runtime)
+        worker.succeeded.connect(
+            lambda result, token=serial: self._on_adtlert_probe_ok(token, result)
+        )
+        worker.failed.connect(
+            lambda message, token=serial: self._on_adtlert_probe_failed(
+                token, message
+            )
+        )
+        self._adtlert_probe_worker = self.register_worker(worker)
+        worker.start()
+
+    @staticmethod
+    def _probe_adtlert_runtime() -> Dict[str, Any]:
+        """Return the actual ADTLERT CUDA path selected by this environment."""
+        import cupy as cp
+        import torch
+        from nvmath.sparse.advanced import DirectSolver  # noqa: F401
+
+        from PyHydroGeophysX.inversion.ert_inversion import (
+            _adtlert_cudss_available,
+            _adtlert_solver_name,
+        )
+
+        if not torch.cuda.is_available():
+            raise RuntimeError("Torch cannot see a CUDA-capable GPU")
+        if int(cp.cuda.runtime.getDeviceCount()) < 1:
+            raise RuntimeError("CuPy cannot see a CUDA-capable GPU")
+        if not _adtlert_cudss_available():
+            raise RuntimeError("ADTLERT CUDA 12/cuDSS probe failed")
+        device = cp.cuda.runtime.getDeviceProperties(0)["name"]
+        if isinstance(device, bytes):
+            device = device.decode(errors="replace")
+        return {
+            "device": str(device),
+            "forward_solver": "cudss",
+            "linearized_solver": _adtlert_solver_name("cgls", prefer_gpu=True),
+        }
+
+    def _on_adtlert_probe_ok(self, serial: int, result: Dict[str, Any]) -> None:
+        if serial != self._adtlert_probe_serial:
+            return
+        if self._engine.currentData() != "adtlert":
+            return
+        self._adtlert_runtime_ready = True
+        self._adtlert_status.setText(
+            f"GPU ready: {result['device']} · cuDSS forward · GPU CGLS"
+        )
+        self._adtlert_status.setStyleSheet("color:#238636; font-size:8pt;")
+
+    def _on_adtlert_probe_failed(self, serial: int, message: str) -> None:
+        if serial != self._adtlert_probe_serial:
+            return
+        if self._engine.currentData() != "adtlert":
+            return
+        self._adtlert_runtime_ready = False
+        self._adtlert_status.setText(
+            "GPU unavailable: this selection will run the original PyHydro ERT "
+            f"engine. {message}"
+        )
+        self._adtlert_status.setStyleSheet("color:#b42318; font-size:8pt;")
+
     # -- loading -------------------------------------------------------------
     def _start_load(self, path: str) -> None:
         """Load one ERT file (off the UI thread) into the electrode + pseudosection
@@ -872,6 +958,15 @@ class ERTProcessingModule(BaseModule):
         if self._ert_data is None:
             self.log("Load ERT data with apparent resistivity first.", "warn")
             return
+        if (
+            self._engine.currentData() == "adtlert"
+            and self._adtlert_runtime_ready is False
+        ):
+            self.log(
+                "ADTLERT GPU is unavailable; this run will use the original "
+                "PyHydro ERT engine.",
+                "warn",
+            )
         out = self.state.output_dir or Path.cwd()
         out_path = io_utils.ensure_dir(Path(out) / "ert_results")
         input_path = out_path / "filtered_ert_data.dat"
@@ -1032,6 +1127,7 @@ class ERTProcessingModule(BaseModule):
             "outliers": dict(summary.get("outliers") or {}),
             "convergence_stop": summary.get("convergence_stop", ""),
             "engine": summary.get("engine", ""),
+            "engine_requested": summary.get("engine_requested", ""),
         }
         self._on_inversion_ok(payload)
         if hasattr(self.state, "update_workflow_result"):
@@ -1044,7 +1140,15 @@ class ERTProcessingModule(BaseModule):
 
     def _on_inversion_ok(self, result: dict) -> None:
         metrics = dict(result.get("metrics") or {})
-        metrics.setdefault("method", self._instrument.currentText())
+        engine = str(result.get("engine") or "")
+        requested_engine = str(result.get("engine_requested") or engine)
+        solver = str(metrics.get("linearized_solver") or "")
+        if engine:
+            metrics.setdefault(
+                "method", f"{engine} · {self._instrument.currentText()}"
+            )
+        else:
+            metrics.setdefault("method", self._instrument.currentText())
         note = str(result.get("auto_lambda_note") or "")
         status = str(result.get("auto_lambda_status") or "off")
         lam_used = result.get("lambda_used")
@@ -1065,6 +1169,8 @@ class ERTProcessingModule(BaseModule):
         # This panel sits above the convergence plot, so it stays to a couple of
         # short entries. Anything omitted here is in the log.
         extra: Dict[str, Any] = dict(metrics.get("extra") or {})
+        if engine == "adtlert":
+            extra["compute"] = "cuDSS forward · GPU CGLS"
         if dropped:
             extra["data"] = f"{outliers.get('kept')} of {outliers.get('n_start')} kept"
             if outliers.get("limited_by_floor"):
@@ -1185,6 +1291,18 @@ class ERTProcessingModule(BaseModule):
                         else "did not do better."), "warn")
         if keep_fixed:
             self.log("Your own settings are kept as the second entry in Model.", "info")
+        if requested_engine == "adtlert" and engine != "adtlert":
+            self.log(
+                "ADTLERT was requested but the run used the original PyHydro "
+                "ERT engine; CUDA/cuDSS was unavailable or the survey is not "
+                "supported by ADTLERT.",
+                "warn",
+            )
+        elif engine == "adtlert":
+            self.log(
+                f"Compute backend: ADTLERT · cuDSS forward · {solver or 'gpu_cgls'}.",
+                "info",
+            )
         vtk = result.get("vtk")
         if vtk:
             self.log(f"Saved {Path(vtk).name} to {Path(vtk).parent}", "info")
@@ -1203,7 +1321,9 @@ class ERTProcessingModule(BaseModule):
                             "rrms": metrics.get("rrms"), "iterations": metrics.get("iterations"),
                             "num_measurements": metrics.get("n_data", self._n_meas),
                             "instrument": self._instrument.currentText(),
-                            "engine": result.get("engine", ""),
+                            "engine": engine,
+                            "engine_requested": requested_engine,
+                            "linearized_solver": solver,
                             "lambda": lam_used, "lambda_requested": lam_req,
                             "auto_lambda_status": status,
                             "auto_lambda_note": note,
@@ -1413,6 +1533,15 @@ class ERTProcessingModule(BaseModule):
             return
         if (
             self._engine.currentData() == "adtlert"
+            and self._adtlert_runtime_ready is False
+        ):
+            self.log(
+                "ADTLERT GPU is unavailable; this run will use the original "
+                "PyHydro ERT engine.",
+                "warn",
+            )
+        if (
+            self._engine.currentData() == "adtlert"
             and not self._tl_windowed.isChecked()
         ):
             self.log(
@@ -1426,6 +1555,7 @@ class ERTProcessingModule(BaseModule):
             "lambda_val": self._lam.value(), "alpha": self._tl_alpha.value(),
             "inversion_type": self._tl_type.currentText(), "max_iterations": self._iter.value(),
             "relativeError": self._relerr.value(), "mesh_quality": self._quality.value(),
+            "para_depth": self._para_depth.value(),
             "windowed": self._tl_windowed.isChecked(), "window_size": self._tl_window.value(),
             "engine": str(self._engine.currentData()),
             "instrument": instrument,
@@ -1508,23 +1638,40 @@ class ERTProcessingModule(BaseModule):
         self._tl_export_btn.setEnabled(True)
 
         self._populate_tl_steps()
+        engine = str(result.get("engine") or "pyhydro")
+        requested_engine = str(result.get("engine_requested") or engine)
+        solver = str(result.get("linearized_solver") or "")
+        compute_note = "Joint χ² over all time steps."
+        if engine == "adtlert":
+            compute_note += f" cuDSS forward · {solver or 'gpu_cgls'}."
+        elif requested_engine == "adtlert":
+            compute_note += " ADTLERT was unavailable; original PyHydro ERT used."
         self._quality_view.show_quality(
             {"chi2": result.get("chi2"), "iterations": len(result.get("chi2_history") or []) or None,
              "n_data": result.get("n_data"), "lambda": self._lam.value(),
-             "method": (f"{result.get('engine', 'pyhydro')} time-lapse "
+             "method": (f"{engine} time-lapse "
                         f"{result.get('inversion_type', '')} "
                         f"({result.get('n_times')} steps)"),
-             "note": ("Joint χ² over all time steps."
-                      + (f" Solver: {result.get('linearized_solver')}."
-                         if result.get("linearized_solver") else ""))},
+             "note": compute_note},
             result.get("chi2_history"), title="Time-lapse ERT inversion")
         lowmem = " · low-memory" if result.get("save_memory") else ""
         n_vtk = len(result.get("vtk_step_paths") or [])
         self.log(f"Time-lapse inversion complete "
-                 f"({result.get('engine', 'pyhydro')}, {result.get('mode')}{lowmem}): "
+                 f"({engine}, {result.get('mode')}{lowmem}): "
                  f"{result.get('n_times')} steps, {result.get('mesh_cells')} cells. "
                  f"Saved VTK (combined + {n_vtk} per-step), npy, mesh. "
                  f"Pick a step in the Resistivity model tab; “Export results…” saves them.", "success")
+        if requested_engine == "adtlert" and engine != "adtlert":
+            self.log(
+                "ADTLERT was requested but the time-lapse run used the original "
+                "PyHydro ERT engine.",
+                "warn",
+            )
+        elif engine == "adtlert":
+            self.log(
+                f"Compute backend: ADTLERT · cuDSS forward · {solver or 'gpu_cgls'}.",
+                "info",
+            )
         self.report_result(result)
 
     def _populate_tl_steps(self) -> None:
