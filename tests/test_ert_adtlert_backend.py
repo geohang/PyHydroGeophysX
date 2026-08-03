@@ -31,6 +31,7 @@ from PyHydroGeophysX.inversion.ert_inversion import (  # noqa: E402
 from PyHydroGeophysX.inversion.windowed import (  # noqa: E402
     WindowedTimeLapseERTInversion,
     _ADTLERTWindowProgress,
+    _PyHydroWindowProgress,
 )
 from PyHydroGeophysX.inversion.time_lapse import (  # noqa: E402
     run_timelapse_ert,
@@ -76,6 +77,37 @@ def test_adtlert_window_events_are_forwarded_as_readable_progress() -> None:
     assert "assembling predictions for 10 time steps" in messages[4]
     assert "complete: 8/8 windows, final chi2 0.900" in messages[5]
     assert progress.iteration_chi2 == [1.2345]
+
+
+def test_pyhydro_window_iterations_map_to_global_progress_units() -> None:
+    messages = []
+    progress = _PyHydroWindowProgress(
+        start_idx=0,
+        n_windows=8,
+        window_size=3,
+        inversion_type="L2",
+        max_iterations=5,
+        log=messages.append,
+    )
+
+    progress.start()
+    progress({
+        "event": "timelapse_iteration_done",
+        "iteration": 2,
+        "max_iterations": 5,
+        "irls_iteration": 1,
+        "irls_iterations": 1,
+        "chi2": 2.3456,
+        "dphi": 0.125,
+    })
+    progress.done(chi2=2.1, iterations=2)
+
+    assert messages[0].startswith("[progress 0/40]")
+    assert "window 1/8 started (time steps 1-3)" in messages[0]
+    assert messages[1].startswith("[progress 2/40]")
+    assert "iteration 2/5: chi2 2.346, dPhi 0.125" in messages[1]
+    assert messages[2].startswith("[progress 5/40]")
+    assert "window 1/8 complete (2 iterations, chi2 2.100)" in messages[2]
 
 
 requires_adtlert_cuda = pytest.mark.skipif(

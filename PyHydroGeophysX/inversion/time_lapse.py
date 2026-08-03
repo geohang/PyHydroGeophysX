@@ -563,6 +563,19 @@ class TimeLapseERTInversion(InversionBase):
 
                 # Store iteration data
                 Err_tot.append([chi2_ert, fmert, ftert])
+                progress_callback = self.parameters.get('progress_callback')
+                if callable(progress_callback):
+                    progress_callback({
+                        'event': 'timelapse_iteration_done',
+                        'iteration': int(nn + 1),
+                        'max_iterations': int(self.parameters['max_iterations']),
+                        'irls_iteration': int(irls_iter + 1),
+                        'irls_iterations': int(
+                            1 if inversion_type == 'L2' else irls_iter_max
+                        ),
+                        'chi2': float(chi2_ert),
+                        'dphi': float(dPhi),
+                    })
 
                 # Check for convergence
                 if chi2_ert < target_chi2:

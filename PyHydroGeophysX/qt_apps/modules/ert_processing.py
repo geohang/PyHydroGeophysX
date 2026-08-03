@@ -1677,9 +1677,7 @@ class ERTProcessingModule(BaseModule):
             return
         self._tl_progress.setRange(0, total)
         self._tl_progress.setValue(max(0, min(current, total)))
-        self._tl_progress.setFormat(
-            f"Windows {current}/{total}" if current else f"Preparing {total} windows"
-        )
+        self._tl_progress.setFormat(label or f"Progress {current}/{total}")
 
     def _on_tl_workflow_ok(self, result: WorkflowRunResult) -> None:
         if hasattr(self.state, "update_workflow_result"):
