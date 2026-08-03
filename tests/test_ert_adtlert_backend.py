@@ -30,10 +30,52 @@ from PyHydroGeophysX.inversion.ert_inversion import (  # noqa: E402
 )
 from PyHydroGeophysX.inversion.windowed import (  # noqa: E402
     WindowedTimeLapseERTInversion,
+    _ADTLERTWindowProgress,
 )
 from PyHydroGeophysX.inversion.time_lapse import (  # noqa: E402
     run_timelapse_ert,
 )
+
+
+def test_adtlert_window_events_are_forwarded_as_readable_progress() -> None:
+    messages = []
+    progress = _ADTLERTWindowProgress(messages.append)
+
+    progress({
+        "event": "windowed_start",
+        "n_windows": 8,
+        "n_times": 10,
+        "window_size": 3,
+    })
+    progress({
+        "event": "window_start",
+        "window_index": 1,
+        "n_windows": 8,
+        "start_idx": 0,
+        "end_idx": 2,
+    })
+    progress({
+        "event": "timelapse_iteration_done",
+        "iteration": 2,
+        "max_iterations": 5,
+        "chi2": 1.2345,
+    })
+    progress({
+        "event": "window_done",
+        "window_index": 1,
+        "n_windows": 8,
+        "final_chi2": 1.2,
+    })
+    progress({"event": "windowed_prediction_start", "n_times": 10})
+    progress({"event": "windowed_done", "n_windows": 8, "final_chi2": 0.9})
+
+    assert messages[0].startswith("[progress 0/8]")
+    assert "window 1/8 started (time steps 1-3)" in messages[1]
+    assert "window 1/8, iteration 2/5: chi2 1.234" in messages[2]
+    assert messages[3].startswith("[progress 1/8]")
+    assert "assembling predictions for 10 time steps" in messages[4]
+    assert "complete: 8/8 windows, final chi2 0.900" in messages[5]
+    assert progress.iteration_chi2 == [1.2345]
 
 
 requires_adtlert_cuda = pytest.mark.skipif(
@@ -285,6 +327,7 @@ def test_adtlert_windowed_runs_through_the_public_timelapse_workflow(
     adtlert_timelapse_case, tmp_path: Path
 ) -> None:
     root, files, datasets, _ = adtlert_timelapse_case
+    messages = []
     result = run_timelapse_ert(
         [str(root / name) for name in files[:3]],
         [0.0, 1.0, 2.0],
@@ -298,6 +341,7 @@ def test_adtlert_windowed_runs_through_the_public_timelapse_workflow(
             "mesh_quality": 32.0,
         },
         str(tmp_path),
+        log=messages.append,
     )
 
     assert result["status"] == "ok"
@@ -317,6 +361,9 @@ def test_adtlert_windowed_runs_through_the_public_timelapse_workflow(
     assert restored_mesh.cellCount() == result["mesh"].cellCount()
     np.testing.assert_allclose(restored_models, result["final_models"])
     np.testing.assert_allclose(restored_coverage, result["coverage"])
+    assert any(message.startswith("[progress 0/1]") for message in messages)
+    assert any(message.startswith("[progress 1/1]") for message in messages)
+    assert any("window 1/1 started" in message for message in messages)
 
 
 def test_missing_adtlert_reports_the_install_extra(

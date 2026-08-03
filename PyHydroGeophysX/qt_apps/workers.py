@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Any, Callable
 
@@ -126,6 +127,7 @@ class ProcessWorkflowWorker(QObject):
     succeeded = Signal(object)
     failed = Signal(str)
     logged = Signal(str)
+    progressed = Signal(int, int, str)
     finished = Signal()
 
     def __init__(
@@ -221,8 +223,19 @@ class ProcessWorkflowWorker(QObject):
     def _emit_output(self, raw: bytes) -> None:
         text = raw.decode("utf-8", errors="replace")
         for line in text.splitlines():
-            if line.strip():
-                self.logged.emit(line.rstrip())
+            rendered = line.rstrip()
+            if not rendered.strip():
+                continue
+            match = re.match(
+                r"^\[progress\s+(\d+)/(\d+)\]\s*(.*)$", rendered.strip()
+            )
+            if match is not None:
+                current, total = int(match.group(1)), int(match.group(2))
+                label = match.group(3).strip()
+                if total > 0 and 0 <= current <= total:
+                    self.progressed.emit(current, total, label)
+                rendered = label or rendered
+            self.logged.emit(rendered)
 
     def _read_stdout(self) -> None:
         self._emit_output(bytes(self.process.readAllStandardOutput()))

@@ -85,6 +85,26 @@ def test_process_worker_restores_result_from_json(tmp_path: Path) -> None:
     assert received[0].to_dict() == expected.to_dict()
 
 
+def test_process_worker_forwards_structured_progress(tmp_path: Path) -> None:
+    worker = ProcessWorkflowWorker(
+        tmp_path / "recipe.json",
+        tmp_path,
+        tmp_path / "output",
+        tmp_path / "result.json",
+    )
+    progressed = []
+    logged = []
+    worker.progressed.connect(lambda *values: progressed.append(values))
+    worker.logged.connect(logged.append)
+
+    worker._emit_output(
+        b"[progress 2/8] ADTLERT window 2/8 complete, chi2 1.100\n"
+    )
+
+    assert progressed == [(2, 8, "ADTLERT window 2/8 complete, chi2 1.100")]
+    assert logged == ["ADTLERT window 2/8 complete, chi2 1.100"]
+
+
 def test_isolated_ert_cli_does_not_load_unused_pyarrow(
     monkeypatch, tmp_path: Path
 ) -> None:

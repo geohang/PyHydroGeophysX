@@ -1664,11 +1664,22 @@ class ERTProcessingModule(BaseModule):
             bundle_dir / "ert_timelapse_process_result.json",
         )
         self._tl_worker.logged.connect(lambda m: self.log(m, "info"))
+        self._tl_worker.progressed.connect(self._on_tl_progress)
         self._tl_worker.succeeded.connect(self._on_tl_workflow_ok)
         self._tl_worker.failed.connect(lambda message: self._on_tl_failed(message, False))
         self._tl_worker.finished.connect(self._reset_tl_button)
         self.register_worker(self._tl_worker)
         self._tl_worker.start()
+
+    def _on_tl_progress(self, current: int, total: int, label: str) -> None:
+        """Show completed ADTLERT windows while retaining the text log."""
+        if total <= 0:
+            return
+        self._tl_progress.setRange(0, total)
+        self._tl_progress.setValue(max(0, min(current, total)))
+        self._tl_progress.setFormat(
+            f"Windows {current}/{total}" if current else f"Preparing {total} windows"
+        )
 
     def _on_tl_workflow_ok(self, result: WorkflowRunResult) -> None:
         if hasattr(self.state, "update_workflow_result"):

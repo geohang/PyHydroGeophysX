@@ -5,7 +5,7 @@ import os
 import sys
 import tempfile
 from multiprocessing import Lock
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pygimli as pg
@@ -19,6 +19,72 @@ from .ert_inversion import (
     _resolve_ert_engine,
 )
 from .time_lapse import TimeLapseERTInversion
+
+
+class _ADTLERTWindowProgress:
+    """Forward ADTLERT's structured window events to workflow text logs.
+
+    The ``[progress current/total]`` prefix is deliberately readable on its
+    own and is also recognized by ``ProcessWorkflowWorker`` so the desktop can
+    turn the same line into a determinate progress bar.
+    """
+
+    def __init__(self, log: Callable[[str], None]) -> None:
+        self.log = log
+        self.iteration_chi2: List[float] = []
+        self.window_index = 0
+        self.n_windows = 0
+
+    def __call__(self, event: Dict[str, Any]) -> None:
+        name = str(event.get("event", ""))
+        if name == "windowed_start":
+            self.n_windows = int(event.get("n_windows", 0))
+            n_times = int(event.get("n_times", 0))
+            window_size = int(event.get("window_size", 0))
+            self.log(
+                f"[progress 0/{self.n_windows}] ADTLERT preparing "
+                f"{self.n_windows} windows ({n_times} steps, window={window_size})"
+            )
+        elif name == "window_start":
+            self.window_index = int(event.get("window_index", 0))
+            self.n_windows = int(event.get("n_windows", self.n_windows))
+            start = int(event.get("start_idx", 0)) + 1
+            end = int(event.get("end_idx", start - 1)) + 1
+            self.log(
+                f"ADTLERT window {self.window_index}/{self.n_windows} started "
+                f"(time steps {start}-{end})"
+            )
+        elif name == "timelapse_iteration_done":
+            value = event.get("chi2")
+            if value is None:
+                return
+            chi2 = float(value)
+            self.iteration_chi2.append(chi2)
+            iteration = int(event.get("iteration", 0))
+            maximum = int(event.get("max_iterations", 0))
+            self.log(
+                f"ADTLERT window {self.window_index}/{self.n_windows}, "
+                f"iteration {iteration}/{maximum}: chi2 {chi2:.3f}"
+            )
+        elif name == "window_done":
+            current = int(event.get("window_index", self.window_index))
+            total = int(event.get("n_windows", self.n_windows))
+            value = event.get("final_chi2")
+            suffix = "" if value is None else f", chi2 {float(value):.3f}"
+            self.log(
+                f"[progress {current}/{total}] ADTLERT window "
+                f"{current}/{total} complete{suffix}"
+            )
+        elif name == "windowed_prediction_start":
+            self.log(
+                "ADTLERT windows complete; assembling predictions for "
+                f"{int(event.get('n_times', 0))} time steps"
+            )
+        elif name == "windowed_done":
+            total = int(event.get("n_windows", self.n_windows))
+            value = event.get("final_chi2")
+            suffix = "" if value is None else f", final chi2 {float(value):.3f}"
+            self.log(f"ADTLERT windowed inversion complete: {total}/{total} windows{suffix}")
 
 
 # ---------------------------------------------------------------------------
@@ -140,6 +206,7 @@ class WindowedTimeLapseERTInversion:
         window_size: int = 3,
         mesh: Optional[Union[pg.Mesh, str]] = None,
         engine: str = "pyhydro",
+        log: Optional[Callable[[str], None]] = None,
         **kwargs,
     ):
         """
@@ -161,6 +228,7 @@ class WindowedTimeLapseERTInversion:
         self.mesh = mesh
         self.requested_engine = str(engine).lower()
         self.engine = _resolve_ert_engine(self.requested_engine)
+        self.log = log or (lambda _message: None)
         self.inversion_params = kwargs
         
         # Validate inputs
@@ -313,17 +381,7 @@ class WindowedTimeLapseERTInversion:
             self.inversion_params.get("method", "cgls"),
             prefer_gpu=True,
         )
-        iteration_chi2: List[float] = []
-
-        def _capture_progress(event: Dict[str, Any]) -> None:
-            # ADTLERT 0.1.0's windowed result replaces the within-window
-            # iteration history with one final chi2 per window. Capture the
-            # existing progress events so the UI and exports retain the real
-            # convergence trace without patching the dependency.
-            if event.get("event") == "timelapse_iteration_done":
-                value = event.get("chi2")
-                if value is not None:
-                    iteration_chi2.append(float(value))
+        progress = _ADTLERTWindowProgress(self.log)
 
         config = InversionConfig(
             max_iterations=int(
@@ -359,7 +417,7 @@ class WindowedTimeLapseERTInversion:
             include_robin_boundary_derivative=False,
             max_log_step=1.0,
             line_search=True,
-            progress_callback=_capture_progress,
+            progress_callback=progress,
         )
         initial = np.vstack(
             [
@@ -405,8 +463,8 @@ class WindowedTimeLapseERTInversion:
         ]
         result.all_chi2 = [float(value) for value in inverted.all_chi2]
         result.iteration_chi2 = (
-            iteration_chi2
-            if iteration_chi2
+            progress.iteration_chi2
+            if progress.iteration_chi2
             else [float(value) for value in inverted.iteration_chi2]
         )
         result.meta.update(

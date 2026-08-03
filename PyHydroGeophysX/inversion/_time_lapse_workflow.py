@@ -283,7 +283,8 @@ def run_timelapse_ert(
             f"window={window_size}, lambda={p['lambda_val']}, alpha={p['alpha']}")
         inversion = WindowedTimeLapseERTInversion(
             data_dir=clean_dir, ert_files=basenames, measurement_times=times,
-            window_size=window_size, mesh=mesh, engine=engine, **inv_kwargs)
+            window_size=window_size, mesh=mesh, engine=engine, log=log,
+            **inv_kwargs)
         result = inversion.run(window_parallel=False)
         mode = "windowed"
     else:
