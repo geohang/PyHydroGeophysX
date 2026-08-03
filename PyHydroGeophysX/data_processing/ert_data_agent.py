@@ -1033,6 +1033,59 @@ def _looks_like_abem_lund_file(data_file_path: Path) -> bool:
     # and many data rows starting with "4".
     return bool(has_abem_tag and type4_rows >= 3)
 
+
+def _source_error_to_relative(
+    error_values,
+    reference_values,
+    *,
+    instrument: str,
+    min_error: float,
+    max_error: float = 0.50,
+) -> np.ndarray:
+    """Normalize an instrument error column to relative-error fractions.
+
+    E4D reports ``v_std`` in the same resistance units as ``v_obs``. Other
+    formats are normalized conservatively from their observed magnitude because
+    their exported error columns may be fractions, percentages, or absolute
+    values. Invalid entries remain NaN so the caller can apply its own fallback.
+    """
+    err_raw = np.asarray(
+        pd.to_numeric(error_values, errors='coerce'), dtype=float
+    )
+    ref_raw = np.asarray(
+        pd.to_numeric(reference_values, errors='coerce'), dtype=float
+    )
+    rel = np.full(err_raw.shape, np.nan, dtype=float)
+
+    finite_pos = err_raw[np.isfinite(err_raw) & (err_raw > 0)]
+    if finite_pos.size == 0:
+        return rel
+
+    if instrument == 'E4D':
+        rel = np.divide(
+            np.abs(err_raw),
+            np.abs(ref_raw),
+            out=np.full(err_raw.shape, np.nan, dtype=float),
+            where=np.isfinite(ref_raw) & (np.abs(ref_raw) > 1e-12),
+        )
+    else:
+        q95 = float(np.nanpercentile(finite_pos, 95))
+        if q95 <= 2.0:
+            rel = np.abs(err_raw)
+        elif q95 <= 200.0:
+            rel = np.abs(err_raw) / 100.0
+        else:
+            rel = np.divide(
+                np.abs(err_raw),
+                np.abs(ref_raw),
+                out=np.full(err_raw.shape, np.nan, dtype=float),
+                where=np.isfinite(ref_raw) & (np.abs(ref_raw) > 1e-12),
+            )
+
+    rel = np.where(np.isfinite(rel) & (rel > 0), rel, np.nan)
+    return np.clip(rel, float(min_error), float(max_error))
+
+
 def _to_ftype(instrument: Instrument) -> str:
     normalized = _normalize_instrument_name(str(instrument))
     if normalized not in _FTYPE_MAP:
@@ -1403,42 +1456,17 @@ def _load_ert_embedded_parsers(
     # are missing.
     err_col = next((c for c in ['error', 'err', 'dev', 'std', 'std_res'] if c in df.columns), None)
 
-    def _normalize_source_error(err_series: pd.Series, rho_series: pd.Series) -> np.ndarray:
-        err_raw = pd.to_numeric(err_series, errors='coerce').to_numpy(dtype=float)
-        rho_raw = pd.to_numeric(rho_series, errors='coerce').to_numpy(dtype=float)
-        rel = np.full(err_raw.shape, np.nan, dtype=float)
-
-        finite_pos = err_raw[np.isfinite(err_raw) & (err_raw > 0)]
-        if finite_pos.size == 0:
-            return rel
-
-        med = float(np.nanmedian(finite_pos))
-        q95 = float(np.nanpercentile(finite_pos, 95))
-
-        # Heuristic:
-        #  - <=2   : likely already relative fraction (e.g., 0.12)
-        #  - <=200 : likely percent (e.g., 12.0 -> 0.12)
-        #  - else  : likely absolute error in data units -> convert with rho
-        if q95 <= 2.0:
-            rel = np.abs(err_raw)
-        elif q95 <= 200.0:
-            rel = np.abs(err_raw) / 100.0
-        else:
-            rel = np.where(
-                np.isfinite(rho_raw) & (np.abs(rho_raw) > 1e-12),
-                np.abs(err_raw) / np.abs(rho_raw),
-                np.nan,
-            )
-
-        rel = np.where(np.isfinite(rel) & (rel > 0), rel, np.nan)
-        return np.clip(rel, 0.01, 0.50)
-
     # Reciprocal filtering preserves the original parser row index but can
     # remove rows. Align source error columns to the retained observations so
     # fallback error estimates have the same length as reciprocal estimates.
     source_error_series = df[err_col].reindex(observations.index) if err_col else None
     source_rel = (
-        _normalize_source_error(source_error_series, observations['rhoa'])
+        _source_error_to_relative(
+            source_error_series,
+            observations['rhoa'],
+            instrument=instrument,
+            min_error=0.01,
+        )
         if source_error_series is not None
         else None
     )
@@ -2109,34 +2137,31 @@ def load_ert_resipy(
         if err_col in df.columns:
             err_vals = df[err_col].values
             
-            # Check if this is E4D format (absolute errors in Ohms)
-            # E4D always stores absolute errors (in Ohms), need to convert to relative
-            # Detection: Only apply to E4D instrument explicitly
             resist_col = next((c for c in ['resist', 'R', 'resistance'] if c in df.columns), None)
-            
-            if instrument == 'E4D' and resist_col and resist_col in df.columns:
-                # Convert absolute error to relative error
-                # For E4D: error column is absolute resistance error [Ohms]
-                # Need: relative error = abs_error / resistance
-                resist_vals = df[resist_col].values
-                # Calculate relative error, avoiding division by zero
-                rel_err_calc = np.where(
-                    (np.isfinite(err_vals)) & (np.isfinite(resist_vals)) & (resist_vals != 0),
-                    np.abs(err_vals / resist_vals),
-                    0.05
+
+            if resist_col and resist_col in df.columns:
+                source_rel = _source_error_to_relative(
+                    err_vals,
+                    df[resist_col],
+                    instrument=instrument,
+                    min_error=0.005,
                 )
-                # Clamp to reasonable range (0.5% to 50%)
-                rel_err = np.clip(rel_err_calc, 0.005, 0.5)
-                print(f"   Converted E4D absolute errors to relative (mean: {np.mean(rel_err):.4f})")
+                rel_err = np.where(np.isfinite(source_rel), source_rel, 0.05)
+                if instrument == 'E4D':
+                    print(
+                        "   Converted E4D absolute errors to relative "
+                        f"(mean: {np.mean(rel_err):.4f})"
+                    )
+                else:
+                    print(
+                        f"   Preserved normalized '{err_col}' errors "
+                        f"(mean: {np.mean(rel_err):.4f})"
+                    )
             else:
-                # Assume already relative error (e.g., Syscal, ABEM formats)
-                # Use the error if it's reasonable (between 0.5% and 50%)
-                valid_err = np.where(
-                    np.isfinite(err_vals) & (err_vals > 0.005) & (err_vals < 0.5), 
-                    err_vals, 
-                    0.05
+                print(
+                    f"   Ignored '{err_col}' because no resistance reference "
+                    "was available; using default 5% errors"
                 )
-                rel_err = np.maximum(rel_err, valid_err)
             break
 
     # Electrodes - access from survey object
