@@ -4,10 +4,9 @@ import sys
 from types import SimpleNamespace
 
 import numpy as np
-from PySide6.QtCore import QProcess
+import pytest
 
 from PyHydroGeophysX.inversion.ert_inversion import _export_model_bundle
-from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
     RunContext,
@@ -16,6 +15,16 @@ from PyHydroGeophysX.workflows import (
 )
 from PyHydroGeophysX.workflows import cli
 from PyHydroGeophysX.workflows import domain
+
+
+def _process_worker_dependencies():
+    pytest.importorskip("PySide6")
+
+    from PySide6.QtCore import QProcess
+
+    from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
+
+    return ProcessWorkflowWorker, QProcess
 
 
 def test_cli_writes_process_safe_result_file(
@@ -56,6 +65,7 @@ def test_cli_writes_process_safe_result_file(
 
 
 def test_process_worker_restores_result_from_json(tmp_path: Path) -> None:
+    ProcessWorkflowWorker, QProcess = _process_worker_dependencies()
     result_path = tmp_path / "result.json"
     expected = WorkflowRunResult(
         status="success",
@@ -86,6 +96,7 @@ def test_process_worker_restores_result_from_json(tmp_path: Path) -> None:
 
 
 def test_process_worker_forwards_structured_progress(tmp_path: Path) -> None:
+    ProcessWorkflowWorker, _QProcess = _process_worker_dependencies()
     worker = ProcessWorkflowWorker(
         tmp_path / "recipe.json",
         tmp_path,
