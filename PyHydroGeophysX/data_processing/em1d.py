@@ -49,13 +49,24 @@ def _temcompany_valid_channels(
     response: np.ndarray,
     relative_std: Optional[np.ndarray] = None,
     flags: Optional[np.ndarray] = None,
+    use_flags: bool = True,
 ) -> "tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]":
-    """Apply TEMcompany dummy values and optional in-use flags."""
+    """Apply TEMcompany dummy values and, unless waived, its in-use flags.
+
+    ``use_flags=False`` keeps every gate the file holds a finite, non-dummy value
+    for, including the ones the acquisition software's own QC switched off. That
+    is a deliberate choice to re-do the editing here rather than inherit it: on a
+    noisy ground survey the project may leave only a quarter of the gates in use,
+    and the inversion's own outlier rejection can be a better judge of which of
+    the rest are usable. The gates come back with their recorded stack errors, so
+    a gate that was switched off for being noisy still carries that noise in its
+    weight.
+    """
     n = min(np.size(times), np.size(response))
     t = np.asarray(times, dtype=float).ravel()[:n]
     d = np.asarray(response, dtype=float).ravel()[:n]
     mask = np.isfinite(t) & (t > 0.0) & np.isfinite(d) & (np.abs(d) < 9_000.0)
-    if flags is not None and np.size(flags):
+    if use_flags and flags is not None and np.size(flags):
         use = np.asarray(flags, dtype=float).ravel()
         mask &= np.pad(use[:n] > 0, (0, max(0, n - use.size)), constant_values=False)[:n]
     std = None
@@ -217,7 +228,8 @@ def _temcompany_system(spec: Dict[str, Any], row: Optional[sqlite3.Row] = None) 
     }
 
 
-def _load_temcompany_database(path: Path, sounding: int, moment: str) -> Dict[str, Any]:
+def _load_temcompany_database(path: Path, sounding: int, moment: str,
+                              use_flags: bool = True) -> Dict[str, Any]:
     """Load one stacked sounding and project geometry from ``project.db``."""
     uri = path.resolve().as_uri() + "?mode=ro"
     con = sqlite3.connect(uri, uri=True)
@@ -251,6 +263,7 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str) -> Dict[st
                     _temcompany_json_array(candidate[value_key]),
                     _temcompany_json_array(candidate[f"{moment}_VoltageValues_STD"]),
                     _temcompany_json_array(candidate[f"{moment}_InUseFlags"]),
+                    use_flags,
                 )
             except (ValueError, TypeError, json.JSONDecodeError):
                 continue
@@ -264,7 +277,8 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str) -> Dict[st
         response = _temcompany_json_array(row[value_key])
         std = _temcompany_json_array(row[f"{moment}_VoltageValues_STD"])
         flags = _temcompany_json_array(row[f"{moment}_InUseFlags"])
-        times, response, std = _temcompany_valid_channels(times, response, std, flags)
+        times, response, std = _temcompany_valid_channels(
+            times, response, std, flags, use_flags)
 
         x = np.asarray([item["UtmX"] for item in rows], dtype=float)
         y = np.asarray([item["UtmY"] for item in rows], dtype=float)
@@ -289,6 +303,10 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str) -> Dict[st
             "positions": _temcompany_positions(x, y),
             "x": x,
             "y": y,
+            # Kept alongside the UTM pair so a map view can place imagery
+            # without a projection library (see visualization.basemap).
+            "longitude": np.asarray([item["Longitude"] for item in rows], dtype=float),
+            "latitude": np.asarray([item["Latitude"] for item in rows], dtype=float),
             "elevation": elevation,
             "heights": heights,
             "line_numbers": np.asarray([item["LineNumber"] for item in rows], dtype=int),
@@ -305,7 +323,8 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str) -> Dict[st
         con.close()
 
 
-def _load_temcompany_joint_database(path: Path, sounding: int) -> Dict[str, Any]:
+def _load_temcompany_joint_database(path: Path, sounding: int,
+                                    use_flags: bool = True) -> Dict[str, Any]:
     """Load all usable LM/HM gates for one station, preserving common station order."""
     uri = path.resolve().as_uri() + "?mode=ro"
     con = sqlite3.connect(uri, uri=True)
@@ -329,6 +348,7 @@ def _load_temcompany_joint_database(path: Path, sounding: int) -> Dict[str, Any]
                         _temcompany_json_array(row[f"{selected}_VoltageValues"]),
                         _temcompany_json_array(row[f"{selected}_VoltageValues_STD"]),
                         _temcompany_json_array(row[f"{selected}_InUseFlags"]),
+                        use_flags,
                     )
                 except (ValueError, TypeError, json.JSONDecodeError):
                     continue
@@ -371,6 +391,8 @@ def _load_temcompany_joint_database(path: Path, sounding: int) -> Dict[str, Any]
             "positions": _temcompany_positions(x, y),
             "x": x,
             "y": y,
+            "longitude": np.asarray([item["Longitude"] for item in rows], dtype=float),
+            "latitude": np.asarray([item["Latitude"] for item in rows], dtype=float),
             "elevation": np.asarray([item["Elevation"] for item in rows], dtype=float),
             "heights": np.asarray([
                 item["RxCoilHeight"] if item["RxCoilHeight"] is not None else np.nan
@@ -500,6 +522,8 @@ def _load_temcompany_xyz(path: Path, sounding: int, moment: str) -> Dict[str, An
         "positions": _temcompany_positions(x, y),
         "x": x,
         "y": y,
+        "longitude": lon,
+        "latitude": lat,
         "elevation": elevation,
         "heights": np.full(len(records), height, dtype=float),
         "line_numbers": np.asarray(
@@ -517,9 +541,14 @@ def _load_temcompany_xyz(path: Path, sounding: int, moment: str) -> Dict[str, An
 
 
 def load_temcompany_sounding(
-    path: str, sounding: int = 0, moment: str = "HM"
+    path: str, sounding: int = 0, moment: str = "HM", *, use_flags: bool = True
 ) -> Dict[str, Any]:
-    """Load a TEMcompany/TEM2Go sounding from a project folder or XYZ export."""
+    """Load a TEMcompany/TEM2Go sounding from a project folder or XYZ export.
+
+    ``use_flags=False`` ignores the project's in-use flags and returns every gate
+    with a finite, non-dummy value. Only a project database records those flags,
+    so it makes no difference to an XYZ export.
+    """
     selected = _normalise_temcompany_moment(moment)
     source = Path(path)
     if source.is_dir():
@@ -530,8 +559,10 @@ def load_temcompany_sounding(
         )
         if project_db is not None:
             if selected == "LM+HM":
-                return _load_temcompany_joint_database(project_db, sounding)
-            return _load_temcompany_database(project_db, sounding, selected)
+                return _load_temcompany_joint_database(
+                    project_db, sounding, use_flags)
+            return _load_temcompany_database(
+                project_db, sounding, selected, use_flags)
         xyz = sorted(source.glob("*_StationData.xyz"))
         if not xyz:
             xyz = sorted(source.glob("*_RawData.xyz"))
@@ -550,7 +581,8 @@ def load_temcompany_sounding(
 
 
 def load_sounding(
-    path: str, method: str, sounding: int = 0, *, moment: str = "HM"
+    path: str, method: str, sounding: int = 0, *, moment: str = "HM",
+    use_flags: bool = True,
 ) -> Dict[str, Any]:
     """Load one sounding from a sounding file.
 
@@ -564,11 +596,14 @@ def load_sounding(
       pair starting at ``1 + 2*sounding``; a lone trailing real column gives imag = 0.
 
     The returned dict also reports ``n_soundings`` so the caller can offer a picker.
+    ``use_flags`` applies only to TEMcompany project databases; see
+    :func:`load_temcompany_sounding`.
     """
     if is_temcompany_source(path):
         if method != "TDEM":
             raise ValueError("TEMcompany/TEM2Go exports are time-domain EM data; select TDEM.")
-        return load_temcompany_sounding(path, sounding=sounding, moment=moment)
+        return load_temcompany_sounding(path, sounding=sounding, moment=moment,
+                                        use_flags=use_flags)
     table = np.atleast_2d(table_io.load_2d_array(path)).astype(float)
     if table.shape[1] < 2:
         raise ValueError(f"Expected >= 2 columns, got shape {table.shape}.")

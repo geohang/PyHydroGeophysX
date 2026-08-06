@@ -112,13 +112,83 @@ A header-less file is read by column order: one column = position; two columns =
   forward's units.
 - **Lateral smoothness** and **LCI passes** control the line constraint. Set
   lateral smoothness to zero to recover the former independent-1D workflow.
+- A line inversion opens the **Resistivity model** tab on "View: Overview
+  (map + section)": the survey map with every sounding in black and the sectioned
+  line picked out, above that line's distance vs depth resistivity section. A
+  survey holding several line numbers is sectioned one line at a time (pick it
+  with "Survey line"), because chaining the lines would put an artificial jump in
+  the middle of the section. Columns hatched in white are soundings that
+  contributed no data of their own; their model came from their neighbours
+  through the lateral constraint. **Hide below DOI** blanks the cells the data do
+  not constrain, at the sensitivity threshold beside it, and both act on the
+  drawing rather than on the result, so the cut can be moved without inverting
+  again. The figure is written to
+  `em_results/em_line_overview.png`. How the misfit varies along the survey is on
+  the **Inversion quality** tab, next to the convergence history.
+- Tick **Basemap** to draw satellite imagery, a street map, or a topographic map
+  under the soundings. Tiles are fetched once and cached under
+  `~/.pyhydrogeophysx/tilecache` (override with `PYHYDROGEOPHYSX_TILE_CACHE`), so
+  a survey already looked at still draws its basemap offline. This needs
+  longitude/latitude per sounding, which a TEMcompany project carries; the axes
+  stay in projected metres, so distances on the map are unaffected. Tile-server
+  terms of use apply, and the attribution shown on the map has to stay with any
+  figure that is published.
+
+## How deep the section is allowed to go
+
+The depth of investigation comes from the **cumulated sensitivity**, computed
+from the analytic Jacobian the coupled solver already uses. At a given depth it
+is the number of error bars the predicted response would move if every layer from
+there down were shifted by one decade in resistivity. Where that falls below the
+threshold, the model there is regularization rather than measurement, and the
+cells are blanked.
+
+Summing the per-layer sensitivities, rather than averaging or normalizing them by
+thickness, is what makes the cut independent of the layer grid: split a layer in
+two and its sensitivity splits with it, so the depth does not move when the grid
+is refined (measured at 0.2 to 2.5 % across a 2x refinement).
+
+The threshold is a judgement, so it sits on the plot next to "Hide below DOI"
+rather than inside the inversion. It is tied to the error model: doubling the
+assumed error halves the sensitivity and the section gets shallower, which is the
+correct response to noisier data. Raise it for a more conservative picture, lower
+it to see what the deeper part of the model looks like.
+
+Earlier releases cut instead at a diffusion depth taken from the latest gate
+time. That rule read the gate time once, from the first sounding on the line, and
+gave every other sounding the same reach; on a ground TDEM survey where the late
+gates survive at some stations and not others it ran about five times deeper than
+the acquisition software's own depths of investigation.
+
+## Answering a high χ²
+
+Two settings, the same pair the ERT module offers, and they address different
+causes:
+
+- **Auto-λ** re-solves the line at other smoothness weights to reach the target
+  χ². Use it when the model is too stiff for the data. When no weight reaches the
+  target, the smoothest of the weights that fit equally well is kept rather than
+  the roughest, so a fraction of a percent of misfit does not buy a railed model.
+- **Reject outliers** drops the gates the converged model cannot explain (beyond
+  the σ cut, over the given passes) and solves again at the same smoothness. Use
+  it when a minority of gates are simply wrong. Cutting is per gate rather than
+  per sounding, because a TDEM station may carry only a handful of gates. "Keep
+  at least" stops it before it would gut the survey; if it stops there, gates
+  beyond the cut remain and the Inversion quality page says so.
+
+Before either, check **Relative error**. For TEMcompany data it is a floor on the
+per-gate stack error the instrument recorded. A stack error measures repeatability
+only, so on ground TDEM it is usually far smaller than the error in representing
+the ground as 1D layers; leaving it at the recorded few percent reports a χ² in
+the tens or hundreds that no model can reach, and both settings above will then
+work hard for nothing.
 - A geometry file next to the data file is loaded automatically when its name is
   `<data>_geometry.csv` or it is the only `*geom*.csv` in that folder; otherwise
   use "Load geometry...". With easting/northing in it, the **Resistivity model**
   tab's plan-view map ("View: Plan slice") uses real **UTM easting/northing** axes,
   and you pick the depth with the slider. Soundings spread in 2D draw a filled map;
   a single flight line draws points coloured by resistivity. "View: Section" shows
-  the along-line distance vs depth section.
+  the along-line distance vs depth section on its own.
 - See `examples/data/EM/EastRiver_VTEM/` for a paired data + geometry example.
 - TEMcompany exports use moment-normalized `dB/dt` units. The imported system
   geometry and unit scale are applied automatically, so **Auto-calibrate** is

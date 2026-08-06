@@ -53,7 +53,16 @@ class InversionQualityView(QWidget):
         return "#c62828", "high misfit — check data errors / λ / geometry"
 
     def show_quality(self, metrics: Optional[Dict[str, Any]] = None,
-                     convergence: Optional[Sequence[float]] = None, title: str = "") -> None:
+                     convergence: Optional[Sequence[float]] = None, title: str = "",
+                     per_item: Optional[Dict[str, Any]] = None) -> None:
+        """Show one inversion's headline numbers, convergence, and per-item misfit.
+
+        ``per_item`` is for inversions made of many small fits (a line of EM
+        soundings, a set of stations) whose misfit varies along the survey.
+        Supply ``values`` and, optionally, ``x`` with ``x_label``, ``groups``
+        (drawing a break wherever the group changes), ``counts`` (marking the
+        items left with no data of their own), and ``item_label``.
+        """
         m = dict(metrics or {})
         chi2 = m.get("chi2")
         color, verdict = self._verdict(chi2)
@@ -82,7 +91,8 @@ class InversionQualityView(QWidget):
             f"<span style='color:{color}'><b>{verdict}</b></span>{note}")
 
         self._draw_convergence(convergence, final_chi2=chi2,
-                               track=m.get("convergence_track"))
+                               track=m.get("convergence_track"),
+                               per_item=per_item)
 
     def _draw_track(self, ax, track) -> bool:
         """Plot every iteration the pipeline ran, segmented by lambda.
@@ -134,11 +144,61 @@ class InversionQualityView(QWidget):
         ax.legend(fontsize=8, loc="best")
         return True
 
+    def _draw_per_item(self, ax, per_item: Dict[str, Any], target: float = 1.0) -> bool:
+        """Misfit per sounding / station along the survey.
+
+        A line inversion reports one whole-survey chi-square, which says nothing
+        about where the fit went wrong. This does, and it is what a rejection
+        threshold gets set against.
+        """
+        import numpy as np
+
+        values = np.asarray(per_item.get("values", []), dtype=float).ravel()
+        if not values.size or not np.isfinite(values).any():
+            return False
+        x = per_item.get("x")
+        x = (np.asarray(x, dtype=float).ravel()
+             if x is not None and np.size(x) == values.size
+             else np.arange(values.size, dtype=float))
+        ax.plot(x, values, "o-", color="#1565ff", lw=1.3, ms=3.5, zorder=3)
+        ax.axhline(float(target), color="#c62828", ls="--", lw=1.0,
+                   label=f"target χ² = {float(target):g}")
+        # An item with no data of its own reports no misfit; its model came from
+        # its neighbours. Saying so is the point of showing this panel.
+        counts = per_item.get("counts")
+        if counts is not None and np.size(counts) == values.size:
+            empty = np.asarray(counts).ravel() == 0
+            if empty.any():
+                ax.plot(x[empty], np.full(int(empty.sum()), float(target)), "x",
+                        color="#9e9e9e", ms=5, zorder=4,
+                        label=f"no data of its own ({int(empty.sum())})")
+        groups = per_item.get("groups")
+        if groups is not None and np.size(groups) == values.size:
+            groups = np.asarray(groups).ravel()
+            for index in np.flatnonzero(groups[1:] != groups[:-1]) + 1:
+                ax.axvline(0.5 * (x[index - 1] + x[index]), color="#9e9e9e",
+                           ls=":", lw=1.0, zorder=1)
+        if np.nanmax(values) / max(np.nanmin(values[values > 0], initial=1.0), 1e-9) > 20:
+            ax.set_yscale("log")
+        ax.set_xlabel(str(per_item.get("x_label", "Item")))
+        ax.set_ylabel("χ²")
+        ax.set_title(f"Misfit per {per_item.get('item_label', 'item')}")
+        ax.grid(True, which="both", ls=":", alpha=0.4)
+        ax.legend(fontsize=8, loc="best")
+        return True
+
     def _draw_convergence(self, convergence: Optional[Sequence[float]],
                           final_chi2: Optional[float] = None,
-                          track: Optional[Sequence[dict]] = None) -> None:
+                          track: Optional[Sequence[dict]] = None,
+                          per_item: Optional[Dict[str, Any]] = None) -> None:
         self._fig.clear()
-        ax = self._fig.add_subplot(111)
+        if per_item:
+            ax, ax_item = self._fig.subplots(1, 2)
+            if not self._draw_per_item(ax_item, per_item):
+                self._fig.clear()
+                ax = self._fig.add_subplot(111)
+        else:
+            ax = self._fig.add_subplot(111)
         if self._draw_track(ax, track):
             self._canvas.draw()
             return

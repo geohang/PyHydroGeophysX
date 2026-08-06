@@ -47,6 +47,37 @@ LOG_RESISTIVITY_BOUNDS: Tuple[float, float] = (0.0, 5.0)
 #: Bounds on the smoothness scale the chi-squared search may visit.
 SMOOTHNESS_SCALE_BOUNDS: Tuple[float, float] = (1e-4, 1e4)
 
+#: Cumulated sensitivity a depth has to carry to count as investigated.
+#:
+#: The quantity is in units of the gates' own error bars: at the depth of
+#: investigation, moving every layer below it by one decade in resistivity
+#: together shifts the predicted response by this many standard deviations.
+#:
+#: Chosen against the depths of investigation a TEMcompany project reported for
+#: its own 71-station ground TDEM survey. Evaluated at that software's own
+#: recovered models, 20 gives a median ratio of 1.02 to its depths and a median
+#: difference of 2.5 m, about one layer thickness there; thresholds from 20 to 30
+#: all land within 3 m, so the choice inside that range is not delicate. Running
+#: this package's own inversion end to end on the same data it comes out at 0.75
+#: of the reference depths (median difference 4.1 m), the remaining gap being the
+#: difference between the two recovered models rather than the rule. Station by
+#: station the two agree only loosely (correlation 0.19), so read the number as a
+#: survey-wide depth scale and not as a per-station guarantee.
+#:
+#: The threshold is tied to the error model: doubling the assumed error halves
+#: the sensitivity and the section gets shallower, which is the honest response
+#: to noisier data. Raise it for a more conservative picture, lower it to see
+#: what the deeper part of the model looks like.
+DOI_SENSITIVITY_THRESHOLD: float = 20.0
+
+#: Relative chi-squared gain a rougher model has to earn to be preferred.
+#: When the target misfit is out of reach — noisy ground data with model error
+#: well above the assumed gate errors — the search keeps relaxing the smoothness
+#: for gains in the third decimal place, and hands back a railed model that fits
+#: no better than the smooth one. Trials within this margin of the best misfit
+#: are treated as the same fit, and the smoothest of them wins.
+CHI2_EQUIVALENCE: float = 0.02
+
 _LN10 = math.log(10.0)
 
 DEFAULT_LCI = {
@@ -464,8 +495,11 @@ def invert_lci(
     terms looks for a better fit. Each trial warm-starts from the models of the
     nearest scale already solved, which is what keeps the search affordable.
 
-    The returned result is whichever run landed closest to the target; the trial
-    record lives in ``lambda_search``.
+    The returned result is whichever run landed closest to the target. When no
+    trial reached the target band, trials whose misfit is within
+    ``CHI2_EQUIVALENCE`` of the best are treated as equally good fits and the
+    smoothest of them is returned instead of the roughest. The trial record
+    lives in ``lambda_search``.
     """
     solved: Dict[float, LCIResult] = {}
 
@@ -517,6 +551,16 @@ def invert_lci(
     )
     search["fixed_chi2"] = float(base.chi2)
     search["fixed_scale"] = float(base.smoothness_scale)
+    if search.get("status") == "best_effort" and best.chi2 > float(target_chi2):
+        smoothest = _smoothest_equivalent(solved, best)
+        if smoothest is not best:
+            log(f"  No trial reached the chi2 target, and scale "
+                f"{smoothest.smoothness_scale:.3g} (chi2={smoothest.chi2:.3f}) "
+                f"fits within {100 * CHI2_EQUIVALENCE:.0f}% of the best trial at "
+                f"{best.smoothness_scale:.3g} (chi2={best.chi2:.3f}); keeping the "
+                f"smoother model.")
+            search["parsimonious_scale"] = float(smoothest.smoothness_scale)
+            best = smoothest
     best.lambda_search = search
     if best is not base:
         log(f"  Smoothness scale {best.smoothness_scale:.3g}: chi2="
@@ -528,13 +572,253 @@ def invert_lci(
     return best
 
 
+def mask_sounding_block(block: SoundingBlock, keep: Sequence[bool]) -> SoundingBlock:
+    """A copy of *block* carrying only the gates flagged in ``keep``.
+
+    The forward and Jacobian are wrapped rather than rebuilt, so the SimPEG
+    simulation behind them is reused as is and dropping a gate costs nothing.
+    A block may end up with no data at all: the sounding then contributes no
+    residual and its model comes entirely from its neighbours through the
+    lateral constraint, which is the honest outcome when every one of its gates
+    was rejected.
+    """
+    index = np.flatnonzero(np.asarray(keep, dtype=bool).ravel())
+    forward, jacobian = block.forward, block.jacobian
+    return SoundingBlock(
+        forward=lambda sigma: np.asarray(
+            forward(sigma), dtype=float).ravel()[index],
+        jacobian=lambda sigma: np.asarray(
+            jacobian(sigma), dtype=float)[index, :],
+        dobs=block.dobs[index],
+        uncertainty=block.uncertainty[index],
+        position=block.position,
+        line=block.line,
+        label=block.label,
+    )
+
+
+def cumulated_sensitivity(block: SoundingBlock, model: np.ndarray) -> np.ndarray:
+    """How much the data still say about each layer and everything below it.
+
+    Entry ``j`` is ``sum over layers k >= j of sum over gates i of
+    |d(data_i) / d(log10 rho_k)| / sigma_i``: move every layer from ``j`` down by
+    one decade in resistivity and this is how many error bars the predicted
+    response shifts. It falls with depth, and where it falls below a threshold
+    the data no longer constrain what is there.
+
+    Summing rather than averaging over layers is what makes it independent of
+    the layer grid: split a layer in two and its sensitivity splits with it, so
+    the cumulated value at any given depth is unchanged (measured at 0.2 to 2.5 %
+    across a 2x refinement on real ground TDEM). A per-layer or
+    thickness-normalized measure does not have that property, and a section's
+    blanked region would then move when the grid was refined.
+
+    The Jacobian is SimPEG's analytic sensitivity, the same one the coupled
+    solver uses, so this costs about one forward evaluation per sounding.
+    """
+    layers = int(np.size(model))
+    if not block.dobs.size or layers == 0:
+        return np.zeros(layers, dtype=float)
+    sigma = 1.0 / np.clip(np.asarray(model, dtype=float).ravel(), 1e-12, None)
+    jacobian = np.asarray(block.jacobian(sigma), dtype=float)
+    if jacobian.shape != (block.dobs.size, layers):
+        return np.zeros(layers, dtype=float)
+    weighted = (jacobian * (-_LN10 * sigma)[None, :]) / block.uncertainty[:, None]
+    per_layer = np.abs(weighted).sum(axis=0)
+    return np.cumsum(per_layer[::-1])[::-1]
+
+
+def sensitivity_doi(block: SoundingBlock, model: np.ndarray,
+                    depth_edges: np.ndarray, *,
+                    threshold: float = DOI_SENSITIVITY_THRESHOLD) -> float:
+    """Depth of investigation: the bottom of the deepest layer still resolved.
+
+    Returns ``0.0`` when even the shallowest layer misses the threshold, which
+    is the honest answer for a station whose gates were all rejected: it has no
+    depth of investigation, and its column carries only what its neighbours say.
+    """
+    cumulated = cumulated_sensitivity(block, model)
+    edges = np.asarray(depth_edges, dtype=float).ravel()
+    resolved = np.flatnonzero(cumulated >= float(threshold))
+    if not resolved.size or resolved[-1] + 1 >= edges.size:
+        return 0.0 if not resolved.size else float(edges[-1])
+    return float(edges[resolved[-1] + 1])
+
+
+def weighted_residuals(blocks: Sequence[SoundingBlock],
+                       models: np.ndarray) -> np.ndarray:
+    """``(predicted - observed) / uncertainty`` for every gate on the line."""
+    parts: List[np.ndarray] = []
+    for block, model in zip(blocks, np.asarray(models, dtype=float)):
+        if not block.dobs.size:
+            parts.append(np.zeros(0, dtype=float))
+            continue
+        sigma = 1.0 / np.clip(model, 1e-12, None)
+        predicted = np.asarray(block.forward(sigma), dtype=float).ravel()
+        parts.append((predicted - block.dobs) / block.uncertainty)
+    return np.concatenate(parts) if parts else np.zeros(0, dtype=float)
+
+
+def invert_lci_rejecting_outliers(
+    blocks: Sequence[SoundingBlock],
+    n_layers: int,
+    *,
+    threshold: float = 3.0,
+    passes: int = 2,
+    min_fraction: float = 0.5,
+    min_gates: int = 3,
+    log: LogFn = _noop,
+    **kwargs: Any,
+) -> Tuple[LCIResult, List[SoundingBlock], Dict[str, Any]]:
+    """Solve the line, then drop the gates the model cannot explain and re-solve.
+
+    This is the EM counterpart of the ERT outlier pass. Each cycle removes the
+    gates whose weighted residual exceeds ``threshold`` and solves again, warm
+    started from the model just found and at the smoothness the first solve
+    settled on, so a rejection pass costs far less than the first one.
+    Two floors bound the cut. ``min_fraction`` is the survey-wide one: when more
+    gates exceed the threshold than it allows, the pass drops the worst offenders
+    up to the limit rather than refusing, because a bad fit is exactly when
+    rejection is wanted. ``min_gates`` is the per-sounding one: a station never
+    loses so many gates that fewer than this remain (or all of them, if it
+    arrived with fewer). Without it a station holding one or two gates loses them
+    both on the first pass, and the section then has a hole where only the
+    lateral constraint is left holding the model. Its best-fitting gates are the
+    ones kept.
+
+    A single noisy gate on a TDEM station carries a lot of weight (a station may
+    hold only a handful), so cutting is per gate rather than per sounding.
+
+    Returns ``(outcome, kept_blocks, info)``.
+    """
+    blocks = list(blocks)
+    n_start = int(sum(block.dobs.size for block in blocks))
+    floor = int(math.ceil(max(0.0, float(min_fraction)) * n_start))
+    info: Dict[str, Any] = {
+        "enabled": True, "threshold": float(threshold), "n_start": n_start,
+        "floor": floor, "min_gates": int(min_gates), "passes": [], "dropped": 0,
+        "kept": n_start, "stopped_because": "", "limited_by_floor": False,
+        "floored_soundings": 0,
+    }
+    outcome = invert_lci(blocks, n_layers, log=log, **kwargs)
+    info["initial"] = {
+        "chi2": float(outcome.chi2),
+        "smoothness_scale": float(outcome.smoothness_scale),
+        "convergence": [float(value) for value in outcome.chi2_history],
+        "n_data": n_start,
+    }
+    # Re-solves stay at the smoothness the first solve settled on, so the change
+    # between passes is the data set and nothing else. The caller's warm start
+    # belongs to the first solve only; later passes start from what it found.
+    rerun = {**kwargs, "auto_lambda": False,
+             "smoothness_scale": float(outcome.smoothness_scale)}
+    rerun.pop("initial_model", None)
+    for index in range(1, max(0, int(passes)) + 1):
+        current = int(sum(block.dobs.size for block in blocks))
+        allowed = current - floor
+        if allowed <= 0:
+            info["stopped_because"] = (
+                f"at the {int(min_fraction * 100)} % floor of {floor} gates")
+            break
+        residual = weighted_residuals(blocks, outcome.models)
+        drop = np.abs(residual) > float(threshold)
+        n_drop = int(drop.sum())
+        if n_drop == 0:
+            info["stopped_because"] = "nothing left above the cut"
+            break
+        if n_drop > allowed:
+            worst = np.argsort(-np.abs(residual))[:allowed]
+            drop = np.zeros(residual.size, dtype=bool)
+            drop[worst] = True
+            n_drop = allowed
+            info["limited_by_floor"] = True
+            log(f"  more gates exceed {threshold:g} sigma than the "
+                f"{int(min_fraction * 100)} % floor allows; dropping the worst {n_drop}")
+        keep = ~drop
+        # Put back the best-fitting gates of any sounding the cut would have
+        # emptied, so no station is left with the lateral constraint alone.
+        floored = 0
+        offset = 0
+        for block in blocks:
+            size = block.dobs.size
+            local = keep[offset:offset + size]
+            wanted = min(int(min_gates), size)
+            if size and int(local.sum()) < wanted:
+                best = np.argsort(np.abs(residual[offset:offset + size]))[:wanted]
+                local[:] = False
+                local[best] = True
+                floored += 1
+            offset += size
+        if floored:
+            info["floored_soundings"] = int(info["floored_soundings"]) + floored
+            log(f"  kept the {min_gates} best gate(s) at {floored} sounding(s) the "
+                f"cut would have emptied")
+        n_drop = int((~keep).sum())
+        if n_drop == 0:
+            info["stopped_because"] = (
+                f"every gate over the cut is at a sounding already down to its "
+                f"{min_gates}-gate floor")
+            break
+        trimmed: List[SoundingBlock] = []
+        offset = 0
+        for block in blocks:
+            size = block.dobs.size
+            trimmed.append(mask_sounding_block(block, keep[offset:offset + size]))
+            offset += size
+        blocks = trimmed
+        outcome = invert_lci(blocks, n_layers, log=log,
+                             initial_model=outcome.models, **rerun)
+        kept = int(sum(block.dobs.size for block in blocks))
+        info["passes"].append({
+            "pass": index, "dropped": n_drop, "kept": kept,
+            "chi2": float(outcome.chi2),
+            "convergence": [float(value) for value in outcome.chi2_history],
+        })
+        log(f"  rejected {n_drop} gate(s) over {threshold:g} sigma, "
+            f"{kept} left -> chi2 {outcome.chi2:.3f}")
+        if info["limited_by_floor"]:
+            # A bounded cut leaves known-bad gates in, so stop rather than nibble
+            # at the floor pass after pass without ever clearing the outliers.
+            info["stopped_because"] = (
+                f"the {int(min_fraction * 100)} % floor capped the cut; gates beyond "
+                f"{threshold:g} sigma remain")
+            break
+    info["kept"] = int(sum(block.dobs.size for block in blocks))
+    info["dropped"] = n_start - info["kept"]
+    if not info["stopped_because"]:
+        info["stopped_because"] = f"all {int(passes)} pass(es) used"
+    return outcome, blocks, info
+
+
+def _smoothest_equivalent(solved: Dict[float, LCIResult],
+                          best: LCIResult) -> LCIResult:
+    """The largest smoothness scale that fits as well as ``best``.
+
+    "As well" means within :data:`CHI2_EQUIVALENCE` in relative terms. Used only
+    when the chi-squared target was never reached, where the search would
+    otherwise trade a fraction of a percent of misfit for a far rougher model.
+    """
+    margin = float(best.chi2) * (1.0 + CHI2_EQUIVALENCE)
+    equivalent = [item for item in solved.values() if item.chi2 <= margin]
+    if not equivalent:
+        return best
+    return max(equivalent, key=lambda item: item.smoothness_scale)
+
+
 __all__ = [
+    "CHI2_EQUIVALENCE",
     "DEFAULT_LCI",
+    "DOI_SENSITIVITY_THRESHOLD",
     "LOG_RESISTIVITY_BOUNDS",
     "SMOOTHNESS_SCALE_BOUNDS",
     "LCIResult",
     "SoundingBlock",
+    "cumulated_sensitivity",
+    "sensitivity_doi",
     "invert_lci",
+    "invert_lci_rejecting_outliers",
     "lateral_edges",
+    "mask_sounding_block",
     "solve_lci",
+    "weighted_residuals",
 ]

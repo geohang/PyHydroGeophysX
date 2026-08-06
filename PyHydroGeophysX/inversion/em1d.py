@@ -57,15 +57,23 @@ def _inversion_layer_thicknesses(inv: Dict[str, Any]) -> np.ndarray:
 
 def _tdem_uncertainty(observed: np.ndarray, item: Dict[str, Any],
                       rel: float, floor: float) -> np.ndarray:
-    """Per-gate uncertainty, preferring the stack error the instrument recorded.
+    """Per-gate uncertainty from the instrument's stack error, floored at ``rel``.
 
     ``relative_std`` is used gate by gate where it is present and positive, and
     ``rel`` fills the rest, so a partially populated column is not thrown away.
+
+    ``rel`` is a floor rather than only a fallback. A stack error measures how
+    repeatable the gate was, which says nothing about how well a 1D layered
+    model can represent the ground under a ground-loop system; leaving the
+    recorded 3-5 % as the whole error budget then reports a chi-squared in the
+    hundreds that no model can reach. Raising the assumed error is the correct
+    response to model error, and it keeps the instrument's relative weighting
+    between gates because the floor applies to every gate alike.
     """
     data_rel = np.asarray(item.get("relative_std", []), dtype=float).ravel()
     if data_rel.size == observed.size:
         data_rel = np.where(np.isfinite(data_rel) & (data_rel > 0.0), data_rel, rel)
-        return data_rel * np.abs(observed) + floor
+        return np.maximum(data_rel, float(rel)) * np.abs(observed) + floor
     return rel * np.abs(observed) + floor
 
 

@@ -147,8 +147,9 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
     caller can fall back to no scaling).
     """
     moment = str(geom.get("tem_moment", "HM"))
+    use_flags = bool(geom.get("use_project_flags", True))
     try:
-        head = load_sounding(path, method, sounding=0, moment=moment)
+        head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags)
     except Exception as exc:  # noqa: BLE001
         log(f"Auto-calibration skipped ({exc}); using data_scale = 1.0")
         return 1.0
@@ -172,7 +173,7 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
 
             def observed(s):
                 return _response_on_times(
-                    load_sounding(path, method, sounding=int(s), moment=moment),
+                    load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags),
                     abscissa,
                 )
         else:
@@ -189,7 +190,7 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
             preds = np.asarray(grid)
 
             def observed(s):
-                d = load_sounding(path, method, sounding=int(s), moment=moment)
+                d = load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags)
                 return np.abs(np.asarray(d["real"], float) + 1j * np.asarray(d["imag"], float))
     except Exception as exc:  # noqa: BLE001
         log(f"Auto-calibration skipped ({exc}); using data_scale = 1.0")
@@ -237,8 +238,9 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
     if ref <= 0:
         return current
     moment = str(geom.get("tem_moment", "HM"))
+    use_flags = bool(geom.get("use_project_flags", True))
     try:
-        head = load_sounding(path, method, sounding=0, moment=moment)
+        head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags)
         n_total = int(head.get("n_soundings", 1))
         probe = np.unique(np.linspace(0, n_total - 1, min(int(max_probe), n_total)).astype(int))
         if method == "TDEM":
@@ -253,7 +255,7 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
 
             def observed(s):
                 return _response_on_times(
-                    load_sounding(path, method, sounding=int(s), moment=moment),
+                    load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags),
                     abscissa,
                 )
         else:
@@ -266,7 +268,7 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
             pred = np.abs(np.asarray(resp, dtype=complex).ravel()[:abscissa.size])
 
             def observed(s):
-                d = load_sounding(path, method, sounding=int(s), moment=moment)
+                d = load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags)
                 return np.abs(np.asarray(d["real"], float) + 1j * np.asarray(d["imag"], float))
     except Exception as exc:  # noqa: BLE001
         log(f"Reference calibration unavailable ({exc}); kept data_scale.")
@@ -287,6 +289,22 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
     k = float(np.clip(np.exp(np.mean(np.log(ks))), 1e-4, 1e4))
     log(f"Reference calibration to a half-space at {ref:.0f} ohm-m: data_scale = {k:.4g}.")
     return k
+
+
+def _latest_gate(data: Dict[str, Any]) -> Optional[float]:
+    """The last time channel this station actually carries, over all moments.
+
+    A joint station's ``times`` entry holds one preview moment only, so reading
+    it would understate a station whose latest gates are in the other moment,
+    and would say nothing at all about stations that differ from the first one
+    on the line.
+    """
+    moments = data.get("moments") or {}
+    times = ([np.asarray(item.get("times", []), dtype=float).ravel()
+              for item in moments.values()]
+             if moments else [np.asarray(data.get("times", []), dtype=float).ravel()])
+    usable = [array.max() for array in times if array.size]
+    return float(max(usable)) if usable else None
 
 
 def _sounding_data_count(data: Dict[str, Any], method: str) -> int:
@@ -337,6 +355,16 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     ``doi_blank`` is set, cells below a per-sounding depth of investigation
     (a diffusion-depth estimate scaled by ``doi_factor``) are blanked (NaN) so the
     unconstrained deep part of an early-time sounding is not shown as railed.
+
+    Two settings answer a chi-squared that stays high, the same pair the ERT
+    module offers. ``inv["auto_lambda"]`` re-solves the line at other smoothness
+    weights to reach ``target_chi2``. ``inv["reject_outliers"]`` drops the gates
+    the converged model cannot explain (beyond ``outlier_threshold`` sigma, over
+    ``outlier_passes`` cycles, never below ``min_data_fraction`` of the gates)
+    and solves again; what it removed is reported under ``result["outliers"]``.
+    They address different causes, so they can be used together: relaxing the
+    smoothness helps when the model is too stiff for the data, rejection helps
+    when a minority of gates are simply wrong.
     """
     if method not in METHODS:
         raise ValueError(f"method must be one of {METHODS}, got {method!r}.")
@@ -344,7 +372,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         _normalise_temcompany_moment(str(geom.get("tem_moment", "HM")))
         if is_temcompany_source(path) else str(geom.get("tem_moment", "HM"))
     )
-    head = load_sounding(path, method, sounding=0, moment=moment)
+    use_flags = bool(geom.get("use_project_flags", True))
+    head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags)
     joint = method == "TDEM" and bool(head.get("moments"))
     invert = (
         fdem_invert if method == "FDEM"
@@ -413,7 +442,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     t_ref = f_ref = None  # last time / min frequency, for the DOI estimate
     for s in range(n_pos):
         try:
-            data = load_sounding(path, method, sounding=s, moment=moment)
+            data = load_sounding(path, method, sounding=s, moment=moment, use_flags=use_flags)
             datasets[s] = data
             if t_ref is None and "times" in data and np.size(data["times"]):
                 t_ref = float(np.asarray(data["times"]).ravel()[-1])
@@ -478,9 +507,16 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     lci_passes = max(0, int(inv.get("lci_passes", 1)))
     reference_distance = max(float(inv.get("reference_distance", 10.0)), 1e-6)
     lci_report: Dict[str, Any] = {}
+    outlier_info: Dict[str, Any] = {"enabled": False}
+    # Kept for the depth-of-investigation pass below, which reads the same
+    # analytic Jacobian the coupled solver used.
+    doi_blocks: Dict[int, Any] = {}
     if simultaneous:
         from PyHydroGeophysX.inversion.em1d import build_sounding_block
-        from PyHydroGeophysX.inversion.em1d_lci import invert_lci
+        from PyHydroGeophysX.inversion.em1d_lci import (
+            invert_lci,
+            invert_lci_rejecting_outliers,
+        )
 
         usable = [s for s in range(n_pos) if datasets[s] is not None]
         sounding_blocks = []
@@ -514,12 +550,10 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
             log(f"Simultaneous LCI: {len(kept)} soundings, lateral="
                 f"{lateral:g}, vertical={float(inv.get('smoothness', 0.3)):g}")
             warm = (surface_models[kept] if use_warm_models else None)
-            outcome = invert_lci(
-                sounding_blocks, n_layers,
+            lci_kwargs = dict(
                 smoothness=float(inv.get("smoothness", 0.3)),
                 lateral_smoothness=lateral * lateral_weight_scale,
                 reference_distance=reference_distance,
-                initial_model=warm,
                 starting_resistivity=float(inv.get("starting_resistivity", 100.0)),
                 max_iterations=int(inv.get("max_iterations", 20)),
                 convergence_tolerance=float(inv.get("convergence_tolerance", 0.02)),
@@ -529,15 +563,59 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                 chi2_tolerance=float(inv.get("chi2_tolerance", 0.2)),
                 max_lambda_trials=int(inv.get("max_lambda_trials", 5)),
                 verbose=bool(inv.get("verbose", True)),
-                log=log)
+            )
+            doi_blocks.update(zip(kept, sounding_blocks))
+            if bool(inv.get("reject_outliers", False)):
+                log(f"Outlier rejection: cut beyond "
+                    f"{float(inv.get('outlier_threshold', 3.0)):g} sigma, "
+                    f"{int(inv.get('outlier_passes', 2))} pass(es), keeping at least "
+                    f"{int(float(inv.get('min_data_fraction', 0.5)) * 100)} % of the gates "
+                    f"and {int(inv.get('min_gates_per_sounding', 3))} per sounding.")
+                outcome, sounding_blocks, outlier_info = invert_lci_rejecting_outliers(
+                    sounding_blocks, n_layers,
+                    threshold=float(inv.get("outlier_threshold", 3.0)),
+                    passes=int(inv.get("outlier_passes", 2)),
+                    min_fraction=float(inv.get("min_data_fraction", 0.5)),
+                    min_gates=int(inv.get("min_gates_per_sounding", 3)),
+                    initial_model=warm, log=log, **lci_kwargs)
+                log(f"  Rejection finished: {outlier_info['kept']} of "
+                    f"{outlier_info['n_start']} gates kept "
+                    f"({outlier_info['stopped_because']}).")
+            else:
+                outcome = invert_lci(sounding_blocks, n_layers,
+                                     initial_model=warm, log=log, **lci_kwargs)
             surface_models[kept] = outcome.models
             model[:, 0, :] = surface_models[:, ::-1]
             for index, s in enumerate(kept):
                 chi2_list[s] = float(outcome.chi2_per_sounding[index])
+                # The blocks are what was actually fitted, so they, not the file,
+                # carry the gate count and the sensitivity once rejection has run.
+                data_count_list[s] = int(sounding_blocks[index].dobs.size)
+                doi_blocks[s] = sounding_blocks[index]
+            # Every stage the solver actually ran, laid end to end. With
+            # rejection on, the final run's own history is a couple of points
+            # and hides the two solves before it.
+            track = [{
+                "stage": "solve",
+                "lambda": float(outlier_info.get("initial", {}).get(
+                    "smoothness_scale", outcome.smoothness_scale)),
+                "chi2": list(outlier_info.get("initial", {}).get(
+                    "convergence", outcome.chi2_history)),
+                "n_data": int(outlier_info.get("initial", {}).get(
+                    "n_data", sum(b.dobs.size for b in sounding_blocks))),
+            }]
+            for entry in outlier_info.get("passes") or []:
+                track.append({
+                    "stage": f"reject {entry['pass']}",
+                    "lambda": float(outcome.smoothness_scale),
+                    "chi2": list(entry.get("convergence") or []),
+                    "n_data": int(entry.get("kept", 0)),
+                })
             lci_report = {
                 "mode": "simultaneous",
                 "chi2": outcome.chi2,
                 "chi2_history": outcome.chi2_history,
+                "convergence_track": track,
                 "iterations": outcome.iterations,
                 "stop_reason": outcome.stop_reason,
                 "smoothness_scale": outcome.smoothness_scale,
@@ -625,27 +703,53 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
             )
             log(f"  LCI pass {pass_index + 1}/{lci_passes}: model change={change:.4g}")
 
-    # Blank cells below the depth of investigation (unconstrained by early time)
-    # and any cell stuck at the resistivity bound (a railed, meaningless value).
-    if doi_blank and np.isfinite(model).any():
-        depth_ctr = 0.5 * (depth_edges[:-1] + depth_edges[1:])  # surface-ordered
-        mu0 = 4e-7 * np.pi
-        rail = 10 ** (5.0 - 0.2)  # near the _occam_1d resistivity upper bound (1e5 Ω·m)
-        for s in range(n_pos):
-            col = model[s, 0, :]  # deepest-first
-            if not np.isfinite(col).any():
-                continue
-            # A low percentile ignores the railed high tail when gauging depth reach.
-            rho_ref = float(np.nanpercentile(col, 40))
-            if method == "TDEM" and t_ref:
-                doi = doi_factor * np.sqrt(2.0 * t_ref * rho_ref / mu0)
-            elif method == "FDEM" and f_ref:
-                doi = doi_factor * 503.0 * np.sqrt(rho_ref / f_ref)
-            else:
-                doi = np.inf
-            keep = (depth_ctr <= doi)[::-1]  # deepest-first to match col
-            col[~keep] = np.nan
-            col[col >= rail] = np.nan
+    # How far down the data still constrain each sounding, and what to hide.
+    #
+    # Where the analytic Jacobian is available the reach comes from the cumulated
+    # sensitivity, which is what the depth of investigation actually means: below
+    # it, moving the whole remaining column by a decade would not move the
+    # predicted response out of its error bars. The diffusion-depth rule is the
+    # fallback for solvers that supply no Jacobian; it is a rule of thumb about
+    # the latest gate, so it uses each sounding's OWN latest gate rather than a
+    # single time borrowed from the first sounding on the line.
+    from PyHydroGeophysX.inversion.em1d_lci import (
+        DOI_SENSITIVITY_THRESHOLD,
+        cumulated_sensitivity,
+        sensitivity_doi,
+    )
+
+    depth_ctr = 0.5 * (depth_edges[:-1] + depth_edges[1:])  # surface-ordered
+    doi_threshold = float(inv.get("doi_threshold", DOI_SENSITIVITY_THRESHOLD))
+    sensitivity = np.full((n_pos, n_layers), np.nan, dtype=float)
+    doi = np.full(n_pos, np.nan, dtype=float)
+    mu0 = 4e-7 * np.pi
+    for s in range(n_pos):
+        row = surface_models[s]
+        if not np.all(np.isfinite(row)):
+            continue
+        block = doi_blocks.get(s)
+        if block is not None:
+            sensitivity[s] = cumulated_sensitivity(block, row)
+            doi[s] = sensitivity_doi(block, row, depth_edges,
+                                     threshold=doi_threshold)
+            continue
+        rho_ref = float(np.nanpercentile(row, 40))
+        last_time = _latest_gate(datasets[s]) if datasets[s] is not None else t_ref
+        if method == "TDEM" and last_time:
+            doi[s] = doi_factor * math.sqrt(2.0 * last_time * rho_ref / mu0)
+        elif method == "FDEM" and f_ref:
+            doi[s] = doi_factor * 503.0 * math.sqrt(rho_ref / f_ref)
+
+    # A cell stuck at the resistivity bound is a railed, meaningless value
+    # whatever the sensitivity says, so that mask is applied either way.
+    rail = 10 ** (5.0 - 0.2)  # near the _occam_1d resistivity upper bound (1e5 Ω·m)
+    for s in range(n_pos):
+        col = model[s, 0, :]  # deepest-first
+        if not np.isfinite(col).any():
+            continue
+        if doi_blank and np.isfinite(doi[s]):
+            col[~(depth_ctr <= doi[s])[::-1]] = np.nan
+        col[col >= rail] = np.nan
 
     pos = pos_lci
     if pos.size >= 2:
@@ -670,11 +774,13 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         "method": method, "edges": (ex, ey, ez), "model3d": model,
         "label": "resistivity (Ω·m)", "cmap": "turbo", "log_scale": True,
         "positions": pos, "depth_edges": depth_edges, "thickness": thick,
+        "sensitivity": sensitivity, "doi": doi, "doi_threshold": doi_threshold,
         "chi2": chi2_mean, "chi2_list": chi2_list, "n_soundings": n_pos,
         "n_layers": n_layers, "n_data": int(sum(data_count_list)),
         "data_count_list": data_count_list, "data_scale": data_scale_used,
         "joint_moments": joint, "lci": bool(lci_report),
         "lci_mode": lci_report.get("mode", "off"), "lci_report": lci_report,
+        "outliers": outlier_info,
         "lateral_smoothness": lateral, "lci_passes": lci_passes,
         "lateral_weight_scale": lateral_weight_scale,
         "line_numbers": line_numbers,
@@ -685,7 +791,11 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         out = table_io.ensure_dir(out_dir)
         np.savez(out / "resistivity_section.npz",
                  positions=pos, elevation_edges=ez, position_edges=ex,
-                 resistivity=model[:, 0, :], chi2=np.asarray(chi2_list, dtype=float))
+                 resistivity=model[:, 0, :], chi2=np.asarray(chi2_list, dtype=float),
+                 # Saved so the depth cut can be reproduced, or moved, without
+                 # re-running the inversion.
+                 sensitivity=sensitivity, doi=doi, depth_edges=depth_edges,
+                 line_numbers=np.asarray(line_numbers, dtype=int))
         result["saved"] = [str(out / "resistivity_section.npz")]
         log(f"  saved {out / 'resistivity_section.npz'}")
     return result

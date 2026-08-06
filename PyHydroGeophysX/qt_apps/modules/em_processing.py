@@ -48,6 +48,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     select_directory,
 )
 from PyHydroGeophysX.qt_apps.widgets.curve_viewer import CurveViewer
+from PyHydroGeophysX.qt_apps.widgets.em_overview_view import EMOverviewView
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.plan_slice_view import PlanSliceView
@@ -93,13 +94,16 @@ class EMProcessingModule(BaseModule):
         self._tabs = QTabWidget()
         self._curve = CurveViewer()
         # The "Resistivity model" tab adapts to the result: a 1D depth profile
-        # (single sounding), or — for a line — a plan-view depth slice (a map you
-        # slice by depth) or the position x depth section, chosen with "View".
+        # (single sounding), or — for a line — the map + section overview, a
+        # plan-view depth slice (a map you slice by depth), or the position x
+        # depth section on its own, chosen with "View".
         self._inv_view = ZoomableImageView()       # page 0: single-sounding profile
-        self._plan_view = PlanSliceView()          # page 1: plan-view depth slice
-        self._section_view = Model3DView()         # page 2: position x depth section
+        self._overview_view = EMOverviewView()     # page 1: map + section overview
+        self._plan_view = PlanSliceView()          # page 2: plan-view depth slice
+        self._section_view = Model3DView()         # page 3: position x depth section
         self._model_stack = QStackedWidget()
         self._model_stack.addWidget(self._inv_view)
+        self._model_stack.addWidget(self._overview_view)
         self._model_stack.addWidget(self._plan_view)
         self._model_stack.addWidget(self._section_view)
         self._model_tab = QWidget()
@@ -107,7 +111,13 @@ class EMProcessingModule(BaseModule):
         self._view_row = QWidget()
         vr = QHBoxLayout(self._view_row); vr.setContentsMargins(6, 2, 6, 2)
         vr.addWidget(QLabel("View:"))
-        self._view_mode = QComboBox(); self._view_mode.addItems(["Plan slice (map)", "Section"])
+        self._view_mode = QComboBox()
+        self._view_mode.addItems(
+            ["Overview (map + section)", "Plan slice (map)", "Section"])
+        self._view_mode.setToolTip(
+            "Overview pairs the survey map with the selected line's resistivity "
+            "section. Plan slice maps one depth layer across the survey. Section "
+            "shows the position x depth model on its own.")
         self._view_mode.currentIndexChanged.connect(self._on_view_mode)
         vr.addWidget(self._view_mode); vr.addStretch(1)
         self._view_row.setVisible(False)
@@ -128,7 +138,8 @@ class EMProcessingModule(BaseModule):
         self._on_method_changed()
 
     def _on_view_mode(self, idx: int) -> None:
-        self._model_stack.setCurrentWidget(self._plan_view if idx == 0 else self._section_view)
+        pages = {0: self._overview_view, 1: self._plan_view}
+        self._model_stack.setCurrentWidget(pages.get(idx, self._section_view))
 
     # -- helpers -------------------------------------------------------------
     @staticmethod
@@ -191,6 +202,19 @@ class EMProcessingModule(BaseModule):
             "gates and LM uses early-time gates. In-use flags are applied automatically.")
         self._tem_moment.currentTextChanged.connect(self._on_tem_moment_changed)
         moment_form.addRow("Moment(s)", self._tem_moment)
+        self._use_flags = QCheckBox("Use the project's in-use flags")
+        self._use_flags.setChecked(True)
+        self._use_flags.setToolTip(
+            "On: import only the gates the acquisition software left switched on, "
+            "which is what its own inversion used.\n\n"
+            "Off: import every gate that holds a finite, non-dummy value, including "
+            "the ones its QC switched off, and let this module's own outlier "
+            "rejection decide. A noisy ground survey may leave only a quarter of "
+            "the gates in use, so this can be several times more data; each gate "
+            "still carries its recorded stack error, so a noisy one is weighted as "
+            "noisy. Turn on 'Reject outliers' with it.")
+        self._use_flags.toggled.connect(self._on_use_flags_changed)
+        moment_form.addRow("", self._use_flags)
         self._tem_moment_row.setVisible(False)
         v.addWidget(self._tem_moment_row)
 
@@ -269,7 +293,10 @@ class EMProcessingModule(BaseModule):
             "Fixed layers in the model. The grid is shared by every sounding on a "
             "line, which is what lets them be coupled layer by layer.")
         self._min_thick = self._dspin(d["min_thickness"], 0.2, 50.0, 0.5, 2)
-        self._max_thick = self._dspin(d["max_thickness"], 1.0, 500.0, 1.0, 1)
+        # Two decimals, like the minimum: a project's saved layer grid is only
+        # reused when both ends still match it (see _collect_inv), and rounding
+        # the deepest layer to 0.1 m was enough to lose that match.
+        self._max_thick = self._dspin(d["max_thickness"], 1.0, 500.0, 1.0, 2)
         # Two ends of one setting: the layer grid is geometric between them.
         self._thick_row = merged_row(self._min_thick, "to", self._max_thick, "m")
         self._smooth = self._dspin(d["smoothness"], 0.0, 10.0, 0.1, 2)
@@ -291,9 +318,12 @@ class EMProcessingModule(BaseModule):
         d = em_pipeline.DEFAULT_INVERSION
         self._rel_err = self._dspin(d["rel_error"], 0.0, 1.0, 0.01, 3)
         self._rel_err.setToolTip(
-            "Assumed relative error per gate, used where the file carries no stack "
-            "error of its own. χ² is measured against this, so it decides what "
-            "\"fitting the data\" means.")
+            "Assumed relative error per gate. Where the file carries a stack error of "
+            "its own (TEMcompany exports do), this is a FLOOR on it, not a "
+            "replacement. χ² is measured against the result, so it decides what "
+            "\"fitting the data\" means. A stack error only measures repeatability; "
+            "raise this to make room for the error in representing the ground as 1D "
+            "layers, which is what keeps χ² out of the hundreds on ground TDEM.")
         self._data_scale = self._dspin(1.0, 1e-4, 1e6, 0.1, 4)
         self._data_scale.setToolTip(
             "Multiply the observed data before inversion. Use for data in normalized units "
@@ -390,7 +420,54 @@ class EMProcessingModule(BaseModule):
             "Upper bound on the extra line solves the search may run, on top of the "
             "one at the smoothness you set.")
         form.addRow("Max trials", self._lam_trials)
+
+        # The other answer to a high χ²: some gates are wrong rather than the
+        # model being too stiff. Same controls, wording and defaults as ERT.
+        self._reject = QCheckBox("Reject outliers: drop gates the model cannot explain")
+        self._reject.setChecked(False)
+        self._reject.setToolTip(
+            "After the line has converged, drop the time gates whose residual exceeds "
+            "the cut below and solve again at the same smoothness. This is what brings "
+            "χ² down when a minority of gates are simply bad; it also shrinks the data "
+            "set, so the floor below keeps it from gutting the survey. Cutting is per "
+            "gate, not per sounding: a TDEM station may carry only a handful of gates.")
+        self._reject.toggled.connect(self._sync_reject)
+        form.addRow(self._reject)
+
+        self._reject_sigma = self._dspin(3.0, 1.5, 20.0, 0.5, 1)
+        self._reject_sigma.setToolTip(
+            "Rejection cut in units of the gate's own error. A gate at 3 means the "
+            "model misses it by three times its stack error.")
+        self._reject_passes = self._ispin(2, 1, 5)
+        self._reject_passes.setToolTip(
+            "How many reject-and-re-solve cycles to run. Each re-solve warm-starts "
+            "from the model just found, so it costs far less than the first solve.")
+        self._reject_row = merged_row(
+            self._reject_sigma, "σ, passes", self._reject_passes)
+        form.addRow("Cut beyond", self._reject_row)
+
+        self._min_keep = self._dspin(50.0, 10.0, 100.0, 5.0, 0)
+        self._min_keep.setSuffix(" %")
+        self._min_keep.setToolTip(
+            "Rejection stops before it would leave less than this share of the gates. "
+            "A χ² bought by deleting most of the survey is not a fit.")
+        self._min_gates = self._ispin(3, 1, 20)
+        self._min_gates.setToolTip(
+            "A sounding never drops below this many gates, keeping its best-fitting "
+            "ones. Stations that arrive with fewer keep everything they have. Without "
+            "this floor a station holding one or two gates loses them both and its "
+            "column becomes a hole in the section, held up by the lateral constraint "
+            "alone.")
+        self._min_keep_row = merged_row(
+            self._min_keep, "of the survey, and", self._min_gates, "gates per sounding")
+        form.addRow("Keep at least", self._min_keep_row)
+        self._sync_reject()
         return box
+
+    def _sync_reject(self) -> None:
+        """Only enable the rejection knobs the checkbox actually uses."""
+        set_rows_enabled([self._reject_row, self._min_keep_row],
+                         self._reject.isEnabled() and self._reject.isChecked())
 
     def _build_run_group(self) -> QGroupBox:
         box = QGroupBox("Run"); form = QFormLayout(box)
@@ -452,6 +529,9 @@ class EMProcessingModule(BaseModule):
     # -- geometry / params ---------------------------------------------------
     def _collect_geom(self) -> Dict[str, Any]:
         geom: Dict[str, Any] = {
+            # Which gates exist travels with the data, so it belongs beside the
+            # moment rather than with the inversion settings.
+            "use_project_flags": bool(self._use_flags.isChecked()),
             "source_radius": self._src_radius.value(),
             "tx_rx_sep": self._tx_rx.value(),
             "height": self._height.value(),
@@ -488,6 +568,9 @@ class EMProcessingModule(BaseModule):
         self._auto_lam.setEnabled(simultaneous)
         set_rows_enabled([self._chi2_row, self._lam_trials],
                          simultaneous and self._auto_lam.isChecked())
+        if hasattr(self, "_reject"):
+            self._reject.setEnabled(simultaneous)
+            self._sync_reject()
 
     def _set_lci_mode(self, value: str) -> None:
         key = str(value).strip().lower()
@@ -511,6 +594,11 @@ class EMProcessingModule(BaseModule):
             "target_chi2": float(self._target_chi2.value()),
             "chi2_tolerance": float(self._chi2_tol.value()),
             "max_lambda_trials": int(self._lam_trials.value()),
+            "reject_outliers": bool(self._reject.isChecked()),
+            "outlier_threshold": float(self._reject_sigma.value()),
+            "outlier_passes": int(self._reject_passes.value()),
+            "min_data_fraction": float(self._min_keep.value()) / 100.0,
+            "min_gates_per_sounding": int(self._min_gates.value()),
             "rel_error": self._rel_err.value(),
             "max_iterations": self._max_iter.value(),
             "data_scale": self._data_scale.value(),
@@ -559,6 +647,18 @@ class EMProcessingModule(BaseModule):
         if (self._source_path is not None and self._data is not None
                 and self._data.get("temcompany")):
             self._load_sounding(self._sounding.value() - 1, reset_geometry=False)
+
+    def _on_use_flags_changed(self, _checked: bool) -> None:
+        """Re-read the file: the flags decide which gates, and which stations, exist.
+
+        A station whose every gate was switched off does not appear at all while
+        the flags are honoured, so the coordinates, the station count and the
+        sounding cap all have to be re-read with them. Unlike the moment picker,
+        this cannot keep the geometry it already had.
+        """
+        if (self._source_path is not None and self._data is not None
+                and self._data.get("temcompany")):
+            self._load_sounding(self._sounding.value() - 1, reset_geometry=True)
 
     def _load_example(self, example_id: str) -> Dict[str, Any]:
         """Load a documented demo dataset and apply its compatible settings."""
@@ -609,7 +709,8 @@ class EMProcessingModule(BaseModule):
         try:
             self._data = em_pipeline.load_sounding(
                 str(self._source_path), self._method.currentText(), sounding=int(index),
-                moment=self._tem_moment.currentText())
+                moment=self._tem_moment.currentText(),
+                use_flags=bool(self._use_flags.isChecked()))
         except Exception as exc:  # noqa: BLE001
             self._data = None
             self.log(f"Could not load sounding: {exc}", "error")
@@ -753,8 +854,11 @@ class EMProcessingModule(BaseModule):
                 inversion.get("lateral_smoothness", self._lateral_smooth.value())))
             self._project_layer_thicknesses = np.asarray(
                 inversion.get("layer_thicknesses", []), dtype=float).ravel()
-            self._line_max.setValue(max(
-                self._line_max.value(), int(self._data.get("n_soundings", 1))))
+            # Track the station count exactly. Only raising it would leave the
+            # cap behind when a reload brings more stations in, and inverting 71
+            # of 94 without saying so is the kind of quiet truncation that is
+            # very hard to notice on the section.
+            self._line_max.setValue(int(self._data.get("n_soundings", 1)))
         n = int(self._data.get("n_soundings", 1))
         span = (float(self._geom_positions[-1] - self._geom_positions[0])
                 if self._geom_positions is not None and self._geom_positions.size else 0.0)
@@ -939,7 +1043,11 @@ class EMProcessingModule(BaseModule):
             self._collect_geom(), self._collect_inv(), with_log=True,
             spacing=float(self._line_spacing.value()), positions=self._geom_positions,
             heights=self._geom_heights, max_soundings=int(self._line_max.value()),
-            ref_resistivity=float(self._ref_res.value()), out_dir=Path(out_dir))
+            ref_resistivity=float(self._ref_res.value()), out_dir=Path(out_dir),
+            # The whole model comes back with its sensitivity; the Resistivity
+            # model tab applies the depth cut, so the threshold can be moved
+            # without inverting again (the ERT view works the same way).
+            doi_blank=False)
         worker.logged.connect(lambda m: self.log(m, "info"))
         worker.succeeded.connect(self._on_line_ok)
         worker.failed.connect(self._on_line_failed)
@@ -997,10 +1105,12 @@ class EMProcessingModule(BaseModule):
                                       label=result["label"], cmap=result["cmap"],
                                       log_scale=result.get("log_scale", True))
         self._populate_plan(result)
+        self._populate_overview(result)
         self._view_row.setVisible(True)
         self._view_mode.blockSignals(True); self._view_mode.setCurrentIndex(0)
         self._view_mode.blockSignals(False)
-        self._model_stack.setCurrentWidget(self._plan_view)  # default to the plan-view map
+        # The map + section overview is what a reader needs first, so open there.
+        self._model_stack.setCurrentWidget(self._overview_view)
         self._tabs.setCurrentWidget(self._model_tab)
         rng = result.get("model_range", [float("nan"), float("nan")])
         chi2 = result.get("chi2")
@@ -1030,12 +1140,22 @@ class EMProcessingModule(BaseModule):
         extra = {"soundings": result.get("n_soundings"), "layers": result.get("n_layers")}
         if coupled:
             extra["stop"] = report.get("stop_reason", "")
+        outliers = dict(result.get("outliers") or {})
+        if outliers.get("enabled"):
+            extra["data"] = f"{outliers.get('kept')} of {outliers.get('n_start')} gates kept"
+            if outliers.get("limited_by_floor"):
+                extra["data"] += " (floor reached)"
+        doi = np.asarray(result.get("doi", []), dtype=float)
+        if doi.size and np.isfinite(doi).any():
+            extra["DOI"] = (f"median {np.nanmedian(doi):.0f} m "
+                            f"(σ ≥ {float(result.get('doi_threshold', 20)):g})")
         self._quality_view.show_quality(
             {"chi2": float(chi2) if isinstance(chi2, float) else float("nan"),
              "n_data": result.get("n_data"),
              "iterations": report.get("iterations") if coupled else None,
              "method": method_txt,
              "extra": extra,
+             "convergence_track": report.get("convergence_track"),
              "note": (
                  "Whole-line weighted residual from one coupled solve; every "
                  "sounding was fitted with its neighbours' models constrained "
@@ -1047,12 +1167,40 @@ class EMProcessingModule(BaseModule):
                  "Mean weighted residual over independently inverted soundings."
              )},
             convergence=(report.get("chi2_history") if coupled else None),
-            title=f"{result['method']} line inversion")
+            title=f"{result['method']} line inversion",
+            per_item={
+                "values": result.get("chi2_list") or [],
+                "x": result.get("positions"),
+                "groups": result.get("line_numbers"),
+                "counts": result.get("data_count_list"),
+                "x_label": "Distance along survey (m)",
+                "item_label": "sounding",
+            })
         saved = result.get("saved") or []
         for path in saved:
-            self.log(f"Saved section to {path}", "info")
+            self.log(f"Saved {Path(path).name} to {path}", "info")
         self.report_result({"method": result["method"], "n_soundings": result.get("n_soundings"),
                             "mean_chi2": chi2, "section_npz": saved[0] if saved else None})
+
+    def _populate_overview(self, result: dict) -> None:
+        """Feed the map + section overview and save it beside the section data."""
+        n_pos = int(np.asarray(result["model3d"]).shape[0])
+        x = y = None
+        if (self._geom_x is not None and self._geom_y is not None
+                and self._geom_x.size >= n_pos and self._geom_y.size >= n_pos):
+            x, y = self._geom_x[:n_pos], self._geom_y[:n_pos]
+        # Geographic coordinates ride along only so the map can place tiles; the
+        # section and the axes stay in the projected metres of the survey.
+        lon = np.asarray((self._data or {}).get("longitude", []), dtype=float).ravel()
+        lat = np.asarray((self._data or {}).get("latitude", []), dtype=float).ravel()
+        self._overview_view.show_result(
+            result, x=x, y=y,
+            lon=lon[:n_pos] if lon.size >= n_pos else None,
+            lat=lat[:n_pos] if lat.size >= n_pos else None)
+        out = io_utils.ensure_dir(Path(self.state.output_dir or ".") / "em_results")
+        saved = self._overview_view.save_figure(out / "em_line_overview.png")
+        if saved:
+            result.setdefault("saved", []).append(saved)
 
     def _populate_plan(self, result: dict) -> None:
         """Feed the plan-view depth-slice map from a line-inversion result: each
@@ -1061,7 +1209,13 @@ class EMProcessingModule(BaseModule):
         n_pos = model.shape[0]
         depth_edges = np.asarray(result["depth_edges"], dtype=float)
         depth_ctr = 0.5 * (depth_edges[:-1] + depth_edges[1:])       # surface-ordered
-        res_surface = model[:, ::-1]                                 # surface-ordered in depth
+        res_surface = model[:, ::-1].copy()                          # surface-ordered in depth
+        # The line result is no longer blanked at the source, so apply the same
+        # depth-of-investigation cut here; a plan slice below it would map
+        # regularization across the survey.
+        sensitivity = np.asarray(result.get("sensitivity", []), dtype=float)
+        if sensitivity.shape == res_surface.shape:
+            res_surface[sensitivity < float(result.get("doi_threshold", 20.0))] = np.nan
         if (self._geom_x is not None and self._geom_y is not None
                 and self._geom_x.size >= n_pos and self._geom_y.size >= n_pos):
             xy = np.column_stack([self._geom_x[:n_pos], self._geom_y[:n_pos]])
@@ -1193,12 +1347,17 @@ class EMProcessingModule(BaseModule):
                           "(calibration multiplier), auto_scale (bool, rough), ref_resistivity "
                           "(ohm-m; calibrate the absolute level to a known value, the reliable "
                           "option), max_iterations. TEMcompany: tem_moment "
-                          "(LM+HM/HM/LM). Line: spacing, max_soundings, "
+                          "(LM+HM/HM/LM), use_project_flags (bool; false also "
+                          "imports the gates the project's own QC switched off). "
+                          "Line: spacing, max_soundings, "
                           "lateral_smoothness, lci_mode "
                           "(simultaneous/sequential/off), lci_passes "
                           "(block-coordinate only). Fit assistance (simultaneous "
                           "only): auto_lambda, target_chi2, chi2_tolerance, "
-                          "max_lambda_trials.")},
+                          "max_lambda_trials, reject_outliers (bool; drop gates "
+                          "the model cannot explain and re-solve), "
+                          "outlier_threshold (sigma), outlier_passes, "
+                          "min_data_fraction (0-1 floor on the gates kept).")},
                 {"name": "auto_calibrate", "args": {},
                  "desc": ("Estimate the data_scale calibration from the loaded data and set it. Use "
                           "for normalized airborne data (e.g. moment-normalized dB/dt).")},
@@ -1318,6 +1477,7 @@ class EMProcessingModule(BaseModule):
             "component": lambda v: set_combo(self._component, v),
             "waveform": lambda v: set_combo(self._waveform, v),
             "tem_moment": lambda v: set_combo(self._tem_moment, str(v).upper()),
+            "use_project_flags": lambda v: self._use_flags.setChecked(bool(v)),
             "n_layers": lambda v: self._n_layers.setValue(int(v)),
             "min_thickness": lambda v: self._min_thick.setValue(float(v)),
             "max_thickness": lambda v: self._max_thick.setValue(float(v)),
@@ -1329,6 +1489,11 @@ class EMProcessingModule(BaseModule):
             "target_chi2": lambda v: self._target_chi2.setValue(float(v)),
             "chi2_tolerance": lambda v: self._chi2_tol.setValue(float(v)),
             "max_lambda_trials": lambda v: self._lam_trials.setValue(int(v)),
+            "reject_outliers": lambda v: self._reject.setChecked(bool(v)),
+            "outlier_threshold": lambda v: self._reject_sigma.setValue(float(v)),
+            "outlier_passes": lambda v: self._reject_passes.setValue(int(v)),
+            "min_data_fraction": lambda v: self._min_keep.setValue(float(v) * 100.0),
+            "min_gates_per_sounding": lambda v: self._min_gates.setValue(int(v)),
             "rel_error": lambda v: self._rel_err.setValue(float(v)),
             "data_scale": lambda v: self._data_scale.setValue(float(v)),
             "auto_scale": lambda v: self._auto_scale.setChecked(bool(v)),
