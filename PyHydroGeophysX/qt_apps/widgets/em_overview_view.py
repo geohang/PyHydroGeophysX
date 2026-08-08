@@ -110,18 +110,20 @@ class EMOverviewView(QWidget):
             "the inversion actually solved for.")
         self._style.currentIndexChanged.connect(self._redraw)
         self._doi_threshold = QDoubleSpinBox()
-        self._doi_threshold.setRange(0.5, 500.0)
-        self._doi_threshold.setDecimals(1)
-        self._doi_threshold.setSingleStep(5.0)
+        self._doi_threshold.setRange(0.02, 50.0)
+        self._doi_threshold.setDecimals(2)
+        self._doi_threshold.setSingleStep(0.1)
         self._doi_threshold.setValue(float(DOI_SENSITIVITY_THRESHOLD))
-        self._doi_threshold.setPrefix("σ ≥ ")
+        self._doi_threshold.setPrefix("S ≥ ")
         self._doi_threshold.setToolTip(
-            "Cumulated sensitivity a depth has to carry to be shown. Raise it for "
-            "a more conservative section, lower it to see what the deeper part of "
-            "the model looks like. The default reproduces the depths of "
-            "investigation a TEMcompany project reported for its own survey to "
-            "within about one layer thickness; anything from 20 to 30 sits within "
-            "a few metres of that.")
+            "Cumulated sensitivity a depth has to carry to be shown, in the sense "
+            "of Christiansen and Auken (2012): moving every layer below that depth "
+            "by one e-fold in resistivity would shift the predicted response by "
+            "this many error bars in total.\n\n"
+            "0.8 is their published value, fine-tuned across ground conductivity "
+            "meters, DC soundings and airborne TEM; they report 0.6 to 1.2 as the "
+            "range worth considering. Raise it for a more conservative section, "
+            "lower it to see what the deeper part of the model looks like.")
         self._doi_threshold.valueChanged.connect(self._redraw)
         row.addWidget(self._style)
         row.addWidget(self._below_doi)
@@ -590,7 +592,7 @@ class EMOverviewView(QWidget):
         ax.set_title("Survey map", fontsize=11)
         ax.tick_params(labelsize=8)
         # Grid lines help on a plain background and only clutter imagery.
-        ax.grid(not attribution, alpha=0.3)
+        ax.grid(False) if attribution else ax.grid(True, alpha=0.3)
         if attribution:
             ax.text(0.99, 0.01, attribution, transform=ax.transAxes, fontsize=6.5,
                     ha="right", va="bottom", color="white",
@@ -643,7 +645,7 @@ class EMOverviewView(QWidget):
             verb = "faded" if self._below_doi_mode() == "fade" else "blanked"
             if resolved.size:
                 rows.append(
-                    f"{verb} below the DOI (σ ≥ {self._doi_threshold.value():g}): "
+                    f"{verb} below the DOI (S ≥ {self._doi_threshold.value():g}): "
                     f"median {np.median(resolved):.0f} m, "
                     f"{np.percentile(resolved, 10):.0f}–"
                     f"{np.percentile(resolved, 90):.0f} m")

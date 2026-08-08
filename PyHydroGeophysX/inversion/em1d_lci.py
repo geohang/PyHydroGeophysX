@@ -49,26 +49,27 @@ SMOOTHNESS_SCALE_BOUNDS: Tuple[float, float] = (1e-4, 1e4)
 
 #: Cumulated sensitivity a depth has to carry to count as investigated.
 #:
-#: The quantity is in units of the gates' own error bars: at the depth of
-#: investigation, moving every layer below it by one decade in resistivity
-#: together shifts the predicted response by this many standard deviations.
+#: The published value from Christiansen and Auken (2012), who fine-tuned it
+#: across ground conductivity meters, DC soundings and airborne TEM and report
+#: 0.6 to 1.2 as the range they considered, moving their example by about 15 %.
+#: Because their measure lives in logarithmic data and model space it carries no
+#: units of its own, which is what lets one number serve every system: at the
+#: depth of investigation, moving every layer below it by one e-fold in
+#: resistivity shifts the predicted response by 0.8 error bars in total.
 #:
-#: Chosen against the depths of investigation a TEMcompany project reported for
-#: its own 71-station ground TDEM survey. Evaluated at that software's own
-#: recovered models, 20 gives a median ratio of 1.02 to its depths and a median
-#: difference of 2.5 m, about one layer thickness there; thresholds from 20 to 30
-#: all land within 3 m, so the choice inside that range is not delicate. Running
-#: this package's own inversion end to end on the same data it comes out at 0.75
-#: of the reference depths (median difference 4.1 m), the remaining gap being the
-#: difference between the two recovered models rather than the rule. Station by
-#: station the two agree only loosely (correlation 0.19), so read the number as a
-#: survey-wide depth scale and not as a per-station guarantee.
+#: The threshold is tied to the error model by construction. Doubling the assumed
+#: error halves the sensitivity and the section gets shallower, which is the
+#: honest response to noisier data. Raise it for a more conservative picture,
+#: lower it to see what the deeper part of the model looks like.
 #:
-#: The threshold is tied to the error model: doubling the assumed error halves
-#: the sensitivity and the section gets shallower, which is the honest response
-#: to noisier data. Raise it for a more conservative picture, lower it to see
-#: what the deeper part of the model looks like.
-DOI_SENSITIVITY_THRESHOLD: float = 20.0
+#: Vendors do not agree on how conservative to be. On a 71-station ground TDEM
+#: survey the TEMcompany software reported depths of investigation about 2.6
+#: times shallower than this threshold gives (median 12 m against 37 m); its
+#: numbers are reproduced at roughly 8. Christiansen and Auken's value is the
+#: default because it is the published one and it travels across systems, but a
+#: project that has to line up with an acquisition package's own sections will
+#: want to raise it.
+DOI_SENSITIVITY_THRESHOLD: float = 0.8
 
 #: Relative chi-squared gain a rougher model has to earn to be preferred.
 #: When the target misfit is out of reach — noisy ground data with model error
@@ -598,33 +599,59 @@ def mask_sounding_block(block: SoundingBlock, keep: Sequence[bool]) -> SoundingB
 
 
 def cumulated_sensitivity(block: SoundingBlock, model: np.ndarray) -> np.ndarray:
-    """How much the data still say about each layer and everything below it.
+    """Cumulated sensitivity after Christiansen and Auken (2012).
 
-    Entry ``j`` is ``sum over layers k >= j of sum over gates i of
-    |d(data_i) / d(log10 rho_k)| / sigma_i``: move every layer from ``j`` down by
-    one decade in resistivity and this is how many error bars the predicted
-    response shifts. It falls with depth, and where it falls below a threshold
-    the data no longer constrain what is there.
+    Their construction, equations 2, 3 and 5 of *A global measure for depth of
+    investigation*, GEOPHYSICS 77(4), WB171-WB177:
 
-    Summing rather than averaging over layers is what makes it independent of
-    the layer grid: split a layer in two and its sensitivity splits with it, so
-    the cumulated value at any given depth is unchanged (measured at 0.2 to 2.5 %
-    across a 2x refinement on real ground TDEM). A per-layer or
-    thickness-normalized measure does not have that property, and a section's
-    blanked region would then move when the grid was refined.
+    * ``G_ij = d log(data_i) / d log(rho_j)``, the Jacobian of the final model in
+      logarithmic data and model space. Working in logarithms on both sides is
+      what makes the resulting number comparable between data types, and so lets
+      one absolute threshold serve every system.
+    * ``s_j = sum_i |G_ij| / sigma_i``, summed over all N data with ``sigma_i``
+      the standard deviation of the *log* datum, which is its relative error.
+    * ``S_j = sum_{k >= j} s_k``, cumulated from the bottom layer upward. Entry
+      ``j`` is therefore the total information the data carry about layer ``j``
+      and everything below it, counted in error bars.
 
-    The Jacobian is SimPEG's analytic sensitivity, the same one the coupled
-    solver uses, so this costs about one forward evaluation per sounding.
+    Their equation 4 divides ``s`` by the layer thickness; the paper uses that
+    only for plotting, and the cumulated quantity here is built from equation 3,
+    which is also what keeps it independent of the layer grid: split a layer in
+    two and its sensitivity splits with it, so the value at a given depth does
+    not move (measured at 0.2 to 2.5 % across a 2x refinement on real ground
+    TDEM).
+
+    Only the data part of the Jacobian takes part, so a depth that clears the
+    threshold is one the measurements reach, not one the lateral or vertical
+    constraint filled in. The Jacobian is SimPEG's analytic sensitivity, the
+    same one the coupled solver uses, so this costs about one forward
+    evaluation per sounding.
+
+    Their step 2, sub-discretizing a few-layer model before differentiating, is
+    unnecessary here: the paper skips it for smooth models, and these are solved
+    on a fixed grid of a dozen layers or more.
     """
     layers = int(np.size(model))
     if not block.dobs.size or layers == 0:
         return np.zeros(layers, dtype=float)
-    sigma = 1.0 / np.clip(np.asarray(model, dtype=float).ravel(), 1e-12, None)
-    jacobian = np.asarray(block.jacobian(sigma), dtype=float)
+    resistivity = np.clip(np.asarray(model, dtype=float).ravel(), 1e-12, None)
+    conductivity = 1.0 / resistivity
+    jacobian = np.asarray(block.jacobian(conductivity), dtype=float)
     if jacobian.shape != (block.dobs.size, layers):
         return np.zeros(layers, dtype=float)
-    weighted = (jacobian * (-_LN10 * sigma)[None, :]) / block.uncertainty[:, None]
+    predicted = np.asarray(block.forward(conductivity), dtype=float).ravel()
+    # d log(d)/d log(rho) = -(d(data)/d(sigma)) * sigma / data. A TDEM decay can
+    # cross zero at an offset receiver, where the log derivative is undefined;
+    # floor the divisor at the datum's own error bar, below which its logarithm
+    # means nothing anyway, so such a gate contributes a bounded sensitivity
+    # rather than an infinity.
+    scale = np.maximum(np.abs(predicted), block.uncertainty)
+    relative = np.maximum(block.uncertainty / np.maximum(np.abs(block.dobs), 1e-300),
+                          1e-6)
+    weighted = (jacobian * conductivity[None, :]) / (scale * relative)[:, None]
     per_layer = np.abs(weighted).sum(axis=0)
+    if not np.isfinite(per_layer).all():
+        per_layer = np.nan_to_num(per_layer, nan=0.0, posinf=0.0, neginf=0.0)
     return np.cumsum(per_layer[::-1])[::-1]
 
 

@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from PyHydroGeophysX.inversion.em1d_lci import DOI_SENSITIVITY_THRESHOLD
 from PyHydroGeophysX.workflows import em1d as em_pipeline
 from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
@@ -1148,7 +1149,7 @@ class EMProcessingModule(BaseModule):
         doi = np.asarray(result.get("doi", []), dtype=float)
         if doi.size and np.isfinite(doi).any():
             extra["DOI"] = (f"median {np.nanmedian(doi):.0f} m "
-                            f"(σ ≥ {float(result.get('doi_threshold', 20)):g})")
+                            f"(S ≥ {float(result.get('doi_threshold', DOI_SENSITIVITY_THRESHOLD)):g})")
         self._quality_view.show_quality(
             {"chi2": float(chi2) if isinstance(chi2, float) else float("nan"),
              "n_data": result.get("n_data"),
@@ -1215,7 +1216,8 @@ class EMProcessingModule(BaseModule):
         # regularization across the survey.
         sensitivity = np.asarray(result.get("sensitivity", []), dtype=float)
         if sensitivity.shape == res_surface.shape:
-            res_surface[sensitivity < float(result.get("doi_threshold", 20.0))] = np.nan
+            res_surface[sensitivity < float(
+                result.get("doi_threshold", DOI_SENSITIVITY_THRESHOLD))] = np.nan
         if (self._geom_x is not None and self._geom_y is not None
                 and self._geom_x.size >= n_pos and self._geom_y.size >= n_pos):
             xy = np.column_stack([self._geom_x[:n_pos], self._geom_y[:n_pos]])

@@ -54,6 +54,21 @@ fi
 echo "Using Python:"
 echo "  ${PYTHON_EXE}"
 echo ""
+
+# A Conda-installed PyGIMLi can ship a Qt5 ``qt.conf`` that redirects Qt6
+# applications to the environment's Qt5 plugins.  Prefer the matching Qt6
+# plugin bundle shipped with PySide6 so macOS can load its Cocoa platform
+# plugin (and headless self-tests can load ``offscreen``).
+PYSIDE6_PLUGIN_DIR="$("${PYTHON_EXE}" -c '
+from pathlib import Path
+import PySide6
+print(Path(PySide6.__file__).resolve().parent / "Qt" / "plugins")
+' 2>/dev/null || true)"
+if [ -n "${PYSIDE6_PLUGIN_DIR}" ] && [ -d "${PYSIDE6_PLUGIN_DIR}" ]; then
+    export QT_PLUGIN_PATH="${PYSIDE6_PLUGIN_DIR}${QT_PLUGIN_PATH:+:${QT_PLUGIN_PATH}}"
+    export QT_QPA_PLATFORM_PLUGIN_PATH="${PYSIDE6_PLUGIN_DIR}/platforms"
+fi
+
 echo "Starting the workbench. Keep this terminal open while using the app:"
 echo "it carries the startup log and any error message."
 echo "========================================"

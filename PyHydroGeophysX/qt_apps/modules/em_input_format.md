@@ -136,29 +136,46 @@ A header-less file is read by column order: one column = position; two columns =
 
 ## How deep the section is allowed to go
 
-The depth of investigation comes from the **cumulated sensitivity**, computed
-from the analytic Jacobian the coupled solver already uses. At a given depth it
-is the number of error bars the predicted response would move if every layer from
-there down were shifted by one decade in resistivity. Where that falls below the
-threshold, the model there is regularization rather than measurement, and the
-cells are blanked.
+The depth of investigation follows Christiansen and Auken (2012), *A global
+measure for depth of investigation*, GEOPHYSICS 77(4), WB171–WB177:
 
-Summing the per-layer sensitivities, rather than averaging or normalizing them by
-thickness, is what makes the cut independent of the layer grid: split a layer in
-two and its sensitivity splits with it, so the depth does not move when the grid
-is refined (measured at 0.2 to 2.5 % across a 2x refinement).
+1. Take the Jacobian of the final model in logarithmic data and model space,
+   `G_ij = d log(data_i) / d log(rho_j)`. Logarithms on both sides are what make
+   the number comparable between data types, so one absolute threshold serves
+   every system.
+2. Normalize by each datum's own standard deviation and sum over all the data:
+   `s_j = sum_i |G_ij| / sigma_i`.
+3. Cumulate from the bottom layer upward: `S_j = sum_{k >= j} s_k`. Entry `j` is
+   the total information the data carry about layer `j` and everything below it.
+4. The depth of investigation is where `S` falls through the threshold.
 
-The threshold is a judgement, so it sits on the plot next to "Hide below DOI"
-rather than inside the inversion. It is tied to the error model: doubling the
-assumed error halves the sensitivity and the section gets shallower, which is the
-correct response to noisier data. Raise it for a more conservative picture, lower
-it to see what the deeper part of the model looks like.
+Their published threshold is **0.8**, fine-tuned across ground conductivity
+meters, DC soundings and airborne TEM, with 0.6 to 1.2 the range they considered.
+It is the default here. Only the data part of the Jacobian takes part, so a depth
+that clears the threshold is one the measurements reach and not one the lateral
+constraint filled in. Their step 2, sub-discretizing a few-layer model before
+differentiating, is skipped as the paper allows for smooth models: these are
+solved on a fixed grid of a dozen layers or more.
+
+Summing the per-layer sensitivities, rather than normalizing them by thickness
+(the paper's equation 4, which it uses only for plotting), is what makes the cut
+independent of the layer grid: split a layer in two and its sensitivity splits
+with it, so the depth does not move when the grid is refined (measured at 0.2 to
+2.5 % across a 2x refinement).
+
+The threshold is a judgement, so it sits on the plot next to "Below DOI" rather
+than inside the inversion, and it can be moved without inverting again. Vendors
+do not agree on how conservative to be: on a 71-station ground TDEM survey the
+TEMcompany software reported depths about 2.6 times shallower than 0.8 gives
+(median 12 m against 37 m), and its numbers come back at roughly 8. Raise it to
+line up with an acquisition package's own sections.
 
 Earlier releases cut instead at a diffusion depth taken from the latest gate
-time. That rule read the gate time once, from the first sounding on the line, and
-gave every other sounding the same reach; on a ground TDEM survey where the late
-gates survive at some stations and not others it ran about five times deeper than
-the acquisition software's own depths of investigation.
+time, which is the first approach the paper lists and criticizes. That rule also
+read the gate time once, from the first sounding on the line, and gave every
+other sounding the same reach; on a ground TDEM survey where the late gates
+survive at some stations and not others it ran about five times deeper than the
+acquisition software's own depths of investigation.
 
 ## Answering a high χ²
 
