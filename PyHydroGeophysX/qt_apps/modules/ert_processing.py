@@ -115,12 +115,13 @@ class ERTProcessingModule(BaseModule):
         self._adtlert_probe_serial = 0
         self._adtlert_runtime_ready: Optional[bool] = None
         self._ert_recipe_path: str = ""
-        # Geometric factors are validated and repaired on every run, with no UI
-        # control: a k that disagrees with the geometry rescales the whole section
-        # and leaves chi2 untouched, so there is no reading of the result that
-        # would make skipping the check the right choice. Scripts and the agent
-        # can still set "check" or "off" through set_params.
-        self._geom_policy = "fix"
+        # Set by the Mode selector, which trades the pre-inversion checks against
+        # turnaround. Quick skips them; Full validates and repairs k. A k that
+        # disagrees with the geometry rescales the whole section while leaving
+        # chi2 untouched, so Quick cannot warn you that it went wrong: the result
+        # panel and the log only report that the check did not run. Scripts and
+        # the agent can still set "check" or "off" directly through set_params.
+        self._geom_policy = "off"
         # Single-inversion results. When the auto-λ search moves off the requested
         # λ, both runs are kept: _inv_choices holds one entry per selectable model
         # and _inv_mgr always points at the one on screen.
@@ -298,6 +299,58 @@ class ERTProcessingModule(BaseModule):
         qform.addRow("Min ρa", self._rmin)
         qform.addRow("Max ρa", self._rmax)
         qform.addRow("Max error", self._max_err)
+
+        # The rest of the criteria are folded away, because which of them a file
+        # can even support varies by instrument: voltage and current come with
+        # some formats and not others, and a reciprocal error needs the survey to
+        # contain reciprocal pairs at all. Each row is enabled against the loaded
+        # data in _refresh_qc_availability, so an unusable one says why rather
+        # than filtering on a field that is not there.
+        self._qc_more = QGroupBox("More checks")
+        self._qc_more.setCheckable(True)
+        self._qc_more.setChecked(False)
+        self._qc_more.setToolTip(
+            "Extra QC criteria. They stay folded because most surveys need none of "
+            "them, and the ones a given file cannot support are disabled with the "
+            "reason in their tooltip.")
+        more_outer = QVBoxLayout(self._qc_more)
+        more_outer.setContentsMargins(0, 0, 0, 0)
+        self._qc_more_body = QWidget()
+        mform = QFormLayout(self._qc_more_body)
+        mform.setContentsMargins(0, 6, 0, 0)
+
+        self._qc_drop_neg = QCheckBox("Drop ρa ≤ 0")
+        self._qc_drop_neg.setToolTip(
+            "A non-positive apparent resistivity is a polarity or geometry error, not "
+            "a measurement. Off by default so the count does not change under you; "
+            "Min ρa above already removes negatives once it is above zero.")
+        mform.addRow(self._qc_drop_neg)
+
+        self._qc_min_v = QDoubleSpinBox(); self._qc_min_v.setRange(0.0, 1e6)
+        self._qc_min_v.setDecimals(3); self._qc_min_v.setValue(0.0)
+        mform.addRow("Min |V|", self._qc_min_v)
+
+        self._qc_min_i = QDoubleSpinBox(); self._qc_min_i.setRange(0.0, 1e6)
+        self._qc_min_i.setDecimals(3); self._qc_min_i.setValue(0.0)
+        mform.addRow("Min |I|", self._qc_min_i)
+
+        self._qc_max_k = QDoubleSpinBox(); self._qc_max_k.setRange(0.0, 1e9)
+        self._qc_max_k.setDecimals(0); self._qc_max_k.setValue(0.0)
+        self._qc_max_k.setToolTip(
+            "Drop configurations whose geometric factor exceeds this (0 = off). A large "
+            "|k| multiplies the measured resistance, and its noise with it, which is how "
+            "a clean-looking rhoa outlier is produced by geometry rather than by ground.")
+        mform.addRow("Max |k|", self._qc_max_k)
+
+        self._qc_max_recip = QDoubleSpinBox(); self._qc_max_recip.setRange(0.0, 100.0)
+        self._qc_max_recip.setDecimals(2); self._qc_max_recip.setValue(0.0); self._qc_max_recip.setSuffix(" %")
+        mform.addRow("Max recip. error", self._qc_max_recip)
+
+        more_outer.addWidget(self._qc_more_body)
+        self._qc_more_body.setVisible(False)
+        self._qc_more.toggled.connect(self._qc_more_body.setVisible)
+        qform.addRow(self._qc_more)
+
         qrow = QHBoxLayout()
         apply_btn = QPushButton("Apply filter")
         apply_btn.setIcon(theme.icon("fa5s.filter"))
@@ -318,6 +371,27 @@ class ERTProcessingModule(BaseModule):
         inv = QGroupBox("Inversion")
         iform = QFormLayout(inv)
         self._inv_form = iform
+
+        # Mode comes first because it overrides several controls below it. The
+        # split is by cost: the geometric-factor check is one extra forward run,
+        # and the auto-λ search is a full inversion per trial. On a 3647-point
+        # field survey they were 13 s and 189 s of a 247 s run.
+        self._inv_mode = QComboBox()
+        for label, value in (("Quick (no pre-checks)", "quick"),
+                             ("Full (validate k, search λ)", "full")):
+            self._inv_mode.addItem(label, value)
+        self._inv_mode.setToolTip(
+            "Quick runs the inversion and nothing else, which is what you want while "
+            "you are still choosing λ and a mesh.\n\n"
+            "Full adds the two stages Quick drops. It validates the geometric factors "
+            "against the mesh, repairing them when they disagree, and it searches λ "
+            "for your target χ². Use it before you trust a section.\n\n"
+            "The k check is the one you cannot postpone on evidence: a wrong k scales "
+            "the whole section by a constant and χ² never notices, so a Quick result "
+            "that looks perfect can still be uniformly wrong. Re-run in Full whenever "
+            "the resistivities themselves look off, not only when the fit looks bad.")
+        self._inv_mode.currentIndexChanged.connect(self._on_inv_mode_changed)
+        iform.addRow("Mode", self._inv_mode)
 
         self._engine = QComboBox()
         for label, value in (("In-house Gauss-Newton", "pyhydro"),
@@ -471,7 +545,8 @@ class ERTProcessingModule(BaseModule):
 
         # Kept short enough to fit the panel; the tooltip carries the detail.
         self._auto_lam = QCheckBox("Auto-λ: re-invert to reach target χ²")
-        self._auto_lam.setChecked(True)
+        # Off in Quick, which is the default mode; Full turns it back on.
+        self._auto_lam.setChecked(False)
         self._auto_lam.setToolTip(
             "The inversion at the λ above always runs first and is always kept. If its χ² "
             "misses the target band, the same mesh is re-inverted at other λ values "
@@ -569,6 +644,7 @@ class ERTProcessingModule(BaseModule):
 
         iform.addRow(self._build_timelapse_panel())
         # Reflect the initial checkbox states; setChecked() above emitted nothing.
+        self._on_inv_mode_changed()
         self._on_auto_lambda(self._auto_lam.isChecked())
         self._on_reject_outliers(self._reject.isChecked())
         layout.addWidget(runbox)
@@ -777,6 +853,9 @@ class ERTProcessingModule(BaseModule):
         self._ert_data = data
         self._ert_data_full = data
         self._qc_mask = [True] * int(data.size())
+        # Which extra criteria this file can support is a property of the file,
+        # so it is settled here rather than being rechecked on every Apply.
+        self._refresh_qc_availability()
         if hasattr(self.state, "register_geophysical_resource"):
             self.state.register_geophysical_resource(
                 "ERT", "observed_data", data,
@@ -890,6 +969,143 @@ class ERTProcessingModule(BaseModule):
         rhoa = np.asarray(data["rhoa"], dtype=float) if data.haveData("rhoa") else np.full(data.size(), np.nan)
         return self._build_pseudo_from_indices(x, a, b, m, nn, rhoa)
 
+    @staticmethod
+    def _reciprocal_error(data) -> Optional[np.ndarray]:
+        """Relative reciprocal error per measurement, NaN where there is no partner.
+
+        A reciprocal swaps the current and potential pairs, (A,B,M,N) -> (M,N,A,B),
+        and reciprocity requires the same transfer resistance from both. How far
+        apart they land is the only error estimate that comes from the data rather
+        than from an assumed percentage, which is why it is worth computing even
+        though most files do not carry it as a column.
+
+        Returns None when the file has neither a resistance nor the rhoa and k
+        needed to rebuild one.
+        """
+        try:
+            a, b, m, n = (np.asarray(data[t], dtype=int) for t in ("a", "b", "m", "n"))
+        except Exception:  # noqa: BLE001 - a container without ABMN cannot be paired
+            return None
+        if data.haveData("r"):
+            res = np.asarray(data["r"], dtype=float)
+        elif data.haveData("rhoa") and data.haveData("k"):
+            k = np.asarray(data["k"], dtype=float)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                res = np.asarray(data["rhoa"], dtype=float) / np.where(np.abs(k) > 1e-12, k, np.nan)
+        else:
+            return None
+        # Each pair is unordered, so canonicalise before matching or (A,B) and
+        # (B,A) read as different configurations and nothing ever pairs up.
+        cur = [tuple(sorted(p)) for p in zip(a, b)]
+        pot = [tuple(sorted(p)) for p in zip(m, n)]
+        first: Dict[Any, int] = {}
+        for i, key in enumerate(zip(cur, pot)):
+            first.setdefault(key, i)
+        err = np.full(res.size, np.nan)
+        for i, (c, p) in enumerate(zip(cur, pot)):
+            j = first.get((p, c))
+            if j is None or j == i:
+                continue
+            mean = 0.5 * (abs(res[i]) + abs(res[j]))
+            if np.isfinite(mean) and mean > 1e-12:
+                err[i] = abs(res[i] - res[j]) / mean
+        return err
+
+    def _refresh_qc_availability(self) -> None:
+        """Enable each folded QC row only where the loaded file can support it.
+
+        Voltage and current arrive with some instrument formats and not others,
+        and a reciprocal error needs the survey to actually contain reciprocals.
+        A row that cannot work is disabled with the reason in its tooltip, which
+        is more useful than a control that silently filters on nothing.
+        """
+        def gate(widget, ok: bool, message: str) -> None:
+            widget.setEnabled(bool(ok))
+            label = self.row_label(widget)
+            if label is not None:
+                label.setEnabled(bool(ok))
+            widget.setToolTip(message)
+
+        data = self._ert_data_full
+        if data is None:
+            for w in (self._qc_min_v, self._qc_min_i, self._qc_max_k, self._qc_max_recip):
+                gate(w, False, "Load ERT data first.")
+            return
+
+        # Units are whatever the file used, so the observed range is quoted rather
+        # than a unit guessed from the magnitudes. 90 could be mA or A.
+        for widget, token, name in ((self._qc_min_v, "u", "voltage"),
+                                    (self._qc_min_i, "i", "current")):
+            if data.haveData(token):
+                v = np.abs(np.asarray(data[token], dtype=float))
+                v = v[np.isfinite(v)]
+                span = f"{v.min():.4g} to {v.max():.4g}" if v.size else "empty"
+                gate(widget, True,
+                     f"Drop readings whose |{token}| falls below this (0 = off). This file's "
+                     f"{name} spans {span}, in the file's own units.")
+            else:
+                gate(widget, False,
+                     f"This file carries no {name} column, so there is nothing to test.")
+
+        if data.haveData("k"):
+            k = np.abs(np.asarray(data["k"], dtype=float))
+            k = k[np.isfinite(k)]
+            span = f"{k.min():.4g} to {k.max():.4g}" if k.size else "empty"
+            gate(self._qc_max_k, True,
+                 "Drop configurations whose geometric factor exceeds this (0 = off). A large "
+                 "|k| multiplies the measured resistance and its noise with it, which is how "
+                 f"geometry alone produces a rhoa outlier. This file spans {span}.")
+        else:
+            gate(self._qc_max_k, False, "This file carries no geometric factors.")
+
+        rec = self._reciprocal_error(data)
+        paired = 0 if rec is None else int(np.isfinite(rec).sum())
+        if paired:
+            finite = rec[np.isfinite(rec)]
+            gate(self._qc_max_recip, True,
+                 f"Drop measurements whose normal and reciprocal disagree by more than this "
+                 f"(0 = off). {paired} of {data.size()} measurements have a reciprocal here; "
+                 f"their disagreement runs to {100.0 * finite.max():.1f}%, median "
+                 f"{100.0 * float(np.median(finite)):.1f}%. Unpaired measurements are kept.")
+        else:
+            gate(self._qc_max_recip, False,
+                 "This survey contains no reciprocal pairs, so there is nothing to compare. "
+                 "Reciprocals have to be measured in the field; they cannot be recovered here.")
+
+    def _apply_extra_filters(self, data, keep: np.ndarray) -> List[str]:
+        """Apply the folded QC criteria to ``keep`` in place; report what each cost.
+
+        A criterion whose field is missing is skipped rather than failing the
+        whole filter, matching the row being disabled in the panel.
+        """
+        reasons: List[str] = []
+
+        def cut(mask: np.ndarray, label: str) -> None:
+            before = int(keep.sum())
+            # In place on purpose: `keep &= mask` here would rebind the enclosing
+            # name and raise UnboundLocalError instead of narrowing the caller's array.
+            np.logical_and(keep, mask, out=keep)
+            lost = before - int(keep.sum())
+            if lost:
+                reasons.append(f"{label} dropped {lost}")
+
+        if self._qc_drop_neg.isChecked():
+            cut(np.asarray(data["rhoa"], dtype=float) > 0.0, "ρa ≤ 0")
+        for widget, token, label in ((self._qc_min_v, "u", "|V| floor"),
+                                     (self._qc_min_i, "i", "|I| floor")):
+            if widget.value() > 0 and data.haveData(token):
+                cut(np.abs(np.asarray(data[token], dtype=float)) >= widget.value(), label)
+        if self._qc_max_k.value() > 0 and data.haveData("k"):
+            cut(np.abs(np.asarray(data["k"], dtype=float)) <= self._qc_max_k.value(), "|k| ceiling")
+        if self._qc_max_recip.value() > 0:
+            rec = self._reciprocal_error(data)
+            if rec is not None:
+                limit = self._qc_max_recip.value() / 100.0
+                # An unpaired measurement has no reciprocal to disagree with, so it
+                # is kept rather than judged against a test it cannot take.
+                cut(~(np.isfinite(rec) & (rec > limit)), "reciprocal error")
+        return reasons
+
     def _apply_filter(self) -> None:
         if self._ert_data_full is None:
             self.log("Load ERT data first.", "warn")
@@ -901,6 +1117,12 @@ class ERTProcessingModule(BaseModule):
             keep = np.isfinite(rhoa) & (rhoa >= self._rmin.value()) & (rhoa <= self._rmax.value())
             if self._max_err.value() > 0 and data.haveData("err"):
                 keep &= np.asarray(data["err"], dtype=float) <= (self._max_err.value() / 100.0)
+            # Folding the section away also switches its criteria off, so what the
+            # panel shows is what the filter did.
+            if self._qc_more.isChecked():
+                reasons = self._apply_extra_filters(data, keep)
+                if reasons:
+                    self.log("Extra QC: " + "; ".join(reasons), "info")
             removed = int((~keep).sum())
             self._qc_mask = keep.astype(bool).tolist()
             data.set("valid", pg.Vector(keep.astype(float)))
@@ -956,6 +1178,53 @@ class ERTProcessingModule(BaseModule):
         self.log(f"Loaded {len(self._x)} electrodes from {Path(path).name}", "success")
 
     # -- inversion -----------------------------------------------------------
+    def _report_data_health(self) -> None:
+        """Report what the data say about themselves, before Full mode inverts them.
+
+        This reports and never drops. Rejecting data is the QC panel's job, where
+        the thresholds are visible and the count changes in front of you; a run
+        that quietly shrank its own dataset is the harder thing to review later.
+        What it adds is the checks whose inputs the inversion never looks at:
+        reciprocity, and whether the readings had any signal behind them.
+        """
+        data = self._ert_data
+        if data is None:
+            return
+        n = int(data.size())
+        notes: List[str] = []
+
+        rec = self._reciprocal_error(data)
+        if rec is not None and np.isfinite(rec).any():
+            finite = rec[np.isfinite(rec)]
+            median = 100.0 * float(np.median(finite))
+            over5 = int((finite > 0.05).sum())
+            notes.append(
+                f"reciprocals: {finite.size}/{n} paired, median disagreement {median:.1f}%"
+                + (f", {over5} above 5%" if over5 else ""))
+            if median > 5.0:
+                notes.append(
+                    "the median reciprocal disagreement is above 5%, so the assumed error "
+                    "model is probably optimistic and chi2 will read low")
+        else:
+            notes.append(f"reciprocals: none in this survey, so the {n} errors are assumed, not measured")
+
+        for token, name in (("u", "voltage"), ("i", "current")):
+            if not data.haveData(token):
+                continue
+            v = np.abs(np.asarray(data[token], dtype=float))
+            weak = int((~np.isfinite(v) | (v <= 0)).sum())
+            if weak:
+                notes.append(f"{name}: {weak} reading(s) at or below zero, which carry no signal")
+            else:
+                notes.append(f"{name}: all finite and positive, spanning {v.min():.4g} to {v.max():.4g}")
+
+        err = np.asarray(data["err"], dtype=float) if data.haveData("err") else None
+        if err is not None and err.size:
+            notes.append(f"stated error: median {100.0 * float(np.median(err)):.1f}%")
+
+        for note in notes:
+            self.log("Full-mode check · " + note, "info")
+
     def _run_inversion(self) -> None:
         if self._ert_data is None:
             self.log("Load ERT data with apparent resistivity first.", "warn")
@@ -969,6 +1238,8 @@ class ERTProcessingModule(BaseModule):
                 "PyHydro ERT engine.",
                 "warn",
             )
+        if str(self._inv_mode.currentData() or "quick") == "full":
+            self._report_data_health()
         out = self.state.output_dir or Path.cwd()
         out_path = io_utils.ensure_dir(Path(out) / "ert_results")
         input_path = out_path / "filtered_ert_data.dat"
@@ -1223,6 +1494,18 @@ class ERTProcessingModule(BaseModule):
             extra["data"] = f"{outliers.get('kept')} of {outliers.get('n_start')} kept"
             if outliers.get("limited_by_floor"):
                 extra["data"] += " (floor reached)"
+        # A skipped k check has no other symptom. Wrong geometric factors scale the
+        # section by a constant and leave chi2 untouched, so if the panel stays
+        # silent here a Quick result is indistinguishable from a validated one.
+        # A pass says nothing worth a line; the other three states each do.
+        # ``ok`` stays False after a successful repair, so ``repaired`` is what
+        # separates a fixed run from one whose scale is still unverified.
+        if not geometry.get("checked", False):
+            extra["k"] = "not checked"
+        elif geometry.get("repaired"):
+            extra["k"] = "repaired"
+        elif not geometry.get("ok", True):
+            extra["k"] = "scale unverified"
         # How chi2 responded to lambda is the one thing with no other home.
         if len(trials) > 1:
             extra["λ"] = " → ".join(
@@ -1459,6 +1742,22 @@ class ERTProcessingModule(BaseModule):
             label = self.row_label(widget)
             if label is not None:
                 label.setEnabled(generated)
+
+    def _on_inv_mode_changed(self, *_args: Any) -> None:
+        """Apply the Quick/Full split to the stages each mode owns.
+
+        Quick drops the two stages that cost the most and change no model on a
+        clean dataset: the geometric-factor check and the auto-λ search. Full
+        restores both.
+
+        This is a preset, not a lock. The auto-λ checkbox stays enabled in both
+        modes, so ticking it under Quick runs the search and the panel shows that
+        it will. The k check has no such control by design, because a wrong k is
+        the one problem the result cannot reveal.
+        """
+        quick = str(self._inv_mode.currentData() or "quick") == "quick"
+        self._geom_policy = "off" if quick else "fix"
+        self._auto_lam.setChecked(not quick)
 
     def _on_auto_lambda(self, on: bool) -> None:
         """Show the auto-λ target and trial budget only while auto-λ is on."""
@@ -2083,6 +2382,10 @@ class ERTProcessingModule(BaseModule):
                           "Single-inversion error model: error_source (file/estimate/max), "
                           "absolute_error (Ohm). Convergence: plateau_tolerance (fraction), "
                           "max_total_iterations, engine (pyhydro/pygimli/adtlert). "
+                          "Mode: inversion_mode ('quick', the default, skips the k check "
+                          "and the lambda search; 'full' runs both). It is a preset, so "
+                          "geometric_factor_policy or auto_lambda sent after it in the "
+                          "same object override it. "
                           "Geometric factors: geometric_factor_policy "
                           "('fix' recomputes k numerically when a homogeneous forward run "
                           "does not return the model resistivity, 'check' only reports, "
@@ -2169,6 +2472,7 @@ class ERTProcessingModule(BaseModule):
             "lambda_bounds": list(_LAMBDA_BOUNDS),
             "mesh_file": str(self._mesh_path or ""),
             "engine": self._engine.currentData(),
+            "inversion_mode": self._inv_mode.currentData(),
             "geometric_factor_policy": self._geom_policy,
             "error_source": self._err_source.currentData(),
             "relative_error": self._relerr.value(),
@@ -2336,6 +2640,18 @@ class ERTProcessingModule(BaseModule):
                 self._rmax.setValue(float(args["max_rhoa"]))
             if "max_error" in args:
                 self._max_err.setValue(float(args["max_error"]))
+            # The folded criteria are opt-in from the agent too: naming any one of
+            # them unfolds the section, so the panel keeps matching what ran.
+            extra = {"drop_nonpositive_rhoa": lambda v: self._qc_drop_neg.setChecked(bool(v)),
+                     "min_voltage": lambda v: self._qc_min_v.setValue(float(v)),
+                     "min_current": lambda v: self._qc_min_i.setValue(float(v)),
+                     "max_geometric_factor": lambda v: self._qc_max_k.setValue(float(v)),
+                     "max_reciprocal_error": lambda v: self._qc_max_recip.setValue(float(v) * 100.0)}
+            used = [key for key in extra if key in args]
+            for key in used:
+                extra[key](args[key])
+            if used:
+                self._qc_more.setChecked(True)
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": str(exc)}
         self._apply_filter()
@@ -2357,6 +2673,23 @@ class ERTProcessingModule(BaseModule):
             if key not in allowed:
                 raise ValueError(f"must be one of {list(allowed)}")
             self._geom_policy = key
+
+        def set_inv_mode(value):
+            """Select the Quick/Full preset.
+
+            ``_agent_set_params`` walks the caller's object in its own order, so a
+            ``geometric_factor_policy`` or ``auto_lambda`` listed after
+            ``inversion_mode`` overrides what the preset just set, and one listed
+            before it does not. Send the mode first and the exceptions after it.
+            """
+            allowed = ("quick", "full")
+            key = str(value).strip().lower()
+            if key not in allowed:
+                raise ValueError(f"must be one of {list(allowed)}")
+            self._inv_mode.setCurrentIndex(
+                [self._inv_mode.itemData(i) for i in range(self._inv_mode.count())].index(key)
+            )
+            self._on_inv_mode_changed()
 
         def set_combo_data(combo, value):
             """Match on the stable itemData key, not on the display label."""
@@ -2380,6 +2713,7 @@ class ERTProcessingModule(BaseModule):
             "time_lapse": lambda v: self._tl_mode.setChecked(bool(v)),
             # single-inversion fit assistance
             "engine": lambda v: set_combo_data(self._engine, v),
+            "inversion_mode": lambda v: set_inv_mode(v),
             "geometric_factor_policy": lambda v: set_geom_policy(v),
             "error_source": lambda v: set_combo_data(self._err_source, v),
             "absolute_error": lambda v: self._abserr.setValue(float(v)),

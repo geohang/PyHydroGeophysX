@@ -361,7 +361,7 @@ def _render_one_qt_module_result(res: Dict[str, Any]) -> None:
             cols[i % len(cols)].metric(lbl, f"{val:.3g}" if isinstance(val, float) else val)
     for fig in res.get("figure_paths", []) or []:
         if fig and Path(str(fig)).exists():
-            st.image(str(fig), use_container_width=True)
+            st.image(str(fig), width="stretch")
     artifacts = _qt_result_artifacts(res)
     if artifacts:
         with st.expander(f"Artifacts ({len(artifacts)})", expanded=False):
@@ -457,7 +457,7 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
                 primary_label = "Open in Qt with current project"
                 if cfg:
                     primary_label += f"  (→ {_QT_MODULE_LABELS.get(auto_module, auto_module)})"
-                if st.button(primary_label, type="primary", use_container_width=True, key="qt_open_current"):
+                if st.button(primary_label, type="primary", width="stretch", key="qt_open_current"):
                     _launch_qt_at(sidebar_state, auto_module)
 
                 st.caption("Or jump straight to a module:")
@@ -466,7 +466,7 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
                     row = grid_modules[row_start:row_start + 4]
                     cols = st.columns(4)
                     for col, mod in zip(cols, row):
-                        if col.button(_QT_MODULE_LABELS.get(mod, mod), use_container_width=True,
+                        if col.button(_QT_MODULE_LABELS.get(mod, mod), width="stretch",
                                       key=f"qt_open_{mod}"):
                             _launch_qt_at(sidebar_state, mod)
                 if alive:
@@ -589,10 +589,10 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
                 render_hydro_multigeophys_tab()
 
 st.set_page_config(
-    page_title="PyHydroGeophysX - Geophysical Workflows",
-    page_icon="PHGX",
+    page_title="PyHydroGeophysX | AQUAH workflows",
+    page_icon=":material/water_drop:",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 CUSTOM_CSS = """
@@ -602,17 +602,20 @@ CUSTOM_CSS = """
     --phgx-gray: #f5f7fb;
     --phgx-dark: #1b262c;
     --phgx-accent: #3d6cb9;
+    --phgx-border: rgba(99, 116, 139, 0.22);
+    --phgx-shadow: 0 10px 30px rgba(15, 76, 117, 0.08);
 }
 
 section.main > div {
-    padding-top: 1rem;
+    padding-top: 1.25rem;
 }
 
 .phgx-header {
-    font-size: 2.4rem;
-    font-weight: 700;
+    font-size: clamp(1.9rem, 4vw, 2.55rem);
+    font-weight: 750;
     color: var(--phgx-dark);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.025em;
+    line-height: 1.08;
 }
 
 .phgx-subtitle-main {
@@ -620,7 +623,7 @@ section.main > div {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    font-size: 1.2rem;
+    font-size: clamp(1rem, 2vw, 1.2rem);
     font-weight: 700;
     letter-spacing: 0.02em;
     margin-top: 0.1rem;
@@ -762,24 +765,25 @@ section.main > div {
     margin-bottom: 0.5rem;
 }
 
-/* Make tabs larger and more prominent */
+/* Keep primary navigation compact enough for laptops and scrollable on phones. */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 8px;
-    background-color: #f0f4f8;
-    padding: 0.5rem;
-    border-radius: 0.6rem;
+    gap: 0.35rem;
+    background-color: var(--secondary-background-color);
+    padding: 0.35rem;
+    border: 1px solid var(--phgx-border);
+    border-radius: 0.75rem;
 }
 
 .stTabs [data-baseweb="tab"] {
-    height: 60px;
-    padding: 0 24px;
-    font-size: 1.1rem;
+    height: 44px;
+    padding: 0 14px;
+    font-size: 0.92rem;
     font-weight: 600;
-    color: var(--phgx-dark);
-    background-color: white;
-    border-radius: 0.5rem;
-    border: 1px solid #e1e5ec;
-    white-space: pre-wrap;
+    color: var(--text-color);
+    background-color: transparent;
+    border-radius: 0.55rem;
+    border: 1px solid transparent;
+    white-space: nowrap;
 }
 
 .stTabs [data-baseweb="tab"]:hover {
@@ -794,7 +798,15 @@ section.main > div {
 }
 
 .stTabs [data-baseweb="tab-panel"] {
-    padding-top: 1.5rem;
+    padding-top: 1rem;
+}
+
+[data-testid="stSidebar"] {
+    border-right: 1px solid var(--phgx-border);
+}
+
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    gap: 0.75rem;
 }
 
 /* Keep the course tabs readable on phones instead of squeezing every label. */
@@ -808,12 +820,21 @@ section.main > div {
 
     .stTabs [data-baseweb="tab"] {
         flex: 0 0 auto;
-        min-width: 156px;
-        height: 52px;
-        padding: 0 16px;
-        font-size: 0.95rem;
+        min-width: 112px;
+        height: 42px;
+        padding: 0 12px;
+        font-size: 0.88rem;
         white-space: nowrap;
         scroll-snap-align: start;
+    }
+
+    .phgx-author-line {
+        gap: 0.35rem;
+    }
+
+    .phgx-pill {
+        font-size: 0.78rem;
+        padding: 0.12rem 0.45rem;
     }
 }
 
@@ -1096,6 +1117,10 @@ div[data-testid="stMetricDelta"] {
 """
 
 st.markdown(f"<style>{CUSTOM_CSS}</style>", unsafe_allow_html=True)
+
+LOGO_FILE = PARENT_DIR / "logo.png"
+if LOGO_FILE.is_file():
+    st.logo(str(LOGO_FILE), size="large", link="https://github.com/geohang/PyHydroGeophysX")
 
 EXAMPLE_REQUESTS: Dict[str, str] = {
     "ParFlow": """Load ParFlow outputs. I uploaded a saturation .pfb file.
@@ -1768,13 +1793,20 @@ def render_example_buttons() -> None:
     Returns:
         None.
     """
-    st.subheader("Example workflows")
-    cols = st.columns(len(EXAMPLE_REQUESTS))
-    for idx, (label, text) in enumerate(EXAMPLE_REQUESTS.items()):
-        if cols[idx].button(label):
-            st.session_state.user_request = text
-            st.rerun()
-    st.caption("Click any example to auto-fill the request box.")
+    selected = st.pills(
+        "Example workflows",
+        options=list(EXAMPLE_REQUESTS),
+        selection_mode="single",
+        default=None,
+        key="example_workflow_selection",
+        help="Choose a preset to fill the workflow request.",
+        width="stretch",
+    )
+    if selected and selected != st.session_state.get("_loaded_example_workflow"):
+        st.session_state._loaded_example_workflow = selected
+        st.session_state.user_request = EXAMPLE_REQUESTS[selected]
+        st.rerun()
+    st.caption("Choose a preset, then adapt its files and parameters to your project.")
 
 
 def _render_interactive_tutorial(
@@ -1811,7 +1843,7 @@ def _render_interactive_tutorial(
                 if st.button(
                     f"Use {request['label']} in Run Workflow",
                     key=f"tutorial_one_click_{example_id}_{request_index}",
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     st.session_state.user_request = str(request["request"])
                     st.session_state.quick_run_mode = str(tutorial["quick_mode"])
@@ -1839,7 +1871,7 @@ def _render_interactive_tutorial(
                 if st.button(
                     f"Open Example {example_id} in Qt → {_QT_MODULE_LABELS.get(module, module)}",
                     key=f"tutorial_open_qt_{example_id}",
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     _launch_qt_at(sidebar_state, module)
             else:
@@ -3761,9 +3793,9 @@ def render_workflow_tab(sidebar_state: Dict[str, Any]) -> None:
     Returns:
         None.
     """
-    st.markdown("---")
-    st.info(
-        "Cloud resources are limited. For big datasets, use the Local Deployment tab so you can run the same web interface with local compute."
+    st.caption(
+        ":material/cloud: Cloud resources are limited. For large datasets, use Local setup "
+        "to run this same interface with local compute."
     )
     st.subheader("Describe your workflow")
     if sidebar_state.get("demo_mode"):
@@ -3772,11 +3804,11 @@ def render_workflow_tab(sidebar_state: Dict[str, Any]) -> None:
 
     # Mode selector: keep the existing one-click flow, and offer the conversational
     # AQUAH agent as an alternative. Both drive the same workflow engine.
-    workflow_mode = st.radio(
+    workflow_mode = st.segmented_control(
         "Mode",
         ["🚀 One-click", "💬 AQUAH chat"],
-        horizontal=True,
         key="workflow_mode",
+        width="stretch",
         help="One-click: describe the workflow and run it in one go. AQUAH chat: converse "
              "step by step — AQUAH builds the configuration and runs the same engine.",
     )
@@ -7050,19 +7082,24 @@ def render_sidebar() -> Dict[str, Any]:
     Returns:
         Dictionary containing provider, model, API key, and output directory values.
     """
-    st.sidebar.header("Configuration")
+    st.sidebar.subheader("Workspace")
 
-    demo_mode = st.sidebar.checkbox(
-        "Demo mode (no API key required)",
+    demo_mode = st.sidebar.toggle(
+        "Demo mode",
         value=bool(st.session_state.demo_mode),
         help="Use bundled cached results and disable live LLM/inversion execution.",
+        width="stretch",
     )
     st.session_state.demo_mode = demo_mode
     if demo_mode:
-        st.sidebar.info("Demo mode uses bundled cached outputs and makes no LLM calls.")
+        st.sidebar.caption(":material/science: Uses bundled results and makes no LLM calls.")
 
-    st.sidebar.markdown("**🔧 Setup**")
-    provider = st.sidebar.selectbox(
+    setup_panel = st.sidebar.expander(
+        "AI connection",
+        expanded=not demo_mode,
+        icon=":material/key:",
+    )
+    provider = setup_panel.selectbox(
         "LLM provider",
         options=["openai", "gemini", "claude"],
         index=["openai", "gemini", "claude"].index(st.session_state.llm_provider)
@@ -7073,10 +7110,10 @@ def render_sidebar() -> Dict[str, Any]:
 
     default_models = {"openai": "gpt-4o-mini", "gemini": "gemini-2.5-flash", "claude": "claude-sonnet-5"}
     model_default = st.session_state.llm_model or default_models.get(provider, "gpt-4o-mini")
-    model = st.sidebar.text_input("Model name", value=model_default)
+    model = setup_panel.text_input("Model name", value=model_default)
 
     env_map = {"openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY", "claude": "ANTHROPIC_API_KEY"}
-    with st.sidebar.expander("Enter API key to run on my own data", expanded=not demo_mode):
+    with setup_panel:
         preset_key = st.session_state.api_key or os.getenv(env_map[provider], "")
         api_key = st.text_input(
             "API key",
@@ -7085,11 +7122,21 @@ def render_sidebar() -> Dict[str, Any]:
             help=f"Read from environment if set: {env_map[provider]}",
         )
 
-    output_dir = st.sidebar.text_input("Output directory", value=st.session_state.output_dir)
+    run_panel = st.sidebar.expander("Run settings", icon=":material/tune:")
+    output_dir = run_panel.text_input("Output directory", value=st.session_state.output_dir)
 
     col_a, col_b = st.sidebar.columns(2)
-    init_clicked = col_a.button("Initialize", type="primary", width="stretch")
-    reset_clicked = col_b.button("Reset state", width="stretch")
+    init_clicked = col_a.button(
+        "Initialize",
+        type="primary",
+        icon=":material/power_settings_new:",
+        width="stretch",
+    )
+    reset_clicked = col_b.button(
+        "Reset",
+        icon=":material/restart_alt:",
+        width="stretch",
+    )
 
     if reset_clicked:
         for key in ["context_agent", "workflow_result", "workflow_config", "upload_dir"]:
@@ -7117,7 +7164,7 @@ def render_sidebar() -> Dict[str, Any]:
         _apply_hydro_notebook_defaults(force=True)
         st.session_state.hydro_defaults_version = HYDRO_DEFAULTS_VERSION
         st.session_state.hydro_active_step = 1
-        st.sidebar.info("Session cleared and Hydro defaults restored from notebook.")
+        st.toast("Session reset and Hydro defaults restored.", icon=":material/restart_alt:")
 
     if init_clicked:
         if not AGENTS_AVAILABLE:
@@ -7140,13 +7187,14 @@ def render_sidebar() -> Dict[str, Any]:
                 st.sidebar.error(f"Initialization failed: {exc}")
                 st.sidebar.exception(exc)
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("**📊 Session**")
-    st.sidebar.metric("Estimated LLM cost", f"${float(st.session_state.llm_cost_estimate_usd):.4f}")
+    st.sidebar.caption("Session")
+    st.sidebar.caption(
+        f"Estimated LLM cost · ${float(st.session_state.llm_cost_estimate_usd):.4f}"
+    )
     if st.session_state.context_agent:
-        st.sidebar.success("Status: ready ✓")
+        st.sidebar.badge("Ready", icon=":material/check_circle:", color="green")
     else:
-        st.sidebar.warning("Status: not initialized")
+        st.sidebar.badge("Not initialized", icon=":material/pending:", color="gray")
 
     return {"provider": provider, "model": model, "api_key": api_key, "output_dir": output_dir, "demo_mode": demo_mode}
 
@@ -11885,32 +11933,32 @@ def main() -> None:
     
     sidebar_state = render_sidebar()
 
-    tab_workflow, tab_workbench, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs([
-        "🚀 Run Workflow",
-        "🖥️ Professional Workbench",
-        "📖 Step-by-Step Tutorials",
-        "🔬 Learn Hydrogeophysics & Ask AI",
-        "💻 Local Deployment",
-        "👤 About Author",
-    ])
+    tab_workflow, tab_workbench, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs(
+        ["Workflow", "Workbench", "Tutorials", "Learn", "Local setup", "About"],
+        key="primary_navigation",
+        on_change="rerun",
+    )
 
-    with tab_workflow:
-        render_workflow_tab(sidebar_state)
-
-    with tab_workbench:
-        render_professional_workbench_tab(sidebar_state)
-
-    with tab_tutorial:
-        render_tutorial_tab(sidebar_state)
-
-    with tab_concepts:
-        render_concepts_tab()
-
-    with tab_local:
-        render_local_deployment_tab()
-
-    with tab_author:
-        render_author_tab()
+    # Only render the selected top-level page. This keeps hidden workbenches from
+    # doing expensive imports and plotting work on every interaction.
+    if tab_workflow.open:
+        with tab_workflow:
+            render_workflow_tab(sidebar_state)
+    elif tab_workbench.open:
+        with tab_workbench:
+            render_professional_workbench_tab(sidebar_state)
+    elif tab_tutorial.open:
+        with tab_tutorial:
+            render_tutorial_tab(sidebar_state)
+    elif tab_concepts.open:
+        with tab_concepts:
+            render_concepts_tab()
+    elif tab_local.open:
+        with tab_local:
+            render_local_deployment_tab()
+    elif tab_author.open:
+        with tab_author:
+            render_author_tab()
     
 if __name__ == "__main__":
     main()

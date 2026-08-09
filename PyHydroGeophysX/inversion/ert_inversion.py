@@ -850,7 +850,7 @@ def _diverged(run) -> bool:
 def _fit_to_plateau(engine, *, lam: float, max_iterations: int,
                     plateau_tolerance: float, target_chi2: float,
                     max_total_iterations: int, start_model=None,
-                    reference_model=None,
+                    reference_model=None, stop_on_target: bool = True,
                     log: Callable[[str], None] = _noop_log) -> ERTRun:
     """Iterate at a fixed lambda until the misfit stops improving.
 
@@ -863,10 +863,19 @@ def _fit_to_plateau(engine, *, lam: float, max_iterations: int,
     ``start_model`` warm-starts the stage from a neighbouring lambda's solution.
     ``reference_model`` must then be the homogeneous model the cold start would
     have used, so the penalty stays on model roughness.
+
+    ``stop_on_target`` must be False for a lambda trial. Every engine stops as
+    soon as chi2 falls below ``target_chi2``, and that test is made before the
+    new lambda has moved anything. A trial warm-started from a model already
+    under the target therefore returns on its first iteration with the seed's
+    chi2, identically for every lambda, which makes an upward search report no
+    improvement while the target was in fact reachable. chi2 is never negative,
+    so 0.0 is a target the stopping rule can never meet.
     """
+    engine_target = float(target_chi2) if stop_on_target else 0.0
     reference = reference_model
     run = engine.fit(lam=lam, max_iterations=max_iterations,
-                     plateau_tolerance=plateau_tolerance, target_chi2=target_chi2,
+                     plateau_tolerance=plateau_tolerance, target_chi2=engine_target,
                      start_model=start_model, reference_model=reference)
     if _diverged(run):
         # Continuing a run that is climbing only buys a worse model, and the
@@ -886,7 +895,7 @@ def _fit_to_plateau(engine, *, lam: float, max_iterations: int,
             reference = engine.reference_model()
         previous, before = run, run.chi2
         nxt = engine.fit(lam=lam, max_iterations=extra,
-                         plateau_tolerance=plateau_tolerance, target_chi2=target_chi2,
+                         plateau_tolerance=plateau_tolerance, target_chi2=engine_target,
                          start_model=run.model, reference_model=reference)
         nxt.convergence = list(run.convergence) + list(nxt.convergence[1:])
         nxt.iterations = run.iterations + nxt.iterations
@@ -1340,6 +1349,7 @@ def run_ert_manager_inversion(
                 plateau_tolerance=plateau_tolerance, target_chi2=target,
                 max_total_iterations=max_total_iterations,
                 start_model=start, reference_model=pinned if start is not None else None,
+                stop_on_target=False,
                 log=log,
             )
             trial_detail[float(trial_lam)] = trial
