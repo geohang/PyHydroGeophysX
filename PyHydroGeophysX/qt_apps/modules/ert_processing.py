@@ -2311,13 +2311,19 @@ class ERTProcessingModule(BaseModule):
         try:
             import numpy as np
 
+            from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
+
             out = io_utils.ensure_dir(folder)
             mesh = mgr.paraDomain
             model = np.asarray(mgr.model, dtype=float)  # resistivity (ohm-m)
             np.save(out / "resistivity_model.npy", model)
-            mesh.save(str(out / "resistivity_mesh.bms"))
+            # numpy takes wide paths, PyGIMLi's writers do not; a folder Windows'
+            # ANSI codepage cannot represent needs the write staged through a
+            # temporary ASCII one. Export to a localized "文档" folder otherwise
+            # writes the .npy and then fails on the .bms.
+            via_ascii_path(mesh.save, out / "resistivity_mesh.bms", mode="write")
             mesh["resistivity"] = model
-            mesh.exportVTK(str(out / "resistivity_model.vtk"))
+            via_ascii_path(mesh.exportVTK, out / "resistivity_model.vtk", mode="write")
             try:
                 cov = np.asarray(mgr.coverage(), dtype=float)
                 np.save(out / "coverage.npy", cov)

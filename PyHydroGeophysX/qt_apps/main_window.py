@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from PyHydroGeophysX.core import mesh_serialization
 from PyHydroGeophysX.qt_apps import theme
 from PyHydroGeophysX.qt_apps.agent.chat_panel import AquahChatPanel
 from PyHydroGeophysX.qt_apps.agent.controller import WorkbenchController
@@ -99,6 +100,12 @@ class PyHydroGeophysXWorkbench(QMainWindow):
 
         self._status_label = QLabel("Ready")
         self.statusBar().addWidget(self._status_label)
+        # Every module writes under state.output_dir, so where that points belongs
+        # on screen rather than only in whichever log line mentions a path.
+        self._output_label = QLabel()
+        self._output_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.statusBar().addPermanentWidget(self._output_label)
+        self._restore_output_dir()
 
         self.log(f"Workbench started. Context: {self.state.context_path or '(none)'}", "info")
         if self.state.context_path and not self.state.context:
@@ -125,6 +132,62 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         settings = QSettings("PyHydroGeophysX", "Workbench")
         settings.setValue("main/geometry", self.saveGeometry())
         settings.setValue("main/windowState", self.saveState())
+
+    # -- output folder -------------------------------------------------------
+    def _restore_output_dir(self) -> None:
+        """Reapply the folder chosen last time, unless a context already set one.
+
+        A bridge context is the launcher telling us where this run's results go,
+        so it outranks a remembered preference.
+        """
+        if not self.state.context:
+            saved = QSettings("PyHydroGeophysX", "Workbench").value("main/outputDir")
+            if saved:
+                self.state.output_dir = Path(str(saved))
+        self._refresh_output_label()
+
+    def _refresh_output_label(self) -> None:
+        path = self.state.output_dir
+        if path is None:
+            self._output_label.setText("Output: (not set)")
+            self._output_label.setToolTip("Results go to the current working directory.")
+            return
+        text = str(path)
+        shown = text if len(text) <= 48 else "…" + text[-47:]
+        warn = not mesh_serialization.ansi_safe(text)
+        self._output_label.setText(("⚠ " if warn else "") + f"Output: {shown}")
+        self._output_label.setToolTip(
+            text + ("\n\nWindows' ANSI codepage cannot represent this path. PyGIMLi writes "
+                    "are staged through a temporary folder to work around it, which is "
+                    "slower and fails outright if TEMP has the same problem. A path "
+                    "without such characters avoids it." if warn else ""))
+
+    def _choose_output_dir(self) -> None:
+        """Choose where module results are written."""
+        start = str(self.state.output_dir or Path.cwd())
+        chosen = QFileDialog.getExistingDirectory(self, "Choose output folder", start)
+        if not chosen:
+            return
+        path = Path(chosen)
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            probe = path / ".phgx_write_test"
+            probe.touch()
+            probe.unlink()
+        except OSError as exc:
+            QMessageBox.warning(self, "Output folder",
+                                f"{path} cannot be written to:\n{exc}")
+            return
+        self.state.output_dir = path
+        QSettings("PyHydroGeophysX", "Workbench").setValue("main/outputDir", str(path))
+        self._refresh_output_label()
+        self.log(f"Output folder set to {path}", "success")
+        if not mesh_serialization.ansi_safe(str(path)):
+            self.log(
+                "This path contains characters Windows' ANSI codepage cannot represent. "
+                "PyGIMLi cannot open such paths directly, so mesh and model writes are "
+                "staged through a temporary folder. It works, but a plainer path is safer.",
+                "warn")
 
     def _make_dock(self, title: str, widget: QWidget, area: Qt.DockWidgetArea) -> QDockWidget:
         dock = QDockWidget(title, self)
@@ -167,6 +230,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
 
         file_menu = menubar.addMenu("&File")
         self._add_action(file_menu, "Open Project Context…", self._open_context)
+        self._add_action(file_menu, "Set Output Folder…", self._choose_output_dir)
         self._add_action(file_menu, "Save Workbench Result", self._save_result)
         self._add_action(file_menu, "Export Current Module Result…", self._export_current_result)
         file_menu.addSeparator()

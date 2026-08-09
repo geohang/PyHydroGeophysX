@@ -1005,11 +1005,15 @@ def _reject_outliers(engine_factory, container, run: ERTRun, *, threshold: float
 
 def _export_model_vtk(manager, output_dir: str | Path, filename: str) -> str:
     """Write the manager's model to VTK, returning "" if the export is unavailable."""
+    from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
+
     try:
         mesh = manager.paraDomain
         mesh["resistivity"] = np.asarray(manager.model, dtype=float)
         path = Path(output_dir) / filename
-        mesh.exportVTK(str(path))
+        # exportVTK opens a narrow path, which fails on any folder Windows' ANSI
+        # codepage cannot represent; via_ascii_path stages the write when needed.
+        via_ascii_path(mesh.exportVTK, path, mode="write")
         return str(path)
     except Exception:  # noqa: BLE001
         return ""
@@ -1017,6 +1021,8 @@ def _export_model_vtk(manager, output_dir: str | Path, filename: str) -> str:
 
 def _export_model_bundle(manager, output_dir: str | Path, stem: str) -> Dict[str, str]:
     """Persist the manager-shaped data needed by a viewer in another process."""
+    from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
+
     out = Path(output_dir)
     paths = {
         "mesh": out / f"{stem}_mesh.bms",
@@ -1024,7 +1030,7 @@ def _export_model_bundle(manager, output_dir: str | Path, stem: str) -> Dict[str
         "response": out / f"{stem}_response.npy",
         "coverage": out / f"{stem}_coverage.npy",
     }
-    manager.paraDomain.save(str(paths["mesh"]))
+    via_ascii_path(manager.paraDomain.save, paths["mesh"], mode="write")
     np.save(paths["model"], np.asarray(manager.model, dtype=float))
     response = getattr(manager, "response", None)
     if response is None:
@@ -1448,11 +1454,21 @@ def run_ert_manager_inversion(
         _export_model_vtk(fixed_handle, out, "resistivity_model_fixed_lambda.vtk")
         if keep_fixed else vtk_path
     )
-    model_bundle = _export_model_bundle(primary, out, "resistivity")
-    fixed_model_bundle = (
-        _export_model_bundle(fixed_handle, out, "resistivity_fixed_lambda")
-        if keep_fixed else dict(model_bundle)
-    )
+    # An inversion that converged is not lost because its output folder could not
+    # be written. The caller still gets the model, the mesh and the convergence
+    # history in memory; only the on-disk copy is missing, and `export_error`
+    # says so instead of the whole run surfacing as a failure minutes in.
+    try:
+        model_bundle = _export_model_bundle(primary, out, "resistivity")
+        fixed_model_bundle = (
+            _export_model_bundle(fixed_handle, out, "resistivity_fixed_lambda")
+            if keep_fixed else dict(model_bundle)
+        )
+    except Exception as exc:  # noqa: BLE001 - the inversion result is still good
+        model_bundle = {}
+        fixed_model_bundle = {}
+        result["export_error"] = str(exc)
+        log(f"  the inversion finished, but writing its results to {out} failed: {exc}")
 
     if result["auto_lambda_note"]:
         log(result["auto_lambda_note"])

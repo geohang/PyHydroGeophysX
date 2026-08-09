@@ -180,13 +180,23 @@ def run_mesh3d(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
     output_name = str(config.pop("output_name", "mesh3d"))
     result = generate_mesh(config, log=context.progress)
     if output_formats:
-        result["outputs"] = save_outputs(
-            result["mesh"],
-            result["electrodes"],
-            context.output_dir,
-            output_name,
-            output_formats,
-        )
+        # A mesh that generated is worth keeping even when writing it out fails.
+        # Letting the export raise here discards it and reports "mesh generation
+        # failed", which sends the user looking at meshing parameters for what is
+        # really a filesystem or path-encoding problem.
+        try:
+            result["outputs"] = save_outputs(
+                result["mesh"],
+                result["electrodes"],
+                context.output_dir,
+                output_name,
+                output_formats,
+            )
+        except Exception as exc:  # noqa: BLE001 - the mesh itself is still good
+            result["outputs"] = {}
+            result["output_error"] = str(exc)
+            context.progress(
+                f"The mesh generated, but saving it to {context.output_dir} failed: {exc}")
     return _legacy_result(spec, context, result)
 
 

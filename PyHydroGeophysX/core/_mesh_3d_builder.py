@@ -291,7 +291,11 @@ def save_outputs(
         outputs["mesh_structure"] = str(sidecar)
     if any("vtk" in f.lower() for f in formats):
         path = output_dir / f"{mesh_name}.vtk"
-        mesh.exportVTK(str(path))
+        from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
+
+        # exportVTK opens its own narrow path, so it fails on the same folders
+        # that defeat mesh.save; see via_ascii_path for what that means.
+        via_ascii_path(mesh.exportVTK, path, mode="write")
         outputs["vtk"] = str(path)
     if any("csv" in f.lower() or "sensor" in f.lower() or "electrode" in f.lower() for f in formats):
         path = output_dir / f"{mesh_name}_sensors.csv"

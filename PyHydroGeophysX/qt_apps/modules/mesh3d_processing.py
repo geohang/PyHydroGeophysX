@@ -691,6 +691,13 @@ class Mesh3DModule(BaseModule):
         self.log(f"Mesh generated: {cells} cells, {nodes} nodes ({res.get('generator')}).", "success")
         for key, path in outputs.items():
             self.log(f"Saved {key}: {path}", "info")
+        # The mesh is in memory and on screen either way; only the file is missing.
+        # Saying so beats a success line that quietly wrote nothing.
+        if res.get("output_error"):
+            self.log(
+                f"The mesh is ready and displayed, but writing it to "
+                f"{cfg.get('output_dir')} failed: {res['output_error']}. "
+                "Use Export to save it elsewhere.", "warn")
         self.report_result({
             "generator": res.get("generator"), "n_sensors": int(len(sensors)),
             "cells": summary.get("Cells"), "nodes": summary.get("Nodes"),
