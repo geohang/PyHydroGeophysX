@@ -12,10 +12,16 @@ Steps
 
 .. code-block:: python
 
-   from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
+   import numpy as np
+
+   from PyHydroGeophysX.model_output.water_content import MODFLOWWaterContent
    from PyHydroGeophysX.petrophysics import water_content_to_resistivity
 
-   wc = MODFLOWWaterContent("examples/data/modflow", idomain=None).load_timestep(0)
+   # idomain marks the active cells of the MODFLOW grid. The loader needs it to
+   # unpack the WaterContent records into (nlay, nrow, ncol), so it cannot be None.
+   idomain = np.loadtxt("examples/data/modflow/id.txt")
+
+   wc = MODFLOWWaterContent("examples/data/modflow", idomain=idomain).load_timestep(0, nlay=3)
    rho = water_content_to_resistivity(wc, rhos=100.0, n=2.0, porosity=0.3)
 
 Related Examples

@@ -122,7 +122,13 @@ A header-less file is read by column order: one column = position; two columns =
   through the lateral constraint. **Hide below DOI** blanks the cells the data do
   not constrain, at the sensitivity threshold beside it, and both act on the
   drawing rather than on the result, so the cut can be moved without inverting
-  again. The figure is written to
+  again. **Depth / Elevation** picks what the vertical axis measures: depth hangs
+  every sounding from a flat top, elevation hangs each from its own recorded
+  ground level so the section follows the topography and a flat-lying unit reads
+  as flat. A TEM project records an elevation per station, so the section opens on
+  elevation; it falls back to depth, and the control switches itself off, when
+  the survey carries no elevations or is flat to within 5 cm. The inversion is
+  the same either way, because each 1D model is solved under its own station. The figure is written to
   `em_results/em_line_overview.png`. How the misfit varies along the survey is on
   the **Inversion quality** tab, next to the convergence history.
 - Tick **Basemap** to draw satellite imagery, a street map, or a topographic map

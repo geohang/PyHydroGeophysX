@@ -57,23 +57,30 @@ def _inversion_layer_thicknesses(inv: Dict[str, Any]) -> np.ndarray:
 
 def _tdem_uncertainty(observed: np.ndarray, item: Dict[str, Any],
                       rel: float, floor: float) -> np.ndarray:
-    """Per-gate uncertainty from the instrument's stack error, floored at ``rel``.
+    """Per-gate uncertainty: the recorded stack error with ``rel`` added in quadrature.
 
-    ``relative_std`` is used gate by gate where it is present and positive, and
-    ``rel`` fills the rest, so a partially populated column is not thrown away.
+    Two independent things go wrong with a gate. Its stack error says how
+    repeatably it was measured, and the file records one per gate. Everything
+    else, system calibration and the error in representing the ground as 1D
+    layers, applies to every gate alike and the stack error knows nothing about
+    it; that is what ``rel`` carries.
 
-    ``rel`` is a floor rather than only a fallback. A stack error measures how
-    repeatable the gate was, which says nothing about how well a 1D layered
-    model can represent the ground under a ground-loop system; leaving the
-    recorded 3-5 % as the whole error budget then reports a chi-squared in the
-    hundreds that no model can reach. Raising the assumed error is the correct
-    response to model error, and it keeps the instrument's relative weighting
-    between gates because the floor applies to every gate alike.
+    Adding them in quadrature is how independent errors combine, and it is what
+    the instrument vendor's own documentation describes ("calculated based on
+    the signal-to-noise ratio and with a 3 % uniform uncertainty added"). It also
+    behaves better than taking the larger of the two, which was the previous
+    rule: quadrature leaves a gate that is already noisy essentially untouched,
+    so the instrument's relative weighting between clean and noisy gates
+    survives, where a floor flattens every gate below it to the same weight.
+
+    Where the file carries no stack error for a gate, ``rel`` is the whole
+    budget, so a partially populated column is still usable.
     """
     data_rel = np.asarray(item.get("relative_std", []), dtype=float).ravel()
     if data_rel.size == observed.size:
-        data_rel = np.where(np.isfinite(data_rel) & (data_rel > 0.0), data_rel, rel)
-        return np.maximum(data_rel, float(rel)) * np.abs(observed) + floor
+        data_rel = np.where(np.isfinite(data_rel) & (data_rel > 0.0), data_rel, 0.0)
+        total = np.hypot(data_rel, float(rel))
+        return total * np.abs(observed) + floor
     return rel * np.abs(observed) + floor
 
 
@@ -196,8 +203,12 @@ def tdem_moment_blocks(data: Dict[str, Any], geom: Dict[str, Any],
             "observed": observed,
             "uncertainty": _tdem_uncertainty(observed, item, rel, floor),
             "sign": sign,
+            # The turn-off ramp and the gate windows belong to the moment,
+            # not to the station, so each block builds its own geometry.
             "modeler": TDEMForwardModeling(
-                thicknesses=thick, survey_config=_tdem_config(geom, model_times)),
+                thicknesses=thick,
+                survey_config=_tdem_config(
+                    {**geom, **(item.get("transmitter") or {})}, model_times)),
         })
     if not blocks:
         raise ValueError("The joint TDEM sounding has no usable LM or HM gates.")
@@ -221,7 +232,7 @@ def _moment_jacobian(blocks: List[Dict[str, Any]]) -> Callable[[np.ndarray], np.
     def jacobian(sigma: np.ndarray) -> np.ndarray:
         return np.vstack([
             item["sign"] * np.asarray(
-                item["modeler"].simulation.getJ(sigma), dtype=float)[
+                item["modeler"].sensitivity(sigma), dtype=float)[
                     : item["model_times"].size][item["channel_indices"], :]
             for item in blocks
         ])

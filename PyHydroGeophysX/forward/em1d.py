@@ -97,14 +97,36 @@ def _tdem_config(geom: Dict[str, Any], times: np.ndarray):
 
     h = float(geom.get("height", 30.0))
     sep = float(geom.get("tx_rx_sep", 0.0))
+    moment = geom.get("source_moment")
+    gates = geom.get("gate_windows") or {}
+    # Gate windows only apply when they belong to these very time channels; a
+    # sounding whose gates were partly rejected carries a shorter time vector.
+    opens = np.asarray(gates.get("open", []), dtype=float).ravel()
+    closes = np.asarray(gates.get("close", []), dtype=float).ravel()
+    centres = np.asarray(gates.get("centre", []), dtype=float).ravel()
+    times = np.asarray(times, dtype=float)
+    if centres.size == opens.size == closes.size and centres.size:
+        picked = [int(np.argmin(np.abs(centres - value))) for value in times]
+        if np.allclose(centres[picked], times, rtol=1e-6):
+            opens, closes = opens[picked], closes[picked]
+        else:
+            opens = closes = np.array([], dtype=float)
     return TDEMSurveyConfig(
         source_location=np.array([0.0, 0.0, h]),
         source_radius=float(geom.get("source_radius", 10.0)),
         source_turns=int(geom.get("loop_turns", 1)),
+        source_moment=None if moment is None else float(moment),
+        waveform_times=geom.get("waveform_times"),
+        waveform_currents=geom.get("waveform_currents"),
+        gate_open=opens if opens.size == times.size else None,
+        gate_close=closes if closes.size == times.size else None,
+        # Three nodes per window costs about 5 % and removes the last
+        # per-moment discrepancy against the vendor forward.
+        gate_samples=int(geom.get("gate_samples", 3)),
         receiver_location=np.array([sep, 0.0, h]),
         receiver_orientation=str(geom.get("orientation", "z")),
         receiver_type=str(geom.get("receiver_type", "b")),
-        times=np.asarray(times, dtype=float),
+        times=times,
         waveform_type=str(geom.get("waveform", "step_off")),
     )
 

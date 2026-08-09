@@ -67,7 +67,6 @@ os.makedirs(seismic_data_dir, exist_ok=True)
 
 # These would be your actual data files
 data_dir = os.path.join(current_dir, "data")
-modflow_dir = os.path.join(data_dir, "modflow")
 
 # Load domain information from files
 # (Replace with your actual file paths)

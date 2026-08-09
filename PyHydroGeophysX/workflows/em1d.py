@@ -148,8 +148,9 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
     """
     moment = str(geom.get("tem_moment", "HM"))
     use_flags = bool(geom.get("use_project_flags", True))
+    tail_cut = geom.get("tail_max_relative_std")
     try:
-        head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags)
+        head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
     except Exception as exc:  # noqa: BLE001
         log(f"Auto-calibration skipped ({exc}); using data_scale = 1.0")
         return 1.0
@@ -173,7 +174,7 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
 
             def observed(s):
                 return _response_on_times(
-                    load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags),
+                    load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags, max_relative_std=tail_cut),
                     abscissa,
                 )
         else:
@@ -190,7 +191,7 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
             preds = np.asarray(grid)
 
             def observed(s):
-                d = load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags)
+                d = load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
                 return np.abs(np.asarray(d["real"], float) + 1j * np.asarray(d["imag"], float))
     except Exception as exc:  # noqa: BLE001
         log(f"Auto-calibration skipped ({exc}); using data_scale = 1.0")
@@ -239,8 +240,9 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
         return current
     moment = str(geom.get("tem_moment", "HM"))
     use_flags = bool(geom.get("use_project_flags", True))
+    tail_cut = geom.get("tail_max_relative_std")
     try:
-        head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags)
+        head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
         n_total = int(head.get("n_soundings", 1))
         probe = np.unique(np.linspace(0, n_total - 1, min(int(max_probe), n_total)).astype(int))
         if method == "TDEM":
@@ -255,7 +257,7 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
 
             def observed(s):
                 return _response_on_times(
-                    load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags),
+                    load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags, max_relative_std=tail_cut),
                     abscissa,
                 )
         else:
@@ -268,7 +270,7 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
             pred = np.abs(np.asarray(resp, dtype=complex).ravel()[:abscissa.size])
 
             def observed(s):
-                d = load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags)
+                d = load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
                 return np.abs(np.asarray(d["real"], float) + 1j * np.asarray(d["imag"], float))
     except Exception as exc:  # noqa: BLE001
         log(f"Reference calibration unavailable ({exc}); kept data_scale.")
@@ -373,7 +375,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         if is_temcompany_source(path) else str(geom.get("tem_moment", "HM"))
     )
     use_flags = bool(geom.get("use_project_flags", True))
-    head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags)
+    tail_cut = geom.get("tail_max_relative_std")
+    head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
     joint = method == "TDEM" and bool(head.get("moments"))
     invert = (
         fdem_invert if method == "FDEM"
@@ -442,7 +445,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     t_ref = f_ref = None  # last time / min frequency, for the DOI estimate
     for s in range(n_pos):
         try:
-            data = load_sounding(path, method, sounding=s, moment=moment, use_flags=use_flags)
+            data = load_sounding(path, method, sounding=s, moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
             datasets[s] = data
             if t_ref is None and "times" in data and np.size(data["times"]):
                 t_ref = float(np.asarray(data["times"]).ravel()[-1])
@@ -479,6 +482,12 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         pos_lci = requested_positions[:n_pos]
     else:
         pos_lci = np.arange(n_pos, dtype=float) * float(spacing)
+    # Ground level per sounding, carried through for plotting only.
+    embedded_elevation = np.asarray(head.get("elevation", []), dtype=float).ravel()
+    surface_elevation = (
+        embedded_elevation[:n_pos] if embedded_elevation.size >= n_pos
+        else np.full(n_pos, np.nan, dtype=float)
+    )
     embedded_lines = np.asarray(head.get("line_numbers", []), dtype=int).ravel()
     line_numbers = (
         embedded_lines[:n_pos]
@@ -775,6 +784,10 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         "label": "resistivity (Ω·m)", "cmap": "turbo", "log_scale": True,
         "positions": pos, "depth_edges": depth_edges, "thickness": thick,
         "sensitivity": sensitivity, "doi": doi, "doi_threshold": doi_threshold,
+        # Ground level at each sounding, so a section can be drawn against
+        # elevation instead of depth. The inversion itself is per sounding and
+        # does not use it: each 1D model starts at its own ground surface.
+        "surface_elevation": surface_elevation,
         "chi2": chi2_mean, "chi2_list": chi2_list, "n_soundings": n_pos,
         "n_layers": n_layers, "n_data": int(sum(data_count_list)),
         "data_count_list": data_count_list, "data_scale": data_scale_used,
@@ -795,7 +808,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                  # Saved so the depth cut can be reproduced, or moved, without
                  # re-running the inversion.
                  sensitivity=sensitivity, doi=doi, depth_edges=depth_edges,
-                 line_numbers=np.asarray(line_numbers, dtype=int))
+                 line_numbers=np.asarray(line_numbers, dtype=int),
+                 surface_elevation=surface_elevation)
         result["saved"] = [str(out / "resistivity_section.npz")]
         log(f"  saved {out / 'resistivity_section.npz'}")
     return result

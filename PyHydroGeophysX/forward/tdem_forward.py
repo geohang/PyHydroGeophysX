@@ -37,12 +37,27 @@ class TDEMSurveyConfig:
     source_radius: float = 10.0
     source_current: float = 1.0
     source_turns: int = 1
+    #: Transmitter moment in A m^2, overriding ``current * turns * area``. Set it
+    #: to 1.0 for data already normalized by the transmitter moment, which is how
+    #: TEMcompany instruments report dB/dt (V/A/m^4): dividing the measurement by
+    #: the moment and then modelling with that moment counts it twice.
+    source_moment: Optional[float] = None
+    #: Turn-off waveform as (times, currents) nodes. A real ramp is not a step,
+    #: and the earliest gates of a ground system sit only microseconds after it
+    #: ends, which is exactly where the difference bites.
+    waveform_times: Optional[np.ndarray] = None
+    waveform_currents: Optional[np.ndarray] = None
+    #: Gate windows, for averaging the response over each one instead of reading
+    #: it at the gate centre.
+    gate_open: Optional[np.ndarray] = None
+    gate_close: Optional[np.ndarray] = None
+    gate_samples: int = 1
     receiver_location: np.ndarray = None
     receiver_orientation: str = "z"
     receiver_type: str = "b"
     times: np.ndarray = None
     waveform_type: str = "step_off"
-    
+
     def __post_init__(self):
         if self.source_location is None:
             self.source_location = np.array([0.0, 0.0, 0.0])
@@ -50,6 +65,43 @@ class TDEMSurveyConfig:
             self.receiver_location = np.array([0.0, 0.0, 0.0])
         if self.times is None:
             self.times = np.logspace(-5, -2, 31)
+
+
+def _gate_sampling(config: "TDEMSurveyConfig"):
+    """Times to model, and the matrix that averages them back onto the gates.
+
+    A gate is an integral over a window, not a reading at its centre, and the
+    windows are log-spaced so the late ones are wide. Sampling each window at a
+    few points and averaging is the honest version. Returns ``(times, None)``
+    when no windows are given or a single sample is asked for, which is the
+    plain gate-centre behaviour.
+    """
+    times = np.asarray(config.times, dtype=float).ravel()
+    n_samples = max(1, int(config.gate_samples))
+    opens = config.gate_open
+    closes = config.gate_close
+    if n_samples == 1 or opens is None or closes is None:
+        return times, None
+    opens = np.asarray(opens, dtype=float).ravel()
+    closes = np.asarray(closes, dtype=float).ravel()
+    if opens.size != times.size or closes.size != times.size:
+        return times, None
+    # Gauss-Legendre in log time: the response is close to a power law across a
+    # window, so a few nodes spaced in log integrate it far better than in time.
+    nodes, weights = np.polynomial.legendre.leggauss(n_samples)
+    sample = np.empty(times.size * n_samples, dtype=float)
+    matrix = np.zeros((times.size, times.size * n_samples), dtype=float)
+    for gate, (low, high) in enumerate(zip(opens, closes)):
+        low = max(float(low), 1e-12)
+        high = max(float(high), low * (1.0 + 1e-9))
+        mid = 0.5 * (np.log(high) + np.log(low))
+        half = 0.5 * (np.log(high) - np.log(low))
+        block = slice(gate * n_samples, (gate + 1) * n_samples)
+        sample[block] = np.exp(mid + half * nodes)
+        # d t = t d(ln t), so integrating in log time carries a factor of t.
+        share = weights * sample[block]
+        matrix[gate, block] = share / share.sum()
+    return sample, matrix
 
 
 # ---------------------------------------------------------------------------
@@ -122,22 +174,29 @@ class TDEMForwardModeling:
             if str(config.receiver_type).lower() in {"dbdt", "db/dt", "time_derivative"}
             else tdem.receivers.PointMagneticFluxDensity
         )
+        self._sample_times, self._gate_weights = _gate_sampling(config)
         receiver_list = [
             receiver_cls(
                 config.receiver_location,
-                config.times,
+                self._sample_times,
                 orientation=config.receiver_orientation
             )
         ]
-        
-        # Create waveform
-        if config.waveform_type == "step_off":
-            waveform = tdem.sources.StepOffWaveform()
+
+        # Create waveform. Measured turn-off nodes win over the named shapes:
+        # a step is only a stand-in for a ramp nobody recorded.
+        nodes = np.asarray(config.waveform_times if config.waveform_times is not None
+                           else [], dtype=float).ravel()
+        currents = np.asarray(config.waveform_currents if config.waveform_currents
+                              is not None else [], dtype=float).ravel()
+        if nodes.size >= 2 and nodes.size == currents.size:
+            waveform = tdem.sources.PiecewiseLinearWaveform(
+                times=nodes, currents=currents)
         elif config.waveform_type == "ramp_off":
             waveform = tdem.sources.RampOffWaveform()
         else:
             waveform = tdem.sources.StepOffWaveform()
-        
+
         # SimPEG's 1D CircularLoop implementation only supports a central-loop
         # receiver. Ground TEM systems such as TEM2Go use a small transmitter loop
         # and an offset receiver; represent that loop by its equivalent magnetic
@@ -148,7 +207,9 @@ class TDEMForwardModeling:
         )
         if offset > 1e-9:
             magnetic_moment = (
-                float(config.source_current)
+                float(config.source_moment)
+                if config.source_moment is not None
+                else float(config.source_current)
                 * max(1, int(config.source_turns))
                 * np.pi
                 * float(config.source_radius) ** 2
@@ -192,8 +253,21 @@ class TDEMForwardModeling:
             sigma = np.exp(conductivity)
         else:
             sigma = np.asarray(conductivity)
-        
-        return self.simulation.dpred(sigma)
+
+        predicted = np.asarray(self.simulation.dpred(sigma), dtype=float).ravel()
+        weights = getattr(self, "_gate_weights", None)
+        return predicted if weights is None else weights @ predicted
+
+    def sensitivity(self, conductivity: np.ndarray) -> np.ndarray:
+        """Analytic d(response)/d(conductivity), averaged over the gate windows.
+
+        The same reduction the forward applies has to be applied to the
+        Jacobian, or the two describe different data.
+        """
+        jacobian = np.asarray(self.simulation.getJ(np.asarray(conductivity)),
+                              dtype=float)
+        weights = getattr(self, "_gate_weights", None)
+        return jacobian if weights is None else weights @ jacobian
     
     def forward_with_noise(
         self,

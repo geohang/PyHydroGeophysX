@@ -58,14 +58,12 @@ class EMOverviewView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         row = QHBoxLayout()
         row.setContentsMargins(6, 2, 6, 2)
-        self._line_label = QLabel("Survey line:")
         self._line = QComboBox()
         self._line.setToolTip(
             "Which survey line to section. Lines are sectioned one at a time "
             "because their along-line distances are not continuous with each "
             "other; 'All lines' chains them and marks the joins.")
         self._line.currentIndexChanged.connect(self._redraw)
-        row.addWidget(self._line_label)
         row.addWidget(self._line)
         row.addSpacing(18)
         self._basemap = QCheckBox("Basemap")
@@ -86,8 +84,8 @@ class EMOverviewView(QWidget):
         # is a judgement, so it is a dial on the picture rather than something
         # frozen into the result.
         self._below_doi = QComboBox()
-        for label, key in (("Fade", "fade"), ("Hide", "hide"), ("Show", "show")):
-            self._below_doi.addItem(f"Below DOI: {label}", key)
+        for label, key in (("fade", "fade"), ("hide", "hide"), ("show", "show")):
+            self._below_doi.addItem(f"DOI: {label}", key)
         self._below_doi.setToolTip(
             "What to do with the cells the data do not constrain. The cut is the "
             "depth of investigation: below it, moving the whole remaining column "
@@ -109,6 +107,18 @@ class EMOverviewView(QWidget):
             "Layer cells draws one rectangle per layer per sounding, which is what "
             "the inversion actually solved for.")
         self._style.currentIndexChanged.connect(self._redraw)
+        self._vertical = QComboBox()
+        for label, key in (("Depth", "depth"), ("Elevation", "elevation")):
+            self._vertical.addItem(label, key)
+        self._vertical.setToolTip(
+            "Depth measures from each sounding's own ground surface, so the "
+            "section is flat-topped and layers line up by burial depth.\n\n"
+            "Elevation hangs every sounding from its recorded ground level, so "
+            "the top of the section is the topography and a flat-lying unit "
+            "reads as flat. Available when the survey carries elevations; a TEM "
+            "project records one per station. The inversion is unchanged either "
+            "way, since each 1D model is solved under its own station.")
+        self._vertical.currentIndexChanged.connect(self._redraw)
         self._doi_threshold = QDoubleSpinBox()
         self._doi_threshold.setRange(0.02, 50.0)
         self._doi_threshold.setDecimals(2)
@@ -126,6 +136,7 @@ class EMOverviewView(QWidget):
             "lower it to see what the deeper part of the model looks like.")
         self._doi_threshold.valueChanged.connect(self._redraw)
         row.addWidget(self._style)
+        row.addWidget(self._vertical)
         row.addWidget(self._below_doi)
         row.addWidget(self._doi_threshold)
         row.addStretch(1)
@@ -162,6 +173,22 @@ class EMOverviewView(QWidget):
                              else None)
         self._below_doi.setEnabled(self._sensitivity is not None)
         self._doi_threshold.setEnabled(self._sensitivity is not None)
+        elevation = np.asarray(result.get("surface_elevation", []), dtype=float).ravel()
+        has_relief = (elevation.size >= n_pos and np.isfinite(elevation[:n_pos]).all()
+                      and float(np.ptp(elevation[:n_pos])) > 0.05)
+        self._vertical.setEnabled(bool(has_relief))
+        # Open on elevation whenever the survey has any: a section drawn from a
+        # flat top over ground that is not flat puts every layer at the wrong
+        # place relative to its neighbours, and the reader has no way to see that
+        # from the picture. Depth stays one click away.
+        self._vertical.blockSignals(True)
+        self._vertical.setCurrentIndex(1 if has_relief else 0)
+        self._vertical.blockSignals(False)
+        if not has_relief:
+            self._vertical.setToolTip(
+                "No ground elevations for these soundings, or the survey is flat "
+                "to within 5 cm, so depth and elevation would draw the same "
+                "section. A TEM project records an elevation per station.")
         if self._sensitivity is not None and "doi_threshold" in result:
             self._doi_threshold.blockSignals(True)
             self._doi_threshold.setValue(float(result["doi_threshold"]))
@@ -201,7 +228,6 @@ class EMOverviewView(QWidget):
         self._line.setCurrentIndex(0)
         self._line.blockSignals(False)
         self._line.setVisible(unique.size > 1)
-        self._line_label.setVisible(unique.size > 1)
         self._row.setVisible(unique.size > 1 or available)
         self._redraw()
 
@@ -239,6 +265,42 @@ class EMOverviewView(QWidget):
         if chosen is None or int(chosen) < 0:
             return np.ones(lines.size, dtype=bool)
         return lines == int(chosen)
+
+    def _surface(self, selected: np.ndarray) -> Optional[np.ndarray]:
+        """Ground level of the selected soundings, or None to draw from a flat top.
+
+        Returns None whenever the section is being measured in depth, or when the
+        survey carries no elevations, so every renderer can treat "no surface" as
+        the ordinary flat-topped case.
+        """
+        if str(self._vertical.currentData()) != "elevation":
+            return None
+        elevation = np.asarray(
+            (self._result or {}).get("surface_elevation", []), dtype=float).ravel()
+        if elevation.size < selected.size:
+            return None
+        here = elevation[:selected.size][selected]
+        if not np.isfinite(here).all():
+            return None
+        return here
+
+    @staticmethod
+    def _cell_grid(edges: np.ndarray, depth_edges: np.ndarray,
+                   surface: Optional[np.ndarray], distance: np.ndarray):
+        """Coordinate arrays for one cell per layer per sounding.
+
+        Always full 2D coordinates, so the caller passes the model the same way
+        round either way. With a surface each column hangs from its own ground
+        level, which is what drapes the section over the topography rather than
+        drawing it flat and relabelling the axis; without one the column runs
+        downward from zero and the axis is inverted instead.
+        """
+        base = (np.zeros(edges.size) if surface is None
+                else np.interp(edges, distance, surface))
+        sign = 1.0 if surface is None else -1.0
+        x = np.repeat(edges[:, None], depth_edges.size, axis=1)
+        y = base[:, None] + sign * depth_edges[None, :]
+        return x, y
 
     @staticmethod
     def _cell_edges(distance: np.ndarray) -> np.ndarray:
@@ -298,30 +360,39 @@ class EMOverviewView(QWidget):
         bottom = self._depth_limit(res if np.isfinite(res).any() else self._res[selected],
                                    depth_centre, depth_edges,
                                    margin=2.5 if fading else 1.3)
+        # Ground level per sounding, or None to measure from a flat surface.
+        surface = self._surface(selected)
         if str(self._style.currentData()) == "smooth":
             self._draw_smooth(ax, distance, depth_centre, self._res[selected],
                               here if mode != "show" else None,
                               norm, cmap, bottom, hide=(mode == "hide"),
-                              groups=lines)
+                              groups=lines, surface=surface)
         else:
+            grids = self._cell_grid(edges, depth_edges, surface, distance)
             if fading:
-                ax.pcolormesh(edges, depth_edges, self._res[selected].T, cmap=cmap,
+                ax.pcolormesh(*grids, self._res[selected], cmap=cmap,
                               norm=norm, shading="auto", alpha=0.22, zorder=1)
-            ax.pcolormesh(edges, depth_edges, res.T, cmap=cmap,
-                          norm=norm, shading="auto", zorder=2)
+            ax.pcolormesh(*grids, res, cmap=cmap, norm=norm,
+                          shading="auto", zorder=2)
         from matplotlib.cm import ScalarMappable
         mesh = ScalarMappable(norm=norm, cmap=cmap)
         ax.set_xlim(edges[0], edges[-1])
         if here is not None and mode != "hide":
-            self._draw_doi_line(ax, distance, here)
-        ax.set_ylim(bottom, 0.0)
+            self._draw_doi_line(ax, distance, here, surface)
+        if surface is None:
+            ax.set_ylim(bottom, 0.0)
+            ax.set_ylabel("Depth (m)")
+        else:
+            ax.plot(distance, surface, "-", color="#444444", lw=1.0, zorder=6)
+            ax.set_ylim(float(np.nanmin(surface)) - bottom,
+                        float(np.nanmax(surface)) + 0.06 * bottom)
+            ax.set_ylabel("Elevation (m)")
         ax.set_xlabel("Distance along line (m)")
-        ax.set_ylabel("Depth (m)")
         ax.set_title(self._section_title(selected, lines, distance), fontsize=11)
         for boundary in np.flatnonzero(np.diff(lines)) + 1:
             ax.axvline(0.5 * (distance[boundary - 1] + distance[boundary]),
                        color="white", lw=1.4, ls="--", alpha=0.9)
-        self._hatch_unconstrained(ax, selected, edges)
+        self._hatch_unconstrained(ax, selected, edges, surface)
 
         box = ax.get_position()
         cax = self._fig.add_axes([0.895, box.y0, 0.018, box.height])
@@ -363,8 +434,8 @@ class EMOverviewView(QWidget):
         ax.set_ylim(*y_limits)
         return str(self._tiles.get("attribution", ""))
 
-    def _hatch_unconstrained(self, ax, selected: np.ndarray,
-                             edges: np.ndarray) -> None:
+    def _hatch_unconstrained(self, ax, selected: np.ndarray, edges: np.ndarray,
+                             surface: Optional[np.ndarray] = None) -> None:
         """Hatch the soundings that contributed no data of their own.
 
         Outlier rejection can take every gate of a station, and a station can
@@ -375,17 +446,22 @@ class EMOverviewView(QWidget):
         """
         from matplotlib.patches import Rectangle
 
-        counts = np.asarray(self._result.get("data_count_list") or [], dtype=float)
+        # Not ``or []``: a result carrying numpy arrays, as one read back from
+        # the saved section does, makes that an ambiguous truth test.
+        counts = np.asarray(self._result.get("data_count_list", []), dtype=float)
         if counts.size < selected.size:
             return
         empty = counts[:selected.size][selected] <= 0
         if not empty.any():
             return
-        bottom, top = ax.get_ylim()
+        low, high = sorted(ax.get_ylim())
         for index in np.flatnonzero(empty):
+            # In elevation the hatch stops at that column's own ground level,
+            # so it does not run up into the air above a low-lying station.
+            ceiling = high if surface is None else float(surface[index])
             ax.add_patch(Rectangle(
-                (edges[index], min(bottom, top)),
-                edges[index + 1] - edges[index], abs(top - bottom),
+                (edges[index], low), edges[index + 1] - edges[index],
+                max(ceiling - low, 0.0),
                 facecolor="none", edgecolor="white", hatch="///",
                 lw=0.0, alpha=0.55, zorder=4))
 
@@ -452,7 +528,8 @@ class EMOverviewView(QWidget):
     def _draw_smooth(ax, distance: np.ndarray, depth_centre: np.ndarray,
                      res: np.ndarray, doi: Optional[np.ndarray],
                      norm, cmap, bottom: float, *, hide: bool = False,
-                     groups: Optional[np.ndarray] = None) -> None:
+                     groups: Optional[np.ndarray] = None,
+                     surface: Optional[np.ndarray] = None) -> None:
         """Draw the section as a continuous image rather than a wall of blocks.
 
         Resistivity is interpolated in log10, which is the quantity the inversion
@@ -513,22 +590,39 @@ class EMOverviewView(QWidget):
                 elif good.sum() == 1:
                     grid[level, span] = float(values[good][0])
 
+        # Nearest sounding rather than a ramp between two, so the edge of the
+        # faded band sits exactly under the stepped depth-of-investigation line
+        # instead of cutting diagonally across it.
+        nearest = np.abs(xs[:, None] - distance[None, :]).argmin(axis=1)
+        depth_of = zs[:, None] * np.ones(width)[None, :]
+        vertical = (zs[-1], zs[0])
+        if surface is not None:
+            # Resample from depth to elevation: every output pixel asks its own
+            # column how deep it is under that column's ground, so the section
+            # follows the topography instead of being drawn flat and relabelled.
+            ground = np.interp(xs, distance, surface)
+            top = float(np.nanmax(surface))
+            base = float(np.nanmin(surface)) - float(bottom)
+            zs_out = np.linspace(top, base, height)
+            depth_of = ground[None, :] - zs_out[:, None]
+            vertical = (base, top)
+            rows = np.clip(np.rint((depth_of - zs[0]) / (zs[1] - zs[0])).astype(int),
+                           0, height - 1)
+            grid = np.take_along_axis(grid, rows, axis=0)
+            grid[depth_of < zs[0]] = np.nan     # above the ground surface
         rgba = colormaps[cmap](norm(np.power(10.0, grid)))
         rgba[..., 3] = np.where(np.isfinite(grid), 1.0, 0.0)
         if doi is not None and np.isfinite(doi).any():
-            # Nearest sounding rather than a ramp between two, so the edge of the
-            # faded band sits exactly under the stepped depth-of-investigation
-            # line instead of cutting diagonally across it.
-            nearest = np.abs(xs[:, None] - distance[None, :]).argmin(axis=1)
             reach = np.nan_to_num(doi)[nearest]
-            below = zs[:, None] > reach[None, :]
+            below = depth_of > reach[None, :]
             rgba[..., 3] *= np.where(
                 below, 0.0 if hide else EMOverviewView._FADE_ALPHA, 1.0)
-        ax.imshow(rgba, extent=(xs[0], xs[-1], zs[-1], zs[0]), origin="upper",
-                  aspect="auto", interpolation="bilinear", zorder=1)
+        ax.imshow(rgba, extent=(xs[0], xs[-1], vertical[0], vertical[1]),
+                  origin="upper", aspect="auto", interpolation="bilinear", zorder=1)
 
     @staticmethod
-    def _draw_doi_line(ax, distance: np.ndarray, doi: np.ndarray) -> None:
+    def _draw_doi_line(ax, distance: np.ndarray, doi: np.ndarray,
+                       surface: Optional[np.ndarray] = None) -> None:
         """Where the data stop constraining the model, as a step per sounding.
 
         Drawn as a step rather than a smooth curve because the depth of
@@ -538,7 +632,8 @@ class EMOverviewView(QWidget):
 
         if not np.isfinite(doi).any():
             return
-        ax.step(distance, doi, where="mid", color="black", lw=1.2, zorder=5,
+        values = doi if surface is None else surface - doi
+        ax.step(distance, values, where="mid", color="black", lw=1.2, zorder=5,
                 path_effects=[patheffects.withStroke(linewidth=2.8,
                                                      foreground="white", alpha=0.85)])
 
@@ -631,7 +726,7 @@ class EMOverviewView(QWidget):
         if outliers.get("enabled"):
             rows.append(f"gates kept: {outliers.get('kept')} of {outliers.get('n_start')}"
                         f" (cut beyond {float(outliers.get('threshold', 0)):g}σ)")
-        counts = np.asarray(result.get("data_count_list") or [], dtype=float)
+        counts = np.asarray(result.get("data_count_list", []), dtype=float)
         empty = int((counts[:selected.size][selected] <= 0).sum()) if counts.size >= selected.size else 0
         vmin, vmax = self._colour_range(bool(result.get("log_scale", True)))
         rows.append(f"colour range: {vmin:.4g}–{vmax:.4g} Ω·m, shared by every line")

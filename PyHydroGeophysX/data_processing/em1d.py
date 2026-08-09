@@ -50,6 +50,7 @@ def _temcompany_valid_channels(
     relative_std: Optional[np.ndarray] = None,
     flags: Optional[np.ndarray] = None,
     use_flags: bool = True,
+    max_relative_std: Optional[float] = None,
 ) -> "tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]":
     """Apply TEMcompany dummy values and, unless waived, its in-use flags.
 
@@ -61,6 +62,34 @@ def _temcompany_valid_channels(
     the rest are usable. The gates come back with their recorded stack errors, so
     a gate that was switched off for being noisy still carries that noise in its
     weight.
+
+    ``max_relative_std`` truncates the decay tail: walking the surviving gates
+    from early to late, the first one that is negative or noisier than this cut
+    ends the sounding, and it and everything after it are dropped. The vendor's
+    own documentation states the rule as "data points with uncertainty exceeding
+    30 % are excluded from the analysis/inversion", and the in-use flags do not
+    record it, so a reader that honours only the flags takes in late gates the
+    acquisition software itself discarded. Measured against one project's stored
+    inversion inputs, no truncation reproduces its gate selection at 53 of 116
+    stations; the documented 0.30 reaches 81, and 0.25 reaches 90. ``None`` keeps
+    every flagged gate.
+
+    Truncating rather than dropping the bad gates individually is the point: past
+    the first gate the decay has fallen into the noise, a later gate that happens
+    to look clean is chance, and keeping it invites the inversion to fit noise at
+    the depth that gate appears to probe. The vendor applies a slope filter on
+    import that disables oscillating gates outright, which is what the in-use
+    flags carry; this is the separate cut its inversion applies on top.
+
+    The sign half of the test needs care. A sign change is not automatically an
+    error: over a very conductive near-surface the response can genuinely start
+    negative and cross over, and offset-loop systems like this one see reversals
+    from 3D and ramp effects too, which is why the vendor documents sign changes
+    as an ordinary feature rather than a fault. In the projects measured here its
+    inversion nonetheless kept essentially no negative gate (0 of 912 LM, 1 of
+    1109 HM), so cutting at the first one reproduces what it did. On a survey
+    where the reversal is real, turn the cut off (``None``) rather than let it
+    delete the signal.
     """
     n = min(np.size(times), np.size(response))
     t = np.asarray(times, dtype=float).ravel()[:n]
@@ -76,6 +105,16 @@ def _temcompany_valid_channels(
                          constant_values=np.nan)[:n]
         std = raw_std[mask]
         std[~np.isfinite(std) | (std < 0.0) | (std >= 9_000.0)] = np.nan
+    if max_relative_std is not None and np.any(mask):
+        kept = np.flatnonzero(mask)                     # gate centres ascend
+        errors = std if std is not None else np.full(kept.size, np.nan)
+        spoiled = (d[kept] < 0.0) | (np.isfinite(errors)
+                                     & (errors > float(max_relative_std)))
+        if spoiled.any():
+            stop = int(np.argmax(spoiled))
+            mask[kept[stop:]] = False
+            if std is not None:
+                std = std[:stop]
     if not np.any(mask):
         raise ValueError("The selected TEMcompany sounding has no enabled, finite time gates.")
     return t[mask], d[mask], std
@@ -189,6 +228,90 @@ def _response_on_times(data: Dict[str, Any], reference_times: np.ndarray) -> np.
     return aligned
 
 
+def _temcompany_protocol(folder: Path) -> Dict[str, Any]:
+    """Acquisition settings from the ``.sts`` protocol beside a project.
+
+    Almost everything the forward needs is duplicated in ``project.db``: loop
+    geometry, turn-off waveform, gate windows, filter corners, currents. Three
+    things are only here.
+
+    ``UniStd`` is the uniform relative uncertainty the instrument adds to every
+    gate on top of its stack error, the "3 % uniform uncertainty" the vendor
+    documentation describes. Reading it means the number comes from the protocol
+    that was actually run rather than from a default that happens to match this
+    one. ``LM_StackSize`` / ``HM_StackSize`` are the transient counts, which an
+    absolute noise model would need. ``ChA_WinFunc`` and ``ChA_GateOverlap``
+    describe the gate taper; the gate averaging here uses a flat window, so a
+    shaped one is a small refinement still on the table.
+
+    Returns an empty dict when no protocol file is present, which is the normal
+    case for a project copied without it.
+    """
+    try:
+        files = sorted(Path(folder).glob("*.sts"))
+    except OSError:
+        return {}
+    if not files:
+        return {}
+    values: Dict[str, str] = {}
+    try:
+        for line in files[0].read_text(encoding="utf-8-sig",
+                                       errors="replace").splitlines():
+            body = line.split(";", 1)[0].strip()
+            key, sep, value = body.partition("=")
+            if sep and key.strip():
+                values[key.strip()] = value.strip()
+    except OSError:
+        return {}
+
+    def number(name: str) -> Optional[float]:
+        try:
+            return float(values[name].split(",")[0])
+        except (KeyError, ValueError):
+            return None
+
+    result: Dict[str, Any] = {"protocol_file": files[0].name}
+    for key, name in (("uniform_std", "UniStd"),
+                      ("stack_size_lm", "LM_StackSize"),
+                      ("stack_size_hm", "HM_StackSize"),
+                      ("gate_overlap", "ChA_GateOverlap"),
+                      ("gates_per_decade", "ChA_GatePerDecade"),
+                      ("gate_window_shape", "ChA_WinFunc"),
+                      ("gate_window_par", "ChA_WinFuncPar1"),
+                      ("powerline_hz", "PowerLineMonitorFreq")):
+        value = number(name)
+        if value is not None:
+            result[key] = value
+    if "AutoSignDetection" in values:
+        result["auto_sign_detection"] = values["AutoSignDetection"]
+    return result
+
+
+def _temcompany_transmitter(spec: Dict[str, Any], moment: str) -> Dict[str, Any]:
+    """Turn-off waveform and gate windows for one moment, as the file records them.
+
+    TEMcompany stores the measured ramp as (time, amplitude) nodes and every
+    gate's open and close time. Both matter for a ground system: the first gate
+    opens a microsecond or two after the ramp ends, where a step-off stand-in is
+    at its worst, and the late gates are wide enough that the centre value is not
+    the window average.
+    """
+    times = np.asarray(spec.get(f"{moment}WaveformTime", []), dtype=float).ravel()
+    currents = np.asarray(spec.get(f"{moment}WaveformAmplitude", []),
+                          dtype=float).ravel()
+    usable = times.size >= 2 and times.size == currents.size
+    centre = np.asarray(spec.get(f"{moment}_GateCentreTime", []), dtype=float).ravel()
+    opens = np.asarray(spec.get(f"{moment}_GateOpenTime", []), dtype=float).ravel()
+    closes = np.asarray(spec.get(f"{moment}_GateCloseTime", []), dtype=float).ravel()
+    windows = (centre.size and centre.size == opens.size == closes.size)
+    return {
+        "waveform_times": times if usable else None,
+        "waveform_currents": currents if usable else None,
+        "gate_windows": ({"centre": centre, "open": opens, "close": closes}
+                         if windows else None),
+    }
+
+
 def _temcompany_system(spec: Dict[str, Any], row: Optional[sqlite3.Row] = None) -> Dict[str, Any]:
     """Map TEMcompany loop/receiver metadata to the workbench geometry."""
     area = float(spec.get("TxLoopArea", 0.0) or 0.0)
@@ -225,11 +348,18 @@ def _temcompany_system(spec: Dict[str, Any], row: Optional[sqlite3.Row] = None) 
         "auto_scale": False,
         "loop_area": area,
         "loop_turns": int(spec.get("NTurnsTxLoop", 1) or 1),
+        # The export is dB/dt already divided by the transmitter moment
+        # (V/A/m^4), so the forward has to model a UNIT moment. Modelling the
+        # real moment on top counts it twice: on this instrument that is a
+        # factor turns * area = 1.59, and the inversion pays for it by raising
+        # every recovered resistivity to bring the amplitude back down.
+        "source_moment": 1.0,
     }
 
 
 def _load_temcompany_database(path: Path, sounding: int, moment: str,
-                              use_flags: bool = True) -> Dict[str, Any]:
+                              use_flags: bool = True,
+                              max_relative_std: Optional[float] = None) -> Dict[str, Any]:
     """Load one stacked sounding and project geometry from ``project.db``."""
     uri = path.resolve().as_uri() + "?mode=ro"
     con = sqlite3.connect(uri, uri=True)
@@ -263,7 +393,7 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str,
                     _temcompany_json_array(candidate[value_key]),
                     _temcompany_json_array(candidate[f"{moment}_VoltageValues_STD"]),
                     _temcompany_json_array(candidate[f"{moment}_InUseFlags"]),
-                    use_flags,
+                    use_flags, max_relative_std,
                 )
             except (ValueError, TypeError, json.JSONDecodeError):
                 continue
@@ -278,7 +408,7 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str,
         std = _temcompany_json_array(row[f"{moment}_VoltageValues_STD"])
         flags = _temcompany_json_array(row[f"{moment}_InUseFlags"])
         times, response, std = _temcompany_valid_channels(
-            times, response, std, flags, use_flags)
+            times, response, std, flags, use_flags, max_relative_std)
 
         x = np.asarray([item["UtmX"] for item in rows], dtype=float)
         y = np.asarray([item["UtmY"] for item in rows], dtype=float)
@@ -311,12 +441,14 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str,
             "heights": heights,
             "line_numbers": np.asarray([item["LineNumber"] for item in rows], dtype=int),
             "station_ids": np.asarray([str(item["StationId"]) for item in rows]),
+            "transmitter": _temcompany_transmitter(spec, moment),
             "temcompany": True,
             "tem_moment": moment,
             "source_format": "TEMcompany project database",
             "coordinate_system": coordinate_system,
             "system": _temcompany_system(spec, row),
             "inversion_defaults": _temcompany_inversion_defaults(con),
+            "protocol": _temcompany_protocol(path.parent),
         }
         return result
     finally:
@@ -324,7 +456,8 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str,
 
 
 def _load_temcompany_joint_database(path: Path, sounding: int,
-                                    use_flags: bool = True) -> Dict[str, Any]:
+                                    use_flags: bool = True,
+                                    max_relative_std: Optional[float] = None) -> Dict[str, Any]:
     """Load all usable LM/HM gates for one station, preserving common station order."""
     uri = path.resolve().as_uri() + "?mode=ro"
     con = sqlite3.connect(uri, uri=True)
@@ -348,13 +481,14 @@ def _load_temcompany_joint_database(path: Path, sounding: int,
                         _temcompany_json_array(row[f"{selected}_VoltageValues"]),
                         _temcompany_json_array(row[f"{selected}_VoltageValues_STD"]),
                         _temcompany_json_array(row[f"{selected}_InUseFlags"]),
-                        use_flags,
+                        use_flags, max_relative_std,
                     )
                 except (ValueError, TypeError, json.JSONDecodeError):
                     continue
                 moments[selected] = {
                     "times": times,
                     "response": response,
+                    "transmitter": _temcompany_transmitter(spec, selected),
                     "relative_std": (
                         np.asarray(std, dtype=float)
                         if std is not None else np.array([], dtype=float)
@@ -408,6 +542,7 @@ def _load_temcompany_joint_database(path: Path, sounding: int,
             "coordinate_system": coordinate_system,
             "system": _temcompany_system(spec, row),
             "inversion_defaults": _temcompany_inversion_defaults(con),
+            "protocol": _temcompany_protocol(path.parent),
         }
     finally:
         con.close()
@@ -511,6 +646,12 @@ def _load_temcompany_xyz(path: Path, sounding: int, moment: str) -> Dict[str, An
         "auto_scale": False,
         "loop_area": area,
         "loop_turns": int(_temcompany_comment_scalar(comments, "LoopTurns", 1.0)),
+        # The export is dB/dt already divided by the transmitter moment
+        # (V/A/m^4), so the forward has to model a UNIT moment. Modelling the
+        # real moment on top counts it twice: on this instrument that is a
+        # factor turns * area = 1.59, and the inversion pays for it by raising
+        # every recovered resistivity to bring the amplitude back down.
+        "source_moment": 1.0,
     }
     station_index = columns.get(station_name)
     return {
@@ -541,7 +682,8 @@ def _load_temcompany_xyz(path: Path, sounding: int, moment: str) -> Dict[str, An
 
 
 def load_temcompany_sounding(
-    path: str, sounding: int = 0, moment: str = "HM", *, use_flags: bool = True
+    path: str, sounding: int = 0, moment: str = "HM", *, use_flags: bool = True,
+    max_relative_std: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Load a TEMcompany/TEM2Go sounding from a project folder or XYZ export.
 
@@ -560,9 +702,9 @@ def load_temcompany_sounding(
         if project_db is not None:
             if selected == "LM+HM":
                 return _load_temcompany_joint_database(
-                    project_db, sounding, use_flags)
+                    project_db, sounding, use_flags, max_relative_std)
             return _load_temcompany_database(
-                project_db, sounding, selected, use_flags)
+                project_db, sounding, selected, use_flags, max_relative_std)
         xyz = sorted(source.glob("*_StationData.xyz"))
         if not xyz:
             xyz = sorted(source.glob("*_RawData.xyz"))
@@ -582,7 +724,7 @@ def load_temcompany_sounding(
 
 def load_sounding(
     path: str, method: str, sounding: int = 0, *, moment: str = "HM",
-    use_flags: bool = True,
+    use_flags: bool = True, max_relative_std: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Load one sounding from a sounding file.
 
@@ -603,7 +745,8 @@ def load_sounding(
         if method != "TDEM":
             raise ValueError("TEMcompany/TEM2Go exports are time-domain EM data; select TDEM.")
         return load_temcompany_sounding(path, sounding=sounding, moment=moment,
-                                        use_flags=use_flags)
+                                        use_flags=use_flags,
+                                        max_relative_std=max_relative_std)
     table = np.atleast_2d(table_io.load_2d_array(path)).astype(float)
     if table.shape[1] < 2:
         raise ValueError(f"Expected >= 2 columns, got shape {table.shape}.")

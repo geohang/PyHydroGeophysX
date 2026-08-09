@@ -40,18 +40,18 @@ _R = 6378137.0
 #: Tile providers, keyed by the label a UI can show. ``url`` takes ``z``, ``x``
 #: and ``y``; Esri numbers its rows before its columns, hence the order there.
 TILE_SOURCES: Dict[str, Dict[str, Any]] = {
-    "Satellite (Esri World Imagery)": {
+    "Satellite": {
         "url": ("https://server.arcgisonline.com/ArcGIS/rest/services/"
                 "World_Imagery/MapServer/tile/{z}/{y}/{x}"),
         "attribution": "Imagery © Esri, Maxar, Earthstar Geographics",
         "max_zoom": 19,
     },
-    "Street map (OpenStreetMap)": {
+    "Street map": {
         "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         "attribution": "© OpenStreetMap contributors",
         "max_zoom": 19,
     },
-    "Topographic (Esri)": {
+    "Topographic": {
         "url": ("https://server.arcgisonline.com/ArcGIS/rest/services/"
                 "World_Topo_Map/MapServer/tile/{z}/{y}/{x}"),
         "attribution": "© Esri, HERE, Garmin, USGS",
@@ -231,7 +231,7 @@ def fetch_mosaic(west: float, south: float, east: float, north: float, *,
 
 def basemap_image(x_limits: Sequence[float], y_limits: Sequence[float], *,
                   transform: "Tuple[complex, complex]",
-                  source: str = "Satellite (Esri World Imagery)",
+                  source: str = "Satellite",
                   target_pixels: int = 900, max_tiles: int = 24,
                   cache_dir: Optional[Path] = None,
                   timeout: float = 8.0) -> Optional[Dict[str, Any]]:

@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QAbstractButton,
     QAbstractSpinBox,
     QComboBox,
+    QFormLayout,
     QLabel,
     QSizePolicy,
     QWidget,
@@ -42,6 +43,14 @@ RELAX_FLOOR_PX = 130
 
 #: Width a shrinkable widget may fall to.
 ELIDED_MIN_PX = 48
+
+#: Floor for a caption that names the field beside it.
+#:
+#: A form label given no floor is squeezed to nothing by its own field, and the
+#: user is left with an unlabelled spin box, which is worse than any amount of
+#: scrolling. Wide enough to keep the first word plus an ellipsis, so the row is
+#: still identifiable and the tooltip carries the rest.
+FORM_LABEL_MIN_PX = 92
 
 #: Floor for a button. Unlike a label, a button clips its caption rather than
 #: eliding it, so a short one must keep enough room to stay readable while a
@@ -95,10 +104,18 @@ def _is_rich(label: QLabel) -> bool:
     return "<" in text and ">" in text
 
 
-def _elide(widget: QWidget) -> None:
-    widget.setMinimumWidth(0)
+def _elide(widget: QWidget, floor: int = 0) -> None:
+    """Let ``widget`` be squeezed, down to ``floor`` pixels.
+
+    ``Ignored`` hands the layout complete freedom, which is right for a readout
+    that may vanish without costing the user anything. A caption that names the
+    control beside it needs a floor instead: ``Preferred`` still lets it give up
+    most of its width, but never all of it.
+    """
+    widget.setMinimumWidth(max(0, int(floor)))
     policy = widget.sizePolicy()
-    policy.setHorizontalPolicy(QSizePolicy.Ignored)
+    policy.setHorizontalPolicy(
+        QSizePolicy.Ignored if floor <= 0 else QSizePolicy.Preferred)
     widget.setSizePolicy(policy)
 
 
@@ -128,6 +145,24 @@ def _text_width(widget: QWidget, text: str) -> int:
     return QFontMetrics(widget.font()).horizontalAdvance(text)
 
 
+def _names_a_field(label: QLabel) -> bool:
+    """Whether this label is the caption of a form row.
+
+    Such a label competes for width with the field it names and loses, because
+    the field carries a spin box or combo that will not shrink past its own
+    controls. Everything else on a page is free-standing and may vanish.
+    """
+    parent = label.parentWidget()
+    layout = parent.layout() if parent is not None else None
+    if not isinstance(layout, QFormLayout):
+        return False
+    for row in range(layout.rowCount()):
+        item = layout.itemAt(row, QFormLayout.LabelRole)
+        if item is not None and item.widget() is label:
+            return True
+    return False
+
+
 def relax_minimum_width(page: QWidget) -> Dict[str, int]:
     """Make ``page`` shrinkable. Returns a count per action, for tests and logs."""
     counts = {"wrapped": 0, "elided_label": 0, "elided_button": 0,
@@ -155,7 +190,7 @@ def relax_minimum_width(page: QWidget) -> Dict[str, int]:
         if not label.toolTip():
             label.setToolTip(text)
         label.installEventFilter(_ELIDE_FILTER)
-        _elide(label)
+        _elide(label, FORM_LABEL_MIN_PX if _names_a_field(label) else 0)
         counts["elided_label"] += 1
 
     for button in page.findChildren(QAbstractButton):

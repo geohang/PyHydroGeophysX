@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QAbstractScrollArea,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -70,9 +71,35 @@ _FILE_FILTER = (
 )
 
 
+def _fit_scroll_width(scroll: QScrollArea, panel: QWidget, *, cap: int) -> None:
+    """Size a side panel to the row that actually needs the most width.
+
+    The panel sits in a row that gives all the stretch to the plots, and a scroll
+    area's own size hint is a fixed default with nothing to do with what it
+    holds. Left alone it therefore settles at exactly its minimum width, and any
+    row wider than that is cut off however much room the window has: a hand-set
+    minimum silently becomes the panel width, and stays wrong as soon as a row
+    is added. Measuring the finished panel keeps the two in step.
+
+    ``cap`` bounds what the panel may demand from a small screen; past it the
+    horizontal scrollbar takes over.
+    """
+    panel.ensurePolished()
+    panel.adjustSize()
+    bar = scroll.verticalScrollBar().sizeHint().width()
+    frame = 2 * scroll.frameWidth()
+    needed = panel.sizeHint().width() + bar + frame
+    scroll.setMinimumWidth(min(needed, int(cap)))
+    scroll.setMaximumWidth(max(needed, int(cap)))
+
+
 class EMProcessingModule(BaseModule):
     module_key = "em_processing"
     module_title = "EM Processing"
+
+    #: Width the control panel may not exceed even if its widest row wants more.
+    #: Past this the row scrolls rather than eating the space the section needs.
+    _CONTROLS_MAX_WIDTH = 580
 
     def __init__(self, state: Any, log: LogFn, parent=None) -> None:
         super().__init__(state, log, parent)
@@ -154,9 +181,10 @@ class EMProcessingModule(BaseModule):
 
     def _build_controls(self) -> QScrollArea:
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        # Wide enough to fit the controls without a horizontal scrollbar.
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setMinimumWidth(450); scroll.setMaximumWidth(500)
+        # A horizontal scrollbar for the window that cannot spare the width.
+        # Suppressing the bar does not make the content fit, it only makes what
+        # does not fit unreachable, which is worse than a bar.
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         panel = QWidget(); scroll.setWidget(panel)
         layout = QVBoxLayout(panel)
 
@@ -168,6 +196,7 @@ class EMProcessingModule(BaseModule):
         layout.addWidget(self._build_assist_group())
         layout.addWidget(self._build_run_group())
         layout.addStretch(1)
+        _fit_scroll_width(scroll, panel, cap=self._CONTROLS_MAX_WIDTH)
         return scroll
 
     def _build_loader_group(self) -> QGroupBox:
@@ -216,6 +245,21 @@ class EMProcessingModule(BaseModule):
             "noisy. Turn on 'Reject outliers' with it.")
         self._use_flags.toggled.connect(self._on_use_flags_changed)
         moment_form.addRow("", self._use_flags)
+        self._tail_cut = self._dspin(0.30, 0.0, 5.0, 0.05, 2)
+        self._tail_cut.setSpecialValueText("off")
+        self._tail_cut.setToolTip(
+            "Truncate each decay at the first gate that is negative or whose stack "
+            "error exceeds this, dropping it and every later gate. The acquisition "
+            "software does this at inversion time and its in-use flags do not record "
+            "it, so without the cut the import takes in late gates that software "
+            "itself discarded. 0.30 is the value the vendor documents; on one project "
+            "it reproduced their gate selection exactly at 81 of 116 stations and 0.25 "
+            "at 90, against 53 with no cut.\n\n"
+            "Set to 0 (off) where a sign reversal is real rather than noise: over a "
+            "very conductive near-surface, and on offset-loop systems generally, the "
+            "response can genuinely cross zero, and the cut would delete it.")
+        self._tail_cut.valueChanged.connect(self._on_use_flags_changed)
+        moment_form.addRow("Tail cut (σ)", self._tail_cut)
         self._tem_moment_row.setVisible(False)
         v.addWidget(self._tem_moment_row)
 
@@ -316,15 +360,17 @@ class EMProcessingModule(BaseModule):
 
     def _build_errors_group(self) -> QGroupBox:
         box = QGroupBox("Data errors and calibration"); form = QFormLayout(box)
-        d = em_pipeline.DEFAULT_INVERSION
-        self._rel_err = self._dspin(d["rel_error"], 0.0, 1.0, 0.01, 3)
+        self._rel_err = self._dspin(0.03, 0.0, 1.0, 0.01, 3)
         self._rel_err.setToolTip(
-            "Assumed relative error per gate. Where the file carries a stack error of "
-            "its own (TEMcompany exports do), this is a FLOOR on it, not a "
-            "replacement. χ² is measured against the result, so it decides what "
-            "\"fitting the data\" means. A stack error only measures repeatability; "
-            "raise this to make room for the error in representing the ground as 1D "
-            "layers, which is what keeps χ² out of the hundreds on ground TDEM.")
+            "Uncertainty that applies to every gate alike: system calibration, and the "
+            "error in representing the ground as 1D layers. Where the file carries a "
+            "per-gate stack error (TEMcompany exports do) this is added to it in "
+            "quadrature, not substituted for it, so a noisy gate stays noisy and a "
+            "clean one gets this as its floor.\n\n"
+            "χ² is measured against the result, so this decides what \"fitting the "
+            "data\" means. 3 % is the value the instrument vendor documents for its "
+            "own processing; raise it if χ² will not come down, since a stack error "
+            "alone is far too optimistic on ground TDEM.")
         self._data_scale = self._dspin(1.0, 1e-4, 1e6, 0.1, 4)
         self._data_scale.setToolTip(
             "Multiply the observed data before inversion. Use for data in normalized units "
@@ -393,7 +439,7 @@ class EMProcessingModule(BaseModule):
 
     def _build_assist_group(self) -> QGroupBox:
         box = QGroupBox("Fit assistance"); form = QFormLayout(box)
-        self._auto_lam = QCheckBox("Auto-λ: re-solve to reach target χ²")
+        self._auto_lam = QCheckBox("Auto-λ (re-solve for target χ²)")
         self._auto_lam.setChecked(True)
         self._auto_lam.setToolTip(
             "The solve at the smoothness above always runs first and is always kept. "
@@ -424,7 +470,7 @@ class EMProcessingModule(BaseModule):
 
         # The other answer to a high χ²: some gates are wrong rather than the
         # model being too stiff. Same controls, wording and defaults as ERT.
-        self._reject = QCheckBox("Reject outliers: drop gates the model cannot explain")
+        self._reject = QCheckBox("Reject outliers")
         self._reject.setChecked(False)
         self._reject.setToolTip(
             "After the line has converged, drop the time gates whose residual exceeds "
@@ -460,7 +506,7 @@ class EMProcessingModule(BaseModule):
             "column becomes a hole in the section, held up by the lateral constraint "
             "alone.")
         self._min_keep_row = merged_row(
-            self._min_keep, "of the survey, and", self._min_gates, "gates per sounding")
+            self._min_keep, "of the gates,", self._min_gates, "per sounding")
         form.addRow("Keep at least", self._min_keep_row)
         self._sync_reject()
         return box
@@ -533,6 +579,8 @@ class EMProcessingModule(BaseModule):
             # Which gates exist travels with the data, so it belongs beside the
             # moment rather than with the inversion settings.
             "use_project_flags": bool(self._use_flags.isChecked()),
+            "tail_max_relative_std": (float(self._tail_cut.value())
+                                      if self._tail_cut.value() > 0 else None),
             "source_radius": self._src_radius.value(),
             "tx_rx_sep": self._tx_rx.value(),
             "height": self._height.value(),
@@ -549,6 +597,10 @@ class EMProcessingModule(BaseModule):
                 )
                 geom["receiver_type"] = str(system.get("receiver_type", "dbdt"))
                 geom["response_sign"] = float(system.get("response_sign", -1.0))
+                # The export is already divided by the transmitter moment, so
+                # the forward models a unit moment rather than the real one.
+                if system.get("source_moment") is not None:
+                    geom["source_moment"] = float(system["source_moment"])
         if self._method.currentText() == "FDEM":
             geom["component"] = self._component.currentText()
         return geom
@@ -711,7 +763,9 @@ class EMProcessingModule(BaseModule):
             self._data = em_pipeline.load_sounding(
                 str(self._source_path), self._method.currentText(), sounding=int(index),
                 moment=self._tem_moment.currentText(),
-                use_flags=bool(self._use_flags.isChecked()))
+                use_flags=bool(self._use_flags.isChecked()),
+                max_relative_std=(float(self._tail_cut.value())
+                                  if self._tail_cut.value() > 0 else None))
         except Exception as exc:  # noqa: BLE001
             self._data = None
             self.log(f"Could not load sounding: {exc}", "error")
@@ -842,6 +896,11 @@ class EMProcessingModule(BaseModule):
                 self._waveform.setCurrentText(waveform)
             self._data_scale.setValue(float(system.get("data_scale", 1.0)))
             self._auto_scale.setChecked(bool(system.get("auto_scale", False)))
+        protocol = dict(self._data.get("protocol", {}))
+        if protocol.get("uniform_std") is not None:
+            # The uniform uncertainty the instrument protocol actually ran
+            # with, rather than the default that happens to match it.
+            self._rel_err.setValue(float(protocol["uniform_std"]))
         inversion = dict(self._data.get("inversion_defaults", {}))
         if inversion:
             self._n_layers.setValue(int(inversion.get("n_layers", self._n_layers.value())))
@@ -864,8 +923,11 @@ class EMProcessingModule(BaseModule):
         span = (float(self._geom_positions[-1] - self._geom_positions[0])
                 if self._geom_positions is not None and self._geom_positions.size else 0.0)
         crs = str(self._data.get("coordinate_system", "embedded coordinates"))
+        protocol_note = (f", protocol {protocol['protocol_file']}"
+                         if protocol.get("protocol_file") else "")
         self._geom_info.setText(
-            f"Geometry (TEMcompany): {n} soundings, {span:.1f} m path, {crs}.")
+            f"Geometry (TEMcompany): {n} soundings, {span:.1f} m path, "
+            f"{crs}{protocol_note}.")
         self.log(
             "Applied TEMcompany geometry and system settings "
             f"(loop radius {self._src_radius.value():.3f} m, "
@@ -1480,6 +1542,8 @@ class EMProcessingModule(BaseModule):
             "waveform": lambda v: set_combo(self._waveform, v),
             "tem_moment": lambda v: set_combo(self._tem_moment, str(v).upper()),
             "use_project_flags": lambda v: self._use_flags.setChecked(bool(v)),
+            "tail_max_relative_std": lambda v: self._tail_cut.setValue(
+                0.0 if v is None else float(v)),
             "n_layers": lambda v: self._n_layers.setValue(int(v)),
             "min_thickness": lambda v: self._min_thick.setValue(float(v)),
             "max_thickness": lambda v: self._max_thick.setValue(float(v)),
