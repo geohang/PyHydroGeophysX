@@ -20,6 +20,10 @@ def select_renderer(
         fmt = Path(str(artifact.get("path") or "")).suffix.lower().lstrip(".")
     if "model_bundle" in kind or kind in {"pygimli_bundle", "mesh_model_bundle"}:
         return "mesh_bundle"
+    # A bare PyGIMLi mesh is the primary product of the 3-D mesh builder, so it
+    # needs its own viewer rather than falling through to "no renderer".
+    if fmt == "bms" or kind in {"mesh", "pygimli_mesh"}:
+        return "mesh"
     if fmt in _VTK_FORMATS or kind in {"velocity_model", "volume", "vtk"}:
         return "vtk"
     if fmt in _IMAGE_FORMATS or "figure" in kind or kind == "image":

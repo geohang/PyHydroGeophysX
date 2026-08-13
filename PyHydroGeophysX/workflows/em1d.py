@@ -494,6 +494,19 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         if embedded_lines.size >= n_pos else np.zeros(n_pos, dtype=int)
     )
 
+    def _per_sounding(key: str, dtype=float):
+        """A per-station column from the source, cut to the inverted stations."""
+        values = np.asarray(head.get(key, []), dtype=dtype).ravel()
+        if values.size >= n_pos:
+            return values[:n_pos]
+        return np.full(n_pos, np.nan if dtype is float else "", dtype=dtype)
+
+    # Map coordinates travel with the section so an export can place each model
+    # in the ground rather than only along the line.
+    easting, northing = _per_sounding("x"), _per_sounding("y")
+    longitude, latitude = _per_sounding("longitude"), _per_sounding("latitude")
+    station_ids = _per_sounding("station_ids", dtype=object)
+
     # LCI keeps model nodes even where the local gate set is too sparse for the
     # SimPEG time spline. Seed those nodes by log-resistivity interpolation along
     # their own survey line; subsequent passes update them from their neighbors.
@@ -788,6 +801,10 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         # elevation instead of depth. The inversion itself is per sounding and
         # does not use it: each 1D model starts at its own ground surface.
         "surface_elevation": surface_elevation,
+        "x": easting, "y": northing,
+        "longitude": longitude, "latitude": latitude,
+        "station_ids": station_ids,
+        "coordinate_system": str(head.get("coordinate_system", "")),
         "chi2": chi2_mean, "chi2_list": chi2_list, "n_soundings": n_pos,
         "n_layers": n_layers, "n_data": int(sum(data_count_list)),
         "data_count_list": data_count_list, "data_scale": data_scale_used,
@@ -809,10 +826,94 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                  # re-running the inversion.
                  sensitivity=sensitivity, doi=doi, depth_edges=depth_edges,
                  line_numbers=np.asarray(line_numbers, dtype=int),
-                 surface_elevation=surface_elevation)
+                 surface_elevation=surface_elevation,
+                 x=easting, y=northing, longitude=longitude, latitude=latitude)
         result["saved"] = [str(out / "resistivity_section.npz")]
         log(f"  saved {out / 'resistivity_section.npz'}")
+        for written in save_line_csv(result, out):
+            result["saved"].append(written)
+            log(f"  saved {written}")
     return result
+
+
+def save_line_csv(result: Dict[str, Any], out_dir: Path) -> List[str]:
+    """Write the section as two flat tables; return the paths written.
+
+    ``model_cells.csv`` is one row per layer per sounding, which is the form a
+    GIS or a gridding package wants: every row carries its own map coordinate
+    and its own elevation, so the section can be reconstructed without knowing
+    anything about the layer grid. ``soundings.csv`` is the per-station summary
+    that would otherwise have to be recovered by grouping the first table.
+
+    Depths are below each station's own ground level, and ``z`` is the elevation
+    of the cell centre where the survey carries ground elevations. A cell below
+    the depth of investigation is written out with its resistivity and flagged
+    rather than dropped: what the inversion produced there is still the answer
+    to a question the data cannot settle, and a reader filtering on the flag can
+    decide for themselves.
+    """
+    out = table_io.ensure_dir(out_dir)
+    res = np.asarray(result["model3d"], dtype=float)[:, 0, :][:, ::-1]  # surface first
+    depth_edges = np.asarray(result["depth_edges"], dtype=float).ravel()
+    n_pos, n_layers = res.shape
+    top, bottom = depth_edges[:n_layers], depth_edges[1:n_layers + 1]
+    centre = 0.5 * (top + bottom)
+
+    def column(key: str, fill=np.nan) -> np.ndarray:
+        values = np.asarray(result.get(key, []), dtype=float).ravel()
+        return values[:n_pos] if values.size >= n_pos else np.full(n_pos, fill)
+
+    lines = np.asarray(result.get("line_numbers", []), dtype=int).ravel()
+    lines = lines[:n_pos] if lines.size >= n_pos else np.zeros(n_pos, dtype=int)
+    stations = np.asarray(result.get("station_ids", []), dtype=object).ravel()
+    stations = stations[:n_pos] if stations.size >= n_pos else np.arange(1, n_pos + 1)
+    surface = column("surface_elevation")
+    x, y = column("x"), column("y")
+    longitude, latitude = column("longitude"), column("latitude")
+    position, chi2 = column("positions"), column("chi2_list")
+    doi = column("doi", fill=np.inf)
+    counts = np.asarray(result.get("data_count_list", []), dtype=float).ravel()
+    counts = counts[:n_pos] if counts.size >= n_pos else np.zeros(n_pos)
+    sensitivity = np.asarray(result.get("sensitivity", []), dtype=float)
+    has_sensitivity = sensitivity.shape == res.shape
+
+    cells = []
+    for s in range(n_pos):
+        for k in range(n_layers):
+            cells.append((
+                int(lines[s]), stations[s], _round(x[s], 3), _round(y[s], 3),
+                _round(longitude[s], 8), _round(latitude[s], 8),
+                _round(surface[s], 3), _round(position[s], 3),
+                _round(top[k], 3), _round(bottom[k], 3), _round(centre[k], 3),
+                _round(surface[s] - centre[k], 3),
+                _round(res[s, k], 6),
+                _round(sensitivity[s, k], 6) if has_sensitivity else "",
+                int(centre[k] > doi[s]),
+                _round(chi2[s], 4),
+            ))
+    paths = [str(table_io.write_csv(
+        out / "model_cells.csv", cells,
+        header=["line", "station", "x", "y", "longitude", "latitude",
+                "surface_elevation", "distance_m", "depth_top_m",
+                "depth_bottom_m", "depth_center_m", "z", "resistivity_ohm_m",
+                "sensitivity", "below_doi", "chi2"]))]
+    summary = [(
+        int(lines[s]), stations[s], _round(x[s], 3), _round(y[s], 3),
+        _round(longitude[s], 8), _round(latitude[s], 8),
+        _round(surface[s], 3), _round(position[s], 3), _round(chi2[s], 4),
+        int(counts[s]), _round(doi[s], 3) if np.isfinite(doi[s]) else "",
+    ) for s in range(n_pos)]
+    paths.append(str(table_io.write_csv(
+        out / "soundings.csv", summary,
+        header=["line", "station", "x", "y", "longitude", "latitude",
+                "surface_elevation", "distance_m", "chi2", "n_data", "doi_m"])))
+    return paths
+
+
+def _round(value: float, digits: int):
+    """A finite number rounded for a table; an empty field for anything else."""
+    number = float(value)
+    return round(number, digits) if np.isfinite(number) else ""
 
 
 def build_em_config(method: str, model: Dict[str, Any], geom: Dict[str, Any],
@@ -871,4 +972,5 @@ __all__ = [
     "invert_line",
     "build_em_config",
     "save_inversion",
+    "save_line_csv",
 ]

@@ -19,13 +19,14 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import numpy as np
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QHBoxLayout,
     QLabel,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -69,6 +70,18 @@ class EMOverviewView(QWidget):
             "resize_event",
             lambda _event: (self._resize_timer.start()
                             if getattr(self, "_result", None) else None))
+        # Imagery is fetched for the extent on screen, so a new extent needs new
+        # tiles. Waited out rather than done per notch: a wheel turn is a burst
+        # of events and every fetch but the last would be thrown away.
+        self._tile_timer = QTimer(self)
+        self._tile_timer.setSingleShot(True)
+        self._tile_timer.setInterval(400)
+        self._tile_timer.timeout.connect(self._refresh_tiles)
+        for event_name, handler in (("scroll_event", self._on_scroll),
+                                    ("button_press_event", self._on_press),
+                                    ("motion_notify_event", self._on_motion),
+                                    ("button_release_event", self._on_release)):
+            self._canvas.mpl_connect(event_name, handler)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -95,6 +108,19 @@ class EMOverviewView(QWidget):
         self._basemap_source.currentIndexChanged.connect(self._on_basemap_toggled)
         row.addWidget(self._basemap)
         row.addWidget(self._basemap_source)
+        self._map_share = QSlider(Qt.Horizontal)
+        self._map_share.setRange(25, 78)
+        self._map_share.setValue(52)
+        self._map_share.setFixedWidth(88)
+        self._map_share.setToolTip(
+            "How much of the panel goes to the map, against the section under "
+            "it. Scroll over either one to zoom it about the cursor, drag to "
+            "pan, double-click to go back to the whole survey.")
+        row.addWidget(QLabel("Map"))
+        row.addWidget(self._map_share)
+        # Through the timer, and not straight to it: QTimer.start takes an
+        # interval, so the slider's own value would become the delay.
+        self._map_share.valueChanged.connect(lambda _v: self._resize_timer.start())
         row.addSpacing(18)
         # Same idea as the ERT view's coverage cut: how far down the data reach
         # is a judgement, so it is a dial on the picture rather than something
@@ -168,6 +194,9 @@ class EMOverviewView(QWidget):
         self._sensitivity: Optional[np.ndarray] = None
         self._transform = None      # projected metres -> Web Mercator, or None
         self._tiles: Optional[Dict[str, Any]] = None
+        self._map_ax = None
+        self._map_limits = None     # map view the reader set, in axes metres
+        self._drag = None           # (axes, x, y) held under the cursor
 
     # -- public --------------------------------------------------------------
     def show_result(self, result: Dict[str, Any], *, x=None, y=None,
@@ -213,6 +242,7 @@ class EMOverviewView(QWidget):
         self._y = self._coordinate(y, n_pos)
         self._tiles = None
         self._transform = None
+        self._map_limits = None     # a new survey is somewhere else entirely
         if self._x is not None and self._y is not None:
             longitude = self._coordinate(lon, n_pos)
             latitude = self._coordinate(lat, n_pos)
@@ -328,6 +358,63 @@ class EMOverviewView(QWidget):
                                0.5 * (distance[:-1] + distance[1:]),
                                [distance[-1] + step / 2.0]])
 
+    # -- panning and zooming --------------------------------------------------
+    def _on_scroll(self, event) -> None:
+        """Wheel over a panel zooms it about the cursor."""
+        ax = event.inaxes
+        if ax is None or event.xdata is None or event.ydata is None:
+            return
+        factor = 1.0 / 1.2 if event.button == "up" else 1.2
+        # Both axes by the same factor. The map holds equal scales, so anything
+        # else reshapes its box and letterboxes the imagery inside it.
+        for (lo, hi), setter, anchor in (
+                (ax.get_xlim(), ax.set_xlim, event.xdata),
+                (ax.get_ylim(), ax.set_ylim, event.ydata)):
+            setter(anchor + (lo - anchor) * factor,
+                   anchor + (hi - anchor) * factor)
+        self._view_moved(ax)
+
+    def _on_press(self, event) -> None:
+        if event.inaxes is None or event.button != 1:
+            return
+        if event.dblclick:
+            self._drag = None
+            if event.inaxes is self._map_ax:
+                self._map_limits = None
+                self._tiles = None
+            self._redraw()
+            return
+        self._drag = (event.inaxes, event.xdata, event.ydata)
+
+    def _on_motion(self, event) -> None:
+        if self._drag is None or event.xdata is None or event.ydata is None:
+            return
+        ax, held_x, held_y = self._drag
+        if event.inaxes is not ax:
+            return
+        # Shift the limits so the point grabbed stays under the cursor.
+        ax.set_xlim(*(np.asarray(ax.get_xlim()) + (held_x - event.xdata)))
+        ax.set_ylim(*(np.asarray(ax.get_ylim()) + (held_y - event.ydata)))
+        self._canvas.draw_idle()
+
+    def _on_release(self, event) -> None:
+        if self._drag is None:
+            return
+        ax, self._drag = self._drag[0], None
+        self._view_moved(ax)
+
+    def _view_moved(self, ax) -> None:
+        """Keep a map view the reader set, and get imagery for it."""
+        if ax is self._map_ax:
+            self._map_limits = (tuple(ax.get_xlim()), tuple(ax.get_ylim()))
+            if self._basemap.isChecked():
+                self._tile_timer.start()
+        self._canvas.draw_idle()
+
+    def _refresh_tiles(self) -> None:
+        self._tiles = None
+        self._redraw()
+
     # -- rendering -----------------------------------------------------------
     def _redraw(self, *_) -> None:
         from matplotlib.colors import LogNorm, Normalize
@@ -355,26 +442,24 @@ class EMOverviewView(QWidget):
         norm = LogNorm(vmin, vmax) if log_scale else Normalize(vmin, vmax)
 
         self._fig.clear()
+        left, right, top, bottom = 0.075, 0.865, 0.945, 0.115
+        self._map_ax = None
+        attribution = ""
         if has_map:
             # Explicit rectangles rather than a gridspec: the map keeps equal
             # axis scales, so only a box that matches the survey's own shape
             # draws it at full size, and a gridspec column cannot know that
-            # shape. Everything left over goes to the keywords beside it.
-            left, right, top, bottom = 0.075, 0.865, 0.955, 0.08
+            # shape. How much of the height the map gets is the reader's call.
             gap = 0.09                     # map xlabel and section title share it
-            map_h = 0.52 * (top - bottom - gap)
+            map_h = 0.01 * self._map_share.value() * (top - bottom - gap)
             map_w = self._map_width(map_h, right - left)
-            self._draw_map(
-                self._fig.add_axes([left, top - map_h, map_w, map_h]),
-                self._fig.add_axes([left + map_w + 0.035, top - map_h,
-                                    right - left - map_w - 0.035, map_h]),
-                selected, chi2)
+            self._map_ax = self._fig.add_axes([left, top - map_h, map_w, map_h])
+            attribution = self._draw_map(self._map_ax, selected)
             ax = self._fig.add_axes([left, bottom, right - left,
                                      top - bottom - gap - map_h])
         else:
-            grid = self._fig.add_gridspec(
-                1, 1, left=0.085, right=0.865, top=0.92, bottom=0.12)
-            ax = self._fig.add_subplot(grid[0, 0])
+            ax = self._fig.add_axes([left + 0.01, bottom + 0.03,
+                                     right - left, top - bottom - 0.03])
 
         cmap = result.get("cmap", "turbo")
         doi = self._doi_depths()
@@ -426,8 +511,34 @@ class EMOverviewView(QWidget):
             bar.ax.yaxis.set_major_locator(LogLocator(base=10.0, subs=(1.0, 3.0)))
             bar.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
             bar.ax.yaxis.set_minor_formatter(NullFormatter())
+        self._draw_footer(selected, chi2, attribution, left, right)
 
         self._canvas.draw_idle()
+
+    def _draw_footer(self, selected: np.ndarray, chi2, attribution: str,
+                     left: float, right: float) -> None:
+        """One small line under the panels: what the picture cannot say itself.
+
+        A caption rather than a block beside the map. The map and the section
+        get the whole figure, and the few numbers that are nowhere else in the
+        drawing stay with it when it is saved.
+        """
+        self._fig.text(right + 0.06, 0.015, " · ".join(self._facts(selected, chi2)),
+                       fontsize=7.5, color="#666666", ha="right", va="bottom")
+        if self._map_ax is not None:
+            handles, labels = self._map_ax.get_legend_handles_labels()
+            if handles:
+                self._fig.legend(handles, labels, loc="lower left",
+                                 bbox_to_anchor=(left, 0.004), ncol=len(handles),
+                                 frameon=False, fontsize=7.5, handlelength=1.5,
+                                 handletextpad=0.5, columnspacing=1.5,
+                                 borderpad=0.0, borderaxespad=0.0)
+        if attribution:
+            # Across from the map rather than on it: the map box is only as wide
+            # as the survey, and a tile provider's credit line is routinely
+            # wider than that, so on the map it would run off the edge.
+            self._fig.text(right + 0.06, 0.985, attribution, fontsize=6.5,
+                           color="#999999", ha="right", va="top")
 
     def _draw_basemap(self, ax, x0: float, y0: float) -> str:
         """Put map tiles under the survey; return the attribution to display.
@@ -440,9 +551,12 @@ class EMOverviewView(QWidget):
         if not self._basemap.isChecked() or self._transform is None:
             return ""
         x, y = self._x - x0, self._y - y0
-        pad = 0.12 * max(float(np.ptp(x)), float(np.ptp(y)), 1.0)
-        x_limits = (float(x.min()) - pad, float(x.max()) + pad)
-        y_limits = (float(y.min()) - pad, float(y.max()) + pad)
+        if self._map_limits is not None:
+            x_limits, y_limits = self._map_limits
+        else:
+            pad = 0.12 * max(float(np.ptp(x)), float(np.ptp(y)), 1.0)
+            x_limits = (float(x.min()) - pad, float(x.max()) + pad)
+            y_limits = (float(y.min()) - pad, float(y.max()) + pad)
         a, b = self._transform
         # The fit was made in absolute projected metres; the axes are offset.
         shifted = (a, b + a * complex(x0, y0))
@@ -689,6 +803,11 @@ class EMOverviewView(QWidget):
 
     def _map_spans(self) -> tuple:
         """Extent the map will cover in metres, east-west and north-south."""
+        if self._map_limits is not None:
+            # Zoom and pan move the view by the same factor on both axes, so a
+            # view the reader set keeps the box shape the survey started with.
+            (x_lo, x_hi), (y_lo, y_hi) = self._map_limits
+            return x_hi - x_lo, y_hi - y_lo
         dx, dy = float(np.ptp(self._x)), float(np.ptp(self._y))
         # A survey run along a single easting leaves that axis no span at all,
         # and equal scales would then collapse the map to a stroke.
@@ -703,16 +822,17 @@ class EMOverviewView(QWidget):
         """Figure-fraction width the survey map needs to fill ``height``.
 
         Equal axis scales mean the drawn map is as tall as its box and only as
-        wide as the survey is wide. A box wider than that pads it with blank
-        paper and pushes the keywords away from it; a narrower one costs height,
-        which is why a survey wider than it is tall is allowed most of the row.
+        wide as the survey is wide. A box wider than that only pads it with
+        blank paper; a narrower one costs height, which is why a survey wider
+        than it is tall is allowed most of the row.
         """
         dx, dy = self._map_spans()
         fig_w, fig_h = self._fig.get_size_inches()
         want = 1.08 * height * (fig_h / fig_w) * dx / dy
-        return float(np.clip(want, 0.16 * available, 0.72 * available))
+        return float(np.clip(want, 0.05 * available, 0.72 * available))
 
-    def _draw_map(self, ax, panel, selected: np.ndarray, chi2) -> None:
+    def _draw_map(self, ax, selected: np.ndarray) -> str:
+        """Draw the plan view; return the imagery credit for the caller to place."""
         x, y = self._x, self._y
         x0, y0 = float(np.nanmin(x)), float(np.nanmin(y))
         ax.set_aspect("equal", "box")
@@ -733,10 +853,12 @@ class EMOverviewView(QWidget):
         from matplotlib.ticker import MaxNLocator
 
         floor = _MAP_SPAN_FLOOR * max(float(np.ptp(x)), float(np.ptp(y)), 1.0)
-        for axis, setter, values in ((ax.xaxis, ax.set_xlim, x - x0),
-                                     (ax.yaxis, ax.set_ylim, y - y0)):
+        for index, (axis, setter, values) in enumerate(
+                ((ax.xaxis, ax.set_xlim, x - x0), (ax.yaxis, ax.set_ylim, y - y0))):
             span = float(np.ptp(values))
-            if not attribution:
+            if self._map_limits is not None:
+                setter(*self._map_limits[index])
+            elif not attribution:
                 # Imagery pins its own limits, and those are padded already.
                 # Bare axes autoscale instead, which leaves a survey run along
                 # one easting with nothing to scale and collapses the map.
@@ -753,28 +875,15 @@ class EMOverviewView(QWidget):
         ax.tick_params(labelsize=8)
         # Grid lines help on a plain background and only clutter imagery.
         ax.grid(False) if attribution else ax.grid(True, alpha=0.3)
-        panel.axis("off")
-        if attribution:
-            # Under the keywords rather than over the imagery: the map box is
-            # only as wide as the survey, and a tile provider's credit line is
-            # routinely wider than that, so on the map it would run off the edge.
-            panel.text(0.0, 0.0, attribution, transform=panel.transAxes,
-                       fontsize=6.5, ha="left", va="bottom", color="#777777")
-        handles, labels = ax.get_legend_handles_labels()
-        panel.legend(handles, labels, loc="upper left", fontsize=9.5,
-                     frameon=False, bbox_to_anchor=(0.0, 1.0), handletextpad=0.6)
-        panel.text(0.0, 0.66, self._summary(selected, chi2), fontsize=10,
-                   va="top", ha="left", color="#333333", linespacing=1.9,
-                   transform=panel.transAxes)
+        return attribution
 
-    def _summary(self, selected: np.ndarray, chi2) -> str:
-        """Keywords beside the map: what was run, how well, how deep.
+    def _facts(self, selected: np.ndarray, chi2) -> list:
+        """The few numbers that are nowhere else in the picture.
 
-        Anything the figure already states carries no line here. The colour
-        range is on the colourbar, the depth range on the axis, and how the
-        misfit varies along the survey is on the Inversion quality page, where
-        it can be read against the convergence history. What is left is the
-        handful of numbers that are nowhere else in the picture.
+        Anything the figure already states is left out. The colour range is on
+        the colourbar, the depth range on the axis, and how the misfit varies
+        along the survey is on the Inversion quality page, where it can be read
+        against the convergence history.
         """
         result = self._result
         report = str((result.get("lci_report") or {}).get("mode", ""))
@@ -810,4 +919,4 @@ class EMOverviewView(QWidget):
             empty = int((counts[:selected.size][selected] <= 0).sum())
             if empty:
                 rows.append(f"⚠ {empty} sounding(s) with no data (hatched)")
-        return "\n".join(rows)
+        return rows

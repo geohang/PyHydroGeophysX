@@ -799,6 +799,8 @@ class ModelViewerModule(BaseModule):
                 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
                 view = VTKVolumeView(); view.show_file(path)
                 self._replace_visual(view)
+            elif renderer == "mesh":
+                self._render_mesh_file(path)
             elif renderer == "table":
                 self._render_table(path)
             elif renderer == "json":
@@ -806,7 +808,12 @@ class ModelViewerModule(BaseModule):
                 text.setPlainText(json.dumps(json.loads(path.read_text(encoding="utf-8")), indent=2))
                 self._replace_visual(text)
             else:
-                self._clear_visual(f"No visual renderer for this artifact.\n{path}")
+                suffix = path.suffix.lstrip(".") or "no extension"
+                self._clear_visual(
+                    f"No preview available for {path.name} ({suffix}).\n\n"
+                    "Use “Open Folder” to inspect it with another tool; the file "
+                    "is listed with its size on the Files tab."
+                )
         except Exception as exc:
             self._clear_visual(f"Could not render {path.name}:\n{exc}")
 
@@ -896,6 +903,25 @@ class ModelViewerModule(BaseModule):
             for col, value in enumerate(row):
                 table.setItem(row_index, col, QTableWidgetItem(value))
         self._replace_visual(table)
+
+    def _render_mesh_file(self, path: Path) -> None:
+        """Show a standalone PyGIMLi mesh, coloured by its region markers.
+
+        A mesh on its own carries no field, but the geometry and the region
+        layout are exactly what someone reviewing a mesh-building run wants to
+        check, and it is the main output of that module.
+        """
+        import pygimli as pg
+        from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
+
+        mesh = pg.load(str(path))
+        markers = np.asarray(mesh.cellMarkers(), dtype=float)
+        view = MeshResultView()
+        view.show_field(
+            mesh, markers,
+            title=f"{path.name} — {mesh.cellCount()} cells, region markers",
+        )
+        self._replace_visual(view)
 
     def _render_mesh_bundle(self, artifact: Dict[str, Any]) -> None:
         if self._current is None or self._store is None:

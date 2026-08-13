@@ -400,7 +400,11 @@ class EMProcessingModule(BaseModule):
         self._line_spacing = self._dspin(50.0, 0.1, 100000.0, 10.0, 2)
         self._line_spacing.setToolTip("Uniform sounding spacing used for the section's x-axis "
                                       "when no geometry file is loaded.")
-        self._line_max = self._ispin(12, 1, 500)
+        # The ceiling is raised to the station count when a survey is loaded. A
+        # fixed one clamps the value silently: a QSpinBox told to hold 887 with a
+        # maximum of 500 simply reads 500 afterwards, and the 387 stations past
+        # it never reach the inversion.
+        self._line_max = self._ispin(12, 1, 100000)
         self._line_max.setToolTip("Cap on how many soundings to invert (keeps a long line fast).")
         self._lateral_smooth = self._dspin(
             float(d.get("lateral_smoothness", 0.0)), 0.0, 20.0, 0.1, 2)
@@ -529,9 +533,16 @@ class EMProcessingModule(BaseModule):
         form.addRow("Backend", self._backend_label)
         self._inv_progress = QProgressBar(); self._inv_progress.setVisible(False)
         form.addRow(self._inv_progress)
-        self._inv_export = QPushButton("Export recovered model (npy + csv)…")
+        self._inv_export = QPushButton("Export recovered model (csv)…")
         self._inv_export.setIcon(theme.icon("fa5s.file-export"))
         self._inv_export.setEnabled(False)
+        self._inv_export.setToolTip(
+            "After a line inversion: model_cells.csv, one row per layer per "
+            "sounding with its map coordinate, elevation, resistivity, "
+            "sensitivity and χ², plus soundings.csv, one row per station. "
+            "After a single sounding: the recovered model as npy + csv.\n\n"
+            "Both are written next to the section automatically; this puts a "
+            "copy wherever you want it.")
         self._inv_export.clicked.connect(self._export_inversion)
         form.addRow(self._inv_export)
         return box
@@ -914,12 +925,16 @@ class EMProcessingModule(BaseModule):
                 inversion.get("lateral_smoothness", self._lateral_smooth.value())))
             self._project_layer_thicknesses = np.asarray(
                 inversion.get("layer_thicknesses", []), dtype=float).ravel()
-            # Track the station count exactly. Only raising it would leave the
-            # cap behind when a reload brings more stations in, and inverting 71
-            # of 94 without saying so is the kind of quiet truncation that is
-            # very hard to notice on the section.
-            self._line_max.setValue(int(self._data.get("n_soundings", 1)))
         n = int(self._data.get("n_soundings", 1))
+        # Track the station count exactly, and outside the block above, because a
+        # project without inversion defaults still has stations. Only raising the
+        # value would leave the cap behind when a reload brings more stations in,
+        # and inverting 71 of 94 without saying so is the kind of quiet
+        # truncation that is very hard to notice on the section. The ceiling goes
+        # up first: stations arrive ordered by line, so a cap below the count
+        # does not thin the survey, it cuts whole lines off the end of it.
+        self._line_max.setMaximum(max(1, n))
+        self._line_max.setValue(max(1, n))
         span = (float(self._geom_positions[-1] - self._geom_positions[0])
                 if self._geom_positions is not None and self._geom_positions.size else 0.0)
         crs = str(self._data.get("coordinate_system", "embedded coordinates"))
@@ -1129,6 +1144,22 @@ class EMProcessingModule(BaseModule):
             return
         out_dir = str(run.outputs_dir)
         self.log(f"Starting {method} line inversion (up to {self._line_max.value()} soundings)…", "info")
+        cap = int(self._line_max.value())
+        loaded = int(self._data.get("n_soundings", 1))
+        if cap < loaded:
+            # Stations arrive ordered by line, so the cap does not thin the
+            # survey, it stops partway through and drops whatever follows.
+            lines = np.asarray(self._data.get("line_numbers", []), dtype=int)
+            dropped = ""
+            if lines.size >= loaded:
+                gone = sorted(set(lines[cap:loaded].tolist())
+                              - set(lines[:cap].tolist()))
+                if gone:
+                    dropped = (", and survey line(s) "
+                               + ", ".join(str(v) for v in gone)
+                               + " are left out of the section entirely")
+            self.log(f"Max soundings is {cap} of {loaded} loaded: the last "
+                     f"{loaded - cap} station(s) are not inverted{dropped}.", "warn")
         worker = TaskWorker(
             em_pipeline.invert_line, str(source), method,
             self._collect_geom(), self._collect_inv(), with_log=True,
@@ -1168,6 +1199,7 @@ class EMProcessingModule(BaseModule):
 
     def _on_inversion_ok(self, result: dict) -> None:
         self._last_result = result
+        self._last_section = None   # the export button now writes this profile
         self._inv_export.setEnabled(True)
         png = self._render_inversion(result)
         if png:
@@ -1202,6 +1234,8 @@ class EMProcessingModule(BaseModule):
 
     def _on_line_ok(self, result: dict) -> None:
         self._last_section = result
+        self._last_result = None    # the export button now writes the section
+        self._inv_export.setEnabled(True)
         # The overview is the only UI-success step that also writes an
         # artifact.  Finalize even if rendering it fails so a successful,
         # expensive inversion is never left permanently marked as running.
@@ -1414,14 +1448,23 @@ class EMProcessingModule(BaseModule):
             return None
 
     def _export_inversion(self) -> None:
-        if not self._last_result:
-            self.log("Run a single-sounding inversion first (a line auto-saves its section).", "warn")
+        # A line section and a single sounding are different tables, and the
+        # button is the same one, so whichever ran last is what gets written.
+        section = getattr(self, "_last_section", None)
+        if not section and not self._last_result:
+            self.log("Run an inversion first.", "warn")
             return
         folder = select_directory(
             self, "Export recovered model to folder",
             self.state.output_dir or Path.cwd(),
         )
         if not folder:
+            return
+        if section:
+            paths = em_pipeline.save_line_csv(section, Path(folder))
+            self.log(f"Exported the section as {len(paths)} CSV file(s) to {folder}: "
+                     f"{int(section.get('n_soundings', 0))} soundings x "
+                     f"{int(section.get('n_layers', 0))} layers.", "success")
             return
         paths = em_pipeline.save_inversion(self._last_result, folder)
         self.log(f"Exported recovered model ({len(paths)} files) to {folder}", "success")

@@ -114,12 +114,17 @@ A header-less file is read by column order: one column = position; two columns =
   lateral smoothness to zero to recover the former independent-1D workflow.
 - A line inversion opens the **Resistivity model** tab on "View: Overview
   (map + section)": the survey map with every sounding in black and the sectioned
-  line picked out, above that line's distance vs depth resistivity section.
-  Beside the map are the few numbers the picture does not already carry: what was
-  run, how many soundings and layers, the median χ², and the depth of
-  investigation. The colour range is on the colourbar and the depth range on the
-  axis, so neither is repeated, and how the misfit varies along the survey is on
-  the **Inversion quality** tab. A
+  line picked out, above that line's distance vs depth resistivity section. The
+  two panels get the whole figure; one small caption underneath carries the few
+  numbers the drawing does not already hold, being what was run, how many
+  soundings and layers, the median χ², and the depth of investigation. The colour
+  range is on the colourbar and the depth range on the axis, so neither is
+  repeated, and how the misfit varies along the survey is on the **Inversion
+  quality** tab. Scroll over either panel to zoom it about the cursor, drag to
+  pan, and double-click to go back to the whole survey; with a basemap on, tiles
+  are fetched again for the new extent once the wheel stops, so zooming in gives
+  sharper imagery rather than a magnified one. The **Map** slider sets how much
+  of the height goes to the map against the section. A
   survey holding several line numbers is sectioned one line at a time (pick it
   with "Survey line"), because chaining the lines would put an artificial jump in
   the middle of the section. Columns hatched in white are soundings that
@@ -136,6 +141,18 @@ A header-less file is read by column order: one column = position; two columns =
   the same either way, because each 1D model is solved under its own station. The figure is written to
   `em_results/em_line_overview.png`. How the misfit varies along the survey is on
   the **Inversion quality** tab, next to the convergence history.
+- A finished line inversion writes two tables next to `resistivity_section.npz`,
+  and **Export recovered model (csv)…** puts a copy wherever you want one.
+  `model_cells.csv` is one row per layer per sounding: `line`, `station`, `x`,
+  `y`, `longitude`, `latitude`, `surface_elevation`, `distance_m`,
+  `depth_top_m`, `depth_bottom_m`, `depth_center_m`, `z` (the cell centre's
+  elevation), `resistivity_ohm_m`, `sensitivity`, `below_doi` and `chi2`. Every
+  row carries its own coordinate, so the section reconstructs in a GIS or a
+  gridding package without knowing anything about the layer grid.
+  `soundings.csv` is the per-station summary: the same location columns plus
+  `chi2`, `n_data` and `doi_m`. Cells below the depth of investigation are
+  written with their resistivity and flagged rather than dropped, so the reader
+  decides what to do with them.
 - Tick **Basemap** to draw satellite imagery, a street map, or a topographic map
   under the soundings. Tiles are fetched once and cached under
   `~/.pyhydrogeophysx/tilecache` (override with `PYHYDROGEOPHYSX_TILE_CACHE`), so
