@@ -15,6 +15,7 @@ _GROUP_ICONS = {
     "Geophysical Data Processing": "fa5s.wave-square",
     "Hydro → Geophysics": "fa5s.water",
     "Geophy → Hydrology": "fa5s.mountain",
+    "Project": "fa5s.folder-open",
 }
 _CHILD_ICONS = {
     "Seismic": "fa5s.wave-square",
@@ -38,6 +39,7 @@ _CHILD_ICONS = {
     "Build Model": "fa5s.cubes",
     "Seismic → Structure": "fa5s.cube",
     "ERT → Water Content": "fa5s.tint",
+    "Saved Results": "fa5s.history",
 }
 
 # (group label, [(child label, module key), ...]). Several Hydro children map to
@@ -69,6 +71,14 @@ TREE_STRUCTURE: List[Tuple[str, List[Tuple[str, str]]]] = [
         [
             ("Seismic → Structure", "seismic3d"),
             ("ERT → Water Content", "geo_hydrology"),
+        ],
+    ),
+    # Every computation is recorded in the active Project, so the history needs a
+    # permanent home in the navigator rather than only a Tools menu entry.
+    (
+        "Project",
+        [
+            ("Saved Results", "model_viewer"),
         ],
     ),
 ]

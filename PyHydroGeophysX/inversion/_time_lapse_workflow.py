@@ -383,13 +383,15 @@ def run_timelapse_ert(
     fig.savefig(panel, dpi=160, bbox_inches="tight"); plt.close(fig)
     figure_paths.append(str(panel))
 
-    # Exports.
+    # Exports go through a sibling temp file that is swapped into place, so a run
+    # that cannot replace the target leaves the previous file intact rather than
+    # truncated, and never publishes a half-written array.
     models_path = out / "final_models.npy"
-    np.save(models_path, final_models); data_paths.append(str(models_path))
+    io_utils.save_npy_atomic(models_path, final_models); data_paths.append(str(models_path))
     coverage_path = None
     if coverage is not None:
         coverage_path = out / "all_coverage.npy"
-        np.save(coverage_path, coverage); data_paths.append(str(coverage_path))
+        io_utils.save_npy_atomic(coverage_path, coverage); data_paths.append(str(coverage_path))
     io_utils.write_csv(
         out / "measurement_times.csv",
         [(i, float(times[i]), labels[i] if i < len(labels) else "",

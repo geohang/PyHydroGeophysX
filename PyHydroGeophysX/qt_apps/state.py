@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from PyHydroGeophysX.qt_apps import io_utils
+from PyHydroGeophysX.qt_apps.results_store import ResultsStore, RunHandle
 from PyHydroGeophysX._internal.utils import utc_now as _utc_now
 
 RESULT_FILENAME = "full_workbench_result.json"
@@ -29,6 +30,10 @@ class WorkbenchState:
     selected_module: str = "home"
     project_root: Optional[Path] = None
     output_dir: Optional[Path] = None
+    #: User-facing Project storage.  Kept distinct from ``project_root``, which
+    #: is the Streamlit bridge/source-project context.
+    results_store_root: Optional[Path] = None
+    results_store: Optional[ResultsStore] = field(default=None, repr=False)
     hydro_data_dir: Optional[Path] = None
     hydro_output_dir: Optional[Path] = None
     selected_points: List[List[float]] = field(default_factory=list)
@@ -45,6 +50,9 @@ class WorkbenchState:
     #: from the Seismic structure module to the ERT -> hydrology module. Not
     #: serialized into the bridge result file.
     shared_structure: Optional[Dict[str, Any]] = None
+    _active_run_handles: Dict[Tuple[str, str], RunHandle] = field(
+        default_factory=dict, repr=False
+    )
 
     # -- construction --------------------------------------------------------
     @classmethod
@@ -108,14 +116,149 @@ class WorkbenchState:
         recipe_path: str = "",
     ) -> None:
         """Record a canonical workflow result while preserving the legacy bridge key."""
-        key = str(module_name)
+        module_key = str(module_name)
+        key = (module_key, str(workflow_id))
         self.active_workflow_id = str(workflow_id)
         self.active_recipe_path = str(recipe_path)
-        self.workflow_results[key] = {
+        self.workflow_results[module_key] = {
             "workflow_id": self.active_workflow_id,
             "recipe_path": self.active_recipe_path,
             "result": dict(result_dict),
         }
+        handle = self._active_run_handles.pop(key, None)
+        if handle is not None and self.results_store is not None:
+            if recipe_path:
+                try:
+                    handle.record.recipe_path = Path(recipe_path).resolve().relative_to(
+                        handle.run_dir.resolve()
+                    ).as_posix()
+                except ValueError:
+                    # A public API caller may keep its recipe elsewhere; managed Qt
+                    # runs deliberately never persist paths outside their run root.
+                    handle.record.recipe_path = ""
+            self.results_store.finish_run(handle, result_dict)
+
+    # -- durable Result Store ----------------------------------------------
+    def set_results_store(self, root: str | Path, *, read_only: bool = False) -> ResultsStore:
+        """Open/create the folder that owns durable Qt run history."""
+        requested = Path(root).expanduser().resolve()
+        if (
+            self.results_store is not None
+            and self.results_store.root == requested
+            and self.results_store.read_only == bool(read_only)
+        ):
+            return self.results_store
+        running = [
+            handle.run_id for handle in self._active_run_handles.values()
+            if handle.record.status == "running"
+        ]
+        if running:
+            raise RuntimeError(
+                "Cannot switch Project while a computation is running: "
+                + ", ".join(running)
+            )
+        store = ResultsStore.open_or_create(requested, read_only=read_only)
+        self.results_store_root = store.root
+        self.results_store = store
+        if not read_only:
+            # Existing module forms still read this bridge-compatible field for
+            # defaults.  New persistent writes use RunHandle directories.
+            self.output_dir = store.root
+            if self.context_path is None:
+                self.result_path = store.root / "qt_bridge" / RESULT_FILENAME
+        return store
+
+    def ensure_results_store(self) -> ResultsStore:
+        if self.results_store is None:
+            fallback = Path.home() / ".pyhydrogeophysx" / "results"
+            self.set_results_store(self.output_dir or fallback)
+        assert self.results_store is not None
+        return self.results_store
+
+    def begin_run(
+        self,
+        module_name: str,
+        operation_id: str,
+        workflow_id: str = "",
+        *,
+        label: str = "",
+    ) -> RunHandle:
+        module_key = str(module_name)
+        operation_key = str(operation_id)
+        key = (module_key, operation_key)
+        existing = self._active_run_handles.get(key)
+        if existing is not None and existing.record.status == "running":
+            raise RuntimeError(
+                f"Operation {module_key!r}/{operation_key!r} already has an active persisted run."
+            )
+        handle = self.ensure_results_store().begin_run(
+            module_key, operation_key, workflow_id, label=label
+        )
+        self._active_run_handles[key] = handle
+        return handle
+
+    def active_run(
+        self, module_name: str, operation_id: str = ""
+    ) -> Optional[RunHandle]:
+        module_key = str(module_name)
+        if operation_id:
+            return self._active_run_handles.get((module_key, str(operation_id)))
+        matches = [
+            handle for (module, _operation), handle in self._active_run_handles.items()
+            if module == module_key
+        ]
+        return matches[0] if len(matches) == 1 else None
+
+    def _pop_active_run(
+        self, module_name: str, operation_id: str = ""
+    ) -> Optional[RunHandle]:
+        module_key = str(module_name)
+        if operation_id:
+            return self._active_run_handles.pop((module_key, str(operation_id)), None)
+        keys = [key for key in self._active_run_handles if key[0] == module_key]
+        if len(keys) > 1:
+            raise RuntimeError(
+                f"Module {module_key!r} has multiple active operations; operation_id is required."
+            )
+        return self._active_run_handles.pop(keys[0], None) if keys else None
+
+    def finish_run(
+        self, module_name: str, result: Any, operation_id: str = ""
+    ) -> None:
+        handle = self._pop_active_run(module_name, operation_id)
+        if handle is not None:
+            self.ensure_results_store().finish_run(handle, result)
+
+    def fail_run(self, module_name: str, error: str, operation_id: str = "") -> None:
+        handle = self._pop_active_run(module_name, operation_id)
+        if handle is not None:
+            self.ensure_results_store().fail_run(handle, error)
+
+    def cancel_run(
+        self, module_name: str, error: str = "", operation_id: str = ""
+    ) -> None:
+        handle = self._pop_active_run(module_name, operation_id)
+        if handle is not None:
+            self.ensure_results_store().cancel_run(handle, error)
+
+    def cancel_module_runs(self, module_name: str, error: str = "") -> None:
+        module_key = str(module_name)
+        for key in [key for key in self._active_run_handles if key[0] == module_key]:
+            handle = self._active_run_handles.pop(key)
+            self.ensure_results_store().cancel_run(handle, error)
+
+    def clear_project_session(self) -> None:
+        """Drop process-local results when the active Project changes."""
+        if self._active_run_handles:
+            raise RuntimeError("Cannot clear Project state while computations are running.")
+        self.module_results.clear()
+        self.workflow_results.clear()
+        self.geophysical_resources.clear()
+        self.shared_structure = None
+        self.selected_points.clear()
+        self.active_dataset = None
+        self.active_workflow_id = ""
+        self.active_recipe_path = ""
 
     def register_geophysical_resource(
         self,
@@ -209,5 +352,6 @@ class WorkbenchState:
             "hydro_output_dir": str(self.hydro_output_dir or ""),
             "context_path": str(self.context_path or ""),
             "result_path": str(self.result_path or ""),
+            "results_store_root": str(self.results_store_root or ""),
             "demo_mode": self.context.get("demo_mode", False),
         }

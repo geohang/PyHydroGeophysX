@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import numpy as np
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -38,6 +39,9 @@ from PyHydroGeophysX.visualization.basemap import (
 
 #: Colours shared with the acquisition-software convention: every sounding in
 #: black, the line being sectioned in red, its zero-distance end in blue.
+#: Smallest map extent along one axis, as a fraction of the other, so a survey
+#: run along a single easting or northing still draws as a map.
+_MAP_SPAN_FLOOR = 0.08
 _ALL_COLOR = "#111111"
 _LINE_COLOR = "#d62728"
 _START_COLOR = "#1f77b4"
@@ -53,6 +57,18 @@ class EMOverviewView(QWidget):
 
         self._fig = Figure(figsize=(11.0, 7.4))
         self._canvas = FigureCanvasQTAgg(self._fig)
+        # The map box is sized from the figure's own aspect, so a resized window
+        # needs the layout worked out again or the map letterboxes inside a box
+        # cut for a different shape. Coalesced, because a drag emits one event
+        # per pixel and each redraw would otherwise be thrown away by the next.
+        self._resize_timer = QTimer(self)
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.setInterval(120)
+        self._resize_timer.timeout.connect(self._redraw)
+        self._canvas.mpl_connect(
+            "resize_event",
+            lambda _event: (self._resize_timer.start()
+                            if getattr(self, "_result", None) else None))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -340,13 +356,21 @@ class EMOverviewView(QWidget):
 
         self._fig.clear()
         if has_map:
-            grid = self._fig.add_gridspec(
-                2, 2, height_ratios=[1.0, 1.25], width_ratios=[1.5, 1.0],
-                hspace=0.36, wspace=0.05,
-                left=0.075, right=0.865, top=0.945, bottom=0.085)
-            self._draw_map(self._fig.add_subplot(grid[0, 0]),
-                           self._fig.add_subplot(grid[0, 1]), selected, chi2)
-            ax = self._fig.add_subplot(grid[1, :])
+            # Explicit rectangles rather than a gridspec: the map keeps equal
+            # axis scales, so only a box that matches the survey's own shape
+            # draws it at full size, and a gridspec column cannot know that
+            # shape. Everything left over goes to the keywords beside it.
+            left, right, top, bottom = 0.075, 0.865, 0.955, 0.08
+            gap = 0.09                     # map xlabel and section title share it
+            map_h = 0.52 * (top - bottom - gap)
+            map_w = self._map_width(map_h, right - left)
+            self._draw_map(
+                self._fig.add_axes([left, top - map_h, map_w, map_h]),
+                self._fig.add_axes([left + map_w + 0.035, top - map_h,
+                                    right - left - map_w - 0.035, map_h]),
+                selected, chi2)
+            ax = self._fig.add_axes([left, bottom, right - left,
+                                     top - bottom - gap - map_h])
         else:
             grid = self._fig.add_gridspec(
                 1, 1, left=0.085, right=0.865, top=0.92, bottom=0.12)
@@ -661,8 +685,32 @@ class EMOverviewView(QWidget):
         chosen = self._line.currentData()
         which = ("all lines" if chosen is None or int(chosen) < 0
                  else f"Line {int(chosen)}")
-        return (f"Resistivity section — {which}   "
-                f"({int(selected.sum())} soundings, {float(distance[-1]):.0f} m)")
+        return f"Resistivity section — {which}   ({float(distance[-1]):.0f} m)"
+
+    def _map_spans(self) -> tuple:
+        """Extent the map will cover in metres, east-west and north-south."""
+        dx, dy = float(np.ptp(self._x)), float(np.ptp(self._y))
+        # A survey run along a single easting leaves that axis no span at all,
+        # and equal scales would then collapse the map to a stroke.
+        floor = _MAP_SPAN_FLOOR * max(dx, dy, 1.0)
+        dx, dy = max(dx, floor), max(dy, floor)
+        if self._basemap.isChecked() and self._transform is not None:
+            pad = 0.24 * max(dx, dy)    # _draw_basemap adds 0.12 on each side
+            dx, dy = dx + pad, dy + pad
+        return dx, dy
+
+    def _map_width(self, height: float, available: float) -> float:
+        """Figure-fraction width the survey map needs to fill ``height``.
+
+        Equal axis scales mean the drawn map is as tall as its box and only as
+        wide as the survey is wide. A box wider than that pads it with blank
+        paper and pushes the keywords away from it; a narrower one costs height,
+        which is why a survey wider than it is tall is allowed most of the row.
+        """
+        dx, dy = self._map_spans()
+        fig_w, fig_h = self._fig.get_size_inches()
+        want = 1.08 * height * (fig_h / fig_w) * dx / dy
+        return float(np.clip(want, 0.16 * available, 0.72 * available))
 
     def _draw_map(self, ax, panel, selected: np.ndarray, chi2) -> None:
         x, y = self._x, self._y
@@ -675,61 +723,74 @@ class EMOverviewView(QWidget):
         # every sounding stays visible even when the whole survey is sectioned.
         ax.plot(x[selected] - x0, y[selected] - y0, "-",
                 color=_LINE_COLOR, lw=6.0, alpha=0.55 if attribution else 0.40,
-                solid_capstyle="round", zorder=2, label="On the section")
+                solid_capstyle="round", zorder=2, label="Sectioned")
         ax.plot(x - x0, y - y0, "o", color=_ALL_COLOR, ms=3.4,
                 mec="white" if attribution else "none",
                 mew=0.7 if attribution else 0.0,
-                label="All soundings", zorder=3, ls="none")
+                label="Soundings", zorder=3, ls="none")
         ax.plot(x[selected][0] - x0, y[selected][0] - y0, "s", color=_START_COLOR,
-                ms=9, mec="white", mew=0.8, label="Section start (0 m)", zorder=4)
+                ms=9, mec="white", mew=0.8, label="Start (0 m)", zorder=4)
+        from matplotlib.ticker import MaxNLocator
+
+        floor = _MAP_SPAN_FLOOR * max(float(np.ptp(x)), float(np.ptp(y)), 1.0)
+        for axis, setter, values in ((ax.xaxis, ax.set_xlim, x - x0),
+                                     (ax.yaxis, ax.set_ylim, y - y0)):
+            span = float(np.ptp(values))
+            if not attribution:
+                # Imagery pins its own limits, and those are padded already.
+                # Bare axes autoscale instead, which leaves a survey run along
+                # one easting with nothing to scale and collapses the map.
+                middle = 0.5 * (float(values.min()) + float(values.max()))
+                want = max(span, floor)
+                setter(middle - 0.55 * want, middle + 0.55 * want)
+            # Equal scales make the box for that axis a sliver, with no room for
+            # ticks, and a single coordinate is what the axis label already says.
+            axis.set_ticks([]) if span < floor else axis.set_major_locator(
+                MaxNLocator(nbins=4))
         ax.set_xlabel(f"Easting − {x0:,.0f} m", fontsize=9)
         ax.set_ylabel(f"Northing − {y0:,.0f} m", fontsize=9)
         ax.set_title("Survey map", fontsize=11)
         ax.tick_params(labelsize=8)
         # Grid lines help on a plain background and only clutter imagery.
         ax.grid(False) if attribution else ax.grid(True, alpha=0.3)
-        if attribution:
-            ax.text(0.99, 0.01, attribution, transform=ax.transAxes, fontsize=6.5,
-                    ha="right", va="bottom", color="white",
-                    bbox=dict(facecolor="black", alpha=0.35, pad=1.5,
-                              edgecolor="none"))
-
         panel.axis("off")
+        if attribution:
+            # Under the keywords rather than over the imagery: the map box is
+            # only as wide as the survey, and a tile provider's credit line is
+            # routinely wider than that, so on the map it would run off the edge.
+            panel.text(0.0, 0.0, attribution, transform=panel.transAxes,
+                       fontsize=6.5, ha="left", va="bottom", color="#777777")
         handles, labels = ax.get_legend_handles_labels()
-        panel.legend(handles, labels, loc="upper left", fontsize=9, frameon=False,
-                     bbox_to_anchor=(0.0, 1.0))
-        panel.text(0.0, 0.56, self._summary(selected, chi2), fontsize=8.5,
-                   va="top", ha="left", color="#333333", linespacing=1.8,
+        panel.legend(handles, labels, loc="upper left", fontsize=9.5,
+                     frameon=False, bbox_to_anchor=(0.0, 1.0), handletextpad=0.6)
+        panel.text(0.0, 0.66, self._summary(selected, chi2), fontsize=10,
+                   va="top", ha="left", color="#333333", linespacing=1.9,
                    transform=panel.transAxes)
 
     def _summary(self, selected: np.ndarray, chi2) -> str:
+        """Keywords beside the map: what was run, how well, how deep.
+
+        Anything the figure already states carries no line here. The colour
+        range is on the colourbar, the depth range on the axis, and how the
+        misfit varies along the survey is on the Inversion quality page, where
+        it can be read against the convergence history. What is left is the
+        handful of numbers that are nowhere else in the picture.
+        """
         result = self._result
-        report = result.get("lci_report") or {}
-        coupling = {"simultaneous": "simultaneous LCI",
-                    "sequential": "block-coordinate LCI"}.get(
-                        str(report.get("mode", "")), "independent 1D")
-        rows = [
-            f"{result.get('method', 'EM')}"
-            + (" · joint LM+HM" if result.get("joint_moments") else "")
-            + f" · {coupling}",
-            f"soundings: {int(selected.sum())} of {selected.size}",
-            f"layers: {int(result.get('n_layers', self._res.shape[1]))}"
-            f"   grid depth: 0–{float(result['depth_edges'][-1]):.0f} m",
-        ]
+        report = str((result.get("lci_report") or {}).get("mode", ""))
+        rows = [" · ".join(part for part in (
+            str(result.get("method", "EM")),
+            "LM+HM" if result.get("joint_moments") else "",
+            {"simultaneous": "LCI", "sequential": "LCI (sequential)"}.get(
+                report, "independent 1D"),
+        ) if part)]
+        rows.append(f"{int(selected.sum())} soundings · "
+                    f"{int(result.get('n_layers', self._res.shape[1]))} layers")
         if chi2 is not None and np.isfinite(chi2).any():
-            # One number only. How the fit varies along the line belongs on the
-            # Inversion quality page, where it can be read against the
-            # convergence history instead of covering the model.
-            rows.append(f"median χ² per sounding: {np.nanmedian(chi2):.1f}"
-                        "   (see Inversion quality)")
+            rows.append(f"median χ² {np.nanmedian(chi2):.1f}")
         outliers = dict(result.get("outliers") or {})
         if outliers.get("enabled"):
-            rows.append(f"gates kept: {outliers.get('kept')} of {outliers.get('n_start')}"
-                        f" (cut beyond {float(outliers.get('threshold', 0)):g}σ)")
-        counts = np.asarray(result.get("data_count_list", []), dtype=float)
-        empty = int((counts[:selected.size][selected] <= 0).sum()) if counts.size >= selected.size else 0
-        vmin, vmax = self._colour_range(bool(result.get("log_scale", True)))
-        rows.append(f"colour range: {vmin:.4g}–{vmax:.4g} Ω·m, shared by every line")
+            rows.append(f"gates {outliers.get('kept')} of {outliers.get('n_start')}")
         doi = self._doi_depths()
         if doi is not None and self._below_doi_mode() != "show":
             # Quote the depth over the soundings that have one. Averaging in the
@@ -737,20 +798,16 @@ class EMOverviewView(QWidget):
             # when what actually happened is that some columns hold nothing.
             here = doi[:selected.size][selected]
             resolved = here[here > 0]
-            verb = "faded" if self._below_doi_mode() == "fade" else "blanked"
             if resolved.size:
-                rows.append(
-                    f"{verb} below the DOI (S ≥ {self._doi_threshold.value():g}): "
-                    f"median {np.median(resolved):.0f} m, "
-                    f"{np.percentile(resolved, 10):.0f}–"
-                    f"{np.percentile(resolved, 90):.0f} m")
+                rows.append(f"DOI {np.median(resolved):.0f} m "
+                            f"(S ≥ {self._doi_threshold.value():g})")
             blank = int((here <= 0).sum())
             if blank:
-                rows.append(
-                    f"{blank} of {here.size} column(s) resolve nothing at this "
-                    "threshold; lower it to see what they hold")
-        elif doi is None:
-            rows.append("cells below the depth of investigation are left blank")
-        if empty:
-            rows.append(f"hatched: {empty} sounding(s) with no data of their own")
+                rows.append(f"⚠ {blank} column(s) unresolved at S ≥ "
+                            f"{self._doi_threshold.value():g}")
+        counts = np.asarray(result.get("data_count_list", []), dtype=float)
+        if counts.size >= selected.size:
+            empty = int((counts[:selected.size][selected] <= 0).sum())
+            if empty:
+                rows.append(f"⚠ {empty} sounding(s) with no data (hatched)")
         return "\n".join(rows)

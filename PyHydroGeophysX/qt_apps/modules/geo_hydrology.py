@@ -13,6 +13,7 @@ pygimli-backed Monte Carlo run with a config-export fallback).
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -969,7 +970,8 @@ class GeoHydrologyModule(BaseModule):
     def _export_config(self) -> str:
         params = self._collect_params()
         config = geo_pipeline.build_petro_config(self._context(), params)
-        out_dir = io_utils.ensure_dir(Path(params["output_dir"] or ".") / "qt_geo_inverse")
+        active = self.state.active_run(self.module_key)
+        out_dir = active.outputs_dir if active else self.state.ensure_results_store().scratch_dir(self.module_key)
         config_path = out_dir / "petro_config.json"
         io_utils.write_json(config_path, config)
         self.log(f"Exported petrophysics config to {config_path}", "success")
@@ -987,7 +989,15 @@ class GeoHydrologyModule(BaseModule):
         seed = int(params.pop("seed"))
         data_dir = self._data_dir()
         params.pop("model_data_dir", None)
-        output_base = Path(params.pop("output_dir", "") or ".")
+        params.pop("output_dir", None)
+        try:
+            run = self.begin_persisted_run(
+                "geo_hydrology.ert_to_wc",
+                workflow_id="geo_hydrology.ert_to_wc",
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not prepare Project run: {exc}", "error")
+            return
         model_files: Dict[str, ArtifactRef] = {}
         if data_dir is not None:
             for filename in (
@@ -998,10 +1008,18 @@ class GeoHydrologyModule(BaseModule):
             ):
                 path = data_dir / filename
                 if path.is_file():
+                    stored = run.inputs_dir / filename
+                    try:
+                        shutil.copy2(path, stored)
+                    except OSError as exc:
+                        self.fail_persisted_run(str(exc))
+                        self.log(f"Could not persist {filename}: {exc}", "error")
+                        return
                     model_files[filename] = ArtifactRef.from_path(
-                        path,
+                        stored,
                         artifact_id=f"ert-model-input:{filename}",
                         kind="ert_model_bundle",
+                        base_dir=run.run_dir,
                     )
         spec = WorkflowSpec(
             workflow_id="geo_hydrology.ert_to_wc",
@@ -1013,9 +1031,8 @@ class GeoHydrologyModule(BaseModule):
             seed=seed,
             metadata={"source": "qt", "rng": "numpy.default_rng"},
         )
-        bundle_dir = io_utils.ensure_dir(output_base / "qt_geo_inverse")
         recipe_path, script_path = export_workflow_bundle(
-            spec, bundle_dir, stem="ert_to_water_content"
+            spec, run.run_dir, stem="ert_to_water_content"
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._workflow_recipe_path = str(recipe_path)
@@ -1029,7 +1046,7 @@ class GeoHydrologyModule(BaseModule):
         self._worker = self.register_worker(
             WorkflowWorker(
                 spec,
-                RunContext(project_root=bundle_dir, output_dir=output_base),
+                RunContext(project_root=run.run_dir, output_dir=run.outputs_dir),
             )
         )
         self._worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
@@ -1063,6 +1080,7 @@ class GeoHydrologyModule(BaseModule):
         self._go_to(5)
 
     def _on_run_failed(self, message: str, backend_unavailable: bool) -> None:
+        self.fail_persisted_run(message)
         self._progress.setRange(0, 1); self._progress.setValue(0)
         level = "warn" if backend_unavailable else "error"
         self.log(f"Estimation problem: {message}", level)

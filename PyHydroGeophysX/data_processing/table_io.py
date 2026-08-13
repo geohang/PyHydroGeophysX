@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
-from typing import Any, Iterable, Optional, Sequence, Union
+from typing import Any, Iterable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -15,6 +16,8 @@ __all__ = [
     "ensure_dir",
     "load_2d_array",
     "load_xyz_table",
+    "npy_shape",
+    "save_npy_atomic",
     "write_csv",
     "write_json",
     "read_json",
@@ -26,6 +29,54 @@ def ensure_dir(path: PathLike) -> Path:
     result = Path(path)
     result.mkdir(parents=True, exist_ok=True)
     return result
+
+
+def npy_shape(path: PathLike) -> Tuple[int, ...]:
+    """Read an ``.npy`` file's shape from its header, without opening the data.
+
+    ``np.load(..., mmap_mode="r")`` is the usual way to ask an array how big it
+    is, but a mapping keeps the file open for as long as the array lives, and
+    Windows then refuses to let anything overwrite it. Reading the header costs
+    one short read, closes immediately, and works even while another process is
+    rewriting the file.
+    """
+    with open(path, "rb") as handle:
+        version = np.lib.format.read_magic(handle)
+        if version == (1, 0):
+            shape, _, _ = np.lib.format.read_array_header_1_0(handle)
+        else:
+            shape, _, _ = np.lib.format.read_array_header_2_0(handle)
+    return tuple(int(value) for value in shape)
+
+
+def save_npy_atomic(path: PathLike, array: Any) -> Path:
+    """Write an ``.npy`` via a sibling temp file, then swap it into place.
+
+    A direct ``np.save`` over an existing result truncates it first, so a write
+    that fails part way leaves a corrupt file that still looks like a result.
+    Staging keeps the previous file intact on failure and never publishes a
+    half-written array.
+
+    This does not defeat a lock: replacing a file another process holds mapped
+    still raises, by design. It makes that failure clean rather than destructive.
+    """
+    target = Path(path)
+    staging = target.with_name(target.name + ".partial")
+    produced = staging
+    try:
+        np.save(staging, array)
+        if not staging.exists():
+            # np.save appends .npy when the name lacks it.
+            produced = staging.with_suffix(staging.suffix + ".npy")
+        os.replace(produced, target)
+    except OSError:
+        for leftover in {staging, produced}:
+            try:
+                leftover.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
+    return target
 
 
 def _load_text_matrix(path: Path) -> np.ndarray:

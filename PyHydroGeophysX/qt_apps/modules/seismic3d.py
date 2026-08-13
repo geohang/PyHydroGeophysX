@@ -11,6 +11,7 @@ turn reuses ``Geophy_modular.seismic_processor`` and ``core.kriging_3d``).
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -409,8 +410,7 @@ class Seismic3DModule(BaseModule):
             ax.set_xlabel("Distance (m)"); ax.set_ylabel("Elevation (m)")
             ax.set_title(f"{line['name']}: bedrock interface @ {self._threshold.value():.0f} m/s")
             ax.grid(True, alpha=0.3); fig.tight_layout()
-            out = Path(self.state.output_dir or ".") / "qt_seismic3d"
-            io_utils.ensure_dir(out)
+            out = self.state.ensure_results_store().scratch_dir(self.module_key)
             p = out / "interface_preview.png"
             fig.savefig(p, dpi=160, bbox_inches="tight"); plt.close(fig)
             self._interface_view.set_image_file(str(p))
@@ -643,7 +643,8 @@ class Seismic3DModule(BaseModule):
     def _export_config(self) -> str:
         params = self._collect_params()
         config = seismic3d_pipeline.build_seismic3d_config(self._context(), params)
-        out_dir = io_utils.ensure_dir(Path(params["output_dir"] or ".") / "qt_seismic3d")
+        active = self.state.active_run(self.module_key)
+        out_dir = active.outputs_dir if active else self.state.ensure_results_store().scratch_dir(self.module_key)
         config_path = out_dir / "seismic3d_config.json"
         io_utils.write_json(config_path, config)
         self.log(f"Exported config to {config_path}", "success")
@@ -657,31 +658,50 @@ class Seismic3DModule(BaseModule):
             self.log("Add at least one seismic line first.", "warn")
             return
         params = self._collect_params()
+        try:
+            run = self.begin_persisted_run(
+                "seismic3d.build",
+                workflow_id="seismic3d.build",
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not prepare Project run: {exc}", "error")
+            return
         serialized_lines: List[Dict[str, Any]] = []
         for index, line in enumerate(params.pop("lines")):
             item = dict(line)
             for field, kind in (("mesh", "seismic_mesh"), ("velocity", "velocity_array")):
                 path = Path(str(item.get(field, "")))
                 if not path.is_file():
-                    raise FileNotFoundError(
-                        f"Seismic3D line {index + 1} {field} file does not exist: {path}"
+                    self.fail_persisted_run(f"Missing input file: {path}")
+                    self.log(
+                        f"Seismic3D line {index + 1} {field} file does not exist: {path}",
+                        "error",
                     )
+                    return
+                stored_dir = io_utils.ensure_dir(run.inputs_dir / f"line_{index + 1}")
+                stored = stored_dir / path.name
+                try:
+                    shutil.copy2(path, stored)
+                except OSError as exc:
+                    self.fail_persisted_run(str(exc))
+                    self.log(f"Could not persist {path.name}: {exc}", "error")
+                    return
                 item[field] = ArtifactRef.from_path(
-                    path,
+                    stored,
                     artifact_id=f"seismic3d-line-{index + 1}:{field}",
                     kind=kind,
+                    base_dir=run.run_dir,
                 )
             serialized_lines.append(item)
-        output_base = Path(params.pop("output_dir", "") or ".")
+        params.pop("output_dir", None)
         spec = WorkflowSpec(
             workflow_id="seismic3d.build",
             inputs={"context": {}, "lines": serialized_lines},
             parameters=params,
             metadata={"source": "qt", "line_count": len(serialized_lines)},
         )
-        bundle_dir = io_utils.ensure_dir(output_base / "qt_seismic3d")
         recipe_path, script_path = export_workflow_bundle(
-            spec, bundle_dir, stem="seismic3d"
+            spec, run.run_dir, stem="seismic3d"
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._workflow_recipe_path = str(recipe_path)
@@ -694,7 +714,7 @@ class Seismic3DModule(BaseModule):
         self._worker = self.register_worker(
             WorkflowWorker(
                 spec,
-                RunContext(project_root=bundle_dir, output_dir=output_base),
+                RunContext(project_root=run.run_dir, output_dir=run.outputs_dir),
             )
         )
         self._worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
@@ -724,6 +744,7 @@ class Seismic3DModule(BaseModule):
         self._go_to(4)
 
     def _on_build_failed(self, message: str, backend_unavailable: bool) -> None:
+        self.fail_persisted_run(message)
         self._progress.setRange(0, 1); self._progress.setValue(0)
         level = "warn" if backend_unavailable else "error"
         self.log(f"Build problem: {message}", level)

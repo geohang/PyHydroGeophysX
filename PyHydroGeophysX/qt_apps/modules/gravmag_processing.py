@@ -49,7 +49,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 )
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
-from PyHydroGeophysX.qt_apps.workers import TaskWorker, WorkflowWorker
+from PyHydroGeophysX.qt_apps.workers import WorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
     RunContext,
@@ -383,7 +383,9 @@ class GravMagProcessingModule(BaseModule):
         self._draw_qc(auto_range=True)
         self._write_processing_recipe()
 
-    def _workflow_input_refs(self, out_dir: Path) -> Dict[str, ArtifactRef]:
+    def _workflow_input_refs(
+        self, out_dir: Path, *, base_dir: Optional[Path] = None
+    ) -> Dict[str, ArtifactRef]:
         if self._x is None or self._y is None or self._fields.get("Observed") is None:
             raise ValueError("No station data is loaded.")
         source = out_dir / "gravmag_station_data.npz"
@@ -394,7 +396,7 @@ class GravMagProcessingModule(BaseModule):
             z=np.asarray(self._effective_z(), dtype=float),
             values=np.asarray(self._fields["Observed"], dtype=float),
         )
-        project_root = out_dir.resolve()
+        project_root = (base_dir or out_dir).resolve()
 
         def ref(name: str) -> ArtifactRef:
             return ArtifactRef.from_path(
@@ -410,9 +412,7 @@ class GravMagProcessingModule(BaseModule):
 
     def _write_processing_recipe(self) -> None:
         try:
-            out_dir = io_utils.ensure_dir(
-                Path(self.state.output_dir or Path.cwd()) / "gravmag_results"
-            )
+            out_dir = self.state.ensure_results_store().scratch_dir(self.module_key)
             spec = WorkflowSpec(
                 workflow_id="gravmag.process",
                 inputs=self._workflow_input_refs(out_dir),
@@ -603,10 +603,12 @@ class GravMagProcessingModule(BaseModule):
         if kind != "gravity":
             field = {"strength_nT": self._B0.value(), "inclination": self._inc.value(),
                      "declination": self._dec.value()}
-        out_path = io_utils.ensure_dir(
-            Path(self.state.output_dir or Path.cwd()) / "gravmag_inversion"
-        )
-        project_root = out_path.resolve()
+        try:
+            run = self.begin_persisted_run("gravmag.invert", "gravmag.invert")
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not prepare Project run: {exc}", "error")
+            return
+        project_root = run.run_dir
         parameters = {
             "kind": kind,
             "field": field,
@@ -626,13 +628,13 @@ class GravMagProcessingModule(BaseModule):
         }
         spec = WorkflowSpec(
             workflow_id="gravmag.invert",
-            inputs=self._workflow_input_refs(out_path),
+            inputs=self._workflow_input_refs(run.inputs_dir, base_dir=run.run_dir),
             parameters=parameters,
             seed=42,
             metadata={"source_file": str(self._source_path or "")},
         )
         recipe_path, script_path = export_workflow_bundle(
-            spec, out_path, stem="gravmag_inversion"
+            spec, run.run_dir, stem="gravmag_inversion"
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._gravmag_recipe_path = str(recipe_path)
@@ -644,7 +646,7 @@ class GravMagProcessingModule(BaseModule):
                  f"cap {self._max_stations.value()}, detrend {self._detrend.value()})…", "info")
         worker = WorkflowWorker(
             spec,
-            RunContext(project_root=project_root, output_dir=out_path),
+            RunContext(project_root=project_root, output_dir=run.outputs_dir),
         )
         worker.logged.connect(lambda message: self.log(message, "info"))
         worker.succeeded.connect(self._on_gravmag_workflow_ok)
@@ -664,14 +666,16 @@ class GravMagProcessingModule(BaseModule):
                 path if path.is_absolute()
                 else Path(self._gravmag_recipe_path).resolve().parent / path
             )
-        self._on_inversion_ok(payload)
-        if hasattr(self.state, "update_workflow_result"):
-            self.state.update_workflow_result(
-                self.module_key,
-                "gravmag.invert",
-                result.to_dict(),
-                recipe_path=self._gravmag_recipe_path,
-            )
+        try:
+            self._on_inversion_ok(payload)
+        finally:
+            if hasattr(self.state, "update_workflow_result"):
+                self.state.update_workflow_result(
+                    self.module_key,
+                    "gravmag.invert",
+                    result.to_dict(),
+                    recipe_path=self._gravmag_recipe_path,
+                )
 
     def _on_inversion_ok(self, result: dict) -> None:
         self._inv_result = result
@@ -730,6 +734,7 @@ class GravMagProcessingModule(BaseModule):
                             "model_vtk": vtk, "n_cells": result["n_cells"]})
 
     def _on_inversion_failed(self, message: str) -> None:
+        self.fail_persisted_run(message)
         if ("backend" in message.lower() or "simpeg" in message.lower()
                 or "discretize" in message.lower() or "pymatsolver" in message.lower()):
             self.log(f"SimPEG 3D inversion needs SimPEG + pymatsolver: {message}", "warn")

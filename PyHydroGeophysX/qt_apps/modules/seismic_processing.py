@@ -68,7 +68,6 @@ try:
         export_traveltime_container,
         first_breaks_to_traveltime,
         normalize_traces,
-        pick_first_breaks,
         read_geometrics_dat,
         read_segy,
     )
@@ -1191,7 +1190,7 @@ class SeismicProcessingModule(BaseModule):
                 field_record=sid, trace_number=gid, trace_index=gid - 1, amplitude=0.0))
         if not picks:
             raise ValueError("No valid (finite, positive) travel times found.")
-        out = io_utils.ensure_dir(Path(str(self.state.output_dir or Path.cwd())) / "srt_results")
+        out = self.state.ensure_results_store().scratch_dir(self.module_key)
         tmp = str(out / "uploaded_traveltime.dat")
         first_breaks_to_traveltime(picks, tmp)
         return tt.load(tmp)
@@ -1234,23 +1233,11 @@ class SeismicProcessingModule(BaseModule):
                                symbolSize=15, symbolBrush=color, symbolPen=pg.mkPen("#222", width=0.8))
 
     def _run_srt(self) -> None:
-        out = io_utils.ensure_dir(Path(str(self.state.output_dir or Path.cwd())) / "srt_results")
-        travel_path = out / "traveltime.dat"
-        picks_path: Optional[Path] = None
-        sources_path: Optional[Path] = None
-        pick_source = "uploaded"
-
-        # Uploaded travel times take priority, but the live DataContainer is
-        # materialized so a generated script never depends on this process.
+        picks = None
         if self._tt_data is not None:
             n = int(self._tt_data.size())
             if n < 4:
                 self.log("Uploaded travel-time file has too few measurements to invert.", "warn")
-                return
-            try:
-                export_traveltime_container(self._tt_data, str(travel_path))
-            except Exception as exc:  # noqa: BLE001
-                self.log(f"Could not serialize uploaded travel times: {exc}", "error")
                 return
             start_msg = f"Running SRT inversion on {n} uploaded travel times."
         else:
@@ -1260,8 +1247,32 @@ class SeismicProcessingModule(BaseModule):
                 self.log("Pick first breaks on at least a couple of shots, or upload "
                          "travel times, before SRT inversion.", "warn")
                 return
-            picks_path = out / "first_break_picks.csv"
-            sources_path = out / "first_break_sources.json"
+            start_msg = f"Running SRT inversion: {len(picks)} picks from {n_shots} shot(s)."
+        try:
+            run = self.begin_persisted_run(
+                "seismic.srt_inversion", "seismic.srt_inversion"
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not prepare Project run: {exc}", "error")
+            return
+        travel_path = run.inputs_dir / "traveltime.dat"
+        picks_path: Optional[Path] = None
+        sources_path: Optional[Path] = None
+        pick_source = "uploaded"
+
+        # Uploaded travel times take priority, but the live DataContainer is
+        # materialized so a generated script never depends on this process.
+        if self._tt_data is not None:
+            try:
+                export_traveltime_container(self._tt_data, str(travel_path))
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Could not serialize uploaded travel times: {exc}", "error")
+                self.fail_persisted_run(str(exc), "seismic.srt_inversion")
+                return
+        else:
+            assert picks is not None
+            picks_path = run.inputs_dir / "first_break_picks.csv"
+            sources_path = run.inputs_dir / "first_break_sources.json"
             export_first_breaks(picks, str(picks_path))
             first_breaks_to_traveltime(
                 picks, str(travel_path), receiver_spacing=self._spacing.value()
@@ -1281,11 +1292,10 @@ class SeismicProcessingModule(BaseModule):
                 else "manual" if "manual" in source_values
                 else "automatic"
             )
-            start_msg = f"Running SRT inversion: {len(picks)} picks from {n_shots} shot(s)."
 
         # Materialized interaction artifacts live beside the recipe/script, so
         # generated code is portable without knowing the original checkout.
-        project_root = out.resolve()
+        project_root = run.run_dir
         inputs: Dict[str, Any] = {
             "traveltime": ArtifactRef.from_path(
                 travel_path,
@@ -1319,9 +1329,9 @@ class SeismicProcessingModule(BaseModule):
                         **self._collect_srt_params()},
             metadata={"pick_source": pick_source},
         )
-        recipe_path, script_path = export_workflow_bundle(spec, out, stem="srt")
+        recipe_path, script_path = export_workflow_bundle(spec, run.run_dir, stem="srt")
         self._reproduce.set_bundle(recipe_path, script_path)
-        context = RunContext(project_root=project_root, output_dir=out)
+        context = RunContext(project_root=project_root, output_dir=run.outputs_dir)
         worker = WorkflowWorker(spec, context)
         self._srt_spec = spec
         self._srt_recipe_path = str(recipe_path)
@@ -1360,14 +1370,16 @@ class SeismicProcessingModule(BaseModule):
             "auto_lambda_note": str(result.summary.get("auto_lambda_note", "")),
             "auto_lambda_status": str(result.summary.get("auto_lambda_status", "off")),
         }
-        self._on_srt_ok(payload)
-        if hasattr(self.state, "update_workflow_result"):
-            self.state.update_workflow_result(
-                self.module_key,
-                "seismic.srt_inversion",
-                result.to_dict(),
-                recipe_path=self._srt_recipe_path,
-            )
+        try:
+            self._on_srt_ok(payload)
+        finally:
+            if hasattr(self.state, "update_workflow_result"):
+                self.state.update_workflow_result(
+                    self.module_key,
+                    "seismic.srt_inversion",
+                    result.to_dict(),
+                    recipe_path=self._srt_recipe_path,
+                )
 
     def _on_srt_ok(self, result: dict) -> None:
         mgr = result.get("mgr")
@@ -1435,6 +1447,7 @@ class SeismicProcessingModule(BaseModule):
             self.log(f"Velocity model export failed: {exc}", "error")
 
     def _on_srt_failed(self, message: str) -> None:
+        self.fail_persisted_run(message, "seismic.srt_inversion")
         self.log(f"SRT inversion failed: {message}", "error")
 
     def _reset_srt_button(self) -> None:

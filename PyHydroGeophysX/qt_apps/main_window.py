@@ -106,6 +106,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         self._output_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.statusBar().addPermanentWidget(self._output_label)
         self._restore_output_dir()
+        self._activate_results_store(self.state.output_dir)
 
         self.log(f"Workbench started. Context: {self.state.context_path or '(none)'}", "info")
         if self.state.context_path and not self.state.context:
@@ -178,7 +179,10 @@ class PyHydroGeophysXWorkbench(QMainWindow):
             QMessageBox.warning(self, "Output folder",
                                 f"{path} cannot be written to:\n{exc}")
             return
-        self.state.output_dir = path
+        if not self._activate_results_store(path):
+            return
+        self._reset_pages(clear_session=True)
+        self.show_module("home")
         QSettings("PyHydroGeophysX", "Workbench").setValue("main/outputDir", str(path))
         self._refresh_output_label()
         self.log(f"Output folder set to {path}", "success")
@@ -229,6 +233,11 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         menubar = self.menuBar()
 
         file_menu = menubar.addMenu("&File")
+        self._add_action(file_menu, "New Project…", self._new_project)
+        self._add_action(file_menu, "Open Project…", self._open_project)
+        self._add_action(file_menu, "Import Existing Results…", self._import_existing_results)
+        self._add_action(file_menu, "Save Project", self._save_project)
+        file_menu.addSeparator()
         self._add_action(file_menu, "Open Project Context…", self._open_context)
         self._add_action(file_menu, "Set Output Folder…", self._choose_output_dir)
         self._add_action(file_menu, "Save Workbench Result", self._save_result)
@@ -244,6 +253,8 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         view_menu.addAction(self._log_dock.toggleViewAction())
 
         tools_menu = menubar.addMenu("&Tools")
+        self._add_action(tools_menu, "Model Viewer", lambda: self.show_module("model_viewer"))
+        tools_menu.addSeparator()
         self._add_action(tools_menu, "Geophysical Data Processing", lambda: self.show_module("seismic"))
         self._add_action(tools_menu, "Hydro → Geophysics", lambda: self.show_module("hydro_geophysics"))
         subsurface = tools_menu.addMenu("Geophy → Hydrology")
@@ -262,6 +273,8 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         toolbar.setIconSize(QSize(18, 18))
         self.addToolBar(toolbar)
+        # Keep the long-standing bridge actions on the primary toolbar. Project
+        # lifecycle has its own explicit File menu entries.
         self._add_action(toolbar, "Open", self._open_context, icon_name="fa5s.folder-open")
         self._add_action(toolbar, "Save", self._save_result, icon_name="fa5s.save")
         toolbar.addSeparator()
@@ -359,16 +372,102 @@ class PyHydroGeophysXWorkbench(QMainWindow):
             self.log("Nothing to delete in this module.", "debug")
 
     # -- file actions --------------------------------------------------------
-    def _open_context(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Open project context", "", "JSON (*.json)")
-        if not path:
-            return
-        self.state = WorkbenchState.from_context(path)
+    def _activate_results_store(self, root: Optional[Path]) -> bool:
+        if root is None:
+            return False
+        try:
+            store = self.state.set_results_store(root)
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not open Project at {root}: {exc}", "error")
+            return False
+        self._refresh_output_label()
+        self.log(f"Project ready: {store.root}", "success")
+        return True
+
+    def _reset_pages(self, *, clear_session: bool = False) -> None:
+        for page in self._pages.values():
+            page.stop_workers()
         self._pages.clear()
         while self._stack.count():
             widget = self._stack.widget(0)
             self._stack.removeWidget(widget)
             widget.deleteLater()
+        if clear_session:
+            self.state.clear_project_session()
+
+    def _new_project(self) -> None:
+        chosen = QFileDialog.getExistingDirectory(
+            self, "Choose or create Project folder", str(self.state.output_dir or Path.cwd())
+        )
+        if not chosen:
+            return
+        if not self._activate_results_store(Path(chosen)):
+            return
+        self._reset_pages(clear_session=True)
+        QSettings("PyHydroGeophysX", "Workbench").setValue("main/outputDir", chosen)
+        self.show_module("home")
+
+    def _open_project(self) -> None:
+        chosen = QFileDialog.getExistingDirectory(
+            self, "Open Project", str(self.state.results_store_root or Path.cwd())
+        )
+        if not chosen:
+            return
+        if not self._activate_results_store(Path(chosen)):
+            return
+        self._reset_pages(clear_session=True)
+        QSettings("PyHydroGeophysX", "Workbench").setValue("main/outputDir", chosen)
+        self.show_module("model_viewer")
+
+    def _save_project(self) -> None:
+        try:
+            store = self.state.ensure_results_store()
+            count = len(store.rebuild_index())
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Save Project", str(exc))
+            return
+        self.log(f"Project index saved ({count} runs).", "success")
+
+    def _import_existing_results(self) -> None:
+        chosen = QFileDialog.getExistingDirectory(
+            self, "Import existing results folder", str(self.state.output_dir or Path.cwd())
+        )
+        if not chosen:
+            return
+        store = self.state.ensure_results_store()
+        preview = store.preview_legacy(chosen)
+        if not preview:
+            QMessageBox.information(
+                self, "Import existing results",
+                "No explicit workflow recipe/result pairs were found. No files were changed.",
+            )
+            return
+        answer = QMessageBox.question(
+            self, "Import existing results",
+            f"Found {len(preview)} recipe/result pair(s). Add run metadata without "
+            "moving the scientific files?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes,
+        )
+        if answer != QMessageBox.Yes:
+            return
+        try:
+            imported = store.import_legacy(chosen)
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Import existing results", str(exc))
+            return
+        self.log(f"Imported {len(imported)} legacy run(s).", "success")
+        self.show_module("model_viewer")
+        viewer = self._pages.get("model_viewer")
+        if viewer is not None and hasattr(viewer, "use_current_store"):
+            viewer.use_current_store()
+
+    def _open_context(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Open project context", "", "JSON (*.json)")
+        if not path:
+            return
+        self._reset_pages()
+        self.state = WorkbenchState.from_context(path)
+        self._activate_results_store(self.state.output_dir or Path(path).parent)
         self.log(f"Loaded context {path}", "success")
         self.show_module(self.state.selected_module or "home")
 

@@ -94,3 +94,24 @@ jobs:
           pytest -q
           tests/test_ert_backend_selection.py
           tests/test_ert_adtlert_backend.py
+
+  qt-model-viewer:
+    name: "Qt Model Viewer (ubuntu, py3.11)"
+    runs-on: ubuntu-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install lightweight desktop dependencies
+        run: python -m pip install -e ".[desktop]" pytest
+
+      - name: Run Qt Model Viewer smoke test
+        run: pytest -q tests/test_qt_model_viewer.py

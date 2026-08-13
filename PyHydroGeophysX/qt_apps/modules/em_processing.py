@@ -11,12 +11,12 @@ forward operators). Results export to npy / csv.
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 from typing import Any, Dict, Optional
 
 import numpy as np
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QAbstractScrollArea,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -39,7 +39,7 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.inversion.em1d_lci import DOI_SENSITIVITY_THRESHOLD
 from PyHydroGeophysX.workflows import em1d as em_pipeline
-from PyHydroGeophysX.qt_apps import io_utils, theme
+from PyHydroGeophysX.qt_apps import theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
     BusyStateController,
@@ -1053,14 +1053,27 @@ class EMProcessingModule(BaseModule):
             self._on_inversion_failed("No persisted EM source is available.", False)
             self._reset_inv_button()
             return
-        output_dir = io_utils.ensure_dir(Path(self.state.output_dir or ".") / "em_results")
+        try:
+            run = self.begin_persisted_run("em.inversion", "em.inversion")
+        except Exception as exc:  # noqa: BLE001
+            self._on_inversion_failed(f"Could not prepare Project run: {exc}", False)
+            self._reset_inv_button()
+            return
+        try:
+            source = self._persist_source(run.inputs_dir)
+        except OSError as exc:
+            self.fail_persisted_run(str(exc), "em.inversion")
+            self._on_inversion_failed(f"Could not persist EM input: {exc}", False)
+            self._reset_inv_button()
+            return
         spec = WorkflowSpec(
             workflow_id="em.inversion",
             inputs={
                 "data": ArtifactRef.from_path(
-                    self._source_path,
+                    source,
                     artifact_id="em-sounding",
                     kind="em_sounding",
+                    base_dir=run.run_dir,
                 )
             },
             parameters={
@@ -1073,13 +1086,13 @@ class EMProcessingModule(BaseModule):
             metadata={"source": "qt"},
         )
         recipe_path, script_path = export_workflow_bundle(
-            spec, output_dir, stem="em_inversion"
+            spec, run.run_dir, stem="em_inversion"
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._workflow_recipe_path = str(recipe_path)
         self._inv_worker = WorkflowWorker(
             spec,
-            RunContext(project_root=output_dir, output_dir=output_dir),
+            RunContext(project_root=run.run_dir, output_dir=run.outputs_dir),
         )
         self._inv_worker.logged.connect(lambda m: self.log(m, "info"))
         self._inv_worker.succeeded.connect(self._on_workflow_ok)
@@ -1089,20 +1102,35 @@ class EMProcessingModule(BaseModule):
         self._inv_worker.start()
 
     def _on_workflow_ok(self, result: WorkflowRunResult) -> None:
-        if hasattr(self.state, "update_workflow_result"):
-            self.state.update_workflow_result(
-                self.module_key,
-                "em.inversion",
-                result.to_dict(),
-                recipe_path=self._workflow_recipe_path,
-            )
-        self._on_inversion_ok(result.legacy_payload())
+        try:
+            self._on_inversion_ok(result.legacy_payload())
+        finally:
+            if hasattr(self.state, "update_workflow_result"):
+                self.state.update_workflow_result(
+                    self.module_key,
+                    "em.inversion",
+                    result.to_dict(),
+                    recipe_path=self._workflow_recipe_path,
+                )
 
     def _start_line(self, method: str) -> None:
-        out_dir = str(io_utils.ensure_dir(Path(self.state.output_dir or ".") / "em_results"))
+        try:
+            run = self.begin_persisted_run("em.line_inversion")
+        except Exception as exc:  # noqa: BLE001
+            self._on_line_failed(f"Could not prepare Project run: {exc}")
+            self._reset_inv_button()
+            return
+        try:
+            source = self._persist_source(run.inputs_dir)
+        except OSError as exc:
+            self.fail_persisted_run(str(exc), "em.line_inversion")
+            self._on_line_failed(f"Could not persist EM input: {exc}")
+            self._reset_inv_button()
+            return
+        out_dir = str(run.outputs_dir)
         self.log(f"Starting {method} line inversion (up to {self._line_max.value()} soundings)…", "info")
         worker = TaskWorker(
-            em_pipeline.invert_line, str(self._source_path), method,
+            em_pipeline.invert_line, str(source), method,
             self._collect_geom(), self._collect_inv(), with_log=True,
             spacing=float(self._line_spacing.value()), positions=self._geom_positions,
             heights=self._geom_heights, max_soundings=int(self._line_max.value()),
@@ -1117,6 +1145,18 @@ class EMProcessingModule(BaseModule):
         worker.finished.connect(self._reset_inv_button)
         self._line_worker = self.register_worker(worker)
         worker.start()
+
+    def _persist_source(self, inputs_dir: Path) -> Path:
+        """Copy the selected file/folder so a recorded EM run is self-contained."""
+        if self._source_path is None:
+            raise FileNotFoundError("No persisted EM source is available.")
+        source = self._source_path
+        target = inputs_dir / source.name
+        if source.is_dir():
+            shutil.copytree(source, target)
+        else:
+            shutil.copy2(source, target)
+        return target
 
     def _reset_inv_button(self) -> None:
         if self._inv_busy is not None:
@@ -1162,13 +1202,19 @@ class EMProcessingModule(BaseModule):
 
     def _on_line_ok(self, result: dict) -> None:
         self._last_section = result
+        # The overview is the only UI-success step that also writes an
+        # artifact.  Finalize even if rendering it fails so a successful,
+        # expensive inversion is never left permanently marked as running.
+        try:
+            self._populate_overview(result)
+        finally:
+            self._finish_line_run(result)
         if "data_scale" in result:  # show the value the worker actually used (calibrated)
             self._data_scale.setValue(float(result["data_scale"]))
         self._section_view.show_model(result["edges"], result["model3d"],
                                       label=result["label"], cmap=result["cmap"],
                                       log_scale=result.get("log_scale", True))
         self._populate_plan(result)
-        self._populate_overview(result)
         self._view_row.setVisible(True)
         self._view_mode.blockSignals(True); self._view_mode.setCurrentIndex(0)
         self._view_mode.blockSignals(False)
@@ -1245,6 +1291,20 @@ class EMProcessingModule(BaseModule):
         self.report_result({"method": result["method"], "n_soundings": result.get("n_soundings"),
                             "mean_chi2": chi2, "section_npz": saved[0] if saved else None})
 
+    def _finish_line_run(self, result: dict) -> None:
+        self.finish_persisted_run({
+            "status": "success",
+            "summary": {
+                "method": result.get("method"),
+                "n_soundings": result.get("n_soundings"),
+                "model_range": result.get("model_range"),
+            },
+            "metrics": {"mean_chi2": result.get("chi2")},
+            "artifacts": [],
+            "warnings": [],
+            "provenance": {"operation_id": "em.line_inversion"},
+        }, "em.line_inversion")
+
     def _populate_overview(self, result: dict) -> None:
         """Feed the map + section overview and save it beside the section data."""
         n_pos = int(np.asarray(result["model3d"]).shape[0])
@@ -1260,7 +1320,8 @@ class EMProcessingModule(BaseModule):
             result, x=x, y=y,
             lon=lon[:n_pos] if lon.size >= n_pos else None,
             lat=lat[:n_pos] if lat.size >= n_pos else None)
-        out = io_utils.ensure_dir(Path(self.state.output_dir or ".") / "em_results")
+        active = self.state.active_run(self.module_key, "em.line_inversion")
+        out = active.outputs_dir if active is not None else self.state.ensure_results_store().scratch_dir(self.module_key)
         saved = self._overview_view.save_figure(out / "em_line_overview.png")
         if saved:
             result.setdefault("saved", []).append(saved)
@@ -1294,10 +1355,12 @@ class EMProcessingModule(BaseModule):
                                     x_label=x_label, y_label=y_label)
 
     def _on_inversion_failed(self, message: str, backend: bool) -> None:
+        self.fail_persisted_run(message, "em.inversion")
         self.log(f"Inversion {'unavailable' if backend else 'failed'}: {message}",
                  "warn" if backend else "error")
 
     def _on_line_failed(self, message: str) -> None:
+        self.fail_persisted_run(message, "em.line_inversion")
         if any(k in message.lower() for k in ("backend", "simpeg", "discretize")):
             self.log(f"Line inversion needs SimPEG: {message}", "warn")
         else:
@@ -1341,7 +1404,8 @@ class EMProcessingModule(BaseModule):
             ax2.set_xscale("log"); ax2.set_title(f"Data fit (chi2={result['chi2']:.2f})")
             ax2.grid(True, which="both", alpha=0.3); ax2.legend(fontsize=8, frameon=False)
             fig.tight_layout()
-            out = io_utils.ensure_dir(Path(self.state.output_dir or ".") / "em_results")
+            active = self.state.active_run(self.module_key, "em.inversion")
+            out = active.outputs_dir if active is not None else self.state.ensure_results_store().scratch_dir(self.module_key)
             p = out / f"{result['method'].lower()}_inversion.png"
             fig.savefig(p, dpi=160, bbox_inches="tight"); plt.close(fig)
             return str(p)

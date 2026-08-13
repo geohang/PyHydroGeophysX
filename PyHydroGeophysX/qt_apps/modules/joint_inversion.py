@@ -927,20 +927,32 @@ class JointInversionModule(BaseModule):
         if not self._validated:
             self.log("Validate data compatibility before running.", "warn"); return
         request = self._request()
-        output_dir = io_utils.ensure_dir(Path(request.output_dir))
-        input_dir = io_utils.ensure_dir(output_dir / "inputs")
+        try:
+            run = self.begin_persisted_run(
+                "joint_inversion.run",
+                workflow_id="joint_inversion.run",
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not prepare Project run: {exc}", "error")
+            return
+        input_dir = run.inputs_dir
         references: Dict[str, ArtifactRef] = {}
         for method, payload in request.data.items():
-            stored = save_joint_observations(
-                method,
-                payload,
-                input_dir / str(method).lower(),
-            )
+            try:
+                stored = save_joint_observations(
+                    method,
+                    payload,
+                    input_dir / str(method).lower(),
+                )
+            except Exception as exc:  # noqa: BLE001
+                self.fail_persisted_run(str(exc))
+                self.log(f"Could not persist joint-inversion inputs: {exc}", "error")
+                return
             references[method] = ArtifactRef.from_path(
                 stored,
                 artifact_id=f"joint-input:{method.lower()}",
                 kind="joint_observations",
-                base_dir=output_dir,
+                base_dir=run.run_dir,
                 metadata={"method": method},
             )
         parameters = dict(request.parameters)
@@ -962,7 +974,7 @@ class JointInversionModule(BaseModule):
             metadata={"source": "qt", "input_order": list(request.data)},
         )
         recipe_path, script_path = export_workflow_bundle(
-            spec, output_dir, stem="joint_inversion"
+            spec, run.run_dir, stem="joint_inversion"
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._workflow_recipe_path = str(recipe_path)
@@ -974,7 +986,7 @@ class JointInversionModule(BaseModule):
         self._run_status.setText("Starting joint inversion…")
         worker = WorkflowWorker(
             spec,
-            RunContext(project_root=output_dir, output_dir=output_dir),
+            RunContext(project_root=run.run_dir, output_dir=run.outputs_dir),
         )
         worker.logged.connect(self._on_workflow_progress)
         worker.succeeded.connect(self._on_workflow_success)
@@ -991,6 +1003,10 @@ class JointInversionModule(BaseModule):
             self._on_progress(record if isinstance(record, dict) else {"message": message})
 
     def _on_workflow_success(self, result: WorkflowRunResult) -> None:
+        domain_result = result.objects.get("domain_result")
+        if not isinstance(domain_result, JointInversionResult):
+            self._on_failure("Joint workflow did not return its in-process domain result.")
+            return
         if hasattr(self.state, "update_workflow_result"):
             self.state.update_workflow_result(
                 self.module_key,
@@ -998,15 +1014,12 @@ class JointInversionModule(BaseModule):
                 result.to_dict(),
                 recipe_path=self._workflow_recipe_path,
             )
-        domain_result = result.objects.get("domain_result")
-        if not isinstance(domain_result, JointInversionResult):
-            self._on_failure("Joint workflow did not return its in-process domain result.")
-            return
         self._on_success(domain_result)
 
     def _cancel(self) -> None:
         if self._worker is not None:
             self._worker.cancel(); self._run_status.setText("Cancelling after the current solver step…")
+            self.cancel_persisted_run("Cancelled by user", "joint_inversion.run")
 
     def _on_progress(self, record: Dict[str, Any]) -> None:
         if "message" in record:
@@ -1038,6 +1051,7 @@ class JointInversionModule(BaseModule):
         self._go_to(5)
 
     def _on_failure(self, message: str) -> None:
+        self.fail_persisted_run(message)
         self._run_status.setText(f"Failed: {message}"); self.log(f"Joint inversion failed: {message}", "error")
 
     def _on_finished(self) -> None:

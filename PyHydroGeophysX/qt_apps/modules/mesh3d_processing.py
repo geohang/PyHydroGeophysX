@@ -15,7 +15,7 @@ the interactive 3D preview is replaced by a short note.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from PySide6.QtCore import QTimer, Qt, QUrl
@@ -443,10 +443,12 @@ class Mesh3DModule(BaseModule):
         f.addRow("Mesh name", self._mesh_name)
         v.addLayout(f)
         row = QHBoxLayout()
-        self._out_dir = QLineEdit(str(self._default_output_dir()))
-        browse = QPushButton("…"); browse.setMaximumWidth(32)
-        browse.clicked.connect(self._browse_output_dir)
-        row.addWidget(self._out_dir, stretch=1); row.addWidget(browse)
+        self._out_dir = QLineEdit("Managed by Project (one outputs/ folder per run)")
+        self._out_dir.setReadOnly(True)
+        self._out_dir.setToolTip(
+            "Mesh files are saved under the active Project's unique run directory."
+        )
+        row.addWidget(self._out_dir, stretch=1)
         v.addLayout(row)
         fr = QHBoxLayout()
         self._fmt_bms = QCheckBox("BMS"); self._fmt_bms.setChecked(True)
@@ -555,7 +557,7 @@ class Mesh3DModule(BaseModule):
             "borehole_top_padding": self._bh_top_pad.value(),
             "borehole_horizontal_cell": self._bh_hcell.value(),
             "borehole_vertical_cell": self._bh_vcell.value(),
-            "output_dir": self._out_dir.text().strip() or str(self._default_output_dir()),
+            "output_dir": str(self._default_output_dir()),
         }
         array = cfg["array_type"]
         if array == "Surface grid":
@@ -615,17 +617,23 @@ class Mesh3DModule(BaseModule):
 
     def _generate_mesh(self) -> None:
         cfg = self._collect_config()
-        output_dir = io_utils.ensure_dir(Path(cfg["output_dir"]))
+        try:
+            run = self.begin_persisted_run("mesh3d.build", "mesh3d.build")
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not prepare Project run: {exc}", "error")
+            return
+        output_dir = run.outputs_dir
+        cfg["output_dir"] = str(output_dir)
         topography_points = cfg.pop("topography_points", None)
         inputs = {}
         if topography_points is not None:
-            topo_path = output_dir / "mesh3d_topography_points.npy"
+            topo_path = run.inputs_dir / "mesh3d_topography_points.npy"
             np.save(topo_path, np.asarray(topography_points, dtype=float))
             inputs["topography_points"] = ArtifactRef.from_path(
                 topo_path,
                 artifact_id="mesh3d:topography_points",
                 kind="topography_points",
-                base_dir=output_dir,
+                base_dir=run.run_dir,
             )
         cfg["output_formats"] = self._selected_formats()
         cfg["output_name"] = self._safe_name()
@@ -636,7 +644,7 @@ class Mesh3DModule(BaseModule):
             metadata={"source": "qt"},
         )
         recipe_path, script_path = export_workflow_bundle(
-            spec, output_dir, stem="mesh3d"
+            spec, run.run_dir, stem="mesh3d"
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._mesh_recipe_path = str(recipe_path)
@@ -648,7 +656,7 @@ class Mesh3DModule(BaseModule):
         self.log("Generating 3D mesh…", "info")
         worker = WorkflowWorker(
             spec,
-            RunContext(project_root=output_dir, output_dir=output_dir),
+            RunContext(project_root=run.run_dir, output_dir=run.outputs_dir),
         )
         worker.logged.connect(lambda m: self.log(m, "info"))
         worker.succeeded.connect(lambda res: self._on_mesh_workflow_ok(cfg, res))
@@ -658,14 +666,16 @@ class Mesh3DModule(BaseModule):
         worker.start()
 
     def _on_mesh_workflow_ok(self, cfg: dict, result: WorkflowRunResult) -> None:
-        if hasattr(self.state, "update_workflow_result"):
-            self.state.update_workflow_result(
-                self.module_key,
-                "mesh3d.build",
-                result.to_dict(),
-                recipe_path=self._mesh_recipe_path,
-            )
-        self._on_mesh_generated(cfg, result.legacy_payload())
+        try:
+            self._on_mesh_generated(cfg, result.legacy_payload())
+        finally:
+            if hasattr(self.state, "update_workflow_result"):
+                self.state.update_workflow_result(
+                    self.module_key,
+                    "mesh3d.build",
+                    result.to_dict(),
+                    recipe_path=self._mesh_recipe_path,
+                )
 
     def _on_mesh_generated(self, cfg: dict, res: dict) -> None:
         mesh = res.get("mesh")
@@ -705,6 +715,7 @@ class Mesh3DModule(BaseModule):
         })
 
     def _on_mesh_failed(self, message: str) -> None:
+        self.fail_persisted_run(message, "mesh3d.build")
         self.log(f"Mesh generation failed: {message}", "error")
         self._info.setText(f"Generation failed: {message}")
 
@@ -736,9 +747,13 @@ class Mesh3DModule(BaseModule):
         if self._mesh is None or self._sensors is None:
             self.log("Generate a 3D mesh first (Generate 3D mesh).", "warn")
             return
-        out_dir = Path(self._out_dir.text().strip() or str(self._default_output_dir()))
-        bundle_dir = io_utils.ensure_dir(out_dir / "ert3d_forward")
-        input_dir = io_utils.ensure_dir(bundle_dir / "inputs")
+        try:
+            run = self.begin_persisted_run("ert3d.forward", "ert3d.forward")
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not prepare Project run: {exc}", "error")
+            return
+        bundle_dir = run.run_dir
+        input_dir = run.inputs_dir
         mesh_path = input_dir / "forward_mesh.bms"
         mesh_structure_path = input_dir / "forward_mesh.bms.structure.json"
         sensors_path = input_dir / "forward_sensors.csv"
@@ -789,7 +804,7 @@ class Mesh3DModule(BaseModule):
         self.log("Running agent-requested 3D ERT forward modeling…", "info")
         worker = WorkflowWorker(
             spec,
-            RunContext(project_root=bundle_dir, output_dir=out_dir),
+            RunContext(project_root=run.run_dir, output_dir=run.outputs_dir),
         )
         worker.logged.connect(lambda m: self.log(m, "info"))
         worker.succeeded.connect(self._on_ert3d_workflow_ok)
@@ -820,6 +835,7 @@ class Mesh3DModule(BaseModule):
             self.load_view_file(vtk)
 
     def _on_ert_forward_failed(self, message: str) -> None:
+        self.fail_persisted_run(message, "ert3d.forward")
         self.log(f"3D ERT forward failed: {message}", "error")
         self._info.setText(f"3D ERT forward failed: {message}")
 
@@ -1009,7 +1025,8 @@ class Mesh3DModule(BaseModule):
             self.log(f"Reset view failed: {exc}", "error")
 
     def _open_output_folder(self) -> None:
-        out = self._out_dir.text().strip() or str(self._default_output_dir())
+        out = self.state.module_results.get(self.module_key, {}).get("output_dir")
+        out = out or str(self.state.results_store_root or self._default_output_dir())
         path = Path(out)
         if path.exists():
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
@@ -1029,7 +1046,7 @@ class Mesh3DModule(BaseModule):
                           "box_height. Topography: z_flat, z_base, tilt_x, tilt_y, hill_base, hill_amp, "
                           "hill_sigma, hill_cx, hill_cy, topo_expr. Mesh: elec_refine, attractor, "
                           "bound_refine, para_depth, dz_fine, dz_coarse, bound_ext, single_region. "
-                          "Borehole: bh_x, bh_y, bh_z_start, bh_z_end, bh_n. Output: mesh_name, output_dir, "
+                          "Borehole: bh_x, bh_y, bh_z_start, bh_z_end, bh_n. Output: mesh_name, "
                           "fmt_bms, fmt_vtk, fmt_csv.")},
                 {"name": "preview_sensors", "args": {},
                  "desc": "Build and preview the sensor layout for the current config."},
@@ -1073,7 +1090,7 @@ class Mesh3DModule(BaseModule):
             "has_sensors": self._sensors is not None,
             "has_mesh": self._mesh is not None,
             "has_ert_forward": self._ert_fwd_result is not None,
-            "output_dir": self._out_dir.text(),
+            "output_dir": "Managed by active Project",
             "last_result_keys": sorted(last.keys()),
         }
 
@@ -1160,7 +1177,6 @@ class Mesh3DModule(BaseModule):
             "bh_z_end": lambda v: self._bh_z_end.setValue(float(v)),
             "bh_n": lambda v: self._bh_n.setValue(int(v)),
             "mesh_name": lambda v: self._mesh_name.setText(str(v)),
-            "output_dir": lambda v: self._out_dir.setText(str(v)),
             "fmt_bms": lambda v: self._fmt_bms.setChecked(bool(v)),
             "fmt_vtk": lambda v: self._fmt_vtk.setChecked(bool(v)),
             "fmt_csv": lambda v: self._fmt_csv.setChecked(bool(v)),

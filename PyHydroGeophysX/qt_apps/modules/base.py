@@ -43,6 +43,23 @@ class BaseModule(QWidget):
         self.state.update_module_result(self.module_key, data)
         self.resultsUpdated.emit()
 
+    def begin_persisted_run(
+        self, operation_id: str, workflow_id: str = "", *, label: str = ""
+    ):
+        """Allocate the sole durable directory for a module operation."""
+        return self.state.begin_run(
+            self.module_key, operation_id, workflow_id, label=label
+        )
+
+    def finish_persisted_run(self, result: Any, operation_id: str = "") -> None:
+        self.state.finish_run(self.module_key, result, operation_id)
+
+    def fail_persisted_run(self, error: str, operation_id: str = "") -> None:
+        self.state.fail_run(self.module_key, error, operation_id)
+
+    def cancel_persisted_run(self, error: str = "", operation_id: str = "") -> None:
+        self.state.cancel_run(self.module_key, error, operation_id)
+
     # -- agent command interface --------------------------------------------
     def agent_describe(self) -> Dict[str, Any]:
         """Describe this module for the AQUAH assistant.
@@ -95,6 +112,7 @@ class BaseModule(QWidget):
 
     def stop_workers(self, wait_ms: int = 5000) -> None:
         """Cancel cooperatively-interruptible workers and join running threads."""
+        had_workers = bool(self._workers)
         for worker in list(self._workers):
             try:
                 if hasattr(worker, "cancel"):
@@ -104,6 +122,10 @@ class BaseModule(QWidget):
                     worker.wait(wait_ms)
             except Exception:  # noqa: BLE001 - shutdown best effort
                 pass
+        if had_workers:
+            self.state.cancel_module_runs(
+                self.module_key, "Workbench closed during computation"
+            )
 
 
 class HomePage(BaseModule):

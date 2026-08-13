@@ -32,10 +32,11 @@ MODULE_SPECS = {
     "hydro_geophysics": ("hydro_geophysics", "HydroGeophysicsModule", "Hydro → Geophysics"),
     "geo_hydrology": ("geo_hydrology", "GeoHydrologyModule", "ERT → Water Content"),
     "seismic3d": ("seismic3d", "Seismic3DModule", "Seismic → Structure"),
+    "model_viewer": ("model_viewer", "ModelViewerModule", "Model Viewer"),
 }
 
 #: Order used to populate the central stack. ``home`` is always first.
-MODULE_ORDER: List[str] = ["home", "seismic", "ert", "mesh3d", "em", "gravmag", "joint_inversion", "hydro_geophysics", "geo_hydrology", "seismic3d"]
+MODULE_ORDER: List[str] = ["home", "seismic", "ert", "mesh3d", "em", "gravmag", "joint_inversion", "hydro_geophysics", "geo_hydrology", "seismic3d", "model_viewer"]
 
 #: Install commands for optional packages a module import may be missing.
 _INSTALL_HINTS = INSTALL_HINTS

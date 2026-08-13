@@ -12,6 +12,7 @@ pygimli forward run with a config-export fallback).
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -881,6 +882,13 @@ class HydroGeophysicsModule(BaseModule):
             self._update_strip()
             return
         files = hydro_pipeline.find_hydro_files(Path(data_dir))
+        # These stay memory-mapped for as long as the module holds them, which is
+        # what keeps a multi-gigabyte water-content array off the heap. The cost
+        # is that Windows will not let anything overwrite a mapped file, so a
+        # regenerated folder cannot be reloaded until the old maps are dropped.
+        # Releasing them here makes reloading the same folder work; the reference
+        # count is what closes the map, so this has to happen before reassigning.
+        self._release_hydro_arrays()
         self._wc = self._safe_load(files["water_content"], mmap=True)
         self._por = self._safe_load(files["porosity"], mmap=True)
         # top is a NumPy array (top.npy), same as the other three; load with
@@ -904,6 +912,20 @@ class HydroGeophysicsModule(BaseModule):
         self.log(f"Loaded hydro data from {data_dir}", "success" if not missing else "warn")
         self._update_display()
         self._update_strip()
+
+    def _release_hydro_arrays(self) -> None:
+        """Drop the memory-mapped hydro arrays so their file handles close.
+
+        A numpy memmap closes when its last reference goes, so clearing the
+        attributes is the release. gc.collect covers the case where a plot or a
+        slice still holds one, which would otherwise keep the file locked.
+        """
+        import gc
+
+        for name in ("_wc", "_por", "_top", "_bot"):
+            if getattr(self, name, None) is not None:
+                setattr(self, name, None)
+        gc.collect()
 
     def _safe_load(self, path, mmap: bool = False, text: bool = False):
         if path is None:
@@ -1100,7 +1122,8 @@ class HydroGeophysicsModule(BaseModule):
         config = hydro_pipeline.build_survey_config(
             self.state.context, params, methods, self._point1 or [0, 0], self._point2 or [0, 0],
             profile=self._profile)
-        out_dir = io_utils.ensure_dir(Path(params["output_dir"] or ".") / "qt_hydro_forward")
+        active = self.state.active_run(self.module_key)
+        out_dir = active.outputs_dir if active else self.state.ensure_results_store().scratch_dir(self.module_key)
         config_path = out_dir / "survey_config.json"
         io_utils.write_json(config_path, config)
         self.log(f"Exported survey config to {config_path}", "success")
@@ -1119,16 +1142,32 @@ class HydroGeophysicsModule(BaseModule):
         seed = int(params.pop("seed"))
         data_dir = self._data_dir()
         params.pop("hydro_data_dir", None)
-        output_base = Path(params.pop("output_dir", "") or ".")
+        params.pop("output_dir", None)
+        try:
+            run = self.begin_persisted_run(
+                "hydro_geophysics.forward",
+                workflow_id="hydro_geophysics.forward",
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not prepare Project run: {exc}", "error")
+            return
         hydro_files: Dict[str, ArtifactRef] = {}
         if data_dir is not None:
             for filename in ("Watercontent.npy", "Porosity.npy", "top.npy", "bot.npy"):
                 path = data_dir / filename
                 if path.is_file():
+                    stored = run.inputs_dir / filename
+                    try:
+                        shutil.copy2(path, stored)
+                    except OSError as exc:
+                        self.fail_persisted_run(str(exc))
+                        self.log(f"Could not persist {filename}: {exc}", "error")
+                        return
                     hydro_files[filename] = ArtifactRef.from_path(
-                        path,
+                        stored,
                         artifact_id=f"hydro-input:{filename}",
                         kind="hydrology_array",
+                        base_dir=run.run_dir,
                     )
         spec = WorkflowSpec(
             workflow_id="hydro_geophysics.forward",
@@ -1145,11 +1184,8 @@ class HydroGeophysicsModule(BaseModule):
             seed=seed,
             metadata={"profile_source": "qt_map_picker"},
         )
-        bundle_dir = io_utils.ensure_dir(
-            output_base / "qt_hydro_forward"
-        )
         recipe_path, script_path = export_workflow_bundle(
-            spec, bundle_dir, stem="hydro_forward"
+            spec, run.run_dir, stem="hydro_forward"
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._workflow_recipe_path = str(recipe_path)
@@ -1164,8 +1200,8 @@ class HydroGeophysicsModule(BaseModule):
             WorkflowWorker(
                 spec,
                 RunContext(
-                    project_root=bundle_dir,
-                    output_dir=output_base,
+                    project_root=run.run_dir,
+                    output_dir=run.outputs_dir,
                 ),
             )
         )
@@ -1198,6 +1234,7 @@ class HydroGeophysicsModule(BaseModule):
         self._go_to(5)
 
     def _on_forward_failed(self, message: str, backend_unavailable: bool) -> None:
+        self.fail_persisted_run(message)
         self._progress.setRange(0, 1); self._progress.setValue(0)
         level = "warn" if backend_unavailable else "error"
         self.log(f"Forward run problem: {message}", level)

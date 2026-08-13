@@ -114,7 +114,12 @@ A header-less file is read by column order: one column = position; two columns =
   lateral smoothness to zero to recover the former independent-1D workflow.
 - A line inversion opens the **Resistivity model** tab on "View: Overview
   (map + section)": the survey map with every sounding in black and the sectioned
-  line picked out, above that line's distance vs depth resistivity section. A
+  line picked out, above that line's distance vs depth resistivity section.
+  Beside the map are the few numbers the picture does not already carry: what was
+  run, how many soundings and layers, the median χ², and the depth of
+  investigation. The colour range is on the colourbar and the depth range on the
+  axis, so neither is repeated, and how the misfit varies along the survey is on
+  the **Inversion quality** tab. A
   survey holding several line numbers is sectioned one line at a time (pick it
   with "Survey line"), because chaining the lines would put an artificial jump in
   the middle of the section. Columns hatched in white are soundings that

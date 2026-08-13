@@ -145,26 +145,26 @@ class LocalHydroAccessor(BaseHydroAccessor):
             return False, summary, errors
 
         try:
-            import numpy as np
+            from PyHydroGeophysX.data_processing.table_io import npy_shape
 
-            water = np.load(self.root / "Watercontent.npy", mmap_mode="r")
-            porosity = np.load(self.root / "Porosity.npy", mmap_mode="r")
-            bot = np.load(self.root / "bot.npy", mmap_mode="r")
+            # Only the shapes are needed, so read the headers instead of mapping
+            # the arrays: a mapping would hold these files open and block whatever
+            # regenerates them.
+            water = npy_shape(self.root / "Watercontent.npy")
+            porosity = npy_shape(self.root / "Porosity.npy")
+            bot = npy_shape(self.root / "bot.npy")
 
-            summary["water_shape"] = tuple(int(v) for v in water.shape)
-            summary["porosity_shape"] = tuple(int(v) for v in porosity.shape)
-            summary["bot_shape"] = tuple(int(v) for v in bot.shape)
-            summary["snapshot_count"] = int(water.shape[0]) if water.ndim >= 1 else 0
+            summary["water_shape"] = water
+            summary["porosity_shape"] = porosity
+            summary["bot_shape"] = bot
+            summary["snapshot_count"] = int(water[0]) if water else 0
 
-            if water.ndim >= 3:
+            if len(water) >= 3:
                 summary["grid_info"] = (
-                    f"{water.shape[1]} x {water.shape[2]} cells, "
-                    f"{water.shape[0]} timesteps"
+                    f"{water[1]} x {water[2]} cells, {water[0]} timesteps"
                 )
 
-            valid = bool(
-                water.ndim >= 3 and porosity.ndim >= 3 and bot.ndim >= 2
-            )
+            valid = bool(len(water) >= 3 and len(porosity) >= 3 and len(bot) >= 2)
             if not valid:
                 errors.append(
                     "Array dimensions invalid: expected water/porosity >=3D, bot >=2D."
@@ -179,10 +179,10 @@ class LocalHydroAccessor(BaseHydroAccessor):
         files = [p.name for p in self.root.iterdir() if p.is_file()]
         info: Dict[str, Any] = {"files": sorted(files)}
         try:
-            import numpy as np
+            from PyHydroGeophysX.data_processing.table_io import npy_shape
 
-            water = np.load(self.root / "Watercontent.npy", mmap_mode="r")
-            info["timesteps"] = int(water.shape[0]) if water.ndim >= 1 else 0
+            shape = npy_shape(self.root / "Watercontent.npy")
+            info["timesteps"] = int(shape[0]) if shape else 0
         except Exception:  # noqa: BLE001
             info["timesteps"] = None
         return info
@@ -281,30 +281,27 @@ class HttpHydroAccessor(BaseHydroAccessor):
 
         # Validate array shapes by reading from cache
         try:
-            import numpy as np
-
             wpath = self._cached_path("Watercontent.npy")
             ppath = self._cached_path("Porosity.npy")
             bpath = self._cached_path("bot.npy")
 
-            water = np.load(str(wpath), mmap_mode="r")
-            porosity = np.load(str(ppath), mmap_mode="r")
-            bot = np.load(str(bpath), mmap_mode="r")
+            from PyHydroGeophysX.data_processing.table_io import npy_shape
 
-            summary["water_shape"] = tuple(int(v) for v in water.shape)
-            summary["porosity_shape"] = tuple(int(v) for v in porosity.shape)
-            summary["bot_shape"] = tuple(int(v) for v in bot.shape)
-            summary["snapshot_count"] = int(water.shape[0]) if water.ndim >= 1 else 0
+            water = npy_shape(wpath)
+            porosity = npy_shape(ppath)
+            bot = npy_shape(bpath)
 
-            if water.ndim >= 3:
+            summary["water_shape"] = water
+            summary["porosity_shape"] = porosity
+            summary["bot_shape"] = bot
+            summary["snapshot_count"] = int(water[0]) if water else 0
+
+            if len(water) >= 3:
                 summary["grid_info"] = (
-                    f"{water.shape[1]} x {water.shape[2]} cells, "
-                    f"{water.shape[0]} timesteps"
+                    f"{water[1]} x {water[2]} cells, {water[0]} timesteps"
                 )
 
-            valid = bool(
-                water.ndim >= 3 and porosity.ndim >= 3 and bot.ndim >= 2
-            )
+            valid = bool(len(water) >= 3 and len(porosity) >= 3 and len(bot) >= 2)
             if not valid:
                 errors.append(
                     "Array dimensions invalid: expected water/porosity >=3D, bot >=2D."

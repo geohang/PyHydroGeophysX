@@ -14,6 +14,7 @@ remains an internal fallback when a device parser raises.
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -815,7 +816,7 @@ class ERTProcessingModule(BaseModule):
         added and when a row in the file list is clicked to preview it."""
         instrument = self._instrument.currentData()
         # Capture widget/state values on the UI thread; the parse runs off-thread.
-        out_dir = self.state.output_dir or Path.cwd()
+        out_dir = self.state.ensure_results_store().scratch_dir(self.module_key)
         elec_file = str(self._electrode_path) if self._electrode_path and self._electrode_path.exists() else None
         spacing = None  # geometry comes from the file; instrument loaders handle layout
         self._info.setText(f"Loading {Path(path).name}…")
@@ -1240,9 +1241,15 @@ class ERTProcessingModule(BaseModule):
             )
         if str(self._inv_mode.currentData() or "quick") == "full":
             self._report_data_health()
-        out = self.state.output_dir or Path.cwd()
-        out_path = io_utils.ensure_dir(Path(out) / "ert_results")
-        input_path = out_path / "filtered_ert_data.dat"
+        try:
+            run = self.begin_persisted_run(
+                "ert.single_inversion", "ert.single_inversion"
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not prepare Project run: {exc}", "error")
+            return
+        out_path = run.outputs_dir
+        input_path = run.inputs_dir / "filtered_ert_data.dat"
         electrode_rows = [
             {
                 "order": index,
@@ -1253,8 +1260,8 @@ class ERTProcessingModule(BaseModule):
             }
             for index in range(len(self._x))
         ]
-        electrode_path = out_path / "edited_electrodes.csv"
-        qc_path = out_path / "ert_qc_mask.json"
+        electrode_path = run.inputs_dir / "edited_electrodes.csv"
+        qc_path = run.inputs_dir / "ert_qc_mask.json"
         io_utils.write_csv(
             electrode_path,
             [
@@ -1282,8 +1289,9 @@ class ERTProcessingModule(BaseModule):
             save_edited_ert_container(self._ert_data, input_path, electrode_rows)
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not serialize edited/QC-filtered ERT data: {exc}", "error")
+            self.fail_persisted_run(str(exc), "ert.single_inversion")
             return
-        project_root = out_path.resolve()
+        project_root = run.run_dir
         spec = WorkflowSpec(
             workflow_id="ert.single_inversion",
             inputs={
@@ -1340,7 +1348,7 @@ class ERTProcessingModule(BaseModule):
             },
             metadata={"source_instrument": self._instrument.currentText()},
         )
-        recipe_path, script_path = export_workflow_bundle(spec, out_path, stem="ert")
+        recipe_path, script_path = export_workflow_bundle(spec, run.run_dir, stem="ert")
         self._reproduce.set_bundle(recipe_path, script_path)
         self._ert_recipe_path = str(recipe_path)
         self._inv_busy = BusyStateController([self._invert_btn])
@@ -1357,7 +1365,7 @@ class ERTProcessingModule(BaseModule):
             recipe_path,
             project_root,
             out_path,
-            out_path / "ert_process_result.json",
+            run.result_path,
         )
         self._inv_worker.logged.connect(lambda msg: self.log(msg, "info"))
         self._inv_worker.succeeded.connect(self._on_ert_workflow_ok)
@@ -1425,14 +1433,16 @@ class ERTProcessingModule(BaseModule):
             "engine": summary.get("engine", ""),
             "engine_requested": summary.get("engine_requested", ""),
         }
-        self._on_inversion_ok(payload)
-        if hasattr(self.state, "update_workflow_result"):
-            self.state.update_workflow_result(
-                self.module_key,
-                "ert.single_inversion",
-                result.to_dict(),
-                recipe_path=self._ert_recipe_path,
-            )
+        try:
+            self._on_inversion_ok(payload)
+        finally:
+            if hasattr(self.state, "update_workflow_result"):
+                self.state.update_workflow_result(
+                    self.module_key,
+                    "ert.single_inversion",
+                    result.to_dict(),
+                    recipe_path=self._ert_recipe_path,
+                )
 
     def _load_model_bundle(self, bundle: Dict[str, Any]):
         """Hydrate a process-safe ERT result into the viewer's manager shape."""
@@ -1768,6 +1778,7 @@ class ERTProcessingModule(BaseModule):
         self._set_rows_visible((self._reject_row, self._min_keep), on)
 
     def _on_inversion_failed(self, message: str) -> None:
+        self.fail_persisted_run(message, "ert.single_inversion")
         self.log(f"ERT inversion failed: {message}", "error")
 
     def _reset_invert_button(self) -> None:
@@ -1896,7 +1907,6 @@ class ERTProcessingModule(BaseModule):
                 "warn",
             )
             return
-        out_dir = str(self.state.output_dir or Path.cwd())
         instrument = self._instrument.currentData()
         params = {
             "lambda_val": self._lam.value(), "alpha": self._tl_alpha.value(),
@@ -1916,8 +1926,28 @@ class ERTProcessingModule(BaseModule):
         if self._tl_lowmem.isChecked():
             params["save_memory"] = True
         times = self._tl_times if len(self._tl_times) == len(self._tl_files) else None
-        output_base = Path(out_dir)
-        bundle_dir = io_utils.ensure_dir(output_base / "qt_ert_timelapse")
+        try:
+            run = self.begin_persisted_run(
+                "ert.timelapse_inversion", "ert.timelapse_inversion"
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not prepare Project run: {exc}", "error")
+            return
+        # Drop this module's references to the previous run's arrays before the
+        # new one writes. They are ordinary in-memory arrays now, but releasing
+        # them keeps a stale model out of the viewer if the run fails.
+        self._tl_models = None
+        self._tl_coverage = None
+        persisted_files = []
+        try:
+            for index, source in enumerate(self._tl_files):
+                target = run.inputs_dir / f"step_{index:04d}{Path(source).suffix}"
+                shutil.copy2(source, target)
+                persisted_files.append(target)
+        except Exception as exc:  # noqa: BLE001
+            self.fail_persisted_run(str(exc), "ert.timelapse_inversion")
+            self.log(f"Could not persist time-lapse inputs: {exc}", "error")
+            return
         spec = WorkflowSpec(
             workflow_id="ert.timelapse_inversion",
             inputs={
@@ -1926,6 +1956,7 @@ class ERTProcessingModule(BaseModule):
                         Path(path),
                         artifact_id=f"ert-timestep:{index}",
                         kind="ert_observations",
+                        base_dir=run.run_dir,
                         metadata={
                             "sequence_index": index,
                             "measurement_time": (
@@ -1933,7 +1964,7 @@ class ERTProcessingModule(BaseModule):
                             ),
                         },
                     )
-                    for index, path in enumerate(self._tl_files)
+                    for index, path in enumerate(persisted_files)
                 ],
                 "measurement_times": list(times or range(len(self._tl_files))),
             },
@@ -1941,7 +1972,7 @@ class ERTProcessingModule(BaseModule):
             metadata={"source": "qt", "sequence_order_persisted": True},
         )
         recipe_path, script_path = export_workflow_bundle(
-            spec, bundle_dir, stem="ert_timelapse"
+            spec, run.run_dir, stem="ert_timelapse"
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._tl_recipe_path = str(recipe_path)
@@ -1958,9 +1989,9 @@ class ERTProcessingModule(BaseModule):
         # the PyHydro engine inside the workflow process.
         self._tl_worker = ProcessWorkflowWorker(
             recipe_path,
-            bundle_dir,
-            output_base,
-            bundle_dir / "ert_timelapse_process_result.json",
+            run.run_dir,
+            run.outputs_dir,
+            run.result_path,
         )
         self._tl_worker.logged.connect(lambda m: self.log(m, "info"))
         self._tl_worker.progressed.connect(self._on_tl_progress)
@@ -2013,13 +2044,18 @@ class ERTProcessingModule(BaseModule):
                     f"missing mesh or model bundle ({mesh_path}, {models_path})"
                 )
             coverage_path = resolve(paths.get("coverage", ""))
+            # Read into memory rather than memory-mapping. A mapping stays open for
+            # as long as the viewer holds the array, and Windows refuses to let the
+            # next run overwrite a mapped file: np.save then fails with
+            # "OSError: [Errno 22] Invalid argument" after the inversion has already
+            # finished, leaving the previous run's arrays on disk beside this run's
+            # figures. These are per-cell result arrays, small enough that mapping
+            # bought nothing.
             return {
                 "mesh": pygimli.load(str(mesh_path)),
-                "final_models": np.load(
-                    models_path, allow_pickle=False, mmap_mode="r"
-                ),
+                "final_models": np.load(models_path, allow_pickle=False),
                 "coverage": (
-                    np.load(coverage_path, allow_pickle=False, mmap_mode="r")
+                    np.load(coverage_path, allow_pickle=False)
                     if coverage_path.is_file() else None
                 ),
             }
@@ -2116,6 +2152,7 @@ class ERTProcessingModule(BaseModule):
         self._model_view.show_field(self._tl_mesh, values, kind="ert", coverage=cov, title=title)
 
     def _on_tl_failed(self, message: str, backend: bool) -> None:
+        self.fail_persisted_run(message, "ert.timelapse_inversion")
         self.log(f"Time-lapse inversion {'unavailable' if backend else 'failed'}: {message}",
                  "warn" if backend else "error")
 
@@ -2519,7 +2556,7 @@ class ERTProcessingModule(BaseModule):
                         "valid": [v for _, v in _INSTRUMENTS if v]}
             self._instrument.setCurrentIndex(idx)
         inst = self._instrument.currentData()
-        out_dir = self.state.output_dir or Path.cwd()
+        out_dir = self.state.ensure_results_store().scratch_dir(self.module_key)
         elec_file = str(self._electrode_path) if self._electrode_path and self._electrode_path.exists() else None
         spacing = None  # geometry comes from the file
         try:
