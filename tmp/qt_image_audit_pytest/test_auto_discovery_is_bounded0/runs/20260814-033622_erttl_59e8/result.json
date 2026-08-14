@@ -1,0 +1,14 @@
+{
+  "status": "ok",
+  "summary": {
+    "large": {
+      "$array": {
+        "shape": [
+          5000
+        ],
+        "dtype": "float64",
+        "size": 5000
+      }
+    }
+  }
+}

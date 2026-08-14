@@ -7,8 +7,16 @@ import pytest
 
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-pytest.importorskip("PySide6")
-pytest.importorskip("pyqtgraph")
+try:
+    # QtGui, not the PySide6 package: the offscreen platform still loads
+    # libEGL/libGL, so a machine without them raises here rather than at the
+    # top-level import. That is a plain ImportError, and pytest.importorskip
+    # skips only on ModuleNotFoundError, so it would break collection instead
+    # of skipping the module.
+    import PySide6.QtGui  # noqa: F401
+    import pyqtgraph  # noqa: F401
+except ImportError as exc:  # pragma: no cover - environment dependent
+    pytest.skip(f"Qt stack unavailable: {exc}", allow_module_level=True)
 
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QToolBar
 

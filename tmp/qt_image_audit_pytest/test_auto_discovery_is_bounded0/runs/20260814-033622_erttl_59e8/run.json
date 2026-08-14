@@ -1,0 +1,2036 @@
+{
+  "schema_version": "1",
+  "run_id": "20260814-033622_erttl_59e8",
+  "module_key": "ert",
+  "operation_id": "ert.timelapse_inversion",
+  "workflow_id": "",
+  "status": "success",
+  "raw_status": "ok",
+  "created_at": "2026-08-14T03:36:22+00:00",
+  "finished_at": "2026-08-14T03:36:22+00:00",
+  "label": "ert.timelapse_inversion \u00b7 2026-08-13 22:36",
+  "notes": "",
+  "recipe_path": "",
+  "result_path": "result.json",
+  "artifacts": [
+    {
+      "artifact_id": "output:outputs/step_0000.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0000.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0001.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0001.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0002.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0002.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0003.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0003.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0004.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0004.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0005.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0005.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0006.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0006.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0007.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0007.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0008.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0008.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0009.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0009.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0010.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0010.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0011.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0011.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0012.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0012.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0013.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0013.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0014.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0014.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0015.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0015.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0016.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0016.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0017.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0017.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0018.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0018.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0019.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0019.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0020.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0020.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0021.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0021.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0022.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0022.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0023.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0023.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0024.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0024.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0025.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0025.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0026.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0026.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0027.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0027.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0028.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0028.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0029.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0029.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0030.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0030.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0031.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0031.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0032.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0032.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0033.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0033.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0034.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0034.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0035.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0035.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0036.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0036.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0037.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0037.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0038.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0038.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0039.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0039.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0040.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0040.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0041.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0041.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0042.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0042.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0043.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0043.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0044.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0044.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0045.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0045.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0046.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0046.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0047.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0047.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0048.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0048.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0049.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0049.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0050.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0050.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0051.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0051.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0052.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0052.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0053.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0053.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0054.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0054.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0055.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0055.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0056.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0056.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0057.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0057.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0058.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0058.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0059.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0059.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0060.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0060.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0061.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0061.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0062.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0062.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0063.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0063.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0064.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0064.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0065.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0065.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0066.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0066.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0067.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0067.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0068.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0068.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0069.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0069.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0070.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0070.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0071.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0071.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0072.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0072.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0073.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0073.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0074.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0074.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0075.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0075.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0076.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0076.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0077.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0077.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0078.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0078.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0079.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0079.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0080.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0080.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0081.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0081.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0082.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0082.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0083.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0083.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0084.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0084.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0085.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0085.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0086.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0086.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0087.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0087.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0088.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0088.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0089.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0089.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0090.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0090.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0091.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0091.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0092.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0092.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0093.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0093.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0094.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0094.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0095.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0095.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0096.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0096.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0097.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0097.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0098.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0098.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0099.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0099.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0100.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0100.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0101.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0101.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0102.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0102.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0103.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0103.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0104.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0104.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0105.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0105.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0106.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0106.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0107.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0107.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0108.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0108.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0109.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0109.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0110.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0110.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0111.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0111.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0112.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0112.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0113.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0113.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0114.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0114.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0115.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0115.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0116.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0116.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0117.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0117.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0118.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0118.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0119.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0119.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0120.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0120.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0121.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0121.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0122.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0122.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0123.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0123.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0124.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0124.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0125.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0125.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0126.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0126.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0127.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0127.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0128.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0128.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0129.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0129.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0130.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0130.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0131.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0131.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0132.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0132.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0133.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0133.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0134.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0134.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0135.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0135.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0136.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0136.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0137.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0137.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0138.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0138.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0139.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0139.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0140.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0140.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0141.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0141.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0142.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0142.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0143.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0143.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0144.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0144.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0145.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0145.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0146.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0146.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0147.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0147.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0148.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0148.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0149.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0149.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0150.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0150.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0151.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0151.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0152.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0152.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0153.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0153.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0154.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0154.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0155.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0155.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0156.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0156.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0157.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0157.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0158.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0158.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0159.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0159.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0160.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0160.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0161.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0161.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0162.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0162.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0163.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0163.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0164.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0164.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0165.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0165.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0166.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0166.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0167.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0167.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0168.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0168.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0169.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0169.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0170.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0170.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0171.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0171.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0172.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0172.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0173.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0173.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0174.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0174.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0175.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0175.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0176.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0176.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0177.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0177.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0178.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0178.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0179.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0179.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0180.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0180.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0181.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0181.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0182.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0182.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0183.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0183.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0184.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0184.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0185.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0185.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0186.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0186.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0187.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0187.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0188.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0188.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0189.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0189.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0190.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0190.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0191.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0191.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0192.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0192.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0193.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0193.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0194.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0194.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0195.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0195.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0196.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0196.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0197.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0197.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0198.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0198.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    },
+    {
+      "artifact_id": "output:outputs/step_0199.csv",
+      "kind": "attachment",
+      "path": "outputs/step_0199.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "auto_discovered": true
+      }
+    }
+  ],
+  "metrics": {},
+  "summary": {
+    "large": {
+      "$array": {
+        "shape": [
+          5000
+        ],
+        "dtype": "float64",
+        "size": 5000
+      }
+    }
+  },
+  "warnings": [
+    "25 additional output files were not individually listed."
+  ],
+  "provenance": {},
+  "error": "",
+  "managed": true,
+  "imported": false
+}

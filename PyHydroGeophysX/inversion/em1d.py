@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List
+import math
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
+
+_LN10 = math.log(10.0)
 
 from PyHydroGeophysX._internal.optional_dependencies import BackendUnavailable
 from PyHydroGeophysX._internal.utils import noop as _noop
@@ -85,8 +88,18 @@ def _tdem_uncertainty(observed: np.ndarray, item: Dict[str, Any],
 
 
 def _occam_1d(forward_vec: Callable[[np.ndarray], np.ndarray], dobs_vec: np.ndarray,
-              unc_vec: np.ndarray, n_layers: int, inv: Dict[str, Any], log: LogFn):
-    """Smooth fixed-layer fit with optional LCI neighbor regularization."""
+              unc_vec: np.ndarray, n_layers: int, inv: Dict[str, Any], log: LogFn,
+              jacobian_vec: Optional[Callable[[np.ndarray], np.ndarray]] = None):
+    """Smooth fixed-layer fit with optional LCI neighbor regularization.
+
+    ``jacobian_vec`` returns ``d(predicted) / d(sigma)`` shaped
+    ``(n_data, n_layers)``. Given one, the optimizer is handed the analytic
+    derivative of the whole residual instead of differencing it: SciPy's
+    two-point rule costs one extra forward call per layer per step, which on a
+    20-layer model is 20 forwards spent to learn what one sensitivity call
+    already knows. Without one the numerical route still works, so a forward
+    operator that cannot supply a sensitivity keeps running.
+    """
     from scipy.optimize import least_squares
     lam = float(inv.get("smoothness", 0.3))
     start_res = float(inv.get("starting_resistivity", 100.0))
@@ -120,6 +133,29 @@ def _occam_1d(forward_vec: Callable[[np.ndarray], np.ndarray], dobs_vec: np.ndar
         )
         return np.concatenate([data_res, smooth, lateral])
 
+    # The two regularization blocks are linear in logres, so their rows are the
+    # same matrix at every model and are built once here. Only the data rows
+    # need the forward operator.
+    smooth_rows = lam * (np.eye(n_layers, k=1) - np.eye(n_layers))[:n_layers - 1]
+    lateral_rows = (lateral_weight * np.eye(n_layers) if lateral_log.size
+                    else np.zeros((0, n_layers)))
+
+    def jacobian(logres: np.ndarray) -> np.ndarray:
+        """d(residual) / d(log10 resistivity), all three blocks.
+
+        The chain rule through ``sigma = 10**(-logres)`` contributes
+        ``d sigma / d logres = -ln(10) * sigma``, the same factor the coupled
+        line solver applies in :func:`em1d_lci._sensitivity_line`.
+        """
+        sigma = 1.0 / np.power(10.0, logres)
+        jac = np.asarray(jacobian_vec(sigma), dtype=float)
+        if jac.shape != (dobs_vec.size, n_layers):
+            raise ValueError(
+                f"the forward operator returned a Jacobian of shape {jac.shape}, "
+                f"expected {(dobs_vec.size, n_layers)}.")
+        data_rows = (jac * (-_LN10 * sigma)[None, :]) / unc_vec[:, None]
+        return np.vstack([data_rows, smooth_rows, lateral_rows])
+
     # SciPy's ``max_nfev`` is the number of outer residual evaluations. Numerical
     # Jacobian probes are additional calls, so multiplying by ``n_layers`` here
     # makes a 20-layer line inversion unnecessarily hundreds of evaluations long.
@@ -134,6 +170,8 @@ def _occam_1d(forward_vec: Callable[[np.ndarray], np.ndarray], dobs_vec: np.ndar
         convergence.append(float(np.mean(data_res ** 2)))
 
     kwargs: Dict[str, Any] = {"max_nfev": max_nfev, "xtol": 1e-8, "ftol": 1e-8}
+    if jacobian_vec is not None:
+        kwargs["jac"] = jacobian
     # SciPy < 1.16 has no callback argument. Keep those supported environments
     # working; their quality page falls back to the final chi-square chart.
     try:
@@ -314,12 +352,13 @@ def fdem_invert(data: Dict[str, Any], geom: Dict[str, Any], inv: Dict[str, Any],
     """Invert an FDEM sounding for a layered resistivity model (Occam 1D)."""
     n_layers = int(inv.get("n_layers", 15))
     thick = _inversion_layer_thicknesses(inv)
-    dobs_vec, unc_vec, forward_vec, _, _, freqs = _fdem_pieces(
+    dobs_vec, unc_vec, forward_vec, jacobian_vec, _, freqs = _fdem_pieces(
         data, geom, inv, thick)
     obs_r, obs_i = dobs_vec[: freqs.size], dobs_vec[freqs.size:]
     log(f"FDEM inversion: {freqs.size} freqs, {n_layers} layers")
 
-    res, chi2, nfev, convergence = _occam_1d(forward_vec, dobs_vec, unc_vec, n_layers, inv, log)
+    res, chi2, nfev, convergence = _occam_1d(
+        forward_vec, dobs_vec, unc_vec, n_layers, inv, log, jacobian_vec)
     sigma = 1.0 / np.clip(res, 1e-12, None)
     pred = forward_vec(sigma)
     pred_r, pred_i = pred[: freqs.size], pred[freqs.size:]
@@ -354,7 +393,11 @@ def tdem_invert(data: Dict[str, Any], geom: Dict[str, Any], inv: Dict[str, Any],
     def forward_vec(sigma: np.ndarray) -> np.ndarray:
         return sign * np.asarray(modeler.forward(sigma), dtype=float).ravel()[: times.size]
 
-    res, chi2, nfev, convergence = _occam_1d(forward_vec, dobs, unc, n_layers, inv, log)
+    def jacobian_vec(sigma: np.ndarray) -> np.ndarray:
+        return sign * np.asarray(modeler.sensitivity(sigma), dtype=float)[: times.size]
+
+    res, chi2, nfev, convergence = _occam_1d(
+        forward_vec, dobs, unc, n_layers, inv, log, jacobian_vec)
     sigma = 1.0 / np.clip(res, 1e-12, None)
     pred = forward_vec(sigma)
     depth, res_step = model_depth_profile(thick, res)
@@ -394,7 +437,8 @@ def tdem_joint_invert(
 
     forward_vec = _moment_forward(blocks)
     res, chi2, nfev, convergence = _occam_1d(
-        forward_vec, observed, uncertainty, n_layers, inv, log)
+        forward_vec, observed, uncertainty, n_layers, inv, log,
+        _moment_jacobian(blocks))
     sigma = 1.0 / np.clip(res, 1e-12, None)
     predicted = forward_vec(sigma)
     predictions: Dict[str, Dict[str, np.ndarray]] = {}

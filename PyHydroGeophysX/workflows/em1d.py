@@ -443,35 +443,66 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         surface_models[:, :] = max(start, 1.0)
         log(f"Using a common {start:g} ohm-m starting model for the LCI.")
     t_ref = f_ref = None  # last time / min frequency, for the DOI estimate
-    for s in range(n_pos):
+    # Imported here rather than at module scope: this module is imported by the
+    # CLI and the Qt app, and the LCI module pulls in SciPy sparse.
+    from PyHydroGeophysX.inversion.em1d_lci import _worker_pool, resolve_worker_count
+
+    workers = resolve_worker_count(n_pos, int(inv.get("parallel_workers", 0)))
+    lci_supplies_model = use_warm_models or use_common_lci_start
+
+    def prepare(s: int):
+        """Read one station, and fit it unless the LCI will supply its model.
+
+        Runs on a worker thread, so it touches nothing shared: the station's
+        data, its geometry and its own result go back to the caller, which does
+        the ordered bookkeeping. Its own exception travels with it for the same
+        reason, since one station failing must not stop the line.
+        """
         try:
-            data = load_sounding(path, method, sounding=s, moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
-            datasets[s] = data
-            if t_ref is None and "times" in data and np.size(data["times"]):
-                t_ref = float(np.asarray(data["times"]).ravel()[-1])
-            if f_ref is None and "frequencies" in data and np.size(data["frequencies"]):
-                f_ref = float(np.asarray(data["frequencies"]).ravel().min())
+            data = load_sounding(path, method, sounding=s, moment=moment,
+                                 use_flags=use_flags, max_relative_std=tail_cut)
             geom_s = geom
             if hts is not None and s < hts.size and np.isfinite(hts[s]):
                 geom_s = {**geom, "height": float(hts[s])}
-            geometries[s] = geom_s
-            if use_warm_models or use_common_lci_start:
-                # The LCI supplies the model, so the per-sounding inversion is
-                # skipped; only the data count is needed here.
-                chi2_list.append(float("nan"))
-                data_count_list.append(_sounding_data_count(data, method))
-                continue
-            result = invert(data, geom_s, inv, log=log)
-            res = np.asarray(result["resistivity"], dtype=float).ravel()
-            surface_models[s, :] = res
-            model[s, 0, :] = res[::-1]  # deepest layer first to match ez ordering
-            chi2_list.append(float(result.get("chi2", np.nan)))
-            data_count_list.append(int(result.get("n_data", 0)))
-            log(f"  sounding {s + 1}/{n_pos}: chi2={result.get('chi2', float('nan')):.3f}")
-        except Exception as exc:  # noqa: BLE001 - keep the line going if one sounding fails
+            if lci_supplies_model:
+                return s, data, geom_s, None, None
+            # Quiet inside the worker: the inner per-iteration lines would
+            # interleave across stations. The caller logs one line per station,
+            # in order, below.
+            return s, data, geom_s, invert(data, geom_s, inv, log=_noop), None
+        except Exception as exc:  # noqa: BLE001 - keep the line going
+            return s, None, geom, None, exc
+
+    if workers > 1:
+        log(f"Reading and fitting {n_pos} soundings on {workers} threads")
+    with _worker_pool(workers) as executor:
+        prepared = ([prepare(s) for s in range(n_pos)] if executor is None
+                    else list(executor.map(prepare, range(n_pos))))
+
+    for s, data, geom_s, result, failure in prepared:
+        if failure is not None:
             chi2_list.append(float("nan"))
             data_count_list.append(0)
-            log(f"  sounding {s + 1}/{n_pos} failed: {exc}")
+            log(f"  sounding {s + 1}/{n_pos} failed: {failure}")
+            continue
+        datasets[s] = data
+        geometries[s] = geom_s
+        if t_ref is None and "times" in data and np.size(data["times"]):
+            t_ref = float(np.asarray(data["times"]).ravel()[-1])
+        if f_ref is None and "frequencies" in data and np.size(data["frequencies"]):
+            f_ref = float(np.asarray(data["frequencies"]).ravel().min())
+        if result is None:
+            # The LCI supplies the model, so the per-sounding inversion is
+            # skipped; only the data count is needed here.
+            chi2_list.append(float("nan"))
+            data_count_list.append(_sounding_data_count(data, method))
+            continue
+        res = np.asarray(result["resistivity"], dtype=float).ravel()
+        surface_models[s, :] = res
+        model[s, 0, :] = res[::-1]  # deepest layer first to match ez ordering
+        chi2_list.append(float(result.get("chi2", np.nan)))
+        data_count_list.append(int(result.get("n_data", 0)))
+        log(f"  sounding {s + 1}/{n_pos}: chi2={result.get('chi2', float('nan')):.3f}")
 
     embedded_positions = np.asarray(head.get("positions", []), dtype=float).ravel()
     requested_positions = (
@@ -541,17 +572,31 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         )
 
         usable = [s for s in range(n_pos) if datasets[s] is not None]
-        sounding_blocks = []
-        kept: List[int] = []
-        for s in usable:
+
+        def build(s: int):
+            """Assemble one station's block, or hand back why it could not be."""
             try:
-                sounding_blocks.append(build_sounding_block(
+                return s, build_sounding_block(
                     datasets[s], geometries[s], inv, method,
                     position=float(pos_lci[s]), line=int(line_numbers[s]),
-                    label=f"sounding {s + 1}"))
-                kept.append(s)
+                    label=f"sounding {s + 1}"), None
             except Exception as exc:  # noqa: BLE001 - one bad station is not fatal
-                log(f"  sounding {s + 1} excluded from the LCI: {exc}")
+                return s, None, exc
+
+        # Worth parallelizing in its own right: each block constructs a SimPEG
+        # simulation and pays that operator's one-time setup, which on a long
+        # line adds up to more than the coupled solve it feeds.
+        with _worker_pool(resolve_worker_count(len(usable), workers)) as executor:
+            built = ([build(s) for s in usable] if executor is None
+                     else list(executor.map(build, usable)))
+        sounding_blocks = []
+        kept: List[int] = []
+        for s, block, failure in built:
+            if failure is not None:
+                log(f"  sounding {s + 1} excluded from the LCI: {failure}")
+                continue
+            sounding_blocks.append(block)
+            kept.append(s)
         if len(kept) < 2:
             # The per-sounding pass was skipped on the assumption the LCI would
             # supply the models, so it has to run now or nothing is inverted.
@@ -584,6 +629,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                 target_chi2=float(inv.get("target_chi2", 1.0)),
                 chi2_tolerance=float(inv.get("chi2_tolerance", 0.2)),
                 max_lambda_trials=int(inv.get("max_lambda_trials", 5)),
+                parallel_workers=workers,
                 verbose=bool(inv.get("verbose", True)),
             )
             doi_blocks.update(zip(kept, sounding_blocks))

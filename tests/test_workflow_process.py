@@ -18,11 +18,15 @@ from PyHydroGeophysX.workflows import domain
 
 
 def _process_worker_dependencies():
-    pytest.importorskip("PySide6")
+    try:
+        # Not importorskip: Qt fails with a plain ImportError on a machine that
+        # has PySide6 but not the GL libraries it links against, and that skips
+        # only on ModuleNotFoundError.
+        from PySide6.QtCore import QProcess
 
-    from PySide6.QtCore import QProcess
-
-    from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
+        from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        pytest.skip(f"Qt stack unavailable: {exc}")
 
     return ProcessWorkflowWorker, QProcess
 

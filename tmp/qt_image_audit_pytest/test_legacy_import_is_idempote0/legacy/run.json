@@ -1,0 +1,39 @@
+{
+  "schema_version": "1",
+  "run_id": "legacy_5a530fbf82bd",
+  "module_key": "em",
+  "operation_id": "em.inversion",
+  "workflow_id": "em.inversion",
+  "status": "success",
+  "raw_status": "completed",
+  "created_at": "2026-08-14T03:36:22+00:00",
+  "finished_at": "2026-08-14T03:36:22+00:00",
+  "label": "Imported em.inversion",
+  "notes": "",
+  "recipe_path": "em_recipe.json",
+  "result_path": "em_process_result.json",
+  "artifacts": [
+    {
+      "path": "model.npy",
+      "kind": "em_model",
+      "format": "npy"
+    },
+    {
+      "artifact_id": "attachment:notes.csv",
+      "kind": "attachment",
+      "path": "notes.csv",
+      "format": "csv",
+      "checksum": "",
+      "metadata": {
+        "imported_attachment": true
+      }
+    }
+  ],
+  "metrics": {},
+  "summary": {},
+  "warnings": [],
+  "provenance": {},
+  "error": "",
+  "managed": false,
+  "imported": true
+}

@@ -109,6 +109,7 @@ class EMProcessingModule(BaseModule):
         self._last_section: Optional[Dict[str, Any]] = None
         self._inv_worker: Optional[WorkflowWorker] = None
         self._inv_busy: Optional[BusyStateController] = None
+        self._parallel_workers = 0      # 0: sized from the machine
         self._line_worker: Optional[TaskWorker] = None
         self._workflow_recipe_path = ""
         self._geom_positions: Optional[np.ndarray] = None
@@ -663,6 +664,10 @@ class EMProcessingModule(BaseModule):
             "outlier_passes": int(self._reject_passes.value()),
             "min_data_fraction": float(self._min_keep.value()) / 100.0,
             "min_gates_per_sounding": int(self._min_gates.value()),
+            # 0 lets the solver size its own thread pool from the machine. It is
+            # a performance knob with no effect on the result, so it is settable
+            # through set_params rather than taking a row in the panel.
+            "parallel_workers": int(self._parallel_workers),
             "rel_error": self._rel_err.value(),
             "max_iterations": self._max_iter.value(),
             "data_scale": self._data_scale.value(),
@@ -1528,7 +1533,10 @@ class EMProcessingModule(BaseModule):
                           "max_lambda_trials, reject_outliers (bool; drop gates "
                           "the model cannot explain and re-solve), "
                           "outlier_threshold (sigma), outlier_passes, "
-                          "min_data_fraction (0-1 floor on the gates kept).")},
+                          "min_data_fraction (0-1 floor on the gates kept). "
+                          "Speed: parallel_workers (threads for the per-sounding "
+                          "forward and Jacobian; 0 sizes it from the machine, and "
+                          "the result is identical either way).")},
                 {"name": "auto_calibrate", "args": {},
                  "desc": ("Estimate the data_scale calibration from the loaded data and set it. Use "
                           "for normalized airborne data (e.g. moment-normalized dB/dt).")},
@@ -1662,6 +1670,7 @@ class EMProcessingModule(BaseModule):
             "target_chi2": lambda v: self._target_chi2.setValue(float(v)),
             "chi2_tolerance": lambda v: self._chi2_tol.setValue(float(v)),
             "max_lambda_trials": lambda v: self._lam_trials.setValue(int(v)),
+            "parallel_workers": lambda v: setattr(self, "_parallel_workers", int(v)),
             "reject_outliers": lambda v: self._reject.setChecked(bool(v)),
             "outlier_threshold": lambda v: self._reject_sigma.setValue(float(v)),
             "outlier_passes": lambda v: self._reject_passes.setValue(int(v)),

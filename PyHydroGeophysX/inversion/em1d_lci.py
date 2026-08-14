@@ -29,10 +29,13 @@ routine in :mod:`PyHydroGeophysX.inversion.em1d` so that ``smoothness`` and
 
 from __future__ import annotations
 
+import contextlib
 import math
+import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -222,17 +225,87 @@ def _lateral_operator(edges, n_soundings: int, n_layers: int):
         shape=(len(edges) * n_layers, n_soundings * n_layers))
 
 
-def _forward_line(blocks: Sequence[SoundingBlock], x: np.ndarray,
-                  n_layers: int) -> List[np.ndarray]:
-    out: List[np.ndarray] = []
-    for s, block in enumerate(blocks):
+def resolve_worker_count(n_soundings: int, requested: int = 0) -> int:
+    """Threads to run the per-sounding forward and Jacobian on.
+
+    ``requested <= 0`` decides here: one thread per sounding, capped at the
+    cores this process may use. A larger number than there are soundings buys
+    nothing, and a thread per core is the most the machine can run at once.
+
+    Threads rather than processes. Each sounding's forward operator is a SimPEG
+    simulation held in a closure, which does not pickle, and a process would
+    also copy the whole model state per worker. The work is NumPy underneath and
+    releases the GIL for most of its duration, which is why threads pay at all;
+    they do not pay in full, so expect well under linear scaling.
+    """
+    if n_soundings <= 1:
+        return 1
+    if int(requested) > 0:
+        return max(1, min(int(requested), int(n_soundings)))
+    cores = getattr(os, "process_cpu_count", None)
+    available = cores() if cores is not None else os.cpu_count()
+    return max(1, min(int(n_soundings), int(available or 1)))
+
+
+@contextlib.contextmanager
+def _worker_pool(workers: int) -> Iterator[Optional[ThreadPoolExecutor]]:
+    """A pool for one solve, or None when there is nothing to gain from one.
+
+    Held open across the whole solve rather than per iteration: an LCI run makes
+    several forward passes per iteration, and building a pool for each of them
+    would spend more on thread startup than the pass costs.
+    """
+    if workers <= 1:
+        yield None
+        return
+    with ThreadPoolExecutor(max_workers=workers,
+                            thread_name_prefix="lci") as executor:
+        with _single_threaded_blas():
+            yield executor
+
+
+@contextlib.contextmanager
+def _single_threaded_blas() -> Iterator[None]:
+    """Keep BLAS to one thread while the soundings run in parallel.
+
+    Otherwise each worker's linear algebra opens its own thread pool and the
+    machine ends up with cores^2 threads competing for cores. Scoped to the
+    solve, so anything else in the process keeps its own threading. Needs
+    ``threadpoolctl``; without it this does nothing, because the environment
+    variables that would control it are read when BLAS loads, long before here.
+    """
+    try:
+        from threadpoolctl import threadpool_limits
+    except ImportError:
+        yield
+        return
+    with threadpool_limits(limits=1):
+        yield
+
+
+def _map_soundings(executor: Optional[ThreadPoolExecutor], fn, count: int) -> list:
+    """``fn`` over every sounding index, in order, on the pool if there is one.
+
+    ``executor.map`` yields results in submission order, so the caller gets the
+    same list either way and nothing downstream has to know which path ran.
+    """
+    if executor is None or count < 2:
+        return [fn(s) for s in range(count)]
+    return list(executor.map(fn, range(count)))
+
+
+def _forward_line(blocks: Sequence[SoundingBlock], x: np.ndarray, n_layers: int,
+                  executor: Optional[ThreadPoolExecutor] = None) -> List[np.ndarray]:
+    def one(s: int) -> np.ndarray:
         sigma = np.power(10.0, -x[s * n_layers:(s + 1) * n_layers])
-        out.append(np.asarray(block.forward(sigma), dtype=float).ravel())
-    return out
+        return np.asarray(blocks[s].forward(sigma), dtype=float).ravel()
+
+    return _map_soundings(executor, one, len(blocks))
 
 
 def _sensitivity_line(blocks: Sequence[SoundingBlock], x: np.ndarray,
-                      n_layers: int):
+                      n_layers: int,
+                      executor: Optional[ThreadPoolExecutor] = None):
     """Block-diagonal d(predicted) / d(log10 resistivity), weighted by 1/sigma_d.
 
     The chain rule through ``sigma = 10**(-x)`` contributes
@@ -240,19 +313,21 @@ def _sensitivity_line(blocks: Sequence[SoundingBlock], x: np.ndarray,
     """
     from scipy import sparse
 
-    parts = []
-    for s, block in enumerate(blocks):
-        xs = x[s * n_layers:(s + 1) * n_layers]
-        sigma = np.power(10.0, -xs)
+    def one(s: int) -> np.ndarray:
+        block = blocks[s]
+        sigma = np.power(10.0, -x[s * n_layers:(s + 1) * n_layers])
         jac = np.asarray(block.jacobian(sigma), dtype=float)
         if jac.shape != (block.dobs.size, n_layers):
             raise ValueError(
                 f"sounding {s} returned a Jacobian of shape {jac.shape}, "
                 f"expected {(block.dobs.size, n_layers)}.")
-        scaled = (jac * (-_LN10 * sigma)[None, :]
-                  ) / block.uncertainty[:, None]
-        parts.append(sparse.csr_matrix(scaled))
-    return sparse.block_diag(parts, format="csr")
+        return (jac * (-_LN10 * sigma)[None, :]) / block.uncertainty[:, None]
+
+    scaled = _map_soundings(executor, one, len(blocks))
+    # Assembled here rather than in the workers: building the sparse blocks is
+    # cheap next to a forward call, and it keeps SciPy out of the threads.
+    return sparse.block_diag([sparse.csr_matrix(part) for part in scaled],
+                             format="csr")
 
 
 def _misfit(blocks: Sequence[SoundingBlock],
@@ -298,6 +373,7 @@ def solve_lci(
     line_search_steps: int = 6,
     target_steps: int = 4,
     bounds: Tuple[float, float] = LOG_RESISTIVITY_BOUNDS,
+    parallel_workers: int = 0,
     verbose: bool = True,
     log: LogFn = _noop,
 ) -> LCIResult:
@@ -325,6 +401,12 @@ def solve_lci(
     :func:`invert_lci` then cannot bisect. Set ``target_steps`` above zero and
     an overshooting step is shortened until the misfit lands within
     ``chi2_tolerance`` of the target instead.
+
+    ``parallel_workers`` runs the per-sounding forward and Jacobian on a thread
+    pool, ``0`` choosing a count from the machine. Every sounding owns its
+    forward operator, and the workers only read the shared model vector, so the
+    arithmetic is the same either way; measured against the serial path, the
+    models come back bit for bit identical.
     """
     started = time.time()
     blocks = list(blocks)
@@ -361,117 +443,124 @@ def solve_lci(
     def objective(vec: np.ndarray, residual: np.ndarray) -> float:
         return float(residual @ residual) + float(vec @ (reg @ vec))
 
-    predicted = _forward_line(blocks, x, n_layers)
-    residual, per_sounding = _misfit(blocks, predicted)
-    chi2 = float(residual @ residual) / max(n_data, 1)
-    history = [chi2]
-    phi = objective(x, residual)
-    speak(f"  LCI start: chi2={chi2:.3f}, {n_soundings} soundings, "
-          f"{len(edges)} lateral ties, {n_data} data")
-
-    # The discrepancy principle with a tolerance: fitting past the target band
-    # is fitting noise. ``target_chi2 <= 0`` disables it and runs to the plateau,
-    # which is what a smoothness comparison at a fixed budget wants.
-    def at_target(value: float) -> bool:
-        return (float(target_chi2) > 0.0
-                and value <= float(target_chi2) + abs(float(chi2_tolerance)))
-
-    stop_reason = "max_iterations"
-    iterations = 0
-    stalls = 0
-    for iteration in range(max(1, int(max_iterations))):
-        if at_target(chi2):
-            stop_reason = "target"
-            break
-        G = _sensitivity_line(blocks, x, n_layers)
-        gram = (G.T @ G) + reg
-        gradient = np.asarray(G.T @ residual, dtype=float) + (reg @ x)
-        step = _solve_normal_equations(gram, -gradient)
-        if not np.all(np.isfinite(step)):
-            stop_reason = "singular_system"
-            break
-
-        # Armijo backtracking. Clipping happens inside the trial so the accepted
-        # decrease belongs to the model that is actually kept.
-        slope = float(gradient @ step)
-        base_x, base_phi, previous = x, phi, chi2
-
-        def attempt(a: float):
-            trial = np.clip(base_x + a * step, lo, hi)
-            trial_pred = _forward_line(blocks, trial, n_layers)
-            trial_res, trial_per = _misfit(blocks, trial_pred)
-            return (trial, trial_pred, trial_res, trial_per,
-                    objective(trial, trial_res),
-                    float(trial_res @ trial_res) / max(n_data, 1))
-
-        alpha = 1.0
-        accepted = None
-        for _ in range(max(1, int(line_search_steps))):
-            candidate = attempt(alpha)
-            if candidate[4] < base_phi + 1e-4 * alpha * min(slope, 0.0):
-                accepted = candidate
-                break
-            alpha *= 0.5
-        if accepted is None:
-            stop_reason = "line_search"
-            break
-
-        # Shorten an overshooting step so the misfit lands near the target
-        # rather than wherever the full Gauss-Newton step happened to put it.
-        band = abs(float(chi2_tolerance))
-        if (int(target_steps) > 0 and float(target_chi2) > 0.0
-                and previous > float(target_chi2)
-                and accepted[5] < float(target_chi2) - band):
-            low, high = 0.0, alpha
-            for _ in range(int(target_steps)):
-                mid = 0.5 * (low + high)
-                probe = attempt(mid)
-                if probe[4] < base_phi and \
-                        abs(probe[5] - target_chi2) < abs(accepted[5] - target_chi2):
-                    accepted, alpha = probe, mid
-                if probe[5] > float(target_chi2):
-                    low = mid          # still short of the target: step further
-                else:
-                    high = mid
-                if abs(probe[5] - float(target_chi2)) <= band:
-                    break
-
-        x, predicted, residual, per_sounding, phi, _ = accepted
-
-        iterations = iteration + 1
+    workers = resolve_worker_count(n_soundings, parallel_workers)
+    if workers > 1:
+        speak(f"  LCI running {n_soundings} soundings on {workers} threads")
+    with _worker_pool(workers) as executor:
+        predicted = _forward_line(blocks, x, n_layers, executor)
+        residual, per_sounding = _misfit(blocks, predicted)
         chi2 = float(residual @ residual) / max(n_data, 1)
-        history.append(chi2)
-        speak(f"  LCI iter {iterations}: chi2={chi2:.3f} (step {alpha:.3g})")
-        if at_target(chi2):
-            stop_reason = "target"
-            break
-        # One thin gain is not a plateau. A backtracked step (alpha well under
-        # one) often gains little while the model is still moving, so require
-        # the improvement to stay small twice running before giving up.
-        gained = previous - chi2
-        stalls = (stalls + 1
-                  if gained <= abs(previous) * float(convergence_tolerance)
-                  else 0)
-        if iterations >= int(min_iterations) and stalls >= 2:
-            stop_reason = "plateau"
-            break
+        history = [chi2]
+        phi = objective(x, residual)
+        speak(f"  LCI start: chi2={chi2:.3f}, {n_soundings} soundings, "
+              f"{len(edges)} lateral ties, {n_data} data")
 
-    speak(f"  LCI stop: {stop_reason} at chi2={chi2:.3f} "
-          f"after {iterations} iteration(s)")
-    models = np.power(10.0, x.reshape(n_soundings, n_layers))
-    return LCIResult(
-        models=models,
-        chi2=chi2,
-        chi2_per_sounding=per_sounding,
-        chi2_history=history,
-        iterations=iterations,
-        stop_reason=stop_reason,
-        smoothness_scale=scale,
-        lambda_vertical=lam_v,
-        lambda_lateral=lam_l,
-        n_data=n_data,
-        seconds=time.time() - started,
-    )
+        # The discrepancy principle with a tolerance: fitting past the target band
+        # is fitting noise. ``target_chi2 <= 0`` disables it and runs to the plateau,
+        # which is what a smoothness comparison at a fixed budget wants.
+        def at_target(value: float) -> bool:
+            return (float(target_chi2) > 0.0
+                    and value <= float(target_chi2) + abs(float(chi2_tolerance)))
+
+        stop_reason = "max_iterations"
+        iterations = 0
+        stalls = 0
+        for iteration in range(max(1, int(max_iterations))):
+            if at_target(chi2):
+                stop_reason = "target"
+                break
+            G = _sensitivity_line(blocks, x, n_layers, executor)
+            gram = (G.T @ G) + reg
+            gradient = np.asarray(G.T @ residual, dtype=float) + (reg @ x)
+            step = _solve_normal_equations(gram, -gradient)
+            if not np.all(np.isfinite(step)):
+                stop_reason = "singular_system"
+                break
+
+            # Armijo backtracking. Clipping happens inside the trial so the accepted
+            # decrease belongs to the model that is actually kept.
+            slope = float(gradient @ step)
+            base_x, base_phi, previous = x, phi, chi2
+
+            def attempt(a: float):
+                trial = np.clip(base_x + a * step, lo, hi)
+                # The line search is the busiest caller: several of these per
+                # iteration against one Jacobian, which is why the pool has to
+                # reach in here and not only the top of the loop.
+                trial_pred = _forward_line(blocks, trial, n_layers, executor)
+                trial_res, trial_per = _misfit(blocks, trial_pred)
+                return (trial, trial_pred, trial_res, trial_per,
+                        objective(trial, trial_res),
+                        float(trial_res @ trial_res) / max(n_data, 1))
+
+            alpha = 1.0
+            accepted = None
+            for _ in range(max(1, int(line_search_steps))):
+                candidate = attempt(alpha)
+                if candidate[4] < base_phi + 1e-4 * alpha * min(slope, 0.0):
+                    accepted = candidate
+                    break
+                alpha *= 0.5
+            if accepted is None:
+                stop_reason = "line_search"
+                break
+
+            # Shorten an overshooting step so the misfit lands near the target
+            # rather than wherever the full Gauss-Newton step happened to put it.
+            band = abs(float(chi2_tolerance))
+            if (int(target_steps) > 0 and float(target_chi2) > 0.0
+                    and previous > float(target_chi2)
+                    and accepted[5] < float(target_chi2) - band):
+                low, high = 0.0, alpha
+                for _ in range(int(target_steps)):
+                    mid = 0.5 * (low + high)
+                    probe = attempt(mid)
+                    if probe[4] < base_phi and \
+                            abs(probe[5] - target_chi2) < abs(accepted[5] - target_chi2):
+                        accepted, alpha = probe, mid
+                    if probe[5] > float(target_chi2):
+                        low = mid          # still short of the target: step further
+                    else:
+                        high = mid
+                    if abs(probe[5] - float(target_chi2)) <= band:
+                        break
+
+            x, predicted, residual, per_sounding, phi, _ = accepted
+
+            iterations = iteration + 1
+            chi2 = float(residual @ residual) / max(n_data, 1)
+            history.append(chi2)
+            speak(f"  LCI iter {iterations}: chi2={chi2:.3f} (step {alpha:.3g})")
+            if at_target(chi2):
+                stop_reason = "target"
+                break
+            # One thin gain is not a plateau. A backtracked step (alpha well under
+            # one) often gains little while the model is still moving, so require
+            # the improvement to stay small twice running before giving up.
+            gained = previous - chi2
+            stalls = (stalls + 1
+                      if gained <= abs(previous) * float(convergence_tolerance)
+                      else 0)
+            if iterations >= int(min_iterations) and stalls >= 2:
+                stop_reason = "plateau"
+                break
+
+        speak(f"  LCI stop: {stop_reason} at chi2={chi2:.3f} "
+              f"after {iterations} iteration(s)")
+        models = np.power(10.0, x.reshape(n_soundings, n_layers))
+        return LCIResult(
+            models=models,
+            chi2=chi2,
+            chi2_per_sounding=per_sounding,
+            chi2_history=history,
+            iterations=iterations,
+            stop_reason=stop_reason,
+            smoothness_scale=scale,
+            lambda_vertical=lam_v,
+            lambda_lateral=lam_l,
+            n_data=n_data,
+            seconds=time.time() - started,
+        )
 
 
 def invert_lci(

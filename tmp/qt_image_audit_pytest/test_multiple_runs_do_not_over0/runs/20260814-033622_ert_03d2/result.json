@@ -1,0 +1,19 @@
+{
+  "status": "ok",
+  "summary": {},
+  "metrics": {
+    "chi2": 1.1
+  },
+  "artifacts": [
+    {
+      "artifact_id": "ert:model",
+      "kind": "resistivity_model",
+      "path": "outputs/model.npy",
+      "format": "npy",
+      "checksum": "sha256:9372c470eeadd5ecd9c3c74c2b3cb633f8e2f2fad799250a0f70d652b6b825e4",
+      "metadata": {}
+    }
+  ],
+  "warnings": [],
+  "provenance": {}
+}
