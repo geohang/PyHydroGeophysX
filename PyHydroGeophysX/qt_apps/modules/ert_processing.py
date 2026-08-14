@@ -404,6 +404,11 @@ class ERTProcessingModule(BaseModule):
         self._qc_max_recip.setDecimals(2); self._qc_max_recip.setValue(0.0); self._qc_max_recip.setSuffix(" %")
         mform.addRow("Max recip. error", self._qc_max_recip)
 
+        self._qc_support_note = QLabel("Load data to see which checks are available.")
+        self._qc_support_note.setWordWrap(True)
+        self._qc_support_note.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        mform.addRow(self._qc_support_note)
+
         more_outer.addWidget(self._qc_more_body)
         self._qc_more_body.setVisible(False)
         self._qc_more.toggled.connect(self._qc_more_body.setVisible)
@@ -1125,10 +1130,14 @@ class ERTProcessingModule(BaseModule):
         if data is None:
             for w in (self._qc_min_v, self._qc_min_i, self._qc_max_k, self._qc_max_recip):
                 gate(w, False, "Load ERT data first.")
+            self._qc_support_note.setText(
+                "Load data to see which checks are available."
+            )
             return
 
         # Units are whatever the file used, so the observed range is quoted rather
         # than a unit guessed from the magnitudes. 90 could be mA or A.
+        unavailable: List[str] = []
         for widget, token, name in ((self._qc_min_v, "u", "voltage"),
                                     (self._qc_min_i, "i", "current")):
             if data.haveData(token):
@@ -1141,6 +1150,7 @@ class ERTProcessingModule(BaseModule):
             else:
                 gate(widget, False,
                      f"This file carries no {name} column, so there is nothing to test.")
+                unavailable.append(f"Min |{token.upper()}| (no {name} column)")
 
         if data.haveData("k"):
             k = np.abs(np.asarray(data["k"], dtype=float))
@@ -1152,6 +1162,7 @@ class ERTProcessingModule(BaseModule):
                  f"geometry alone produces a rhoa outlier. This file spans {span}.")
         else:
             gate(self._qc_max_k, False, "This file carries no geometric factors.")
+            unavailable.append("Max |k| (no geometric factors)")
 
         rec = self._reciprocal_error(data)
         paired = 0 if rec is None else int(np.isfinite(rec).sum())
@@ -1164,8 +1175,21 @@ class ERTProcessingModule(BaseModule):
                  f"{100.0 * float(np.median(finite)):.1f}%. Unpaired measurements are kept.")
         else:
             gate(self._qc_max_recip, False,
-                 "This survey contains no reciprocal pairs, so there is nothing to compare. "
-                 "Reciprocals have to be measured in the field; they cannot be recovered here.")
+                  "This survey contains no reciprocal pairs, so there is nothing to compare. "
+                  "Reciprocals have to be measured in the field; they cannot be recovered here.")
+            unavailable.append("Max reciprocal error (no reciprocal pairs)")
+
+        if unavailable:
+            self._qc_support_note.setText(
+                "Unavailable for this file: " + "; ".join(unavailable) + ". "
+                "These controls are disabled because the required measurements "
+                "were not recorded, not because the input box is broken."
+            )
+        else:
+            self._qc_support_note.setText(
+                "All extra checks are supported by this file. A value of 0 turns "
+                "each numerical check off."
+            )
 
     def _apply_extra_filters(self, data, keep: np.ndarray) -> List[str]:
         """Apply the folded QC criteria to ``keep`` in place; report what each cost.

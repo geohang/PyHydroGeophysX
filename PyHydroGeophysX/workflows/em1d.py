@@ -611,13 +611,35 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     # analytic Jacobian the coupled solver used.
     doi_blocks: Dict[int, Any] = {}
     if simultaneous:
-        from PyHydroGeophysX.inversion.em1d import build_sounding_block
+        from PyHydroGeophysX.inversion.em1d import (
+            ForwardOperatorCache,
+            build_sounding_block,
+        )
         from PyHydroGeophysX.inversion.em1d_lci import (
             invert_lci,
             invert_lci_rejecting_outliers,
         )
 
         usable = [s for s in range(n_pos) if datasets[s] is not None]
+        # Stations that kept the same gates share one forward operator, which is
+        # what keeps a long line from paying SimPEG's first-call setup once per
+        # station. Planned before anything is built, so the groups that get to
+        # keep an exact operator are the ones carrying the most stations.
+        operators = ForwardOperatorCache(int(inv.get("max_forward_operators", 0)))
+        if method != "FDEM":
+            thick_lci = _inversion_layer_thicknesses(inv)
+            signatures = []
+            for s in usable:
+                moments = dict((datasets[s] or {}).get("moments") or {})
+                items = ([(nm, moments[nm]) for nm in ("LM", "HM") if nm in moments]
+                         or [("TDEM", datasets[s])])
+                for nm, item in items:
+                    times = np.asarray(item.get("times", []), dtype=float).ravel()
+                    if times.size:
+                        signatures.append(operators._signature(
+                            nm, times,
+                            {**geometries[s], **(item.get("transmitter") or {})}))
+            operators.plan(signatures)
 
         def build(s: int):
             """Assemble one station's block, or hand back why it could not be."""
@@ -625,7 +647,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                 return s, build_sounding_block(
                     datasets[s], geometries[s], inv, method,
                     position=float(pos_lci[s]), line=int(line_numbers[s]),
-                    label=f"sounding {s + 1}"), None
+                    label=f"sounding {s + 1}", operators=operators), None
             except Exception as exc:  # noqa: BLE001 - one bad station is not fatal
                 return s, None, exc
 
@@ -635,6 +657,9 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         with _worker_pool(resolve_worker_count(len(usable), workers)) as executor:
             built = ([build(s) for s in usable] if executor is None
                      else list(executor.map(build, usable)))
+        if len(operators):
+            log(f"  forward operators: {len(operators)} shared across "
+                f"{len(usable)} soundings")
         sounding_blocks = []
         kept: List[int] = []
         for s, block, failure in built:

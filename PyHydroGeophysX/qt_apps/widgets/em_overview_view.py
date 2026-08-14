@@ -66,10 +66,12 @@ class EMOverviewView(QWidget):
         self._resize_timer.setSingleShot(True)
         self._resize_timer.setInterval(120)
         self._resize_timer.timeout.connect(self._redraw)
-        self._canvas.mpl_connect(
-            "resize_event",
-            lambda _event: (self._resize_timer.start()
-                            if getattr(self, "_result", None) else None))
+        self._canvas.mpl_connect("resize_event", self._on_canvas_resized)
+        #: Figure size the current layout was computed for, so a resize event
+        #: that carries no change does not schedule the work again. Drawing can
+        #: itself emit a resize event, and without this the two feed each other.
+        self._laid_out_for: Optional[tuple] = None
+        self._rendering = False
         # Imagery is fetched for the extent on screen, so a new extent needs new
         # tiles. Waited out rather than done per notch: a wheel turn is a burst
         # of events and every fetch but the last would be thrown away.
@@ -109,13 +111,13 @@ class EMOverviewView(QWidget):
         row.addWidget(self._basemap)
         row.addWidget(self._basemap_source)
         self._map_share = QSlider(Qt.Horizontal)
-        self._map_share.setRange(25, 78)
-        self._map_share.setValue(52)
+        self._map_share.setRange(12, 55)
+        self._map_share.setValue(30)
         self._map_share.setFixedWidth(88)
         self._map_share.setToolTip(
-            "How much of the panel goes to the map, against the section under "
-            "it. Scroll over either one to zoom it about the cursor, drag to "
-            "pan, double-click to go back to the whole survey.")
+            "Width of the map column, against the section beside it. Scrolling "
+            "over either panel zooms it about the cursor, dragging pans, and a "
+            "double-click returns to the whole survey.")
         row.addWidget(QLabel("Map"))
         row.addWidget(self._map_share)
         # Through the timer, and not straight to it: QTimer.start takes an
@@ -369,6 +371,23 @@ class EMOverviewView(QWidget):
                                [distance[-1] + step / 2.0]])
 
     # -- panning and zooming --------------------------------------------------
+    def _on_canvas_resized(self, _event) -> None:
+        """Re-lay the figure, but only for a size it has not been laid out for.
+
+        The layout is computed from the figure's own aspect, so a genuine resize
+        has to redo it. A redraw can emit this event itself, though, and acting
+        on that would put the widget in a loop that never settles.
+        """
+        if self._result is None or self._rendering:
+            return
+        if self._figure_size() != self._laid_out_for:
+            self._resize_timer.start()
+
+    def _figure_size(self) -> tuple:
+        """The figure's size, rounded so sub-pixel jitter is not a change."""
+        width, height = self._fig.get_size_inches()
+        return round(float(width), 3), round(float(height), 3)
+
     def _on_scroll(self, event) -> None:
         """Wheel over a panel zooms it about the cursor."""
         ax = event.inaxes
@@ -427,6 +446,16 @@ class EMOverviewView(QWidget):
 
     # -- rendering -----------------------------------------------------------
     def _redraw(self, *_) -> None:
+        if self._rendering:     # a draw can emit the events that land back here
+            return
+        self._rendering = True
+        try:
+            self._render()
+        finally:
+            self._rendering = False
+            self._laid_out_for = self._figure_size()
+
+    def _render(self) -> None:
         from matplotlib.colors import LogNorm, Normalize
         from matplotlib.ticker import FuncFormatter, LogLocator, NullFormatter
 
@@ -459,18 +488,19 @@ class EMOverviewView(QWidget):
             # Explicit rectangles rather than a gridspec: the map keeps equal
             # axis scales, so only a box that matches the survey's own shape
             # draws it at full size, and a gridspec column cannot know that
-            # shape. How much of the height the map gets is the reader's call.
-            gap = 0.09                     # map xlabel and section title share it
-            map_h = 0.01 * self._map_share.value() * (top - bottom - gap)
-            map_w = self._map_width(map_h, right - left)
-            # A survey much wider than it is tall runs out of width before it
-            # runs out of height, and the rest of the slot would be a band of
-            # blank paper above and below the map. Give it back to the section.
-            map_h = min(map_h, self._map_height(map_w))
+            # shape. The map takes a column on the left, the section the rest.
+            gap = 0.085                    # map ylabel and section labels share it
+            column = 0.01 * self._map_share.value() * (right - left)
+            # A survey longer than it is wide fills the column's height and stops;
+            # a wide one runs out of height first and would leave the rest of the
+            # column blank, so the column shrinks to what the map actually needs.
+            map_h = min(top - bottom, self._map_height(column))
+            map_w = min(column, self._map_width(map_h, right - left))
             self._map_ax = self._fig.add_axes([left, top - map_h, map_w, map_h])
             attribution = self._draw_map(self._map_ax, selected)
-            ax = self._fig.add_axes([left, bottom, right - left,
-                                     top - bottom - gap - map_h])
+            section_left = left + map_w + gap
+            ax = self._fig.add_axes([section_left, bottom,
+                                     right - section_left, top - bottom])
         else:
             ax = self._fig.add_axes([left + 0.01, bottom + 0.03,
                                      right - left, top - bottom - 0.03])

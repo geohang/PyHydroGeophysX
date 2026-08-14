@@ -10,13 +10,36 @@ import scipy
 import scipy.sparse
 from scipy.sparse import linalg as splinalg
 
-# Try to import cupy for GPU acceleration
-try:
-    import cupy as cp
-    from cupyx.scipy.sparse import csr_matrix
+# CuPy must stay lazy. Importing it while a CPU-only workflow is starting loads
+# CUDA DLLs into the process before PyGIMLi loads its native solver DLLs. On
+# Windows, environment-specific DLL versions can then collide even though the
+# run never requested a GPU solver (observed as 0xC06D007F / procedure not
+# found). Keep these public names for compatibility, but populate them only when
+# a caller explicitly asks for ``use_gpu=True``.
+cp = None
+csr_matrix = None
+GPU_AVAILABLE = False
+_GPU_BACKEND_CHECKED = False
+
+
+def _load_gpu_backend() -> bool:
+    """Import CuPy once, and only for an explicitly requested GPU solve."""
+    global cp, csr_matrix, GPU_AVAILABLE, _GPU_BACKEND_CHECKED
+    if _GPU_BACKEND_CHECKED:
+        return bool(GPU_AVAILABLE)
+    _GPU_BACKEND_CHECKED = True
+    try:
+        import cupy as _cp
+        from cupyx.scipy.sparse import csr_matrix as _csr_matrix
+    except Exception:  # noqa: BLE001 - optional DLL imports can raise OSError
+        cp = None
+        csr_matrix = None
+        GPU_AVAILABLE = False
+        return False
+    cp = _cp
+    csr_matrix = _csr_matrix
     GPU_AVAILABLE = True
-except ImportError:
-    GPU_AVAILABLE = False
+    return True
 
 # Try to import joblib for parallel processing
 try:
@@ -161,8 +184,9 @@ def generalized_solver(
         result = splinalg.lsqr(A, b_flat, atol=tol, btol=tol, iter_lim=maxiter, damp=damp)
         return np.asarray(result[0], dtype=float).reshape(-1, 1)
 
-    # Choose the backend (NumPy or CuPy)
-    if use_gpu and GPU_AVAILABLE:
+    # Choose the backend (NumPy or CuPy). A CPU solve never imports CuPy.
+    gpu_available = _load_gpu_backend() if use_gpu else False
+    if use_gpu and gpu_available:
         xp = cp
     else:
         xp = np
@@ -351,7 +375,7 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
             break
     
     # Return solution (convert back to CPU if on GPU)
-    return x.get() if use_gpu and GPU_AVAILABLE else x
+    return x.get() if use_gpu else x
 
 
 # ---------------------------------------------------------------------------
@@ -443,7 +467,7 @@ def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
                 _info(f"LSQR converged after {i+1} iterations")
             break
     
-    return x.get() if use_gpu and GPU_AVAILABLE else x
+    return x.get() if use_gpu else x
 
 
 # ---------------------------------------------------------------------------
@@ -540,7 +564,7 @@ def _rrlsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
                 _info(f"RRLSQR converged after {i+1} iterations")
             break
     
-    return x.get() if use_gpu and GPU_AVAILABLE else x
+    return x.get() if use_gpu else x
 
 
 # ---------------------------------------------------------------------------
@@ -603,7 +627,7 @@ def _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
                 _info(f"RRLS converged after {i+1} iterations")
             break
             
-    return x.get() if use_gpu and GPU_AVAILABLE else x
+    return x.get() if use_gpu else x
 
 
 # ---------------------------------------------------------------------------
@@ -631,7 +655,8 @@ class LinearSolver:
         self.method = method.lower()
         self.max_iterations = max_iterations
         self.tolerance = tolerance
-        self.use_gpu = use_gpu and GPU_AVAILABLE
+        gpu_available = _load_gpu_backend() if use_gpu else False
+        self.use_gpu = bool(use_gpu and gpu_available)
         self.parallel = parallel and PARALLEL_AVAILABLE
         self.n_jobs = n_jobs
         self.damping = damping
@@ -643,7 +668,7 @@ class LinearSolver:
             raise ValueError(f"Invalid method: {method}. Must be one of {valid_methods}")
         
         # Check GPU availability
-        if use_gpu and not GPU_AVAILABLE:
+        if use_gpu and not gpu_available:
             print("Warning: GPU acceleration requested but CuPy not available. Using CPU.")
             self.use_gpu = False
         
