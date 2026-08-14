@@ -241,8 +241,17 @@ class Model3DView(QWidget):
     def show_model(self, edges: Sequence, model3d, *, label: str = "value",
                    cmap: str = "turbo", log_scale: bool = False) -> None:
         import numpy as np
-        self._edges = tuple(np.asarray(e, dtype=float) for e in edges)
-        self._model = np.asarray(model3d, dtype=float)
+        parsed_edges = tuple(np.asarray(e, dtype=float) for e in edges)
+        parsed_model = np.asarray(model3d, dtype=float)
+        if len(parsed_edges) != 3 or parsed_model.ndim != 3:
+            raise ValueError("A 3D model needs three edge arrays and shape (nx, ny, nz).")
+        expected = tuple(int(edge.size - 1) for edge in parsed_edges)
+        if expected != parsed_model.shape:
+            raise ValueError(
+                f"Model shape {parsed_model.shape} does not match edge-defined shape {expected}."
+            )
+        self._edges = parsed_edges
+        self._model = parsed_model
         self._label = label
         self._cmap = cmap
         self._log = bool(log_scale)
@@ -267,8 +276,18 @@ class Model3DView(QWidget):
         pv = self._pv
         ex, ey, ez = self._edges
         grid = pv.RectilinearGrid(ex, ey, ez)
-        grid.cell_data[self._label] = self._model.flatten(order="F")
         self._plotter.clear()
+        values = self._model
+        if self._log:
+            values = np.where(np.isfinite(values) & (values > 0), values, np.nan)
+            if not np.isfinite(values).any():
+                self._plotter.add_text(
+                    "No positive finite values for logarithmic display.",
+                    position="upper_left",
+                )
+                self._plotter.add_axes()
+                return
+        grid.cell_data[self._label] = values.flatten(order="F")
         kw = dict(scalars=self._label, cmap=self._cmap, log_scale=self._log,
                   show_edges=False, scalar_bar_args={"title": self._label})
         try:
@@ -295,21 +314,41 @@ class Model3DView(QWidget):
         _, ny, nz = m.shape
         zi = int(np.clip(self._z_slider.value(), 0, nz - 1))
         yj = int(np.clip(self._y_slider.value(), 0, ny - 1))
-        finite = m[np.isfinite(m)]
+        finite_mask = np.isfinite(m)
+        if self._log:
+            finite_mask &= m > 0
+        finite = m[finite_mask]
+        self._fig.clear()
+        if finite.size == 0:
+            ax = self._fig.add_subplot(111)
+            ax.text(
+                0.5, 0.5,
+                "No positive finite values for logarithmic display."
+                if self._log else "No finite model values to display.",
+                ha="center", va="center", transform=ax.transAxes, wrap=True,
+            )
+            ax.axis("off")
+            self._canvas.draw_idle()
+            return
         vmin = float(np.nanpercentile(finite, 2)) if finite.size else 0.0
         vmax = float(np.nanpercentile(finite, 98)) if finite.size else 1.0
         if self._log:
-            norm = LogNorm(max(vmin, 1e-9), max(vmax, 1e-9))
+            vmin = max(vmin, 1e-12)
+            vmax = max(vmax, vmin * 1.01)
+            norm = LogNorm(vmin, vmax)
         else:
             norm = Normalize(vmin, vmax if vmax > vmin else vmin + 1.0)
         zc = 0.5 * (ez[:-1] + ez[1:])
         yc = 0.5 * (ey[:-1] + ey[1:])
-        self._fig.clear()
         if ny == 1:
             # 2D section: position along the line (x) vs elevation/depth (z).
             ax = self._fig.add_subplot(111)
             im = ax.pcolormesh(ex, ez, m[:, 0, :].T, cmap=self._cmap, norm=norm, shading="auto")
-            ax.set_title("Resistivity section")
+            field_name = self._label.strip() or "Model"
+            ax.set_title(
+                "Resistivity section"
+                if "resist" in field_name.lower() else f"{field_name} section"
+            )
             ax.set_xlabel("position along line (m)"); ax.set_ylabel("elevation (m)")
             self._fig.colorbar(im, ax=ax, shrink=0.85, label=self._label)
             self._canvas.draw_idle()

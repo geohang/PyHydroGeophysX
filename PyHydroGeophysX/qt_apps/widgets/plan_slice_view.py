@@ -51,6 +51,14 @@ class PlanSliceView(QWidget):
         self._xy = np.asarray(xy, dtype=float)
         self._res = np.asarray(res, dtype=float)
         self._depths = np.asarray(depths, dtype=float).ravel()
+        if self._xy.ndim != 2 or self._xy.shape[1] < 2:
+            raise ValueError("Plan slices need xy coordinates with shape (n_soundings, 2).")
+        if self._res.ndim != 2:
+            raise ValueError("Plan slices need values with shape (n_soundings, n_depths).")
+        if self._res.shape[0] != self._xy.shape[0]:
+            raise ValueError("Coordinate and sounding counts do not match.")
+        if self._res.shape[1] != self._depths.size or self._depths.size == 0:
+            raise ValueError("Depth coordinates must match the value columns and cannot be empty.")
         self._label = label
         self._log = bool(log_scale)
         self._x_label = x_label
@@ -70,7 +78,10 @@ class PlanSliceView(QWidget):
             return
         j = int(np.clip(self._z.value(), 0, self._depths.size - 1))
         vals = self._res[:, j]
-        finite_all = self._res[np.isfinite(self._res)]
+        finite_mask = np.isfinite(self._res)
+        if self._log:
+            finite_mask &= self._res > 0
+        finite_all = self._res[finite_mask]
         if finite_all.size:
             vmin = float(np.nanpercentile(finite_all, 2))
             vmax = float(np.nanpercentile(finite_all, 98))
@@ -83,6 +94,8 @@ class PlanSliceView(QWidget):
 
         x, y = self._xy[:, 0], self._xy[:, 1]
         good = np.isfinite(vals) & np.isfinite(x) & np.isfinite(y)
+        if self._log:
+            good &= vals > 0
         # Treat the soundings as a line (scatter only, no misleading filled map)
         # unless they genuinely spread in 2D: compare the minor vs major PCA axis.
         collinear = True
@@ -93,6 +106,20 @@ class PlanSliceView(QWidget):
 
         self._fig.clear()
         ax = self._fig.add_subplot(111)
+        if not good.any():
+            ax.text(
+                0.5, 0.5,
+                "No positive finite values at this depth."
+                if self._log else "No finite values at this depth.",
+                ha="center", va="center", transform=ax.transAxes,
+            )
+            ax.set_xlabel(self._x_label)
+            if self._y_label:
+                ax.set_ylabel(self._y_label)
+            ax.set_title(f"Depth {self._depths[j]:.0f} m")
+            self._z_label.setText(f"{self._depths[j]:.0f} m")
+            self._canvas.draw_idle()
+            return
         mappable = None
         if good.sum() >= 4 and not collinear:
             try:  # a filled map when the soundings actually spread in 2D

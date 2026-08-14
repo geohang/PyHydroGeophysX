@@ -959,7 +959,22 @@ class HydroGeophysicsModule(BaseModule):
             return
         if arr2d is None:
             return
-        self._map.set_array(arr2d)
+        labels = {
+            "Water content": "Volumetric water content",
+            "Porosity": "Porosity",
+            "Top": "Top elevation / depth (m)",
+            "Bottom": "Bottom elevation / depth (m)",
+        }
+        title = var
+        if var in {"Water content", "Porosity", "Bottom"}:
+            title += f" — layer {layer}"
+        if var == "Water content" and self._wc is not None and self._wc.ndim == 4:
+            title += f", snapshot {self._snapshot.value()}"
+        self._map.set_array(
+            arr2d,
+            value_label=labels.get(var, var),
+            title=title,
+        )
         if self._point1 and self._point2:
             self._map.set_profile_points(self._point1, self._point2)
 
@@ -1005,7 +1020,13 @@ class HydroGeophysicsModule(BaseModule):
         self._profile = profile
         try:
             wc = np.asarray(profile["water_content_profile"], dtype=float)
-            self._preview.set_array(wc)
+            self._preview.set_array(
+                wc,
+                x_label="Profile sample",
+                y_label="Layer",
+                value_label="Volumetric water content",
+                title="Water-content profile preview",
+            )
         except Exception as exc:  # noqa: BLE001
             self.log(f"Profile preview failed: {exc}", "warn")
 

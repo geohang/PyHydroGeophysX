@@ -127,6 +127,41 @@ def _artifact_label(artifact: Dict[str, Any], *, missing: bool = False) -> str:
     return f"{label} (missing)" if missing else label
 
 
+def _artifact_plot_options(artifact: Dict[str, Any], path: Path) -> tuple[str, str, bool]:
+    """Return ``(title, value_label, log_scale)`` for numeric previews.
+
+    Result artifacts already carry field metadata in several workflows.  Keep
+    that meaning when the file reaches the generic viewer instead of reducing
+    every grid to anonymous rows, columns, and an unlabeled linear colour bar.
+    """
+    metadata = artifact.get("metadata")
+    metadata = dict(metadata) if isinstance(metadata, dict) else {}
+    kind = str(artifact.get("kind") or "")
+    field = str(
+        metadata.get("label")
+        or metadata.get("field")
+        or artifact.get("label")
+        or (_pretty_kind(kind) if kind else "Value")
+    ).strip()
+    units = str(metadata.get("units") or "").strip()
+    tokens = " ".join((kind, path.stem, field)).lower()
+    is_resistivity = any(token in tokens for token in ("resistiv", "rhoa", "rho_a"))
+    if not units and is_resistivity:
+        units = "Ω·m"
+    value_label = field or "Value"
+    if units and units.lower() not in value_label.lower():
+        value_label = f"{value_label} ({units})"
+    explicit_log = metadata.get("log_scale")
+    if isinstance(explicit_log, str):
+        log_scale = explicit_log.strip().lower() in {"1", "true", "yes", "log", "log10"}
+    elif explicit_log is None:
+        log_scale = is_resistivity
+    else:
+        log_scale = bool(explicit_log)
+    title = str(metadata.get("title") or path.stem.replace("_", " ").strip()).strip()
+    return title, value_label, log_scale
+
+
 def _run_title(record: "RunRecord") -> str:
     """Show the user's own name for a run, or a short stable one.
 
@@ -789,11 +824,13 @@ class ModelViewerModule(BaseModule):
         renderer = select_renderer(artifact)
         try:
             if renderer in {"array", "array_stack", "curve"} and path.suffix.lower() in {".npy", ".npz"}:
-                self._render_numpy(path, renderer)
+                self._render_numpy(path, renderer, artifact)
             elif renderer == "curve":
                 self._render_curve_file(path)
             elif renderer == "image":
-                view = ZoomableImageView(); view.set_image_file(path)
+                view = ZoomableImageView()
+                if not view.set_image_file(path):
+                    raise ValueError("the image decoder could not read this file")
                 self._replace_visual(view)
             elif renderer == "vtk":
                 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
@@ -824,7 +861,14 @@ class ModelViewerModule(BaseModule):
         self._visual_resources.extend(resources or [])
         self._visual_layout.addWidget(widget)
 
-    def _render_numpy(self, path: Path, renderer: str) -> None:
+    def _render_numpy(
+        self,
+        path: Path,
+        renderer: str,
+        artifact: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        artifact = dict(artifact or {})
+        title, value_label, log_scale = _artifact_plot_options(artifact, path)
         loaded = np.load(
             path,
             allow_pickle=False,
@@ -839,20 +883,43 @@ class ModelViewerModule(BaseModule):
                 ]
                 if not names:
                     raise ValueError("NPZ contains no numeric arrays.")
-                array = np.array(loaded[names[0]], copy=True)
+                metadata = artifact.get("metadata")
+                metadata = dict(metadata) if isinstance(metadata, dict) else {}
+                requested = str(metadata.get("array_key") or "")
+                chosen = requested if requested in names else names[0]
+                array = np.array(loaded[chosen], copy=True)
                 loaded.close()
             else:
                 array = loaded
-            renderer = select_renderer({"path": str(path)}, array.shape)
+            # Keep semantic dispatch from the artifact (notably a 2-D curve
+            # table).  Shape only upgrades/downgrades the generic array modes.
+            if renderer == "array" and array.ndim >= 3:
+                renderer = "array_stack"
+            elif renderer == "array_stack" and array.ndim < 3:
+                renderer = "curve" if array.ndim == 1 else "array"
             if renderer == "curve" or array.ndim == 1:
-                values = np.array(array, copy=True).ravel()
-                view = CurveViewer(); view.add_curve(
-                    np.arange(values.size), values, path.stem
-                )
+                values = np.array(array, copy=True)
+                view = CurveViewer()
+                if values.ndim == 2 and min(values.shape) >= 2:
+                    # A compact 2 x N / 3 x N array normally stores x and one
+                    # or two series by row; a tall N x K array stores columns.
+                    if values.shape[0] <= 4 and values.shape[1] > 2 * values.shape[0]:
+                        values = values.T
+                    x = values[:, 0]
+                    for column in range(1, values.shape[1]):
+                        view.add_curve(x, values[:, column], f"{value_label} {column}")
+                else:
+                    values = values.ravel()
+                    view.add_curve(np.arange(values.size), values, value_label)
                 self._replace_visual(view); return
             if array.ndim == 2:
                 values = np.array(array, copy=True)
-                view = ArrayViewer(); view.set_array(values)
+                view = ArrayViewer(); view.set_array(
+                    values,
+                    log=log_scale,
+                    value_label=value_label,
+                    title=title,
+                )
                 self._replace_visual(view); return
             if array.ndim >= 3:
                 host = QWidget(); layout = QVBoxLayout(host)
@@ -861,17 +928,29 @@ class ModelViewerModule(BaseModule):
                 controls.addWidget(QLabel("Step / slice:")); controls.addWidget(step); controls.addStretch(1)
                 view = ArrayViewer()
                 sample = np.asarray(array).ravel()[::max(1, array.size // 250_000)]
+                if log_scale:
+                    with np.errstate(divide="ignore", invalid="ignore"):
+                        sample = np.log10(np.where(sample > 0, sample, np.nan))
                 finite = sample[np.isfinite(sample)]
-                limits = np.percentile(finite, [2, 98]) if finite.size else None
+                limits = None
+                if finite.size:
+                    lo, hi = np.percentile(finite, [2, 98])
+                    if hi <= lo:
+                        half_span = 0.5 if log_scale else max(abs(float(lo)) * 0.05, 0.5)
+                        lo, hi = float(lo) - half_span, float(hi) + half_span
+                    limits = (float(lo), float(hi))
                 def show_slice(value: int) -> None:
                     # Copy only the visible slice: the widget never owns a view
                     # of the file mapping, so Delete Run can close it first.
                     view.set_array(
                         np.array(array[value], copy=True),
                         autoscale=limits is None,
+                        log=log_scale,
+                        value_label=value_label,
+                        title=f"{title} — slice {value + 1}",
                     )
-                    if limits is not None and limits[1] > limits[0]:
-                        view.set_levels(float(limits[0]), float(limits[1]))
+                    if limits is not None:
+                        view.set_levels(*limits)
                 step.valueChanged.connect(show_slice); show_slice(0)
                 layout.addLayout(controls); layout.addWidget(view, stretch=1)
                 self._replace_visual(host, resources=[loaded])

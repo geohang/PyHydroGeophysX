@@ -651,7 +651,10 @@ class EMOverviewView(QWidget):
         nothing on the picture reaches.
         """
         shown = self._masked_resistivity()
-        finite = shown[np.isfinite(shown)]
+        finite_mask = np.isfinite(shown)
+        if log_scale:
+            finite_mask &= shown > 0
+        finite = shown[finite_mask]
         if not finite.size:
             return (1.0, 100.0)
         vmin = float(np.percentile(finite, 5))
@@ -686,7 +689,7 @@ class EMOverviewView(QWidget):
         """
         from matplotlib import colormaps
 
-        if distance.size < 2 or not np.isfinite(res).any():
+        if distance.size < 1 or not np.isfinite(res).any():
             return
         width, height = 700, 420
         # Out to the cell boundaries, not just to the end stations: the axes are
@@ -707,7 +710,7 @@ class EMOverviewView(QWidget):
             elif finite.sum() == 1:
                 columns[index] = np.log10(row[finite][0])
         usable = np.flatnonzero(np.isfinite(columns).any(axis=1))
-        if usable.size < 2:
+        if usable.size < 1:
             return
         # Then across the line, one survey line at a time. Interpolating over a
         # join would draw a smooth transition between two places that are not

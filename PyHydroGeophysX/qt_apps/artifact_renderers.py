@@ -20,13 +20,15 @@ def select_renderer(
         fmt = Path(str(artifact.get("path") or "")).suffix.lower().lstrip(".")
     if "model_bundle" in kind or kind in {"pygimli_bundle", "mesh_model_bundle"}:
         return "mesh_bundle"
-    # A bare PyGIMLi mesh is the primary product of the 3-D mesh builder, so it
-    # needs its own viewer rather than falling through to "no renderer".
-    if fmt == "bms" or kind in {"mesh", "pygimli_mesh"}:
+    # A recognized file format is stronger evidence than a broad semantic kind.
+    # In particular, ``kind=volume`` with ``format=npy`` is a NumPy stack, not a
+    # VTK file, and a ``figure_*`` data artifact must not be sent to an image
+    # decoder merely because its kind contains the word "figure".
+    if fmt == "bms":
         return "mesh"
-    if fmt in _VTK_FORMATS or kind in {"velocity_model", "volume", "vtk"}:
+    if fmt in _VTK_FORMATS:
         return "vtk"
-    if fmt in _IMAGE_FORMATS or "figure" in kind or kind == "image":
+    if fmt in _IMAGE_FORMATS:
         return "image"
     if fmt in {"npy", "npz"}:
         shape = tuple(array_shape or artifact.get("shape") or ())
@@ -41,6 +43,14 @@ def select_renderer(
         return "table"
     if fmt == "json":
         return "json"
+    # Kind-only fallbacks cover virtual/in-record artifacts and files without a
+    # useful extension. A bare PyGIMLi mesh is the primary mesh-builder product.
+    if kind in {"mesh", "pygimli_mesh"}:
+        return "mesh"
+    if kind in {"velocity_model", "volume", "vtk"}:
+        return "vtk"
+    if "figure" in kind or kind == "image":
+        return "image"
     return "file"
 
 

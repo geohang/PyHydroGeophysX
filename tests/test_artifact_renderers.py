@@ -11,6 +11,9 @@ from PyHydroGeophysX.qt_apps.artifact_renderers import select_renderer
         ({"path": "forward_mesh.bms"}, None, "mesh"),
         ({"kind": "mesh", "path": "grid.bms"}, None, "mesh"),
         ({"path": "velocity.vtk"}, None, "vtk"),
+        # Concrete NumPy formats take precedence over broad semantic kinds.
+        ({"kind": "volume", "path": "velocity.npy"}, (4, 5, 6), "array_stack"),
+        ({"kind": "figure_data", "path": "section.npy"}, (20, 30), "array"),
         ({"path": "section.npy"}, (20, 30), "array"),
         ({"path": "times.npy"}, (12, 20, 30), "array_stack"),
         ({"kind": "gravmag_profile", "path": "line.csv"}, None, "curve"),

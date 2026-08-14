@@ -157,14 +157,37 @@ class ERTProcessingModule(BaseModule):
         self._plot.addItem(self._sel_scatter)
         self._plot.scene().sigMouseClicked.connect(self._on_click)
 
-        self._pseudo_widget = pg.PlotWidget()
+        # Use a GraphicsLayout rather than a bare PlotWidget so the colour scale
+        # is part of the pseudosection.  The plotted quantity is log10(rhoa), but
+        # the colour-bar axis formats those exponents back into physical ohm-m
+        # values; readers should not have to infer resistivity from colour alone.
+        self._pseudo_widget = pg.GraphicsLayoutWidget()
         self._pseudo_widget.setBackground("w")
-        self._pseudo_widget.showGrid(x=True, y=True, alpha=0.25)
-        self._pseudo_widget.setLabel("bottom", "x (m)")
-        self._pseudo_widget.setLabel("left", "pseudo-depth (m)")
-        self._pseudo_plot = self._pseudo_widget.getPlotItem()
-        self._pseudo_scatter = pg.ScatterPlotItem(size=11)
+        self._pseudo_plot = self._pseudo_widget.addPlot(row=0, col=0)
+        self._pseudo_plot.showGrid(x=True, y=True, alpha=0.25)
+        self._pseudo_plot.setLabel("bottom", "x (m)")
+        self._pseudo_plot.setLabel("left", "pseudo-depth (m, positive down)")
+        self._pseudo_plot.invertY(True)
+        self._pseudo_scatter = pg.ScatterPlotItem(size=11, hoverable=True)
         self._pseudo_plot.addItem(self._pseudo_scatter)
+        self._pseudo_scatter.sigHovered.connect(self._on_pseudo_hover)
+        self._pseudo_colorbar = pg.ColorBarItem(
+            values=(0.0, 1.0),
+            width=18,
+            colorMap=self._cmap,
+            label="Apparent resistivity (Ω·m)",
+            interactive=False,
+            colorMapMenu=False,
+        )
+        self._pseudo_colorbar.axis.setLogMode(True)
+        self._pseudo_widget.addItem(self._pseudo_colorbar, row=0, col=1)
+        self._pseudo_readout = self._pseudo_widget.addLabel(
+            "Hover a measurement to read apparent resistivity.",
+            row=1,
+            col=0,
+            colspan=2,
+            justify="left",
+        )
 
         self._model_view = MeshResultView()
         # The "Resistivity model" tab shows the single inversion OR any time step
@@ -2226,6 +2249,8 @@ class ERTProcessingModule(BaseModule):
         if not self._pseudo:
             self._pseudo_scatter.setData([])
             self._pseudo_plot.setTitle("")
+            self._pseudo_colorbar.setVisible(False)
+            self._pseudo_readout.setText("No apparent-resistivity measurements loaded.")
             return
         arr = np.asarray(self._pseudo, dtype=float)
         mid, depth, rhoa = arr[:, 0], arr[:, 1], arr[:, 2]
@@ -2233,19 +2258,52 @@ class ERTProcessingModule(BaseModule):
         mid, depth, rhoa = mid[valid], depth[valid], rhoa[valid]
         if rhoa.size == 0:
             self._pseudo_scatter.setData([])
+            self._pseudo_plot.setTitle("No positive finite apparent resistivity to display")
+            self._pseudo_colorbar.setVisible(False)
+            self._pseudo_readout.setText(
+                "All apparent-resistivity values are missing, non-finite, or non-positive."
+            )
             return
         log_rhoa = np.log10(rhoa)
         lo, hi = np.percentile(log_rhoa, [3, 97])
-        rng = hi - lo if hi > lo else 1.0
+        if hi <= lo:
+            lo, hi = float(lo) - 0.5, float(hi) + 0.5
+        rng = hi - lo
         norm = np.clip((log_rhoa - lo) / rng, 0.0, 1.0)
         lut = self._cmap.map(norm, mode="byte")
         spots = [
-            {"pos": (float(mid[i]), -float(depth[i])),
-             "brush": pg.mkBrush(int(lut[i, 0]), int(lut[i, 1]), int(lut[i, 2])), "size": 11}
+            {"pos": (float(mid[i]), float(depth[i])),
+             "data": (float(mid[i]), float(depth[i]), float(rhoa[i])),
+             "brush": pg.mkBrush(int(lut[i, 0]), int(lut[i, 1]), int(lut[i, 2])),
+             "size": 11}
             for i in range(mid.size)
         ]
         self._pseudo_scatter.setData(spots)
-        self._pseudo_plot.setTitle(f"Apparent resistivity (Ω·m): {rhoa.min():.0f} – {rhoa.max():.0f}  (n={rhoa.size})")
+        self._pseudo_colorbar.setLevels((float(lo), float(hi)))
+        self._pseudo_colorbar.setVisible(True)
+        self._pseudo_readout.setText(
+            "Hover a measurement to read x, pseudo-depth, and apparent resistivity."
+        )
+        self._pseudo_plot.setTitle(
+            f"Apparent resistivity: {rhoa.min():.3g} – {rhoa.max():.3g} Ω·m  "
+            f"(n={rhoa.size})"
+        )
+
+    def _on_pseudo_hover(self, _item, points, _event) -> None:
+        """Report the physical value behind a pseudosection colour."""
+        if not points:
+            self._pseudo_readout.setText(
+                "Hover a measurement to read x, pseudo-depth, and apparent resistivity."
+            )
+            return
+        data = points[0].data()
+        if not data or len(data) != 3:
+            return
+        x, depth, rhoa = data
+        self._pseudo_readout.setText(
+            f"x = {float(x):.3g} m    ·    pseudo-depth = {float(depth):.3g} m"
+            f"    ·    ρa = {float(rhoa):.4g} Ω·m"
+        )
 
     # -- interaction ---------------------------------------------------------
     def _nearest(self, x: float, z: float) -> Optional[int]:

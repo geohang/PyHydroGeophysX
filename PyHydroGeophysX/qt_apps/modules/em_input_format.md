@@ -106,6 +106,16 @@ A header-less file is read by column order: one column = position; two columns =
 
 ## Notes
 
+- A line inversion runs the per-sounding work on threads: reading the stations,
+  building their forward operators, and every forward and Jacobian evaluation
+  inside the coupled solve. The thread count comes from the machine; set
+  `parallel_workers` through `set_params` to pin it. Each sounding owns its
+  forward operator and the workers only read the shared model, so the models
+  come back bit for bit identical to a serial run, which the test suite checks
+  over repeated solves. The coupled solve itself measures 9.5 times faster on 20
+  threads; end to end the gain is smaller, because building the forward
+  operators is a fixed cost that threads do not remove (roughly 1.4 times on a
+  short run, 3.9 times on one that iterates 25 times).
 - **Auto-calibrate** (checkbox, on by default) estimates the data-scale
   calibration from the data before inverting. Leave it on for normalized airborne
   data (e.g. moment-normalized dB/dt); it returns ~1 for data already in the

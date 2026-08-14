@@ -44,6 +44,8 @@ class ArrayViewer(QWidget):
         self._profile_mode = False
         self._markers: List[Tuple[float, float]] = []
         self._profile_pts: List[List[float]] = []
+        self._value_label = "Value"
+        self._log_display = False
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -65,6 +67,7 @@ class ArrayViewer(QWidget):
             self._hist.gradient.loadPreset("viridis")
         except Exception:
             pass
+        self._hist.axis.setLabel(self._value_label)
         self._glw.addItem(self._hist, row=0, col=1)
 
         self._marker_scatter = pg.ScatterPlotItem(
@@ -107,20 +110,30 @@ class ArrayViewer(QWidget):
         y_label: Optional[str] = None,
         log: bool = False,
         invert_y: Optional[bool] = None,
+        value_label: Optional[str] = None,
+        title: Optional[str] = None,
     ) -> None:
         """Display ``array`` (2D). Levels default to the 2-98 percentile.
 
         ``extent=(x0, x1, z0, z1)`` maps the array into real-world units (e.g. a
         resistivity section in metres) instead of column/row indices; ``log``
         colours by ``log10`` while the hover read-out still reports the linear
-        value; ``x_label`` / ``y_label`` / ``invert_y`` adjust the axes. With no
-        optional arguments the behaviour is unchanged for existing callers.
+        value; ``x_label`` / ``y_label`` / ``invert_y`` adjust the axes.
+        ``value_label`` labels both the colour scale and hover readout.  For a
+        logarithmic display, colour-bar ticks are formatted back into the
+        original physical values rather than exposing log10 exponents.
         """
         arr = np.asarray(array, dtype=float)
         if arr.ndim != 2:
             raise ValueError(f"ArrayViewer needs a 2D array, got shape {arr.shape}.")
         self._array = arr
         self._extent = extent
+        self._log_display = bool(log)
+        self._value_label = str(value_label or "Value")
+        self._hist.axis.setLabel(self._value_label)
+        self._hist.axis.setLogMode(self._log_display)
+        self._plot.setTitle(str(title or ""))
+        self._readout.setText(f"x: -, y: -, {self._value_label}: -")
         if invert_y is not None:
             self._plot.invertY(bool(invert_y))
         if x_label is not None:
@@ -132,6 +145,10 @@ class ArrayViewer(QWidget):
         if log:
             with np.errstate(divide="ignore", invalid="ignore"):
                 display = np.log10(np.where(arr > 0, arr, np.nan))
+        # setRect leaves a transform on the ImageItem.  Reset it when a later
+        # dataset goes back to pixel coordinates, otherwise axes and hover
+        # locations silently retain the previous dataset's physical extent.
+        self._img.resetTransform()
         self._img.setImage(display, autoLevels=False)
         if extent is not None:
             x0, x1, z0, z1 = (float(v) for v in extent)
@@ -142,9 +159,13 @@ class ArrayViewer(QWidget):
             if finite.size:
                 lo, hi = np.percentile(finite, [2, 98])
                 if hi <= lo:
-                    hi = lo + 1.0
+                    half_span = 0.5 if log else max(abs(float(lo)) * 0.05, 0.5)
+                    lo, hi = float(lo) - half_span, float(hi) + half_span
                 self._img.setLevels((lo, hi))
                 self._hist.setLevels(lo, hi)
+            else:
+                self._img.setLevels((0.0, 1.0))
+                self._hist.setLevels(0.0, 1.0)
             self._plot.autoRange()
 
     def set_levels(self, lo: float, hi: float) -> None:
@@ -244,13 +265,14 @@ class ArrayViewer(QWidget):
     def _on_mouse_moved(self, scene_pos) -> None:
         hit = self._scene_to_array(scene_pos)
         if hit is None:
-            self._readout.setText("x: -, y: -, value: -")
+            self._readout.setText(f"x: -, y: -, {self._value_label}: -")
             return
         col, row, value, x, z = hit
+        reading = f"{self._value_label}: {value:.4g}"
         if self._extent is not None:
-            self._readout.setText(f"x: {x:.1f}, z: {z:.1f}, value: {value:.4g}")
+            self._readout.setText(f"x: {x:.1f}, z: {z:.1f}, {reading}")
         else:
-            self._readout.setText(f"x(col): {col}, y(row): {row}, value: {value:.4g}")
+            self._readout.setText(f"x(col): {col}, y(row): {row}, {reading}")
 
     def _on_mouse_clicked(self, event) -> None:
         if event.button() != Qt.LeftButton:
