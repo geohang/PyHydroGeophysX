@@ -2,8 +2,8 @@
 
 ``TaskWorker`` handles non-workflow support tasks such as file parsing and
 preview generation. ``WorkflowWorker`` runs cooperative workflows in a Qt
-thread, while ``ProcessWorkflowWorker`` isolates native calls that can retain
-the GIL (notably PyGIMLi inversion) in a separate Python process.
+thread, while ``ProcessProbeWorker`` and ``ProcessWorkflowWorker`` isolate
+native-library probes and workflows in separate Python processes.
 """
 
 from __future__ import annotations
@@ -36,6 +36,19 @@ def _error_message(exc: Exception) -> str:
     if isinstance(exc, BackendUnavailable):
         return f"Backend unavailable: {exc}"
     return str(exc)
+
+
+def _active_console_python() -> Path:
+    """Return the console Python launcher belonging to the active environment."""
+    prefix_python = Path(sys.prefix) / "Scripts" / "python.exe"
+    executable = prefix_python if prefix_python.is_file() else Path(sys.executable)
+    if executable.name.lower().startswith("pythonw"):
+        console_python = executable.with_name(
+            executable.name.replace("pythonw", "python", 1)
+        )
+        if console_python.is_file():
+            executable = console_python
+    return executable
 
 
 class TaskWorker(QThread):
@@ -114,6 +127,180 @@ class WorkflowWorker(QThread):
                 self.failed.emit(_error_message(exc))
 
 
+class ProcessProbeWorker(QObject):
+    """Run a JSON-emitting diagnostic module in a clean Python process.
+
+    GPU libraries load several native Windows DLLs. Importing them from a
+    ``QThread`` still uses the workbench process and can therefore inherit a
+    conflicting OpenMP DLL that another visualization dependency loaded first.
+    A fresh interpreter has its own DLL namespace and matches the isolation used
+    by the actual ERT inversion workflow.
+
+    The child module must print a final JSON object with either
+    ``{"ok": true, "result": {...}}`` or ``{"ok": false, "error": "..."}``.
+    Earlier stdout/stderr is retained only as a diagnostic if the contract is
+    not satisfied.
+    """
+
+    succeeded = Signal(object)
+    failed = Signal(str)
+    finished = Signal()
+
+    def __init__(
+        self,
+        module: str,
+        *,
+        timeout_ms: int = 60000,
+        working_directory: str | Path | None = None,
+        parent: QObject | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.module = str(module)
+        self.timeout_ms = max(1000, int(timeout_ms))
+        self._cancelled = False
+        self._finished = False
+        self._timed_out = False
+        self._stdout = bytearray()
+        self._stderr = bytearray()
+
+        self.process = QProcess(self)
+        if working_directory is not None:
+            self.process.setWorkingDirectory(str(Path(working_directory).resolve()))
+        environment = QProcessEnvironment.systemEnvironment()
+        environment.insert("PYTHONUTF8", "1")
+        environment.insert("PYTHONIOENCODING", "utf-8")
+        self.process.setProcessEnvironment(environment)
+        self.process.setProgram(str(_active_console_python()))
+        self.process.setArguments(["-m", self.module])
+        self.process.readyReadStandardOutput.connect(self._read_stdout)
+        self.process.readyReadStandardError.connect(self._read_stderr)
+        self.process.errorOccurred.connect(self._on_process_error)
+        self.process.finished.connect(self._on_finished)
+
+        self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(self._on_timeout)
+
+    def start(self) -> None:
+        self._timer.start(self.timeout_ms)
+        self.process.start()
+
+    def cancel(self) -> None:
+        self._cancelled = True
+        self._timer.stop()
+        if self.isRunning():
+            self.process.terminate()
+            QTimer.singleShot(2000, self._kill_if_running)
+
+    def quit(self) -> None:
+        """QThread-compatible shutdown hook used by ``BaseModule``."""
+        self.cancel()
+
+    def wait(self, timeout_ms: int = 30000) -> bool:
+        return bool(self.process.waitForFinished(int(timeout_ms)))
+
+    def isRunning(self) -> bool:  # noqa: N802 - mirror QThread's public API
+        return self.process.state() != QProcess.ProcessState.NotRunning
+
+    def is_cancelled(self) -> bool:
+        return self._cancelled
+
+    def _kill_if_running(self) -> None:
+        if self.isRunning():
+            self.process.kill()
+
+    def _read_stdout(self) -> None:
+        self._stdout.extend(bytes(self.process.readAllStandardOutput()))
+
+    def _read_stderr(self) -> None:
+        self._stderr.extend(bytes(self.process.readAllStandardError()))
+
+    def _on_timeout(self) -> None:
+        if self._finished:
+            return
+        self._timed_out = True
+        if self.isRunning():
+            self.process.kill()
+        else:
+            self._finish_with_error(
+                f"Probe process timed out after {self.timeout_ms / 1000:g} seconds."
+            )
+
+    def _on_process_error(self, error: QProcess.ProcessError) -> None:
+        if error == QProcess.ProcessError.FailedToStart and not self._finished:
+            self._finish_with_error(
+                f"Could not start probe process: {self.process.errorString()}"
+            )
+
+    def _finish_with_error(self, message: str) -> None:
+        if self._finished:
+            return
+        self._finished = True
+        self._timer.stop()
+        if not self._cancelled:
+            self.failed.emit(message)
+        self.finished.emit()
+
+    @staticmethod
+    def _last_json_object(raw: bytes) -> dict[str, Any]:
+        text = raw.decode("utf-8", errors="replace")
+        for line in reversed(text.splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict) and "ok" in payload:
+                return payload
+        raise ValueError("probe did not return its JSON result")
+
+    def _on_finished(
+        self, exit_code: int, _exit_status: QProcess.ExitStatus
+    ) -> None:
+        if self._finished:
+            return
+        self._timer.stop()
+        self._read_stdout()
+        self._read_stderr()
+        if self._cancelled:
+            self._finished = True
+            self.finished.emit()
+            return
+        if self._timed_out:
+            self._finish_with_error(
+                f"Probe process timed out after {self.timeout_ms / 1000:g} seconds."
+            )
+            return
+        if int(exit_code) != 0:
+            unsigned = int(exit_code) & 0xFFFFFFFF
+            detail = self._stderr.decode("utf-8", errors="replace").strip()
+            suffix = f" {detail[-2000:]}" if detail else ""
+            self._finish_with_error(
+                f"Probe process exited with code {int(exit_code)} "
+                f"(0x{unsigned:08X}).{suffix}"
+            )
+            return
+        try:
+            payload = self._last_json_object(bytes(self._stdout))
+        except Exception as exc:  # noqa: BLE001 - malformed child output
+            detail = self._stderr.decode("utf-8", errors="replace").strip()
+            suffix = f" Stderr: {detail[-2000:]}" if detail else ""
+            self._finish_with_error(f"Could not read probe result: {exc}.{suffix}")
+            return
+        if not bool(payload.get("ok")):
+            self._finish_with_error(str(payload.get("error") or "GPU probe failed."))
+            return
+        result = payload.get("result")
+        if not isinstance(result, dict):
+            self._finish_with_error("GPU probe returned an invalid result object.")
+            return
+        self._finished = True
+        self.succeeded.emit(result)
+        self.finished.emit()
+
+
 class ProcessWorkflowWorker(QObject):
     """Execute a recipe in an isolated Python process.
 
@@ -163,15 +350,7 @@ class ProcessWorkflowWorker(QObject):
         # launcher and has crashed in extension DLL initialization (notably
         # pyarrow/arrow.dll).  Prefer the console launcher belonging to the
         # active prefix; QProcess supplies pipes so it does not open a console.
-        prefix_python = Path(sys.prefix) / "Scripts" / "python.exe"
-        executable = prefix_python if prefix_python.is_file() else Path(sys.executable)
-        if executable.name.lower().startswith("pythonw"):
-            console_python = executable.with_name(
-                executable.name.replace("pythonw", "python", 1)
-            )
-            if console_python.is_file():
-                executable = console_python
-        self.process.setProgram(str(executable))
+        self.process.setProgram(str(_active_console_python()))
         self.process.setArguments([
             "-m",
             "PyHydroGeophysX.workflows.cli",
@@ -288,4 +467,9 @@ class ProcessWorkflowWorker(QObject):
         self.finished.emit()
 
 
-__all__ = ["ProcessWorkflowWorker", "TaskWorker", "WorkflowWorker"]
+__all__ = [
+    "ProcessProbeWorker",
+    "ProcessWorkflowWorker",
+    "TaskWorker",
+    "WorkflowWorker",
+]

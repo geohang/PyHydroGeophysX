@@ -129,25 +129,25 @@ class EMOverviewView(QWidget):
         for label, key in (("fade", "fade"), ("hide", "hide"), ("show", "show")):
             self._below_doi.addItem(f"DOI: {label}", key)
         self._below_doi.setToolTip(
-            "What to do with the cells the data do not constrain. The cut is the "
-            "depth of investigation: below it, moving the whole remaining column "
-            "by one decade in resistivity would not move the predicted response by "
-            "more than the threshold, counted in the gates' own error bars.\n\n"
-            "Fade keeps the model visible but washed out, so the section stays "
-            "continuous and it is still obvious which part is regularization. "
-            "Hide blanks it. Show draws everything at full strength, which is only "
-            "honest with the depth-of-investigation line to read it against.")
+            "How the cells below the depth of investigation are drawn. Below that "
+            "depth, changing the whole remaining column by one decade in "
+            "resistivity moves the predicted response by less than the threshold "
+            "beside this control, measured in the gates' own error bars.\n\n"
+            "Fade draws them washed out, so the section stays continuous and the "
+            "regularized part is still distinguishable. Hide leaves them blank. "
+            "Show draws them at full strength, with the depth-of-investigation "
+            "line marking where they begin.")
         self._below_doi.currentIndexChanged.connect(self._redraw)
         self._style = QComboBox()
         for label, key in (("Smooth", "smooth"), ("Layer cells", "cells")):
             self._style.addItem(label, key)
         self._style.setToolTip(
             "Smooth interpolates the recovered models between soundings and down "
-            "each layer stack, the way acquisition software draws a section: the "
-            "structure reads continuously instead of as a wall of blocks. It adds "
-            "no resolution, and the exported model is unchanged.\n\n"
+            "each layer stack, so the section reads continuously rather than as a "
+            "grid of blocks. It adds no resolution, and the exported model is "
+            "unchanged.\n\n"
             "Layer cells draws one rectangle per layer per sounding, which is what "
-            "the inversion actually solved for.")
+            "the inversion solved for.")
         self._style.currentIndexChanged.connect(self._redraw)
         self._vertical = QComboBox()
         for label, key in (("Depth", "depth"), ("Elevation", "elevation")):
@@ -156,10 +156,10 @@ class EMOverviewView(QWidget):
             "Depth measures from each sounding's own ground surface, so the "
             "section is flat-topped and layers line up by burial depth.\n\n"
             "Elevation hangs every sounding from its recorded ground level, so "
-            "the top of the section is the topography and a flat-lying unit "
-            "reads as flat. Available when the survey carries elevations; a TEM "
-            "project records one per station. The inversion is unchanged either "
-            "way, since each 1D model is solved under its own station.")
+            "the top of the section is the topography and a flat-lying unit reads "
+            "as flat. Available when the survey carries elevations. The inversion "
+            "is unchanged either way, since each 1D model is solved under its own "
+            "station.")
         self._vertical.currentIndexChanged.connect(self._redraw)
         self._doi_threshold = QDoubleSpinBox()
         self._doi_threshold.setRange(0.02, 50.0)
@@ -168,14 +168,14 @@ class EMOverviewView(QWidget):
         self._doi_threshold.setValue(float(DOI_SENSITIVITY_THRESHOLD))
         self._doi_threshold.setPrefix("S ≥ ")
         self._doi_threshold.setToolTip(
-            "Cumulated sensitivity a depth has to carry to be shown, in the sense "
-            "of Christiansen and Auken (2012): moving every layer below that depth "
-            "by one e-fold in resistivity would shift the predicted response by "
-            "this many error bars in total.\n\n"
-            "0.8 is their published value, fine-tuned across ground conductivity "
-            "meters, DC soundings and airborne TEM; they report 0.6 to 1.2 as the "
-            "range worth considering. Raise it for a more conservative section, "
-            "lower it to see what the deeper part of the model looks like.")
+            "Cumulated sensitivity a depth must carry to count as investigated. S "
+            "is the sum, over every layer at and below that depth, of how far the "
+            "predicted response moves when the layer changes by one e-fold in "
+            "resistivity, measured in error bars. The definition follows "
+            "Christiansen and Auken (2012).\n\n"
+            "Higher values put the depth of investigation shallower and shorten "
+            "the section; lower values extend it deeper. The value carries no "
+            "units, so one setting applies across systems.")
         self._doi_threshold.valueChanged.connect(self._redraw)
         row.addWidget(self._style)
         row.addWidget(self._vertical)

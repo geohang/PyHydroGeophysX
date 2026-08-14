@@ -45,6 +45,11 @@ coverage.xml
 .pytest_cache/
 # Scratch directories some tests create next to the repo root
 .pytest_tmp_*/
+# Local GUI reproductions created while validating real field datasets.
+tmp/*_native/
+
+# Local release plans that must never be committed or uploaded.
+local_plans/v0.5.0_ert_ui_rendering_plan.md
 
 # Local-only tests, kept out of the published repository by choice.
 # CI runs `pytest -q`, so these do not run there; they are for local checks.

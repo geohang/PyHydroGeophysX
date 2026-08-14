@@ -520,9 +520,7 @@ class EMProcessingModule(BaseModule):
             "After the line converges, the time gates whose residual exceeds the cut "
             "below are dropped and the line is solved again at the same smoothness. "
             "This addresses a high χ² caused by individual bad gates rather than by "
-            "a model that is too stiff.
-
-"
+            "a model that is too stiff.\n\n"
             "Cutting is per gate, not per sounding, and it shrinks the data set; the "
             "floor below bounds how much can be removed. A TDEM station may carry "
             "only a handful of gates.")

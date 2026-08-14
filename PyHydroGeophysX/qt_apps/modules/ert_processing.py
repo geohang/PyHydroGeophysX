@@ -55,6 +55,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.workers import (
+    ProcessProbeWorker,
     ProcessWorkflowWorker,
     TaskWorker,
 )
@@ -113,7 +114,7 @@ class ERTProcessingModule(BaseModule):
         self._qc_mask: Optional[List[bool]] = None
         self._inv_worker: Optional[Any] = None
         self._inv_busy: Optional[BusyStateController] = None
-        self._adtlert_probe_worker: Optional[TaskWorker] = None
+        self._adtlert_probe_worker: Optional[ProcessProbeWorker] = None
         self._adtlert_probe_serial = 0
         self._adtlert_runtime_ready: Optional[bool] = None
         self._ert_recipe_path: str = ""
@@ -225,7 +226,7 @@ class ERTProcessingModule(BaseModule):
         step_bar.setContentsMargins(6, 2, 6, 2)
         step_bar.addWidget(QLabel("Time step:"))
         self._tl_step_combo = QComboBox()
-        self._tl_step_combo.setToolTip("Choose which time-lapse inversion result to display.")
+        self._tl_step_combo.setToolTip("Which time-lapse inversion result is displayed.")
         self._tl_step_combo.currentIndexChanged.connect(self._show_tl_step)
         step_bar.addWidget(self._tl_step_combo, stretch=1)
         self._tl_prev_btn = QPushButton("◀"); self._tl_prev_btn.setMaximumWidth(34)
@@ -245,8 +246,8 @@ class ERTProcessingModule(BaseModule):
         pick_bar.addWidget(QLabel("Model:"))
         self._lam_pick = QComboBox()
         self._lam_pick.setToolTip(
-            "The auto-λ search re-inverted at a different λ. Switch between that model "
-            "and the one at the λ you set.")
+            "The auto-λ search re-inverted at a different λ. Selects between that "
+            "model and the one at the λ set above.")
         self._lam_pick.currentIndexChanged.connect(self._show_lambda_choice)
         pick_bar.addWidget(self._lam_pick, stretch=1)
         self._lam_pick_row.setVisible(False)
@@ -292,6 +293,15 @@ class ERTProcessingModule(BaseModule):
         self._instrument.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
         self._instrument.setMinimumContentsLength(16)
         lform.addRow("Instrument / format", self._instrument)
+
+        # Which reader handled the file is not visible in the result, and the two
+        # do not always agree on how many measurements a file holds, so it is
+        # stated rather than left to the log.
+        self._reader_status = QLabel()
+        self._reader_status.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        self._reader_status.setWordWrap(True)
+        lform.addRow("", self._reader_status)
+        self._show_reader_status()
 
         load_hint = QLabel("Add one or more ERT files (one per time step for time-lapse). "
                            "Click a row to preview it; order top→bottom is time order.")
@@ -368,9 +378,10 @@ class ERTProcessingModule(BaseModule):
 
         self._qc_drop_neg = QCheckBox("Drop ρa ≤ 0")
         self._qc_drop_neg.setToolTip(
-            "A non-positive apparent resistivity is a polarity or geometry error, not "
-            "a measurement. Off by default so the count does not change under you; "
-            "Min ρa above already removes negatives once it is above zero.")
+            "A non-positive apparent resistivity is a polarity or geometry error "
+            "rather than a measurement. Off by default, so the measurement count is "
+            "unchanged unless it is enabled. Min ρa above already removes negatives "
+            "once it is set above zero.")
         mform.addRow(self._qc_drop_neg)
 
         self._qc_min_v = QDoubleSpinBox(); self._qc_min_v.setRange(0.0, 1e6)
@@ -428,12 +439,12 @@ class ERTProcessingModule(BaseModule):
                              ("Full (validate k, search λ)", "full")):
             self._inv_mode.addItem(label, value)
         self._inv_mode.setToolTip(
-            "Quick runs the inversion and nothing else, which is what you want while "
-            "you are still choosing λ and a mesh.\n\n"
+            "Quick runs the inversion and nothing else, which is the shorter run "
+            "while λ and the mesh are still being settled.\n\n"
             "Full adds the two stages Quick drops. It validates the geometric factors "
             "against the mesh, repairing them when they disagree, and it searches λ "
-            "for your target χ². Use it before you trust a section.\n\n"
-            "The k check is the one you cannot postpone on evidence: a wrong k scales "
+            "for the target χ².\n\n"
+            "The k check is the one with the most evidence behind it: a wrong k scales "
             "the whole section by a constant and χ² never notices, so a Quick result "
             "that looks perfect can still be uniformly wrong. Re-run in Full whenever "
             "the resistivities themselves look off, not only when the fit looks bad.")
@@ -447,12 +458,12 @@ class ERTProcessingModule(BaseModule):
             self._engine.addItem(label, value)
         self._engine.setToolTip(
             "Solver. The in-house Gauss-Newton inversion exposes its own stopping rule "
-            "and line search, so the fit assistance below can drive it directly; the "
-            "PyGIMLi manager is kept as a cross-check.\n\n"
+            "and line search, so the fit assistance below drives it directly. The "
+            "PyGIMLi manager runs its own loop and is available as a cross-check.\n\n"
             "ADTLERT uses a CUDA-accelerated cuDSS forward solve and GPU CGLS. "
             "CUDA 12 plus cuDSS are required. Windows is supported; Linux is "
             "recommended for the best performance. The controls below remain "
-            "under your control when this engine is selected.")
+            "available when this engine is selected.")
         self._engine.currentIndexChanged.connect(self._on_engine_changed)
         iform.addRow("Engine", self._engine)
         self._adtlert_status = QLabel()
@@ -511,7 +522,7 @@ class ERTProcessingModule(BaseModule):
         self._mesh_btn = QPushButton("Import mesh…")
         self._mesh_btn.setIcon(theme.icon("fa5s.project-diagram"))
         self._mesh_btn.setToolTip(
-            "Invert on a mesh you built elsewhere instead of one generated from "
+            "Inverts on an externally built mesh instead of one generated from "
             "the electrode positions. PyGIMLi .bms, Gmsh .msh, VTK, or .poly. "
             "The region to invert must carry marker 2 or above; marker 0 and 1 "
             "are treated as background and stay fixed. The file is checked "
@@ -609,7 +620,8 @@ class ERTProcessingModule(BaseModule):
         self._target_chi2.setSingleStep(0.1); self._target_chi2.setValue(1.0)
         self._target_chi2.setToolTip(
             "χ² = 1 means the model explains the data to within the assumed relative "
-            "error. Raise it if the data are noisier than the error estimate admits.")
+            "error. A larger target accepts a looser fit, matching data noisier than "
+            "the error estimate describes.")
         self._chi2_tol = QDoubleSpinBox()
         self._chi2_tol.setRange(0.01, 10.0); self._chi2_tol.setDecimals(2)
         self._chi2_tol.setSingleStep(0.05); self._chi2_tol.setValue(0.2)
@@ -627,16 +639,19 @@ class ERTProcessingModule(BaseModule):
         self._lam_trials = QSpinBox(); self._lam_trials.setRange(1, 20); self._lam_trials.setValue(6)
         self._lam_trials.setToolTip(
             "Upper bound on the extra inversions the λ search may run, on top of the "
-            "one at your λ. Reached only when the target stays out of range.")
+            "first one at the λ set above. Reached only when the target stays out of "
+            "range.")
         aform.addRow("Max λ trials", self._lam_trials)
 
         self._reject = QCheckBox("Reject outliers: drop data the model cannot explain")
         self._reject.setChecked(False)
         self._reject.setToolTip(
-            "After the inversion has converged, drop the measurements whose residual "
-            "exceeds the threshold below and invert again. This is what brings χ² down "
-            "when a handful of readings are simply bad; it also shrinks the dataset, so "
-            "the floor below keeps it from gutting the survey.")
+            "After the inversion converges, the measurements whose residual exceeds "
+            "the threshold below are dropped and the inversion runs again. This "
+            "addresses a high χ² caused by individual bad readings rather than by the "
+            "model.\n\n"
+            "It also shrinks the dataset; the floor below bounds how much can be "
+            "removed.")
         self._reject.toggled.connect(self._on_reject_outliers)
         aform.addRow(self._reject)
 
@@ -762,7 +777,7 @@ class ERTProcessingModule(BaseModule):
         tlform.addRow(self._tl_progress)
         self._tl_export_btn = QPushButton("Export results (VTK + npy + mesh)…")
         self._tl_export_btn.setIcon(theme.icon("fa5s.cube"))
-        self._tl_export_btn.setToolTip("Save the time-lapse models to a folder you pick: a combined VTK, "
+        self._tl_export_btn.setToolTip("Saves the time-lapse models to a chosen folder: a combined VTK, "
                                        "per-step VTKs, final_models.npy, the mesh (.bms), times CSV, and the figure.")
         self._tl_export_btn.setEnabled(False)
         self._tl_export_btn.clicked.connect(self._export_tl_results)
@@ -783,6 +798,9 @@ class ERTProcessingModule(BaseModule):
 
     def _on_engine_changed(self, _index: int = -1) -> None:
         """Probe the selected CUDA backend without changing user parameters."""
+        previous = self._adtlert_probe_worker
+        if previous is not None and previous.isRunning():
+            previous.cancel()
         if self._engine.currentData() != "adtlert":
             self._adtlert_probe_serial += 1
             self._adtlert_status.setVisible(False)
@@ -793,7 +811,10 @@ class ERTProcessingModule(BaseModule):
         self._adtlert_status.setText("Checking CUDA, cuDSS, and GPU CGLS…")
         self._adtlert_status.setStyleSheet("color:#5a6a7a; font-size:8pt;")
         self._adtlert_status.setVisible(True)
-        worker = TaskWorker(self._probe_adtlert_runtime)
+        worker = ProcessProbeWorker(
+            "PyHydroGeophysX.qt_apps.adtlert_probe",
+            timeout_ms=60000,
+        )
         worker.succeeded.connect(
             lambda result, token=serial: self._on_adtlert_probe_ok(token, result)
         )
@@ -804,33 +825,6 @@ class ERTProcessingModule(BaseModule):
         )
         self._adtlert_probe_worker = self.register_worker(worker)
         worker.start()
-
-    @staticmethod
-    def _probe_adtlert_runtime() -> Dict[str, Any]:
-        """Return the actual ADTLERT CUDA path selected by this environment."""
-        import cupy as cp
-        import torch
-        from nvmath.sparse.advanced import DirectSolver  # noqa: F401
-
-        from PyHydroGeophysX.inversion.ert_inversion import (
-            _adtlert_cudss_available,
-            _adtlert_solver_name,
-        )
-
-        if not torch.cuda.is_available():
-            raise RuntimeError("Torch cannot see a CUDA-capable GPU")
-        if int(cp.cuda.runtime.getDeviceCount()) < 1:
-            raise RuntimeError("CuPy cannot see a CUDA-capable GPU")
-        if not _adtlert_cudss_available():
-            raise RuntimeError("ADTLERT CUDA 12/cuDSS probe failed")
-        device = cp.cuda.runtime.getDeviceProperties(0)["name"]
-        if isinstance(device, bytes):
-            device = device.decode(errors="replace")
-        return {
-            "device": str(device),
-            "forward_solver": "cudss",
-            "linearized_solver": _adtlert_solver_name("cgls", prefer_gpu=True),
-        }
 
     def _on_adtlert_probe_ok(self, serial: int, result: Dict[str, Any]) -> None:
         if serial != self._adtlert_probe_serial:
@@ -850,8 +844,8 @@ class ERTProcessingModule(BaseModule):
             return
         self._adtlert_runtime_ready = False
         self._adtlert_status.setText(
-            "GPU unavailable: this selection will run the original PyHydro ERT "
-            f"engine. {message}"
+            "GPU preflight failed. The isolated inversion process will check "
+            f"again and fall back only if CUDA/cuDSS is unavailable. {message}"
         )
         self._adtlert_status.setStyleSheet("color:#b42318; font-size:8pt;")
 
@@ -872,22 +866,73 @@ class ERTProcessingModule(BaseModule):
         self._load_worker = self.register_worker(worker)
         worker.start()
 
+    @staticmethod
+    def _resipy_version() -> str:
+        """Whether ResIPy imports, and its version where it reports one.
+
+        Returns ``""`` when it cannot be imported at all. ResIPy carries its
+        version as ``ResIPy_version`` rather than the usual ``__version__``, and
+        older builds carry neither, so the installed distribution's metadata is
+        the fallback and a bare "yes" the last resort.
+        """
+        try:
+            import resipy
+        except Exception:  # noqa: BLE001 - an optional reader
+            return ""
+        for attribute in ("ResIPy_version", "__version__"):
+            found = getattr(resipy, attribute, None)
+            if found:
+                return str(found)
+        try:
+            from importlib.metadata import version
+            return str(version("resipy"))
+        except Exception:  # noqa: BLE001
+            return "yes"
+
+    def _show_reader_status(self, reader: str = "", detail: str = "") -> None:
+        """One line naming the reader available, or the one that read the file.
+
+        ``reader`` is empty before a file is loaded, when the line reports only
+        what is installed.
+        """
+        version = self._resipy_version()
+        if not reader:
+            named = "ResIPy" if version == "yes" else f"ResIPy {version}"
+            self._reader_status.setText(
+                f"{named} available for loading data." if version
+                else "ResIPy not installed. PyGIMLi loads the data instead.")
+            self._reader_status.setToolTip(
+                "ResIPy handles the instrument-specific formats and the "
+                "reciprocal/stacking columns that come with them. Without it, "
+                "PyGIMLi's native reader is used, which reads the unified and "
+                "BERT formats." if not version else "")
+            return
+        note = f", {detail}" if detail else ""
+        self._reader_status.setText(f"Data loaded by {reader}{note}.")
+        self._reader_status.setToolTip("")
+
     def _parse_ert(self, path, instrument, out_dir, elec_file, spacing):
         """Parse ERT data off the UI thread. Returns a plain dict for the slot."""
         warning = ""
+        reader, reason = "ResIPy", ""
         if instrument is None:  # defensive: the dropdown has no auto/None option
             elec, pseudo, nmeas, data = self._load_pygimli(path)
+            reader = "PyGIMLi"
         else:
             try:
                 elec, pseudo, nmeas, data = self._load_resipy(path, instrument, out_dir, elec_file, spacing)
             except Exception as exc:  # noqa: BLE001
                 warning = f"{instrument} loader failed ({exc}); fell back to pygimli's native reader."
                 elec, pseudo, nmeas, data = self._load_pygimli(path)
-        return {"elec": elec, "pseudo": pseudo, "nmeas": nmeas, "data": data, "warning": warning}
+                reader, reason = "PyGIMLi", "ResIPy could not parse this file"
+        return {"elec": elec, "pseudo": pseudo, "nmeas": nmeas, "data": data,
+                "warning": warning, "reader": reader, "reader_reason": reason}
 
     def _on_ert_loaded(self, path: str, res: dict) -> None:
         if res.get("warning"):
             self.log(res["warning"], "warn")
+        self._show_reader_status(str(res.get("reader", "")),
+                                 str(res.get("reader_reason", "")))
         elec, pseudo, nmeas, data = res["elec"], res["pseudo"], res["nmeas"], res["data"]
         self._x = [float(e[0]) for e in elec]
         self._z = [float(e[1]) for e in elec]
@@ -923,6 +968,9 @@ class ERTProcessingModule(BaseModule):
     def _on_ert_load_failed(self, message: str) -> None:
         self.log(f"Could not load ERT data: {message}", "error")
         self._info.setText(f"Load failed: {message}")
+        # Neither reader got there, so the line goes back to what is installed
+        # rather than keeping the last file's answer.
+        self._show_reader_status()
 
     def _load_pygimli(self, path: str):
         import pygimli.physics.ert as ert
@@ -1281,8 +1329,8 @@ class ERTProcessingModule(BaseModule):
             and self._adtlert_runtime_ready is False
         ):
             self.log(
-                "ADTLERT GPU is unavailable; this run will use the original "
-                "PyHydro ERT engine.",
+                "ADTLERT GPU preflight failed; the isolated inversion process "
+                "will check again and fall back only if CUDA/cuDSS is unavailable.",
                 "warn",
             )
         if str(self._inv_mode.currentData() or "quick") == "full":
@@ -1940,8 +1988,8 @@ class ERTProcessingModule(BaseModule):
             and self._adtlert_runtime_ready is False
         ):
             self.log(
-                "ADTLERT GPU is unavailable; this run will use the original "
-                "PyHydro ERT engine.",
+                "ADTLERT GPU preflight failed; the isolated inversion process "
+                "will check again and fall back only if CUDA/cuDSS is unavailable.",
                 "warn",
             )
         if (

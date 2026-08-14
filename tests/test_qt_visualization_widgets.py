@@ -158,3 +158,33 @@ def test_model_viewer_preserves_resistivity_artifact_semantics(
     assert rendered_stack is not None
     assert rendered_stack._img.levels[1] > rendered_stack._img.levels[0]
     view.close()
+
+
+def test_ert_names_the_reader_that_handled_the_file(app, tmp_path: Path, monkeypatch):
+    """The reader is not visible in the result, so the panel states it.
+
+    ResIPy and PyGIMLi do not always agree on how many measurements a file
+    holds, which makes "who read this" a question about the numbers on screen
+    rather than a detail of the implementation.
+    """
+    view = ERTProcessingModule(WorkbenchState(output_dir=tmp_path), lambda *_a: None)
+
+    monkeypatch.setattr(type(view), "_resipy_version", staticmethod(lambda: "3.6.6"))
+    view._show_reader_status()
+    assert view._reader_status.text() == "ResIPy 3.6.6 available for loading data."
+
+    view._show_reader_status("ResIPy")
+    assert view._reader_status.text() == "Data loaded by ResIPy."
+
+    view._show_reader_status("PyGIMLi", "ResIPy could not parse this file")
+    assert "PyGIMLi" in view._reader_status.text()
+    assert "could not parse" in view._reader_status.text()
+
+    # A load that failed outright leaves neither reader to name.
+    view._on_ert_load_failed("unreadable")
+    assert view._reader_status.text() == "ResIPy 3.6.6 available for loading data."
+
+    monkeypatch.setattr(type(view), "_resipy_version", staticmethod(lambda: ""))
+    view._show_reader_status()
+    assert "not installed" in view._reader_status.text()
+    view.close()
