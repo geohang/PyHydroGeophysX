@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QProgressBar,
     QPushButton,
     QScrollArea,
@@ -69,6 +70,9 @@ _FILE_FILTER = (
     "TEMcompany XYZ (*.xyz);;"
     "All files (*)"
 )
+_TEM2GO_FORMAT = "TEMcompany / TEM2Go"
+_TTEM_FORMAT = "TEMcompany tTEM raw"
+_TEM_FORMATS = {_TEM2GO_FORMAT, _TTEM_FORMAT}
 
 
 def _fit_scroll_width(scroll: QScrollArea, panel: QWidget, *, cap: int) -> None:
@@ -118,6 +122,8 @@ class EMProcessingModule(BaseModule):
         self._geom_y: Optional[np.ndarray] = None
         self._example_id: Optional[str] = None
         self._project_layer_thicknesses: Optional[np.ndarray] = None
+        self._ttem_gex_path: Optional[Path] = None
+        self._ttem_tfi_path: Optional[Path] = None
 
         root = QHBoxLayout(self)
         self._tabs = QTabWidget()
@@ -205,7 +211,7 @@ class EMProcessingModule(BaseModule):
         self._method = QComboBox(); self._method.addItems(list(em_pipeline.METHODS))
         self._method.currentTextChanged.connect(self._on_method_changed)
         self._data_format = QComboBox()
-        self._data_format.addItems(["Generic table", "TEMcompany / TEM2Go"])
+        self._data_format.addItems(["Generic table", _TEM2GO_FORMAT, _TTEM_FORMAT])
         self._data_format.currentTextChanged.connect(self._on_data_format_changed)
         mrow = QFormLayout()
         mrow.addRow("Method", self._method)
@@ -264,6 +270,28 @@ class EMProcessingModule(BaseModule):
         self._tem_moment_row.setVisible(False)
         v.addWidget(self._tem_moment_row)
 
+        self._ttem_calibration_row = QWidget()
+        calibration_form = QFormLayout(self._ttem_calibration_row)
+        calibration_form.setContentsMargins(0, 0, 0, 0)
+        self._gex_path_edit = QLineEdit(); self._gex_path_edit.setReadOnly(True)
+        self._gex_path_edit.setPlaceholderText("Auto-detect or select .gex")
+        gex_button = QPushButton("Browse…")
+        gex_button.clicked.connect(self._select_ttem_gex)
+        gex_row = QWidget(); gex_layout = QHBoxLayout(gex_row)
+        gex_layout.setContentsMargins(0, 0, 0, 0)
+        gex_layout.addWidget(self._gex_path_edit, stretch=1); gex_layout.addWidget(gex_button)
+        calibration_form.addRow("System GEX", gex_row)
+        self._tfi_path_edit = QLineEdit(); self._tfi_path_edit.setReadOnly(True)
+        self._tfi_path_edit.setPlaceholderText("Auto-detect or select .tfi")
+        tfi_button = QPushButton("Browse…")
+        tfi_button.clicked.connect(self._select_ttem_tfi)
+        tfi_row = QWidget(); tfi_layout = QHBoxLayout(tfi_row)
+        tfi_layout.setContentsMargins(0, 0, 0, 0)
+        tfi_layout.addWidget(self._tfi_path_edit, stretch=1); tfi_layout.addWidget(tfi_button)
+        calibration_form.addRow("Import filter TFI", tfi_row)
+        self._ttem_calibration_row.setVisible(False)
+        v.addWidget(self._ttem_calibration_row)
+
         # Optional per-sounding geometry (positions / height) for a survey line;
         # sits next to the loader, shown once a multi-sounding file is loaded.
         self._geom_row = QWidget()
@@ -313,12 +341,21 @@ class EMProcessingModule(BaseModule):
         box = QGroupBox("Survey geometry (system)"); form = QFormLayout(box)
         f = em_pipeline.DEFAULT_FDEM
         self._src_radius = self._dspin(f["source_radius"], 0.01, 200.0, 0.1, 3)
-        self._tx_rx = self._dspin(f["tx_rx_sep"], 0.0, 500.0, 1.0, 1)
-        self._height = self._dspin(f["height"], 0.0, 500.0, 1.0, 1)
+        self._loop_area = self._dspin(8.0, 0.01, 10000.0, 0.25, 2)
+        self._loop_area.setToolTip(
+            "Physical transmitter-loop area. For raw tTEM this also re-normalizes "
+            "dB/dt by the chosen area, so changing it affects both data and forward model."
+        )
+        self._loop_area.editingFinished.connect(self._on_ttem_loop_area_changed)
+        self._tx_rx = self._dspin(f["tx_rx_sep"], 0.0, 500.0, 0.05, 2)
+        self._height = self._dspin(f["height"], 0.0, 500.0, 0.05, 2)
         self._orient = QComboBox(); self._orient.addItems(["z", "x", "y"])
         self._component = QComboBox(); self._component.addItems(["secondary", "total", "both"])
         self._waveform = QComboBox()
-        form.addRow("Source radius (m)", self._src_radius)
+        self._src_radius_label = QLabel("Source radius (m)")
+        form.addRow(self._src_radius_label, self._src_radius)
+        self._loop_area_label = QLabel("Tx loop area (m²)")
+        form.addRow(self._loop_area_label, self._loop_area)
         self._tx_rx_label = QLabel("Tx-Rx sep (m)")
         form.addRow(self._tx_rx_label, self._tx_rx)
         form.addRow("Height (m)", self._height)
@@ -326,6 +363,11 @@ class EMProcessingModule(BaseModule):
         self._component_label = QLabel("Component")
         form.addRow(self._component_label, self._component)
         form.addRow("Waveform", self._waveform)
+        self._system_note = QLabel("")
+        self._system_note.setWordWrap(True)
+        self._system_note.setStyleSheet("color:#9b5a00; font-size:8pt;")
+        self._system_note.setVisible(False)
+        form.addRow(self._system_note)
         return box
 
     # The controls are split the same way as the ERT page: what defines the
@@ -557,17 +599,76 @@ class EMProcessingModule(BaseModule):
         self._component.setVisible(fdem)
         self._tx_rx_label.setVisible(True)
         self._tx_rx.setVisible(True)
+        self._src_radius_label.setVisible(fdem)
+        self._src_radius.setVisible(fdem)
+        self._loop_area_label.setVisible(not fdem)
+        self._loop_area.setVisible(not fdem)
         if not fdem and hasattr(self, "_tem_moment_row"):
             self._tem_moment_row.setVisible(
-                self._data_format.currentText() == "TEMcompany / TEM2Go")
+                self._data_format.currentText() in _TEM_FORMATS)
         self._refresh_backend_state()
 
     def _on_data_format_changed(self, selected: str) -> None:
-        temcompany = selected == "TEMcompany / TEM2Go"
+        temcompany = selected in _TEM_FORMATS
         if temcompany:
             self._method.setCurrentText("TDEM")
+        self._use_flags.setEnabled(selected == _TEM2GO_FORMAT)
+        self._use_flags.setToolTip(
+            "Raw tTEM SKB files do not contain TEM2Go inversion flags."
+            if selected == _TTEM_FORMAT else
+            "Use the enabled-gate flags stored by the TEM2Go project."
+        )
+        self._system_note.setVisible(selected == _TTEM_FORMAT)
+        self._ttem_calibration_row.setVisible(selected == _TTEM_FORMAT)
+        if selected == _TTEM_FORMAT:
+            self._system_note.setText(
+                "Raw tTEM geometry is editable below. Manual defaults are only a "
+                "fallback until the instrument-specific GEX/TFI files are supplied."
+            )
         self._tem_moment_row.setVisible(
             temcompany and self._method.currentText() == "TDEM")
+
+    def _on_ttem_loop_area_changed(self) -> None:
+        """Re-normalize the preview when the raw tTEM loop area is edited."""
+        if (self._source_path is not None and self._data is not None
+                and self._data.get("ttem")):
+            self._load_sounding(self._sounding.value() - 1, reset_geometry=False)
+
+    def _set_ttem_calibration_path(self, kind: str, path: Optional[Path]) -> None:
+        resolved = path.resolve() if path else None
+        if kind == "gex":
+            self._ttem_gex_path = resolved
+            self._gex_path_edit.setText(str(resolved or ""))
+        else:
+            self._ttem_tfi_path = resolved
+            self._tfi_path_edit.setText(str(resolved or ""))
+
+    def _auto_detect_ttem_calibration(self, source: Path) -> None:
+        root = source if source.is_dir() else source.parent
+        for kind in ("gex", "tfi"):
+            matches = sorted(root.rglob(f"*.{kind}"))
+            self._set_ttem_calibration_path(kind, matches[0] if len(matches) == 1 else None)
+
+    def _select_ttem_calibration(self, kind: str) -> None:
+        selected, _ = QFileDialog.getOpenFileName(
+            self, f"Select tTEM {kind.upper()}",
+            str(self._source_path or Path.cwd()),
+            f"tTEM {kind.upper()} (*.{kind});;All files (*)",
+        )
+        if not selected:
+            return
+        self._set_ttem_calibration_path(kind, Path(selected))
+        if self._source_path is not None:
+            index = self._sounding.value() - 1
+            if kind == "gex":
+                self._data = None  # let the newly selected GEX seed geometry fields
+            self._load_sounding(index, reset_geometry=(kind == "gex"))
+
+    def _select_ttem_gex(self) -> None:
+        self._select_ttem_calibration("gex")
+
+    def _select_ttem_tfi(self) -> None:
+        self._select_ttem_calibration("tfi")
 
     def _refresh_backend_state(self) -> bool:
         """Reflect the method-specific SimPEG availability in the run controls."""
@@ -593,7 +694,14 @@ class EMProcessingModule(BaseModule):
             "use_project_flags": bool(self._use_flags.isChecked()),
             "tail_max_relative_std": (float(self._tail_cut.value())
                                       if self._tail_cut.value() > 0 else None),
-            "source_radius": self._src_radius.value(),
+            "source_radius": (
+                float(np.sqrt(self._loop_area.value() / np.pi))
+                if self._method.currentText() == "TDEM"
+                else self._src_radius.value()
+            ),
+            "loop_area": self._loop_area.value(),
+            "ttem_gex_path": str(self._ttem_gex_path or ""),
+            "ttem_tfi_path": str(self._ttem_tfi_path or ""),
             "tx_rx_sep": self._tx_rx.value(),
             "height": self._height.value(),
             "orientation": self._orient.currentText(),
@@ -604,9 +712,6 @@ class EMProcessingModule(BaseModule):
             if self._data and self._data.get("temcompany"):
                 system = dict(self._data.get("system", {}))
                 geom["loop_turns"] = int(system.get("loop_turns", 1))
-                geom["loop_area"] = float(
-                    system.get("loop_area", np.pi * self._src_radius.value() ** 2)
-                )
                 geom["receiver_type"] = str(system.get("receiver_type", "dbdt"))
                 geom["response_sign"] = float(system.get("response_sign", -1.0))
                 # The export is already divided by the transmitter moment, so
@@ -694,19 +799,24 @@ class EMProcessingModule(BaseModule):
 
     # -- data ----------------------------------------------------------------
     def _load(self) -> None:
-        if self._data_format.currentText() == "TEMcompany / TEM2Go":
+        if self._data_format.currentText() in _TEM_FORMATS:
             selected = select_directory(self, "Load EM project folder", Path.cwd())
             path = str(selected) if selected else ""
         else:
             path, _ = QFileDialog.getOpenFileName(self, "Load EM data", "", _FILE_FILTER)
         if not path:
             return
-        if em_pipeline.is_temcompany_source(path):
+        if em_pipeline.is_ttem_source(path):
             self._method.setCurrentText("TDEM")
-            self._data_format.setCurrentText("TEMcompany / TEM2Go")
+            self._data_format.setCurrentText(_TTEM_FORMAT)
+            self._auto_detect_ttem_calibration(Path(path))
+        elif em_pipeline.is_temcompany_source(path):
+            self._method.setCurrentText("TDEM")
+            self._data_format.setCurrentText(_TEM2GO_FORMAT)
         self._example_id = None
         self._example_note.setVisible(False)
         self._source_path = Path(path)
+        self._data = None
         self._sounding.blockSignals(True)
         self._sounding.setValue(1)
         self._sounding.blockSignals(False)
@@ -741,7 +851,7 @@ class EMProcessingModule(BaseModule):
             return {"status": "failed", "error": f"Example file not found: {path}"}
         self._method.setCurrentText(str(spec["method"]))
         self._data_format.setCurrentText(
-            "TEMcompany / TEM2Go"
+            _TEM2GO_FORMAT
             if em_pipeline.is_temcompany_source(str(path))
             else "Generic table"
         )
@@ -775,13 +885,20 @@ class EMProcessingModule(BaseModule):
     def _load_sounding(self, index: int, *, reset_geometry: bool = True) -> None:
         if self._source_path is None:
             return
+        area_override = (
+            None if reset_geometry and self._data is None
+            else float(self._loop_area.value())
+        )
         try:
             self._data = em_pipeline.load_sounding(
                 str(self._source_path), self._method.currentText(), sounding=int(index),
                 moment=self._tem_moment.currentText(),
                 use_flags=bool(self._use_flags.isChecked()),
                 max_relative_std=(float(self._tail_cut.value())
-                                  if self._tail_cut.value() > 0 else None))
+                                  if self._tail_cut.value() > 0 else None),
+                ttem_loop_area=area_override,
+                ttem_gex_path=str(self._ttem_gex_path or ""),
+                ttem_tfi_path=str(self._ttem_tfi_path or ""))
         except Exception as exc:  # noqa: BLE001
             self._data = None
             self.log(f"Could not load sounding: {exc}", "error")
@@ -892,7 +1009,7 @@ class EMProcessingModule(BaseModule):
         if positions is not None:
             self._geom_positions = np.asarray(positions, dtype=float).ravel()
         heights = self._data.get("heights")
-        if heights is not None:
+        if heights is not None and not self._data.get("ttem"):
             self._geom_heights = np.asarray(heights, dtype=float).ravel()
         x = self._data.get("x")
         y = self._data.get("y")
@@ -901,6 +1018,7 @@ class EMProcessingModule(BaseModule):
             self._geom_y = np.asarray(y, dtype=float).ravel()
         system = dict(self._data.get("system", {}))
         if system:
+            self._loop_area.setValue(float(system.get("loop_area", self._loop_area.value())))
             self._src_radius.setValue(float(system.get("source_radius", self._src_radius.value())))
             self._tx_rx.setValue(float(system.get("tx_rx_sep", self._tx_rx.value())))
             self._height.setValue(float(system.get("height", self._height.value())))
@@ -939,7 +1057,7 @@ class EMProcessingModule(BaseModule):
         # up first: stations arrive ordered by line, so a cap below the count
         # does not thin the survey, it cuts whole lines off the end of it.
         self._line_max.setMaximum(max(1, n))
-        self._line_max.setValue(max(1, n))
+        self._line_max.setValue(min(max(1, n), 200) if self._data.get("ttem") else max(1, n))
         span = (float(self._geom_positions[-1] - self._geom_positions[0])
                 if self._geom_positions is not None and self._geom_positions.size else 0.0)
         crs = str(self._data.get("coordinate_system", "embedded coordinates"))
@@ -954,6 +1072,25 @@ class EMProcessingModule(BaseModule):
             f"Tx-Rx {self._tx_rx.value():.2f} m).",
             "info",
         )
+        if self._data.get("ttem"):
+            calibration = dict(self._data.get("calibration", {}))
+            self._system_note.setVisible(True)
+            if calibration.get("gex_applied") and calibration.get("tfi_applied"):
+                self._system_note.setText(
+                    f"Applied {Path(calibration['gex_path']).name} and "
+                    f"{Path(calibration['tfi_path']).name}. Geometry remains editable below."
+                )
+            else:
+                missing = "/".join(
+                    name for name, key in (("GEX", "gex_applied"), ("TFI", "tfi_applied"))
+                    if not calibration.get(key)
+                )
+                self._system_note.setText(
+                    f"Missing {missing}. Area, Tx–Rx separation and height below are "
+                    "active, but full instrument calibration is incomplete."
+                )
+            level = "info" if calibration.get("gex_applied") and calibration.get("tfi_applied") else "warn"
+            self.log(self._system_note.text(), level)
 
     def _maybe_auto_geometry(self) -> None:
         """Auto-load a companion geometry file (so UTM coordinates are used without
@@ -1187,6 +1324,12 @@ class EMProcessingModule(BaseModule):
         if self._source_path is None:
             raise FileNotFoundError("No persisted EM source is available.")
         source = self._source_path
+        if self._data and self._data.get("ttem"):
+            # Raw tTEM surveys are commonly hundreds of MB.  ArtifactRef accepts
+            # an absolute directory, so keep one external reference rather than
+            # duplicating the acquisition for every single/line inversion.
+            self.log("Using the original tTEM raw folder without copying it into the run.", "info")
+            return source
         target = inputs_dir / source.name
         if source.is_dir():
             shutil.copytree(source, target)
@@ -1517,7 +1660,7 @@ class EMProcessingModule(BaseModule):
                           "If the source has several soundings, 'sounding' picks the preview; "
                           "the inversion still uses the survey.")},
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
-                 "desc": ("Set parameters. Geometry: source_radius, tx_rx_sep, height, orientation "
+                 "desc": ("Set parameters. Geometry: source_radius, loop_area, tx_rx_sep, height, orientation "
                           "(z/x/y), component (secondary/total/both), waveform. Inversion: n_layers, "
                           "min_thickness, max_thickness, smoothness, rel_error, data_scale "
                           "(calibration multiplier), auto_scale (bool, rough), ref_resistivity "
@@ -1609,9 +1752,22 @@ class EMProcessingModule(BaseModule):
         p = Path(str(path))
         if not p.exists():
             return {"status": "failed", "error": f"File not found: {p}"}
-        if em_pipeline.is_temcompany_source(str(p)):
+        if em_pipeline.is_ttem_source(str(p)):
             self._method.setCurrentText("TDEM")
-            self._data_format.setCurrentText("TEMcompany / TEM2Go")
+            self._data_format.setCurrentText(_TTEM_FORMAT)
+            self._auto_detect_ttem_calibration(p)
+            if moment is not None:
+                selected = str(moment).upper()
+                if selected not in em_pipeline.TEMCOMPANY_MOMENTS:
+                    return {
+                        "status": "failed",
+                        "error": f"TEMcompany moment must be one of "
+                                 f"{em_pipeline.TEMCOMPANY_MOMENTS}.",
+                    }
+                self._tem_moment.setCurrentText(selected)
+        elif em_pipeline.is_temcompany_source(str(p)):
+            self._method.setCurrentText("TDEM")
+            self._data_format.setCurrentText(_TEM2GO_FORMAT)
             if moment is not None:
                 selected = str(moment).upper()
                 if selected not in em_pipeline.TEMCOMPANY_MOMENTS:
@@ -1624,6 +1780,7 @@ class EMProcessingModule(BaseModule):
         self._example_id = None
         self._example_note.setVisible(False)
         self._source_path = Path(p)
+        self._data = None
         try:
             self._load_sounding(max(0, int(sounding) - 1))
         except Exception as exc:  # noqa: BLE001
@@ -1650,6 +1807,7 @@ class EMProcessingModule(BaseModule):
 
         handlers = {
             "source_radius": lambda v: self._src_radius.setValue(float(v)),
+            "loop_area": lambda v: self._loop_area.setValue(float(v)),
             "tx_rx_sep": lambda v: self._tx_rx.setValue(float(v)),
             "height": lambda v: self._height.setValue(float(v)),
             "orientation": lambda v: set_combo(self._orient, v),
@@ -1696,6 +1854,8 @@ class EMProcessingModule(BaseModule):
                 applied[key] = value
             except Exception as exc:  # noqa: BLE001
                 ignored[key] = str(exc)
+        if "loop_area" in applied:
+            self._on_ttem_loop_area_changed()
         return {"status": "ok" if applied else "failed", "applied": applied, "ignored": ignored}
 
     def _agent_run_inversion(self) -> Dict[str, Any]:

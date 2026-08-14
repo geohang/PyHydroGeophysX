@@ -33,6 +33,40 @@ latitude/longitude but not the database UTM fields, so the workbench derives
 local metric map coordinates. A complete project folder preserves the original
 UTM coordinates and enabled-gate flags.
 
+## TEMcompany tTEM raw (SKB/SPS)
+
+Set **Data format** to **TEMcompany tTEM raw**, click **Load data**, and select
+the survey directory containing `tTEMLog`. The importer finds every
+`*_tTEM_Rawdata.skb` below it and pairs each file with its GPS and transmitter
+current `.sps` logs. It then:
+
+- decodes the LM/HM alternating-polarity records and stacks consecutive cycles
+  into approximately 2-second soundings;
+- applies each gate's acquisition scale factor and normalizes by its measured
+  LM/HM transmitter current;
+- interpolates GPS position/elevation to each sounding and keeps acquisition
+  runs as separate survey-line numbers;
+- sends the resulting LM+HM observations into the same joint 1D/LCI inversion
+  used for TEM2Go projects.
+
+The raw directory is referenced in place instead of copied into every Project
+run, because a survey can be hundreds of MB. Keep the original directory when
+you need to reproduce a saved run. The initial line-inversion cap is 200
+soundings; raise it deliberately for a larger section.
+
+For raw tTEM, **Tx loop area**, **Tx-Rx separation**, and **Height** in Survey
+geometry are editable calculation inputs. Changing the loop area re-normalizes
+the raw response by the selected area; it is not merely a plot label. The area
+also defines the equivalent circular-loop radius. The separation and height are
+passed to every forward operator on the line. Values loaded from this reader are
+fallbacks and may be replaced by field measurements.
+
+An instrument `.gex` calibration file is needed for exact production geometry,
+filter transfer functions and gate removal. GEX parsing is not part of this raw
+reader yet; the importer records that limitation and uses standard tTEM values:
+an 8 m2 one-turn loop, 9.28 m Tx-Rx separation and 0.43 m height. The waveform
+turn-off and gate windows still come from the SKB acquisition header.
+
 ## TDEM (time domain) — one sounding
 
 Two columns:

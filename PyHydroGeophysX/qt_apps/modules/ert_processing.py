@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -36,6 +37,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSpinBox,
     QTabWidget,
     QVBoxLayout,
@@ -157,37 +159,72 @@ class ERTProcessingModule(BaseModule):
         self._plot.addItem(self._sel_scatter)
         self._plot.scene().sigMouseClicked.connect(self._on_click)
 
-        # Use a GraphicsLayout rather than a bare PlotWidget so the colour scale
-        # is part of the pseudosection.  The plotted quantity is log10(rhoa), but
-        # the colour-bar axis formats those exponents back into physical ohm-m
-        # values; readers should not have to infer resistivity from colour alone.
-        self._pseudo_widget = pg.GraphicsLayoutWidget()
-        self._pseudo_widget.setBackground("w")
-        self._pseudo_plot = self._pseudo_widget.addPlot(row=0, col=0)
+        # Keep the readout and colour legend outside pyqtgraph's GraphicsLayout.
+        # A changing LabelItem beside a hoverable scatter can feed its new size
+        # back into the plot geometry: the point moves under the stationary mouse,
+        # hover toggles again, and Windows Qt eventually dies with c00000fd (stack
+        # overflow) rather than a Python traceback.  Fixed-height Qt widgets plus
+        # click-to-read have no geometry/hover feedback path.
+        self._pseudo_widget = QWidget()
+        pseudo_layout = QVBoxLayout(self._pseudo_widget)
+        pseudo_layout.setContentsMargins(0, 0, 0, 0)
+        pseudo_layout.setSpacing(4)
+        self._pseudo_plot_widget = pg.PlotWidget()
+        self._pseudo_plot_widget.setBackground("w")
+        self._pseudo_plot = self._pseudo_plot_widget.getPlotItem()
         self._pseudo_plot.showGrid(x=True, y=True, alpha=0.25)
         self._pseudo_plot.setLabel("bottom", "x (m)")
         self._pseudo_plot.setLabel("left", "pseudo-depth (m, positive down)")
         self._pseudo_plot.invertY(True)
-        self._pseudo_scatter = pg.ScatterPlotItem(size=11, hoverable=True)
+        self._pseudo_scatter = pg.ScatterPlotItem(size=11)
         self._pseudo_plot.addItem(self._pseudo_scatter)
-        self._pseudo_scatter.sigHovered.connect(self._on_pseudo_hover)
-        self._pseudo_colorbar = pg.ColorBarItem(
-            values=(0.0, 1.0),
-            width=18,
-            colorMap=self._cmap,
-            label="Apparent resistivity (Ω·m)",
-            interactive=False,
-            colorMapMenu=False,
+        self._pseudo_scatter.sigClicked.connect(self._on_pseudo_clicked)
+        pseudo_layout.addWidget(self._pseudo_plot_widget, stretch=1)
+
+        self._pseudo_legend = QWidget()
+        legend_layout = QVBoxLayout(self._pseudo_legend)
+        legend_layout.setContentsMargins(8, 0, 8, 0)
+        legend_layout.setSpacing(1)
+        legend_layout.addWidget(QLabel("Apparent resistivity (Ω·m)"))
+        self._pseudo_scale_bar = QFrame()
+        self._pseudo_scale_bar.setFixedHeight(12)
+        stops = []
+        fractions = np.linspace(0.0, 1.0, 9)
+        colours = self._cmap.map(fractions, mode="byte")
+        for fraction, colour in zip(fractions, colours):
+            stops.append(
+                f"stop:{fraction:.3f} rgb({int(colour[0])},"
+                f"{int(colour[1])},{int(colour[2])})"
+            )
+        self._pseudo_scale_bar.setStyleSheet(
+            "QFrame { border: 1px solid #8b949e; border-radius: 2px; "
+            "background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
+            + ", ".join(stops)
+            + "); }"
         )
-        self._pseudo_colorbar.axis.setLogMode(True)
-        self._pseudo_widget.addItem(self._pseudo_colorbar, row=0, col=1)
-        self._pseudo_readout = self._pseudo_widget.addLabel(
-            "Hover a measurement to read apparent resistivity.",
-            row=1,
-            col=0,
-            colspan=2,
-            justify="left",
+        legend_layout.addWidget(self._pseudo_scale_bar)
+        scale_row = QHBoxLayout()
+        scale_row.setContentsMargins(0, 0, 0, 0)
+        scale_row.setSpacing(2)
+        self._pseudo_scale_labels: List[QLabel] = []
+        for index in range(5):
+            label = QLabel("—")
+            label.setAlignment(
+                Qt.AlignLeft if index == 0 else Qt.AlignRight if index == 4 else Qt.AlignCenter
+            )
+            scale_row.addWidget(label, stretch=1)
+            self._pseudo_scale_labels.append(label)
+        legend_layout.addLayout(scale_row)
+        pseudo_layout.addWidget(self._pseudo_legend)
+
+        self._pseudo_readout = QLabel(
+            "Click a measurement to read x, pseudo-depth, and apparent resistivity."
         )
+        self._pseudo_readout.setContentsMargins(8, 0, 8, 0)
+        self._pseudo_readout.setFixedHeight(24)
+        self._pseudo_readout.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
+        self._pseudo_readout.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        pseudo_layout.addWidget(self._pseudo_readout)
 
         self._model_view = MeshResultView()
         # The "Resistivity model" tab shows the single inversion OR any time step
@@ -2249,7 +2286,7 @@ class ERTProcessingModule(BaseModule):
         if not self._pseudo:
             self._pseudo_scatter.setData([])
             self._pseudo_plot.setTitle("")
-            self._pseudo_colorbar.setVisible(False)
+            self._pseudo_legend.setVisible(False)
             self._pseudo_readout.setText("No apparent-resistivity measurements loaded.")
             return
         arr = np.asarray(self._pseudo, dtype=float)
@@ -2259,7 +2296,7 @@ class ERTProcessingModule(BaseModule):
         if rhoa.size == 0:
             self._pseudo_scatter.setData([])
             self._pseudo_plot.setTitle("No positive finite apparent resistivity to display")
-            self._pseudo_colorbar.setVisible(False)
+            self._pseudo_legend.setVisible(False)
             self._pseudo_readout.setText(
                 "All apparent-resistivity values are missing, non-finite, or non-positive."
             )
@@ -2279,21 +2316,23 @@ class ERTProcessingModule(BaseModule):
             for i in range(mid.size)
         ]
         self._pseudo_scatter.setData(spots)
-        self._pseudo_colorbar.setLevels((float(lo), float(hi)))
-        self._pseudo_colorbar.setVisible(True)
+        legend_values = np.power(10.0, np.linspace(float(lo), float(hi), 5))
+        for label, value in zip(self._pseudo_scale_labels, legend_values):
+            label.setText(f"{float(value):.4g}")
+        self._pseudo_legend.setVisible(True)
         self._pseudo_readout.setText(
-            "Hover a measurement to read x, pseudo-depth, and apparent resistivity."
+            "Click a measurement to read x, pseudo-depth, and apparent resistivity."
         )
         self._pseudo_plot.setTitle(
             f"Apparent resistivity: {rhoa.min():.3g} – {rhoa.max():.3g} Ω·m  "
             f"(n={rhoa.size})"
         )
 
-    def _on_pseudo_hover(self, _item, points, _event) -> None:
+    def _on_pseudo_clicked(self, _item, points, _event) -> None:
         """Report the physical value behind a pseudosection colour."""
         if not points:
             self._pseudo_readout.setText(
-                "Hover a measurement to read x, pseudo-depth, and apparent resistivity."
+                "Click a measurement to read x, pseudo-depth, and apparent resistivity."
             )
             return
         data = points[0].data()

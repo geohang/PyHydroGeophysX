@@ -243,10 +243,12 @@ class EMOverviewView(QWidget):
         self._tiles = None
         self._transform = None
         self._map_limits = None     # a new survey is somewhere else entirely
+        has_geographic = False
         if self._x is not None and self._y is not None:
             longitude = self._coordinate(lon, n_pos)
             latitude = self._coordinate(lat, n_pos)
-            if longitude is not None and latitude is not None:
+            has_geographic = longitude is not None and latitude is not None
+            if has_geographic:  # noqa: SIM102 - the transform can still fail
                 self._transform = fit_local_transform(
                     self._x, self._y, longitude, latitude)
         available = self._transform is not None
@@ -255,7 +257,15 @@ class EMOverviewView(QWidget):
             self._basemap.blockSignals(True)
             self._basemap.setChecked(False)
             self._basemap.blockSignals(False)
+            # Say which of the two it is. A project that carries coordinates
+            # which disagree is a different problem from one that carries none,
+            # and the first message sends the reader looking for the wrong thing.
             self._basemap.setToolTip(
+                "This project's longitude/latitude and its projected coordinates "
+                "do not place the soundings in the same spot, so imagery cannot "
+                "be registered to the survey. The section is unaffected: it is "
+                "drawn from the projected coordinates alone."
+                if has_geographic else
                 "No longitude/latitude for these soundings, so map tiles cannot "
                 "be placed. A TEMcompany project folder carries them.")
 
@@ -864,9 +874,14 @@ class EMOverviewView(QWidget):
         ax.plot(x[selected] - x0, y[selected] - y0, "-",
                 color=_LINE_COLOR, lw=6.0, alpha=0.55 if attribution else 0.40,
                 solid_capstyle="round", zorder=2, label="Sectioned")
-        ax.plot(x - x0, y - y0, "o", color=_ALL_COLOR, ms=3.4,
+        # A survey of a few dozen stations reads best as outlined dots; several
+        # hundred of them at the same size merge into a white ribbon that hides
+        # the ground underneath, so the marker shrinks as the line fills up.
+        dense = max(1.0, x.size / 120.0)
+        ax.plot(x - x0, y - y0, "o", color=_ALL_COLOR,
+                ms=float(np.clip(3.4 / np.sqrt(dense), 1.2, 3.4)),
                 mec="white" if attribution else "none",
-                mew=0.7 if attribution else 0.0,
+                mew=float(np.clip(0.7 / dense, 0.0, 0.7)) if attribution else 0.0,
                 label="Soundings", zorder=3, ls="none")
         ax.plot(x[selected][0] - x0, y[selected][0] - y0, "s", color=_START_COLOR,
                 ms=9, mec="white", mew=0.8, label="Start (0 m)", zorder=4)

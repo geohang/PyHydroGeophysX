@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from PyHydroGeophysX.qt_apps import theme
+from PyHydroGeophysX.qt_apps.widgets.log_scale_axis import label_axis_in_physical_units
 
 # Display arrays as image[row, col] (numpy convention) rather than the pyqtgraph
 # default of image[x, y]. This makes click -> [col, row] mapping correct.
@@ -131,7 +132,7 @@ class ArrayViewer(QWidget):
         self._log_display = bool(log)
         self._value_label = str(value_label or "Value")
         self._hist.axis.setLabel(self._value_label)
-        self._hist.axis.setLogMode(self._log_display)
+        label_axis_in_physical_units(self._hist.axis, self._log_display)
         self._plot.setTitle(str(title or ""))
         self._readout.setText(f"x: -, y: -, {self._value_label}: -")
         if invert_y is not None:

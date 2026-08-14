@@ -120,10 +120,17 @@ class PlanSliceView(QWidget):
             self._z_label.setText(f"{self._depths[j]:.0f} m")
             self._canvas.draw_idle()
             return
+        # Explicit levels across the range the colours cover. A level *count*
+        # under a log norm is handed to a decade locator, so a survey spanning
+        # less than two decades comes back as one or two flat bands and a colour
+        # bar labelled only in powers of ten.
+        levels = (np.geomspace(norm.vmin, norm.vmax, 15) if self._log
+                  else np.linspace(norm.vmin, norm.vmax, 15))
         mappable = None
         if good.sum() >= 4 and not collinear:
             try:  # a filled map when the soundings actually spread in 2D
-                mappable = ax.tricontourf(x[good], y[good], vals[good], levels=14,
+                mappable = ax.tricontourf(x[good], y[good], vals[good],
+                                          levels=levels, extend="both",
                                           cmap="turbo", norm=norm)
             except Exception:  # noqa: BLE001 - degenerate triangulation -> points only
                 mappable = None
@@ -138,6 +145,14 @@ class PlanSliceView(QWidget):
         if not collinear:
             ax.set_aspect("equal", "box")
         ax.grid(True, alpha=0.3)
-        self._fig.colorbar(mappable, ax=ax, label=self._label)
+        bar = self._fig.colorbar(mappable, ax=ax, label=self._label)
+        if self._log:
+            # Explicit levels are arbitrary reals, and the default formatter
+            # renders those as "2.0986 x 10^2". The reader wants 210.
+            from matplotlib.ticker import FuncFormatter, LogLocator
+
+            bar.ax.yaxis.set_major_locator(LogLocator(base=10.0, subs=(1.0, 2.0, 5.0)))
+            bar.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+            bar.ax.yaxis.set_minor_formatter(FuncFormatter(lambda _v, _p: ""))
         self._z_label.setText(f"{self._depths[j]:.0f} m")
         self._canvas.draw_idle()

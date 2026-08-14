@@ -16,9 +16,11 @@ from PyHydroGeophysX.data_processing.em1d import (
     _normalise_temcompany_moment,
     _response_on_times,
     is_temcompany_source,
+    is_ttem_source,
     load_line_geometry,
     load_sounding,
     load_temcompany_sounding,
+    load_ttem_sounding,
 )
 from PyHydroGeophysX.forward.em1d import (
     DEFAULT_FDEM,
@@ -150,7 +152,12 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
     use_flags = bool(geom.get("use_project_flags", True))
     tail_cut = geom.get("tail_max_relative_std")
     try:
-        head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
+        head = load_sounding(
+            path, method, sounding=0, moment=moment, use_flags=use_flags,
+            max_relative_std=tail_cut, ttem_loop_area=geom.get("loop_area"),
+            ttem_gex_path=geom.get("ttem_gex_path"),
+            ttem_tfi_path=geom.get("ttem_tfi_path"),
+        )
     except Exception as exc:  # noqa: BLE001
         log(f"Auto-calibration skipped ({exc}); using data_scale = 1.0")
         return 1.0
@@ -174,7 +181,13 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
 
             def observed(s):
                 return _response_on_times(
-                    load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags, max_relative_std=tail_cut),
+                    load_sounding(
+                        path, method, sounding=int(s), moment=moment,
+                        use_flags=use_flags, max_relative_std=tail_cut,
+                        ttem_loop_area=geom.get("loop_area"),
+                        ttem_gex_path=geom.get("ttem_gex_path"),
+                        ttem_tfi_path=geom.get("ttem_tfi_path"),
+                    ),
                     abscissa,
                 )
         else:
@@ -191,7 +204,13 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
             preds = np.asarray(grid)
 
             def observed(s):
-                d = load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
+                d = load_sounding(
+                    path, method, sounding=int(s), moment=moment,
+                    use_flags=use_flags, max_relative_std=tail_cut,
+                    ttem_loop_area=geom.get("loop_area"),
+                    ttem_gex_path=geom.get("ttem_gex_path"),
+                    ttem_tfi_path=geom.get("ttem_tfi_path"),
+                )
                 return np.abs(np.asarray(d["real"], float) + 1j * np.asarray(d["imag"], float))
     except Exception as exc:  # noqa: BLE001
         log(f"Auto-calibration skipped ({exc}); using data_scale = 1.0")
@@ -242,7 +261,12 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
     use_flags = bool(geom.get("use_project_flags", True))
     tail_cut = geom.get("tail_max_relative_std")
     try:
-        head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
+        head = load_sounding(
+            path, method, sounding=0, moment=moment, use_flags=use_flags,
+            max_relative_std=tail_cut, ttem_loop_area=geom.get("loop_area"),
+            ttem_gex_path=geom.get("ttem_gex_path"),
+            ttem_tfi_path=geom.get("ttem_tfi_path"),
+        )
         n_total = int(head.get("n_soundings", 1))
         probe = np.unique(np.linspace(0, n_total - 1, min(int(max_probe), n_total)).astype(int))
         if method == "TDEM":
@@ -257,7 +281,13 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
 
             def observed(s):
                 return _response_on_times(
-                    load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags, max_relative_std=tail_cut),
+                    load_sounding(
+                        path, method, sounding=int(s), moment=moment,
+                        use_flags=use_flags, max_relative_std=tail_cut,
+                        ttem_loop_area=geom.get("loop_area"),
+                        ttem_gex_path=geom.get("ttem_gex_path"),
+                        ttem_tfi_path=geom.get("ttem_tfi_path"),
+                    ),
                     abscissa,
                 )
         else:
@@ -270,7 +300,13 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
             pred = np.abs(np.asarray(resp, dtype=complex).ravel()[:abscissa.size])
 
             def observed(s):
-                d = load_sounding(path, method, sounding=int(s), moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
+                d = load_sounding(
+                    path, method, sounding=int(s), moment=moment,
+                    use_flags=use_flags, max_relative_std=tail_cut,
+                    ttem_loop_area=geom.get("loop_area"),
+                    ttem_gex_path=geom.get("ttem_gex_path"),
+                    ttem_tfi_path=geom.get("ttem_tfi_path"),
+                )
                 return np.abs(np.asarray(d["real"], float) + 1j * np.asarray(d["imag"], float))
     except Exception as exc:  # noqa: BLE001
         log(f"Reference calibration unavailable ({exc}); kept data_scale.")
@@ -372,11 +408,17 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         raise ValueError(f"method must be one of {METHODS}, got {method!r}.")
     moment = (
         _normalise_temcompany_moment(str(geom.get("tem_moment", "HM")))
-        if is_temcompany_source(path) else str(geom.get("tem_moment", "HM"))
+        if (is_temcompany_source(path) or is_ttem_source(path))
+        else str(geom.get("tem_moment", "HM"))
     )
     use_flags = bool(geom.get("use_project_flags", True))
     tail_cut = geom.get("tail_max_relative_std")
-    head = load_sounding(path, method, sounding=0, moment=moment, use_flags=use_flags, max_relative_std=tail_cut)
+    head = load_sounding(
+        path, method, sounding=0, moment=moment, use_flags=use_flags,
+        max_relative_std=tail_cut, ttem_loop_area=geom.get("loop_area"),
+        ttem_gex_path=geom.get("ttem_gex_path"),
+        ttem_tfi_path=geom.get("ttem_tfi_path"),
+    )
     joint = method == "TDEM" and bool(head.get("moments"))
     invert = (
         fdem_invert if method == "FDEM"
@@ -459,8 +501,12 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         reason, since one station failing must not stop the line.
         """
         try:
-            data = load_sounding(path, method, sounding=s, moment=moment,
-                                 use_flags=use_flags, max_relative_std=tail_cut)
+            data = load_sounding(
+                path, method, sounding=s, moment=moment, use_flags=use_flags,
+                max_relative_std=tail_cut, ttem_loop_area=geom.get("loop_area"),
+                ttem_gex_path=geom.get("ttem_gex_path"),
+                ttem_tfi_path=geom.get("ttem_tfi_path"),
+            )
             geom_s = geom
             if hts is not None and s < hts.size and np.isfinite(hts[s]):
                 geom_s = {**geom, "height": float(hts[s])}
@@ -1005,7 +1051,9 @@ __all__ = [
     "model_arrays",
     "model_depth_profile",
     "is_temcompany_source",
+    "is_ttem_source",
     "load_temcompany_sounding",
+    "load_ttem_sounding",
     "load_sounding",
     "load_line_geometry",
     "fdem_forward",

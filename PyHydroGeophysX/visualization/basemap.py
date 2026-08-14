@@ -65,6 +65,14 @@ _USER_AGENT = "PyHydroGeophysX/basemap (+https://github.com/geohang/PyHydroGeoph
 
 _TILE_PIXELS = 256
 
+#: How far a project's projected coordinates and its longitude/latitude may
+#: disagree, in metres, and still be treated as the same place. Sized to absorb
+#: a datum difference and ordinary GPS scatter while still rejecting coordinates
+#: that belong to different surveys, which miss by kilometres. Satellite imagery
+#: is itself georeferenced to several metres, so a tighter rule would withhold
+#: the basemap over an error smaller than the basemap's own.
+_TRANSFORM_TOLERANCE_M = 8.0
+
 
 def default_cache_dir() -> Path:
     """Where tiles are kept between sessions.
@@ -123,11 +131,19 @@ def fit_local_transform(x, y, lon, lat) -> Optional["Tuple[complex, complex]"]:
         return None
     residual = np.abs((a * source + b) - target)
     span = float(np.abs(source - source_mid).max()) or 1.0
-    # Over one survey a similarity holds to a fraction of a metre, most of the
-    # residual being how consistently the instrument wrote its two coordinate
-    # pairs rather than the projections themselves. One part in a thousand of
-    # the survey's own extent means the inputs do not describe one place.
-    if float(residual.max()) > max(1.0, 1e-3 * span * abs(a)):
+    # What this test has to catch is coordinates that describe different places:
+    # a swapped pair, or latitudes from another survey. Those miss by kilometres.
+    # What it must not catch is the metre-level disagreement that two coordinate
+    # sets from the same instrument routinely carry, from a datum difference
+    # (NAD83 against WGS84 is one to two metres across the United States) or from
+    # two GPS fixes taken at different moments. A survey several hundred metres
+    # across shows that offset plainly, and rejecting it would withhold imagery
+    # over a discrepancy far smaller than the imagery's own registration.
+    #
+    # Judged on a high percentile rather than the maximum, so that a handful of
+    # bad fixes cannot disable the basemap for a whole survey.
+    typical = float(np.percentile(residual, 90)) if residual.size >= 10 else float(residual.max())
+    if typical > max(_TRANSFORM_TOLERANCE_M, 5e-3 * span * abs(a)):
         return None
     return a, b
 

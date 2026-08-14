@@ -31,7 +31,7 @@ def app():
     return QApplication.instance() or QApplication([])
 
 
-def test_ert_pseudosection_has_physical_colour_scale_and_hover_value(
+def test_ert_pseudosection_has_physical_colour_scale_and_click_value(
     app, tmp_path: Path
 ) -> None:
     view = ERTProcessingModule(
@@ -41,15 +41,19 @@ def test_ert_pseudosection_has_physical_colour_scale_and_hover_value(
     view._draw_pseudosection()
     app.processEvents()
 
-    assert view._pseudo_colorbar.isVisible()
-    assert view._pseudo_colorbar.axis.logMode
-    assert "Apparent resistivity" in view._pseudo_colorbar.getAxis("left").labelText
+    assert not view._pseudo_legend.isHidden()
+    legend_values = [float(label.text()) for label in view._pseudo_scale_labels]
+    assert legend_values == sorted(legend_values)
+    assert legend_values[0] >= 10.0
+    assert legend_values[-1] <= 1000.0
     assert len(view._pseudo_scatter.points()) == 3
     assert view._pseudo_scatter.points()[0].pos().y() == pytest.approx(1.0)
     assert view._pseudo_plot.vb.state["yInverted"]
-    view._on_pseudo_hover(None, [view._pseudo_scatter.points()[1]], None)
-    assert "ρa" in view._pseudo_readout.text
-    assert "100" in view._pseudo_readout.text
+    assert not view._pseudo_scatter.opts.get("hoverable", False)
+    assert view._pseudo_readout.sizePolicy().horizontalPolicy().name == "Ignored"
+    view._on_pseudo_clicked(None, [view._pseudo_scatter.points()[1]], None)
+    assert "ρa" in view._pseudo_readout.text()
+    assert "100" in view._pseudo_readout.text()
     view.close()
 
 
@@ -62,9 +66,9 @@ def test_array_log_colourbar_reports_physical_values_and_resets_extent(app) -> N
         extent=(100.0, 220.0, -20.0, 0.0),
         value_label="Resistivity (Ω·m)",
     )
-    assert view._hist.axis.logMode
+    assert not view._hist.axis.logMode
     assert view._hist.axis.tickStrings([0.0, 1.0, 2.0, 3.0], 1.0, 1.0) == [
-        "1", "10¹", "10²", "10³"
+        "1", "10", "100", "1000"
     ]
     assert view._hist.axis.labelText == "Resistivity (Ω·m)"
     assert view._img.transform().m11() != pytest.approx(1.0)

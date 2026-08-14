@@ -321,13 +321,16 @@ def run_em_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResu
     method = str(parameters.pop("method", "TDEM")).upper()
     moment = str(parameters.pop("moment", "HM"))
     sounding = int(parameters.pop("sounding", 0))
+    geometry = dict(parameters.pop("geometry", {}))
     data = context.load_object(
         source,
         lambda path: em1d.load_sounding(
-            str(path), method, sounding=sounding, moment=moment
+            str(path), method, sounding=sounding, moment=moment,
+            ttem_loop_area=geometry.get("loop_area"),
+            ttem_gex_path=geometry.get("ttem_gex_path"),
+            ttem_tfi_path=geometry.get("ttem_tfi_path"),
         ),
     )
-    geometry = dict(parameters.pop("geometry", {}))
     if method == "FDEM":
         result = em1d.fdem_invert(data, geometry, parameters, log=context.progress)
     elif data.get("moments"):

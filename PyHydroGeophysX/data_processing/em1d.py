@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 from PyHydroGeophysX.data_processing import table_io
+from PyHydroGeophysX.data_processing.ttem import is_ttem_source, load_ttem_sounding
 
 TEMCOMPANY_MOMENTS = ("LM+HM", "HM", "LM")
 
@@ -738,6 +739,8 @@ def load_temcompany_sounding(
 def load_sounding(
     path: str, method: str, sounding: int = 0, *, moment: str = "HM",
     use_flags: bool = True, max_relative_std: Optional[float] = None,
+    ttem_loop_area: Optional[float] = None, ttem_gex_path: Optional[str] = None,
+    ttem_tfi_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Load one sounding from a sounding file.
 
@@ -754,6 +757,14 @@ def load_sounding(
     ``use_flags`` applies only to TEMcompany project databases; see
     :func:`load_temcompany_sounding`.
     """
+    if is_ttem_source(path):
+        if method != "TDEM":
+            raise ValueError("TEMcompany tTEM raw data are time-domain EM data; select TDEM.")
+        return load_ttem_sounding(path, sounding=sounding, moment=moment,
+                                  max_relative_std=max_relative_std,
+                                  loop_area=ttem_loop_area,
+                                  gex_path=ttem_gex_path,
+                                  tfi_path=ttem_tfi_path)
     if is_temcompany_source(path):
         if method != "TDEM":
             raise ValueError("TEMcompany/TEM2Go exports are time-domain EM data; select TDEM.")
@@ -830,7 +841,9 @@ def load_line_geometry(path: str) -> Dict[str, Any]:
 __all__ = [
     "TEMCOMPANY_MOMENTS",
     "is_temcompany_source",
+    "is_ttem_source",
     "load_temcompany_sounding",
+    "load_ttem_sounding",
     "load_sounding",
     "load_line_geometry",
 ]

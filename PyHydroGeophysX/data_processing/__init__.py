@@ -146,9 +146,17 @@ _EXPORTS: Dict[str, Tuple[str, str]] = {
         "PyHydroGeophysX.data_processing.em1d",
         "is_temcompany_source",
     ),
+    "is_ttem_source": (
+        "PyHydroGeophysX.data_processing.ttem",
+        "is_ttem_source",
+    ),
     "load_temcompany_sounding": (
         "PyHydroGeophysX.data_processing.em1d",
         "load_temcompany_sounding",
+    ),
+    "load_ttem_sounding": (
+        "PyHydroGeophysX.data_processing.ttem",
+        "load_ttem_sounding",
     ),
     "load_sounding": ("PyHydroGeophysX.data_processing.em1d", "load_sounding"),
     "load_line_geometry": (
