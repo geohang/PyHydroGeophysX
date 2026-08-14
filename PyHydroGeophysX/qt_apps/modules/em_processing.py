@@ -242,29 +242,21 @@ class EMProcessingModule(BaseModule):
         self._use_flags = QCheckBox("Use the project's in-use flags")
         self._use_flags.setChecked(True)
         self._use_flags.setToolTip(
-            "On: import only the gates the acquisition software left switched on, "
-            "which is what its own inversion used.\n\n"
-            "Off: import every gate that holds a finite, non-dummy value, including "
-            "the ones its QC switched off, and let this module's own outlier "
-            "rejection decide. A noisy ground survey may leave only a quarter of "
-            "the gates in use, so this can be several times more data; each gate "
-            "still carries its recorded stack error, so a noisy one is weighted as "
-            "noisy. Turn on 'Reject outliers' with it.")
+            "On: only the gates the project file marks as in use are imported.\n\n"
+            "Off: every gate holding a finite, non-dummy value is imported, "
+            "including those the project marks unused. On a noisy survey that can "
+            "be several times as many gates. Each one keeps its recorded stack "
+            "error, so its weight in the fit is unchanged.")
         self._use_flags.toggled.connect(self._on_use_flags_changed)
         moment_form.addRow("", self._use_flags)
         self._tail_cut = self._dspin(0.30, 0.0, 5.0, 0.05, 2)
         self._tail_cut.setSpecialValueText("off")
         self._tail_cut.setToolTip(
-            "Truncate each decay at the first gate that is negative or whose stack "
-            "error exceeds this, dropping it and every later gate. The acquisition "
-            "software does this at inversion time and its in-use flags do not record "
-            "it, so without the cut the import takes in late gates that software "
-            "itself discarded. 0.30 is the value the vendor documents; on one project "
-            "it reproduced their gate selection exactly at 81 of 116 stations and 0.25 "
-            "at 90, against 53 with no cut.\n\n"
-            "Set to 0 (off) where a sign reversal is real rather than noise: over a "
-            "very conductive near-surface, and on offset-loop systems generally, the "
-            "response can genuinely cross zero, and the cut would delete it.")
+            "Truncates each decay at the first gate that is negative or whose stack "
+            "error exceeds this value, dropping that gate and every later one.\n\n"
+            "0 turns the cut off. A response can cross zero for physical reasons "
+            "over a very conductive near-surface and on offset-loop systems, where "
+            "truncating would remove real signal.")
         self._tail_cut.valueChanged.connect(self._on_use_flags_changed)
         moment_form.addRow("Tail cut (σ)", self._tail_cut)
         self._tem_moment_row.setVisible(False)
@@ -321,7 +313,9 @@ class EMProcessingModule(BaseModule):
         self._sounding_row = QWidget()
         srow = QFormLayout(self._sounding_row); srow.setContentsMargins(0, 0, 0, 0)
         self._sounding = QSpinBox(); self._sounding.setRange(1, 1); self._sounding.setValue(1)
-        self._sounding.setToolTip("This file holds several soundings; pick which one to preview.")
+        self._sounding.setToolTip(
+            "Selects which of the file's soundings the preview shows. A line "
+            "inversion uses the whole survey regardless of this setting.")
         self._sounding.valueChanged.connect(self._on_sounding_changed)
         srow.addRow("Preview sounding #", self._sounding)
         self._sounding_row.setVisible(False)
@@ -405,31 +399,33 @@ class EMProcessingModule(BaseModule):
         box = QGroupBox("Data errors and calibration"); form = QFormLayout(box)
         self._rel_err = self._dspin(0.03, 0.0, 1.0, 0.01, 3)
         self._rel_err.setToolTip(
-            "Uncertainty that applies to every gate alike: system calibration, and the "
+            "Uncertainty applied to every gate alike: system calibration, and the "
             "error in representing the ground as 1D layers. Where the file carries a "
-            "per-gate stack error (TEMcompany exports do) this is added to it in "
-            "quadrature, not substituted for it, so a noisy gate stays noisy and a "
-            "clean one gets this as its floor.\n\n"
-            "χ² is measured against the result, so this decides what \"fitting the "
-            "data\" means. 3 % is the value the instrument vendor documents for its "
-            "own processing; raise it if χ² will not come down, since a stack error "
-            "alone is far too optimistic on ground TDEM.")
+            "per-gate stack error, this is added in quadrature rather than replacing "
+            "it, so a noisy gate stays noisy and a clean one takes this as its "
+            "floor.\n\n"
+            "χ² is measured against the combined uncertainty, so this value is what "
+            "\"fitting the data\" is measured against. A larger value makes the same "
+            "model fit better; a smaller one makes it fit worse.")
         self._data_scale = self._dspin(1.0, 1e-4, 1e6, 0.1, 4)
         self._data_scale.setToolTip(
-            "Multiply the observed data before inversion. Use for data in normalized units "
-            "(e.g. moment-normalized airborne dB/dt) that need a system calibration constant. "
-            "1.0 = no scaling.")
+            "Multiplies the observed data before inversion, for data in normalized "
+            "units such as moment-normalized airborne dB/dt that carry a system "
+            "calibration constant. 1.0 leaves the data unscaled.")
         self._auto_scale = QCheckBox("Auto-calibrate")
         self._auto_scale.setChecked(True)
-        self._auto_scale.setToolTip("Rough amplitude guess from the data shape (de-rails the "
-                                    "inversion, but the absolute resistivity is only approximate). "
-                                    "For reliable absolute values, use Reference resistivity instead.")
+        self._auto_scale.setToolTip(
+            "Estimates the amplitude scale from the shape of the decay. This keeps "
+            "the inversion off the bounds; the absolute resistivity level it "
+            "produces is approximate, since the shape alone does not fix it.")
         self._ref_res = self._dspin(0.0, 0.0, 1e5, 10.0, 1)
         self._ref_res.setToolTip(
-            "Pin the ABSOLUTE resistivity to a known/expected value (ohm-m) from a borehole or "
-            "regional geology — it ties the data amplitude to a half-space at this value, the "
-            "same way for every dataset, so results are consistent (the data alone cannot fix the "
-            "level). Recovered resistivity lands near this value. 0 = off; overrides Auto-calibrate.")
+            "Ties the amplitude scale to a half-space of this resistivity, in Ω·m, "
+            "so the recovered model lands near this level. The data alone do not "
+            "determine the absolute level, and the same value is applied the same "
+            "way to every dataset.\n\n"
+            "0 turns this off. A non-zero value takes precedence over "
+            "Auto-calibrate.")
         form.addRow("Relative error", self._rel_err)
         form.addRow("Data scale / calib.", self._data_scale)
         form.addRow("", self._auto_scale)
@@ -470,7 +466,8 @@ class EMProcessingModule(BaseModule):
             "inverts each sounding alone.")
         self._lci_passes = self._ispin(int(d.get("lci_passes", 1)), 0, 10)
         self._lci_passes.setToolTip(
-            "Block-coordinate passes. The simultaneous solver does not use this.")
+            "Number of block-coordinate passes. The simultaneous solver does not "
+            "use this setting.")
         self._lci_passes_label = QLabel("passes")
         self._lci_mode_row = merged_row(
             self._lci_mode, self._lci_passes_label, self._lci_passes)
@@ -512,7 +509,7 @@ class EMProcessingModule(BaseModule):
         self._lam_trials = self._ispin(5, 1, 20)
         self._lam_trials.setToolTip(
             "Upper bound on the extra line solves the search may run, on top of the "
-            "one at the smoothness you set.")
+            "first one at the smoothness set above.")
         form.addRow("Max trials", self._lam_trials)
 
         # The other answer to a high χ²: some gates are wrong rather than the
@@ -520,11 +517,15 @@ class EMProcessingModule(BaseModule):
         self._reject = QCheckBox("Reject outliers")
         self._reject.setChecked(False)
         self._reject.setToolTip(
-            "After the line has converged, drop the time gates whose residual exceeds "
-            "the cut below and solve again at the same smoothness. This is what brings "
-            "χ² down when a minority of gates are simply bad; it also shrinks the data "
-            "set, so the floor below keeps it from gutting the survey. Cutting is per "
-            "gate, not per sounding: a TDEM station may carry only a handful of gates.")
+            "After the line converges, the time gates whose residual exceeds the cut "
+            "below are dropped and the line is solved again at the same smoothness. "
+            "This addresses a high χ² caused by individual bad gates rather than by "
+            "a model that is too stiff.
+
+"
+            "Cutting is per gate, not per sounding, and it shrinks the data set; the "
+            "floor below bounds how much can be removed. A TDEM station may carry "
+            "only a handful of gates.")
         self._reject.toggled.connect(self._sync_reject)
         form.addRow(self._reject)
 
@@ -583,9 +584,9 @@ class EMProcessingModule(BaseModule):
             "After a line inversion: model_cells.csv, one row per layer per "
             "sounding with its map coordinate, elevation, resistivity, "
             "sensitivity and χ², plus soundings.csv, one row per station. "
-            "After a single sounding: the recovered model as npy + csv.\n\n"
-            "Both are written next to the section automatically; this puts a "
-            "copy wherever you want it.")
+            "After a single sounding: the recovered model as npy and csv.\n\n"
+            "Both are written next to the section automatically. This writes a "
+            "second copy to a chosen folder.")
         self._inv_export.clicked.connect(self._export_inversion)
         form.addRow(self._inv_export)
         return box

@@ -37,7 +37,6 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QSpinBox,
     QTabWidget,
     QVBoxLayout,
@@ -159,27 +158,23 @@ class ERTProcessingModule(BaseModule):
         self._plot.addItem(self._sel_scatter)
         self._plot.scene().sigMouseClicked.connect(self._on_click)
 
-        # Keep the readout and colour legend outside pyqtgraph's GraphicsLayout.
-        # A changing LabelItem beside a hoverable scatter can feed its new size
-        # back into the plot geometry: the point moves under the stationary mouse,
-        # hover toggles again, and Windows Qt eventually dies with c00000fd (stack
-        # overflow) rather than a Python traceback.  Fixed-height Qt widgets plus
-        # click-to-read have no geometry/hover feedback path.
+        # Render the apparent-resistivity section with Matplotlib rather than a
+        # pyqtgraph ScatterPlotItem.  On some Windows Qt/pyqtgraph combinations
+        # the scatter loses the ViewBox transform after a resize: axes remain in
+        # data coordinates while markers are painted as scene pixels above/left
+        # of the plot.  This section is intentionally static; reliable placement
+        # is more important than per-point hover/pick interaction here.
         self._pseudo_widget = QWidget()
         pseudo_layout = QVBoxLayout(self._pseudo_widget)
         pseudo_layout.setContentsMargins(0, 0, 0, 0)
         pseudo_layout.setSpacing(4)
-        self._pseudo_plot_widget = pg.PlotWidget()
-        self._pseudo_plot_widget.setBackground("w")
-        self._pseudo_plot = self._pseudo_plot_widget.getPlotItem()
-        self._pseudo_plot.showGrid(x=True, y=True, alpha=0.25)
-        self._pseudo_plot.setLabel("bottom", "x (m)")
-        self._pseudo_plot.setLabel("left", "pseudo-depth (m, positive down)")
-        self._pseudo_plot.invertY(True)
-        self._pseudo_scatter = pg.ScatterPlotItem(size=11)
-        self._pseudo_plot.addItem(self._pseudo_scatter)
-        self._pseudo_scatter.sigClicked.connect(self._on_pseudo_clicked)
-        pseudo_layout.addWidget(self._pseudo_plot_widget, stretch=1)
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+        from matplotlib.figure import Figure
+
+        self._pseudo_figure = Figure(facecolor="white", constrained_layout=True)
+        self._pseudo_canvas = FigureCanvasQTAgg(self._pseudo_figure)
+        self._pseudo_ax = self._pseudo_figure.add_subplot(111)
+        pseudo_layout.addWidget(self._pseudo_canvas, stretch=1)
 
         self._pseudo_legend = QWidget()
         legend_layout = QVBoxLayout(self._pseudo_legend)
@@ -216,14 +211,6 @@ class ERTProcessingModule(BaseModule):
             self._pseudo_scale_labels.append(label)
         legend_layout.addLayout(scale_row)
         pseudo_layout.addWidget(self._pseudo_legend)
-
-        self._pseudo_readout = QLabel("")
-        self._pseudo_readout.setContentsMargins(8, 0, 8, 0)
-        self._pseudo_readout.setFixedHeight(24)
-        self._pseudo_readout.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
-        self._pseudo_readout.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self._pseudo_readout.setVisible(False)
-        pseudo_layout.addWidget(self._pseudo_readout)
 
         self._model_view = MeshResultView()
         # The "Resistivity model" tab shows the single inversion OR any time step
@@ -2281,23 +2268,29 @@ class ERTProcessingModule(BaseModule):
             self.log("No time-lapse output yet.", "warn")
 
     # -- pseudosection -------------------------------------------------------
+    def _show_pseudosection_message(self, message: str) -> None:
+        """Show a stable empty-state message on the static section canvas."""
+        self._pseudo_ax.clear()
+        self._pseudo_ax.set_axis_off()
+        if message:
+            self._pseudo_ax.text(
+                0.5, 0.5, message,
+                ha="center", va="center", transform=self._pseudo_ax.transAxes,
+            )
+        self._pseudo_legend.setVisible(False)
+        self._pseudo_canvas.draw_idle()
+
     def _draw_pseudosection(self) -> None:
         if not self._pseudo:
-            self._pseudo_scatter.setData([])
-            self._pseudo_plot.setTitle("")
-            self._pseudo_legend.setVisible(False)
-            self._pseudo_readout.setText("No apparent-resistivity measurements loaded.")
-            self._pseudo_readout.setVisible(True)
+            self._show_pseudosection_message(
+                "No apparent-resistivity measurements loaded."
+            )
             return
         arr = np.asarray(self._pseudo, dtype=float)
         if arr.ndim != 2 or arr.shape[1] < 3:
-            self._pseudo_scatter.setData([])
-            self._pseudo_plot.setTitle("Invalid apparent-resistivity pseudosection geometry")
-            self._pseudo_legend.setVisible(False)
-            self._pseudo_readout.setText(
+            self._show_pseudosection_message(
                 "The loaded pseudosection does not contain x, depth, and rhoa columns."
             )
-            self._pseudo_readout.setVisible(True)
             return
         mid, depth, rhoa = arr[:, 0], arr[:, 1], arr[:, 2]
         valid = (
@@ -2309,14 +2302,10 @@ class ERTProcessingModule(BaseModule):
         )
         mid, depth, rhoa = mid[valid], depth[valid], rhoa[valid]
         if rhoa.size == 0:
-            self._pseudo_scatter.setData([])
-            self._pseudo_plot.setTitle("No valid apparent-resistivity geometry to display")
-            self._pseudo_legend.setVisible(False)
-            self._pseudo_readout.setText(
+            self._show_pseudosection_message(
                 "All x/depth values are invalid, or apparent resistivity is missing, "
                 "non-finite, or non-positive."
             )
-            self._pseudo_readout.setVisible(True)
             return
         log_rhoa = np.log10(rhoa)
         lo, hi = np.percentile(log_rhoa, [3, 97])
@@ -2325,14 +2314,6 @@ class ERTProcessingModule(BaseModule):
         rng = hi - lo
         norm = np.clip((log_rhoa - lo) / rng, 0.0, 1.0)
         lut = self._cmap.map(norm, mode="byte")
-        spots = [
-            {"pos": (float(mid[i]), float(depth[i])),
-             "data": (float(mid[i]), float(depth[i]), float(rhoa[i])),
-             "brush": pg.mkBrush(int(lut[i, 0]), int(lut[i, 1]), int(lut[i, 2])),
-             "size": 11}
-            for i in range(mid.size)
-        ]
-        self._pseudo_scatter.setData(spots)
         x_min, x_max = float(np.min(mid)), float(np.max(mid))
         x_span = x_max - x_min
         if x_span <= 1e-9:
@@ -2342,36 +2323,36 @@ class ERTProcessingModule(BaseModule):
             x_pad = 0.03 * x_span
             x_min, x_max = x_min - x_pad, x_max + x_pad
         depth_max = max(float(np.max(depth)) * 1.08, 0.02)
-        # Explicit finite ranges keep pyqtgraph from magnifying coordinate
-        # round-off into long decimal tick labels when source geometry is flat.
-        self._pseudo_plot.setXRange(x_min, x_max, padding=0.0)
-        self._pseudo_plot.setYRange(0.0, depth_max, padding=0.0)
+
+        self._pseudo_ax.clear()
+        self._pseudo_ax.set_axis_on()
+        rgba = np.ones((len(lut), 4), dtype=float)
+        rgba[:, :3] = np.asarray(lut[:, :3], dtype=float) / 255.0
+        self._pseudo_ax.scatter(
+            mid,
+            depth,
+            s=34,
+            c=rgba,
+            marker="o",
+            edgecolors="#394b59",
+            linewidths=0.35,
+        )
+        self._pseudo_ax.set_xlim(x_min, x_max)
+        self._pseudo_ax.set_ylim(depth_max, 0.0)
+        self._pseudo_ax.set_xlabel("x (m)")
+        self._pseudo_ax.set_ylabel("pseudo-depth (m, positive down)")
+        self._pseudo_ax.grid(True, which="major", alpha=0.28)
+        self._pseudo_ax.minorticks_on()
+        self._pseudo_ax.grid(True, which="minor", alpha=0.10)
+        self._pseudo_ax.set_title(
+            f"Apparent resistivity: {rhoa.min():.3g} – {rhoa.max():.3g} Ω·m "
+            f"(n={rhoa.size})"
+        )
+        self._pseudo_canvas.draw_idle()
         legend_values = np.power(10.0, np.linspace(float(lo), float(hi), 5))
         for label, value in zip(self._pseudo_scale_labels, legend_values):
             label.setText(f"{float(value):.4g}")
         self._pseudo_legend.setVisible(True)
-        self._pseudo_readout.clear()
-        self._pseudo_readout.setVisible(False)
-        self._pseudo_plot.setTitle(
-            f"Apparent resistivity: {rhoa.min():.3g} – {rhoa.max():.3g} Ω·m  "
-            f"(n={rhoa.size})"
-        )
-
-    def _on_pseudo_clicked(self, _item, points, _event) -> None:
-        """Report the physical value behind a pseudosection colour."""
-        if not points:
-            self._pseudo_readout.clear()
-            self._pseudo_readout.setVisible(False)
-            return
-        data = points[0].data()
-        if not data or len(data) != 3:
-            return
-        x, depth, rhoa = data
-        self._pseudo_readout.setText(
-            f"x = {float(x):.3g} m    ·    pseudo-depth = {float(depth):.3g} m"
-            f"    ·    ρa = {float(rhoa):.4g} Ω·m"
-        )
-        self._pseudo_readout.setVisible(True)
 
     # -- interaction ---------------------------------------------------------
     def _nearest(self, x: float, z: float) -> Optional[int]:

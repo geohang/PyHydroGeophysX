@@ -31,7 +31,7 @@ def app():
     return QApplication.instance() or QApplication([])
 
 
-def test_ert_pseudosection_has_physical_colour_scale_and_click_value(
+def test_ert_pseudosection_has_stable_static_markers_and_physical_colour_scale(
     app, tmp_path: Path
 ) -> None:
     view = ERTProcessingModule(
@@ -39,6 +39,7 @@ def test_ert_pseudosection_has_physical_colour_scale_and_click_value(
     )
     view._pseudo = [(0.0, 1.0, 10.0), (1.0, 2.0, 100.0), (2.0, 3.0, 1000.0)]
     view._draw_pseudosection()
+    view._pseudo_canvas.draw()
     app.processEvents()
 
     assert not view._pseudo_legend.isHidden()
@@ -46,20 +47,14 @@ def test_ert_pseudosection_has_physical_colour_scale_and_click_value(
     assert legend_values == sorted(legend_values)
     assert legend_values[0] >= 10.0
     assert legend_values[-1] <= 1000.0
-    assert len(view._pseudo_scatter.points()) == 3
-    assert view._pseudo_scatter.points()[0].pos().y() == pytest.approx(1.0)
-    assert view._pseudo_plot.vb.state["yInverted"]
-    x_range, y_range = view._pseudo_plot.vb.viewRange()
-    assert x_range == pytest.approx([-0.06, 2.06])
-    assert y_range == pytest.approx([0.0, 3.24])
-    assert view._pseudo_plot.vb.state["autoRange"] == [False, False]
-    assert not view._pseudo_scatter.opts.get("hoverable", False)
-    assert view._pseudo_readout.sizePolicy().horizontalPolicy().name == "Ignored"
-    assert view._pseudo_readout.isHidden()
-    view._on_pseudo_clicked(None, [view._pseudo_scatter.points()[1]], None)
-    assert not view._pseudo_readout.isHidden()
-    assert "ρa" in view._pseudo_readout.text()
-    assert "100" in view._pseudo_readout.text()
+    assert len(view._pseudo_ax.collections) == 1
+    offsets = np.asarray(view._pseudo_ax.collections[0].get_offsets(), dtype=float)
+    np.testing.assert_allclose(
+        offsets, np.array([[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]])
+    )
+    assert view._pseudo_ax.get_xlim() == pytest.approx((-0.06, 2.06))
+    assert view._pseudo_ax.get_ylim() == pytest.approx((3.24, 0.0))
+    assert view._pseudo_ax.yaxis_inverted()
     view.close()
 
 
