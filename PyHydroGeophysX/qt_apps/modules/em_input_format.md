@@ -38,7 +38,9 @@ UTM coordinates and enabled-gate flags.
 Set **Data format** to **TEMcompany tTEM raw**, click **Load data**, and select
 the survey directory containing `tTEMLog`. The importer finds every
 `*_tTEM_Rawdata.skb` below it and pairs each file with its GPS and transmitter
-current `.sps` logs. It then:
+current `.sps` logs. The **System GEX** and **Import filter TFI** selectors
+auto-detect a single `.gex`/`.tfi` in that directory, or let you browse to files
+stored elsewhere. It then:
 
 - decodes the LM/HM alternating-polarity records and stacks consecutive cycles
   into approximately 2-second soundings;
@@ -48,6 +50,12 @@ current `.sps` logs. It then:
   runs as separate survey-line numbers;
 - sends the resulting LM+HM observations into the same joint 1D/LCI inversion
   used for TEM2Go projects.
+
+The GEX supplies loop area/turns, Tx-Rx geometry, full moment waveforms, gate
+windows/time shifts, gate factors, first/last usable gates, and the uniform data
+error. The TFI FIR coefficients are convolved with each sign-corrected LM/HM
+transient sequence before stacking. The calibration status is shown below the
+geometry controls and its file paths are saved in the workflow recipe.
 
 The raw directory is referenced in place instead of copied into every Project
 run, because a survey can be hundreds of MB. Keep the original directory when
@@ -61,11 +69,10 @@ also defines the equivalent circular-loop radius. The separation and height are
 passed to every forward operator on the line. Values loaded from this reader are
 fallbacks and may be replaced by field measurements.
 
-An instrument `.gex` calibration file is needed for exact production geometry,
-filter transfer functions and gate removal. GEX parsing is not part of this raw
-reader yet; the importer records that limitation and uses standard tTEM values:
-an 8 m2 one-turn loop, 9.28 m Tx-Rx separation and 0.43 m height. The waveform
-turn-off and gate windows still come from the SKB acquisition header.
+When no GEX is selected or uniquely auto-detected, the importer reports the
+limitation and falls back to an 8 m2 one-turn loop, 9.28 m Tx-Rx separation,
+0.43 m height, and waveform/gate information from the SKB header. When no TFI
+is selected, it uses polarity-pair stacking without the import FIR.
 
 ## TDEM (time domain) — one sounding
 

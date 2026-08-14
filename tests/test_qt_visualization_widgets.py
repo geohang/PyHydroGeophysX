@@ -51,7 +51,9 @@ def test_ert_pseudosection_has_physical_colour_scale_and_click_value(
     assert view._pseudo_plot.vb.state["yInverted"]
     assert not view._pseudo_scatter.opts.get("hoverable", False)
     assert view._pseudo_readout.sizePolicy().horizontalPolicy().name == "Ignored"
+    assert view._pseudo_readout.isHidden()
     view._on_pseudo_clicked(None, [view._pseudo_scatter.points()[1]], None)
+    assert not view._pseudo_readout.isHidden()
     assert "ρa" in view._pseudo_readout.text()
     assert "100" in view._pseudo_readout.text()
     view.close()

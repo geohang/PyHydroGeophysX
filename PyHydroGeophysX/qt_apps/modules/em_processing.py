@@ -657,6 +657,9 @@ class EMProcessingModule(BaseModule):
         )
         if not selected:
             return
+        if Path(selected).suffix.lower() != f".{kind}":
+            self.log(f"Selected calibration file must end in .{kind}.", "error")
+            return
         self._set_ttem_calibration_path(kind, Path(selected))
         if self._source_path is not None:
             index = self._sounding.value() - 1

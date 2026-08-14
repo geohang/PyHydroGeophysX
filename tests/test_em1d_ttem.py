@@ -112,3 +112,43 @@ def test_ttem_loop_area_controls_normalization(tmp_path: Path) -> None:
     np.testing.assert_allclose(area_4["response"], 2.0 * area_8["response"])
     assert area_4["system"]["loop_area"] == 4.0
     np.testing.assert_allclose(area_4["system"]["source_radius"], np.sqrt(4.0 / np.pi))
+
+
+def test_ttem_applies_gex_and_tfi(tmp_path: Path) -> None:
+    source = _make_project(tmp_path / "survey")
+    gex = source / "system.gex"
+    gate_lines = "\n".join(
+        f"GateTime{i:02d}={2*i+1}e-6 {2*i}e-6 {2*i+2}e-6"
+        for i in range(1, 7)
+    )
+    gex.write_text(
+        "[General]\n"
+        "RxCoilPosition1=-7 0 -0.5\nTxCoilPosition1=0 0 -0.7\n"
+        "TxLoopArea=4\n"
+        "WaveformLMPoint01=-2e-4 1\nWaveformLMPoint02=2e-6 0\n"
+        "WaveformHMPoint01=-4.5e-4 1\nWaveformHMPoint02=4e-6 0\n"
+        f"{gate_lines}\n"
+        "[Channel1]\nTransmitterMoment=LM\nNoGates=5\nGateFactor=2\n"
+        "RemoveInitialGates=1\nRemoveGatesFrom=5\nUniformDataSTD=.04\n"
+        "[Channel2]\nTransmitterMoment=HM\nNoGates=6\nGateFactor=1\n"
+        "RemoveInitialGates=2\nUniformDataSTD=.04\n",
+        encoding="ascii",
+    )
+    tfi = source / "system.tfi"
+    tfi.write_text(
+        "[FilterSwCh1]\nPeriodtime=.000496\nFilter=.5 .5\n"
+        "[FilterSwCh2]\nPeriodtime=.001773\nFilter=.5 .5\n",
+        encoding="ascii",
+    )
+
+    result = load_sounding(str(source), "TDEM", moment="LM+HM")
+
+    assert result["calibration"]["gex_applied"] is True
+    assert result["calibration"]["tfi_applied"] is True
+    assert result["system"]["loop_area"] == 4.0
+    assert result["system"]["tx_rx_sep"] == 7.0
+    assert result["system"]["height"] == 0.5
+    assert result["protocol"]["uniform_std"] == 0.04
+    assert result["protocol"]["tfi_channels"] == [1, 2]
+    assert result["moments"]["LM"]["times"].size == 3
+    assert result["moments"]["HM"]["times"].size == 4

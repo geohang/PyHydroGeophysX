@@ -124,11 +124,14 @@ def _read_gex(resolved_path: str) -> Dict[str, Any]:
             "waveform_times": waveform[:, 0] if waveform.size else np.array([]),
             "waveform_currents": waveform[:, 1] if waveform.size else np.array([]),
             "gate_factor": _number(channel, "GateFactor", 1.0),
+            "loop_turns": int(_number(general, f"NumberOfTurns{moment}", 1)),
             "remove_initial": int(_number(channel, "RemoveInitialGates", 0)),
             "remove_from": int(_number(channel, "RemoveGatesFrom", n_gates + 1)),
             "uniform_std": _number(channel, "UniformDataSTD", 0.03),
             "tib_lowpass": _float_values(channel, "TiBLowPassFilter"),
         }
+    if not result["moments"]:
+        raise ValueError(f"No LM/HM channel definitions were found in GEX: {path}")
     return result
 
 
@@ -146,6 +149,8 @@ def _read_tfi(resolved_path: str) -> Dict[int, Dict[str, Any]]:
                 "coefficients": coefficients,
                 "period": _number(block, "Periodtime", np.nan),
             }
+    if not result:
+        raise ValueError(f"No FilterSwCh FIR definitions were found in TFI: {path}")
     return result
 
 
@@ -154,6 +159,8 @@ def _calibration_path(source: Path, explicit: Optional[str], suffix: str) -> Opt
         path = Path(explicit).expanduser().resolve()
         if not path.is_file():
             raise ValueError(f"Selected {suffix.upper()} file not found: {path}")
+        if path.suffix.lower() != f".{suffix}":
+            raise ValueError(f"Selected calibration file must end in .{suffix}: {path}")
         return path
     root = source if source.is_dir() else source.parent
     matches = sorted(root.rglob(f"*.{suffix}"))
@@ -390,7 +397,7 @@ def _current(record: Dict[str, Any], file_index: Dict[str, Any]) -> float:
 
 def _stack_record(
     record: Dict[str, Any], file_index: Dict[str, Any], loop_area: float,
-    filters: Dict[int, Dict[str, Any]],
+    loop_turns: int, filters: Dict[int, Dict[str, Any]],
 ) -> tuple[np.ndarray, np.ndarray]:
     with record["path"].open("rb") as handle:
         handle.seek(record["offset"])
@@ -423,7 +430,8 @@ def _stack_record(
                if pairs.shape[0] > 1 else np.zeros(mean.size))
     config = file_index["header"]["moments"][record["moment"]]
     scale = config["factors"] / max(
-        abs(_current(record, file_index)) * float(loop_area), 1e-12
+        abs(_current(record, file_index)) * float(loop_area) * max(1, int(loop_turns)),
+        1e-12,
     )
     return mean * scale, sem * np.abs(scale)
 
@@ -434,8 +442,11 @@ def _moment_data(
 ) -> Dict[str, Any]:
     file_index = sounding["file"]
     records = [record for record in sounding["records"] if record["moment"] == moment]
+    calibrated = (gex or {}).get("moments", {}).get(moment)
+    loop_turns = int((calibrated or {}).get("loop_turns", 1))
     stacked = [
-        _stack_record(record, file_index, loop_area, filters) for record in records
+        _stack_record(record, file_index, loop_area, loop_turns, filters)
+        for record in records
     ]
     responses = np.asarray([item[0] for item in stacked])
     within = np.asarray([item[1] for item in stacked])
@@ -445,7 +456,6 @@ def _moment_data(
     absolute_std = np.sqrt(between ** 2 + np.mean(within ** 2, axis=0))
     relative_std = absolute_std / np.maximum(np.abs(response), 1e-30)
     config = file_index["header"]["moments"][moment]
-    calibrated = (gex or {}).get("moments", {}).get(moment)
     if calibrated:
         response *= float(calibrated.get("gate_factor", 1.0))
         absolute_std *= abs(float(calibrated.get("gate_factor", 1.0)))
@@ -478,6 +488,7 @@ def _moment_data(
     transmitter = {
         "waveform": "custom", "waveform_times": waveform_times,
         "waveform_currents": waveform_currents,
+        "loop_turns": loop_turns,
         "gate_windows": {"open": gate_open[selection],
                          "close": gate_close[selection],
                          "centre": times[selection]},

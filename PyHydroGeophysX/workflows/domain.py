@@ -326,6 +326,8 @@ def run_em_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResu
         source,
         lambda path: em1d.load_sounding(
             str(path), method, sounding=sounding, moment=moment,
+            use_flags=bool(geometry.get("use_project_flags", True)),
+            max_relative_std=geometry.get("tail_max_relative_std"),
             ttem_loop_area=geometry.get("loop_area"),
             ttem_gex_path=geometry.get("ttem_gex_path"),
             ttem_tfi_path=geometry.get("ttem_tfi_path"),

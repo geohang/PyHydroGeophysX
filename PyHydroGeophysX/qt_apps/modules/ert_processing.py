@@ -217,13 +217,12 @@ class ERTProcessingModule(BaseModule):
         legend_layout.addLayout(scale_row)
         pseudo_layout.addWidget(self._pseudo_legend)
 
-        self._pseudo_readout = QLabel(
-            "Click a measurement to read x, pseudo-depth, and apparent resistivity."
-        )
+        self._pseudo_readout = QLabel("")
         self._pseudo_readout.setContentsMargins(8, 0, 8, 0)
         self._pseudo_readout.setFixedHeight(24)
         self._pseudo_readout.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         self._pseudo_readout.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self._pseudo_readout.setVisible(False)
         pseudo_layout.addWidget(self._pseudo_readout)
 
         self._model_view = MeshResultView()
@@ -2288,6 +2287,7 @@ class ERTProcessingModule(BaseModule):
             self._pseudo_plot.setTitle("")
             self._pseudo_legend.setVisible(False)
             self._pseudo_readout.setText("No apparent-resistivity measurements loaded.")
+            self._pseudo_readout.setVisible(True)
             return
         arr = np.asarray(self._pseudo, dtype=float)
         mid, depth, rhoa = arr[:, 0], arr[:, 1], arr[:, 2]
@@ -2300,6 +2300,7 @@ class ERTProcessingModule(BaseModule):
             self._pseudo_readout.setText(
                 "All apparent-resistivity values are missing, non-finite, or non-positive."
             )
+            self._pseudo_readout.setVisible(True)
             return
         log_rhoa = np.log10(rhoa)
         lo, hi = np.percentile(log_rhoa, [3, 97])
@@ -2320,9 +2321,8 @@ class ERTProcessingModule(BaseModule):
         for label, value in zip(self._pseudo_scale_labels, legend_values):
             label.setText(f"{float(value):.4g}")
         self._pseudo_legend.setVisible(True)
-        self._pseudo_readout.setText(
-            "Click a measurement to read x, pseudo-depth, and apparent resistivity."
-        )
+        self._pseudo_readout.clear()
+        self._pseudo_readout.setVisible(False)
         self._pseudo_plot.setTitle(
             f"Apparent resistivity: {rhoa.min():.3g} – {rhoa.max():.3g} Ω·m  "
             f"(n={rhoa.size})"
@@ -2331,9 +2331,8 @@ class ERTProcessingModule(BaseModule):
     def _on_pseudo_clicked(self, _item, points, _event) -> None:
         """Report the physical value behind a pseudosection colour."""
         if not points:
-            self._pseudo_readout.setText(
-                "Click a measurement to read x, pseudo-depth, and apparent resistivity."
-            )
+            self._pseudo_readout.clear()
+            self._pseudo_readout.setVisible(False)
             return
         data = points[0].data()
         if not data or len(data) != 3:
@@ -2343,6 +2342,7 @@ class ERTProcessingModule(BaseModule):
             f"x = {float(x):.3g} m    ·    pseudo-depth = {float(depth):.3g} m"
             f"    ·    ρa = {float(rhoa):.4g} Ω·m"
         )
+        self._pseudo_readout.setVisible(True)
 
     # -- interaction ---------------------------------------------------------
     def _nearest(self, x: float, z: float) -> Optional[int]:
