@@ -56,6 +56,10 @@ windows/time shifts, gate factors, first/last usable gates, and the uniform data
 error. The TFI FIR coefficients are convolved with each sign-corrected LM/HM
 transient sequence before stacking. The calibration status is shown below the
 geometry controls and its file paths are saved in the workflow recipe.
+The GEX receiver-coil two-pole low-pass and the TiB low-pass cascade are applied
+to the SimPEG transient on a dense early-time grid before gate-window averaging.
+The identical linear response operator is applied to the analytic
+Jacobian, so predicted data and inversion sensitivities use the same calibration.
 
 The raw directory is referenced in place instead of copied into every Project
 run, because a survey can be hundreds of MB. Keep the original directory when

@@ -2290,15 +2290,31 @@ class ERTProcessingModule(BaseModule):
             self._pseudo_readout.setVisible(True)
             return
         arr = np.asarray(self._pseudo, dtype=float)
+        if arr.ndim != 2 or arr.shape[1] < 3:
+            self._pseudo_scatter.setData([])
+            self._pseudo_plot.setTitle("Invalid apparent-resistivity pseudosection geometry")
+            self._pseudo_legend.setVisible(False)
+            self._pseudo_readout.setText(
+                "The loaded pseudosection does not contain x, depth, and rhoa columns."
+            )
+            self._pseudo_readout.setVisible(True)
+            return
         mid, depth, rhoa = arr[:, 0], arr[:, 1], arr[:, 2]
-        valid = np.isfinite(rhoa) & (rhoa > 0)
+        valid = (
+            np.isfinite(mid)
+            & np.isfinite(depth)
+            & (depth >= 0.0)
+            & np.isfinite(rhoa)
+            & (rhoa > 0.0)
+        )
         mid, depth, rhoa = mid[valid], depth[valid], rhoa[valid]
         if rhoa.size == 0:
             self._pseudo_scatter.setData([])
-            self._pseudo_plot.setTitle("No positive finite apparent resistivity to display")
+            self._pseudo_plot.setTitle("No valid apparent-resistivity geometry to display")
             self._pseudo_legend.setVisible(False)
             self._pseudo_readout.setText(
-                "All apparent-resistivity values are missing, non-finite, or non-positive."
+                "All x/depth values are invalid, or apparent resistivity is missing, "
+                "non-finite, or non-positive."
             )
             self._pseudo_readout.setVisible(True)
             return
@@ -2317,6 +2333,19 @@ class ERTProcessingModule(BaseModule):
             for i in range(mid.size)
         ]
         self._pseudo_scatter.setData(spots)
+        x_min, x_max = float(np.min(mid)), float(np.max(mid))
+        x_span = x_max - x_min
+        if x_span <= 1e-9:
+            x_center = 0.5 * (x_min + x_max)
+            x_min, x_max = x_center - 0.5, x_center + 0.5
+        else:
+            x_pad = 0.03 * x_span
+            x_min, x_max = x_min - x_pad, x_max + x_pad
+        depth_max = max(float(np.max(depth)) * 1.08, 0.02)
+        # Explicit finite ranges keep pyqtgraph from magnifying coordinate
+        # round-off into long decimal tick labels when source geometry is flat.
+        self._pseudo_plot.setXRange(x_min, x_max, padding=0.0)
+        self._pseudo_plot.setYRange(0.0, depth_max, padding=0.0)
         legend_values = np.power(10.0, np.linspace(float(lo), float(hi), 5))
         for label, value in zip(self._pseudo_scale_labels, legend_values):
             label.setText(f"{float(value):.4g}")

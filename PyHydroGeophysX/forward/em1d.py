@@ -123,6 +123,8 @@ def _tdem_config(geom: Dict[str, Any], times: np.ndarray):
         # Three nodes per window costs about 5 % and removes the last
         # per-moment discrepancy against the vendor forward.
         gate_samples=int(geom.get("gate_samples", 3)),
+        analog_lowpass=geom.get("analog_lowpass"),
+        analog_filter_samples=int(geom.get("analog_filter_samples", 48)),
         receiver_location=np.array([sep, 0.0, h]),
         receiver_orientation=str(geom.get("orientation", "z")),
         receiver_type=str(geom.get("receiver_type", "b")),

@@ -665,7 +665,7 @@ class EMProcessingModule(BaseModule):
             index = self._sounding.value() - 1
             if kind == "gex":
                 self._data = None  # let the newly selected GEX seed geometry fields
-            self._load_sounding(index, reset_geometry=(kind == "gex"))
+            self._load_sounding(index, reset_geometry=True)
 
     def _select_ttem_gex(self) -> None:
         self._select_ttem_calibration("gex")
@@ -1079,10 +1079,27 @@ class EMProcessingModule(BaseModule):
             calibration = dict(self._data.get("calibration", {}))
             self._system_note.setVisible(True)
             if calibration.get("gex_applied") and calibration.get("tfi_applied"):
-                self._system_note.setText(
-                    f"Applied {Path(calibration['gex_path']).name} and "
-                    f"{Path(calibration['tfi_path']).name}. Geometry remains editable below."
-                )
+                filters = dict(calibration.get("analog_lowpass", {}))
+                first_filter = next(iter(filters.values()), {})
+                if calibration.get("analog_lowpass_modelled"):
+                    receiver = float(first_filter.get("receiver_cutoff_hz", 0.0)) / 1e3
+                    tib = float(first_filter.get("tib_cutoff_hz", 0.0)) / 1e3
+                    order = int(first_filter.get("tib_order", 0))
+                    self._system_note.setText(
+                        f"Applied {Path(calibration['gex_path']).name} and "
+                        f"{Path(calibration['tfi_path']).name}. Geometry, waveform, gates, "
+                        "import FIR, and the GEX analog response are active in both the "
+                        f"SimPEG forward response and Jacobian (receiver 2-pole {receiver:g} "
+                        f"kHz; TiB {order}-pole {tib:g} kHz)."
+                    )
+                    self._system_note.setStyleSheet("color:#2f6f3e; font-size:8pt;")
+                else:
+                    self._system_note.setText(
+                        f"Applied {Path(calibration['gex_path']).name} and "
+                        f"{Path(calibration['tfi_path']).name}, but the GEX has no supported "
+                        "RxCoilLPFilter/TiBLowPassFilter definition."
+                    )
+                    self._system_note.setStyleSheet("color:#9b5a00; font-size:8pt;")
             else:
                 missing = "/".join(
                     name for name, key in (("GEX", "gex_applied"), ("TFI", "tfi_applied"))
@@ -1092,7 +1109,13 @@ class EMProcessingModule(BaseModule):
                     f"Missing {missing}. Area, Tx–Rx separation and height below are "
                     "active, but full instrument calibration is incomplete."
                 )
-            level = "info" if calibration.get("gex_applied") and calibration.get("tfi_applied") else "warn"
+                self._system_note.setStyleSheet("color:#9b5a00; font-size:8pt;")
+            complete = (
+                calibration.get("gex_applied")
+                and calibration.get("tfi_applied")
+                and calibration.get("analog_lowpass_modelled")
+            )
+            level = "info" if complete else "warn"
             self.log(self._system_note.text(), level)
 
     def _maybe_auto_geometry(self) -> None:

@@ -124,14 +124,16 @@ def test_ttem_applies_gex_and_tfi(tmp_path: Path) -> None:
     gex.write_text(
         "[General]\n"
         "RxCoilPosition1=-7 0 -0.5\nTxCoilPosition1=0 0 -0.7\n"
-        "TxLoopArea=4\n"
+        "TxLoopArea=4\nRxCoilLPFilter1=.86 420e3\n"
         "WaveformLMPoint01=-2e-4 1\nWaveformLMPoint02=2e-6 0\n"
         "WaveformHMPoint01=-4.5e-4 1\nWaveformHMPoint02=4e-6 0\n"
         f"{gate_lines}\n"
         "[Channel1]\nTransmitterMoment=LM\nNoGates=5\nGateFactor=2\n"
         "RemoveInitialGates=1\nRemoveGatesFrom=5\nUniformDataSTD=.04\n"
+        "TiBLowPassFilter=1 679e3\n"
         "[Channel2]\nTransmitterMoment=HM\nNoGates=6\nGateFactor=1\n"
-        "RemoveInitialGates=2\nUniformDataSTD=.04\n",
+        "RemoveInitialGates=2\nUniformDataSTD=.04\n"
+        "TiBLowPassFilter=1 679e3\n",
         encoding="ascii",
     )
     tfi = source / "system.tfi"
@@ -150,5 +152,28 @@ def test_ttem_applies_gex_and_tfi(tmp_path: Path) -> None:
     assert result["system"]["height"] == 0.5
     assert result["protocol"]["uniform_std"] == 0.04
     assert result["protocol"]["tfi_channels"] == [1, 2]
+    assert result["calibration"]["analog_lowpass_modelled"] is True
+    assert result["protocol"]["analog_lowpass"]["LM"] == {
+        "receiver_damping": 0.86,
+        "receiver_cutoff_hz": 420e3,
+        "tib_order": 1,
+        "tib_cutoff_hz": 679e3,
+    }
+    assert result["moments"]["HM"]["transmitter"]["analog_lowpass"] == (
+        result["protocol"]["analog_lowpass"]["HM"]
+    )
     assert result["moments"]["LM"]["times"].size == 3
     assert result["moments"]["HM"]["times"].size == 4
+
+
+def test_gex_analog_filter_is_causal_and_has_unity_dc_gain() -> None:
+    from PyHydroGeophysX.forward.tdem_forward import _analog_filter_matrix_cached
+
+    times = tuple(np.linspace(0.0, 10e-6, 101))
+    response = _analog_filter_matrix_cached(
+        times, 0.86, 420e3, 1, 679e3
+    ) @ np.ones(len(times))
+
+    assert response[0] == 0.0
+    assert abs(response[-1] - 1.0) < 1e-8
+    assert np.max(response) < 1.01

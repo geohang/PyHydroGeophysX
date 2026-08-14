@@ -49,6 +49,10 @@ def test_ert_pseudosection_has_physical_colour_scale_and_click_value(
     assert len(view._pseudo_scatter.points()) == 3
     assert view._pseudo_scatter.points()[0].pos().y() == pytest.approx(1.0)
     assert view._pseudo_plot.vb.state["yInverted"]
+    x_range, y_range = view._pseudo_plot.vb.viewRange()
+    assert x_range == pytest.approx([-0.06, 2.06])
+    assert y_range == pytest.approx([0.0, 3.24])
+    assert view._pseudo_plot.vb.state["autoRange"] == [False, False]
     assert not view._pseudo_scatter.opts.get("hoverable", False)
     assert view._pseudo_readout.sizePolicy().horizontalPolicy().name == "Ignored"
     assert view._pseudo_readout.isHidden()

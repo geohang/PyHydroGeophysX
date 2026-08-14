@@ -73,13 +73,20 @@ def _read_gex(resolved_path: str) -> Dict[str, Any]:
     rx = _float_values(general, "RxCoilPosition1")
     tx = _float_values(general, "TxCoilPosition1")
     loop_area = _number(general, "TxLoopArea", 8.0)
+    rx_lowpasses = {
+        number: values
+        for number in range(1, 9)
+        if (values := _float_values(general, f"RxCoilLPFilter{number}")).size
+    }
     result: Dict[str, Any] = {
         "path": str(path), "loop_area": loop_area,
         "tx_rx_sep": (float(np.linalg.norm(rx[:2] - tx[:2]))
                       if rx.size >= 2 and tx.size >= 2 else 9.28),
         "height": abs(float(rx[2])) if rx.size >= 3 else 0.43,
         "tx_height": abs(float(tx[2])) if tx.size >= 3 else np.nan,
-        "rx_lowpass": _float_values(general, "RxCoilLPFilter1"),
+        # The suffix identifies the receiver coil, not another cascaded stage.
+        "rx_lowpasses": rx_lowpasses,
+        "rx_lowpass": rx_lowpasses.get(1, np.array([], dtype=float)),
         "front_gate_delay": _number(general, "FrontGateDelay", 0.0),
         "moments": {},
     }
@@ -117,6 +124,7 @@ def _read_gex(resolved_path: str) -> Dict[str, Any]:
         shift = _number(channel, "GateTimeShift", 0.0)
         if selected_gates.size:
             selected_gates += shift
+        rx_coil = int(_number(channel, "RxCoilNumber", 1))
         result["moments"][moment] = {
             "times": selected_gates[:, 0] if selected_gates.size else np.array([]),
             "gate_open": selected_gates[:, 1] if selected_gates.size else np.array([]),
@@ -128,6 +136,8 @@ def _read_gex(resolved_path: str) -> Dict[str, Any]:
             "remove_initial": int(_number(channel, "RemoveInitialGates", 0)),
             "remove_from": int(_number(channel, "RemoveGatesFrom", n_gates + 1)),
             "uniform_std": _number(channel, "UniformDataSTD", 0.03),
+            "rx_coil": rx_coil,
+            "rx_lowpass": rx_lowpasses.get(rx_coil, np.array([], dtype=float)),
             "tib_lowpass": _float_values(channel, "TiBLowPassFilter"),
         }
     if not result["moments"]:
@@ -485,6 +495,24 @@ def _moment_data(
             first = candidates[0]
     selection = slice(first, stop)
     relative_std = absolute_std / np.maximum(np.abs(response), 1e-30)
+    analog_lowpass: Dict[str, Any] = {}
+    receiver_filter = np.asarray(
+        (calibrated or {}).get("rx_lowpass", (gex or {}).get("rx_lowpass", [])),
+        dtype=float,
+    )
+    tib_filter = np.asarray((calibrated or {}).get("tib_lowpass", []), dtype=float)
+    if (receiver_filter.size >= 2 and np.all(np.isfinite(receiver_filter[:2]))
+            and np.all(receiver_filter[:2] > 0.0)):
+        analog_lowpass.update({
+            "receiver_damping": float(receiver_filter[0]),
+            "receiver_cutoff_hz": float(receiver_filter[1]),
+        })
+    if (tib_filter.size >= 2 and np.all(np.isfinite(tib_filter[:2]))
+            and np.all(tib_filter[:2] > 0.0)):
+        analog_lowpass.update({
+            "tib_order": max(1, int(round(float(tib_filter[0])))),
+            "tib_cutoff_hz": float(tib_filter[1]),
+        })
     transmitter = {
         "waveform": "custom", "waveform_times": waveform_times,
         "waveform_currents": waveform_currents,
@@ -493,6 +521,8 @@ def _moment_data(
                          "close": gate_close[selection],
                          "centre": times[selection]},
     }
+    if analog_lowpass:
+        transmitter["analog_lowpass"] = analog_lowpass
     return {"times": times[selection], "response": response[selection],
             "relative_std": relative_std[selection], "transmitter": transmitter}
 
@@ -553,6 +583,12 @@ def load_ttem_sounding(
         raise ValueError(
             "The selected raw tTEM sounding has no usable LM or HM gates after QC."
         )
+    analog_filters = {
+        name: dict(item["transmitter"].get("analog_lowpass", {}))
+        for name, item in moments.items()
+        if item["transmitter"].get("analog_lowpass")
+    }
+    analog_lowpass_modelled = bool(analog_filters)
     system = {
         "source_radius": math.sqrt(effective_area / math.pi),
         "tx_rx_sep": float((gex or {}).get("tx_rx_sep", 9.28)),
@@ -588,9 +624,13 @@ def load_ttem_sounding(
             "gex_file": str(selected_gex) if selected_gex else "",
             "tfi_file": str(selected_tfi) if selected_tfi else "",
             "tfi_channels": sorted(filters),
+            "analog_lowpass": analog_filters,
+            "analog_lowpass_modelled": analog_lowpass_modelled,
         },
         "calibration": {
             "gex_applied": bool(selected_gex), "tfi_applied": bool(selected_tfi),
+            "analog_lowpass": analog_filters,
+            "analog_lowpass_modelled": analog_lowpass_modelled,
             "gex_path": str(selected_gex) if selected_gex else "",
             "tfi_path": str(selected_tfi) if selected_tfi else "",
         },
