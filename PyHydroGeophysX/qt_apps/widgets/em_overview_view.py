@@ -453,6 +453,10 @@ class EMOverviewView(QWidget):
             gap = 0.09                     # map xlabel and section title share it
             map_h = 0.01 * self._map_share.value() * (top - bottom - gap)
             map_w = self._map_width(map_h, right - left)
+            # A survey much wider than it is tall runs out of width before it
+            # runs out of height, and the rest of the slot would be a band of
+            # blank paper above and below the map. Give it back to the section.
+            map_h = min(map_h, self._map_height(map_w))
             self._map_ax = self._fig.add_axes([left, top - map_h, map_w, map_h])
             attribution = self._draw_map(self._map_ax, selected)
             ax = self._fig.add_axes([left, bottom, right - left,
@@ -685,7 +689,11 @@ class EMOverviewView(QWidget):
         if distance.size < 2 or not np.isfinite(res).any():
             return
         width, height = 700, 420
-        xs = np.linspace(float(distance[0]), float(distance[-1]), width)
+        # Out to the cell boundaries, not just to the end stations: the axes are
+        # set to the same edges, so stopping at the stations leaves a white band
+        # half a station wide at each end that the cells drawing does not have.
+        half = 0.5 * (float(np.median(np.diff(distance))) if distance.size > 1 else 1.0)
+        xs = np.linspace(float(distance[0]) - half, float(distance[-1]) + half, width)
         zs = np.linspace(float(depth_centre[0]), float(bottom), height)
 
         # Down each sounding first: only its own finite layers take part, so a
@@ -831,11 +839,20 @@ class EMOverviewView(QWidget):
         want = 1.08 * height * (fig_h / fig_w) * dx / dy
         return float(np.clip(want, 0.05 * available, 0.72 * available))
 
+    def _map_height(self, width: float) -> float:
+        """Figure-fraction height the map fills at ``width``, at equal scales."""
+        dx, dy = self._map_spans()
+        fig_w, fig_h = self._fig.get_size_inches()
+        return float(1.06 * width * (fig_w / fig_h) * dy / dx)
+
     def _draw_map(self, ax, selected: np.ndarray) -> str:
         """Draw the plan view; return the imagery credit for the caller to place."""
         x, y = self._x, self._y
         x0, y0 = float(np.nanmin(x)), float(np.nanmin(y))
+        # Equal scales, and whatever slack is left in the box falls below the
+        # map rather than being split, so the map stays under its own title.
         ax.set_aspect("equal", "box")
+        ax.set_anchor("N")
         # Imagery first: it sets the extent the markers are then drawn into, and
         # it decides how the markers have to be styled to stay readable.
         attribution = self._draw_basemap(ax, x0, y0)
@@ -869,8 +886,15 @@ class EMOverviewView(QWidget):
             # ticks, and a single coordinate is what the axis label already says.
             axis.set_ticks([]) if span < floor else axis.set_major_locator(
                 MaxNLocator(nbins=4))
-        ax.set_xlabel(f"Easting − {x0:,.0f} m", fontsize=9)
-        ax.set_ylabel(f"Northing − {y0:,.0f} m", fontsize=9)
+        # A survey much wider than it is tall leaves a box too short to hold a
+        # rotated axis label, which would then run off the top of the figure.
+        # The origin it carries still has to be readable, so it moves alongside
+        # the easting instead of being dropped.
+        upright = ax.get_position().height < 0.14
+        ax.set_xlabel(f"Easting − {x0:,.0f} m"
+                      + (f",   Northing − {y0:,.0f} m" if upright else ""),
+                      fontsize=9)
+        ax.set_ylabel("" if upright else f"Northing − {y0:,.0f} m", fontsize=9)
         ax.set_title("Survey map", fontsize=11)
         ax.tick_params(labelsize=8)
         # Grid lines help on a plain background and only clutter imagery.

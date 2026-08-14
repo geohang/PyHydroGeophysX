@@ -312,6 +312,25 @@ def _temcompany_transmitter(spec: Dict[str, Any], moment: str) -> Dict[str, Any]
     }
 
 
+def _temcompany_column(rows, key: str, dtype=float, default=np.nan) -> np.ndarray:
+    """One column of ``StationStackData``, or the default where it is absent.
+
+    The schema has grown across TEMcompany releases, and the synthetic exporter
+    writes only what its example needs, so a project may carry no Longitude or
+    Latitude at all. ``sqlite3.Row`` raises ``IndexError`` for a name it does
+    not hold rather than returning None, which turns a missing optional column
+    into a failure to open the survey.
+    """
+    values = []
+    for row in rows:
+        try:
+            value = row[key]
+        except (IndexError, KeyError):
+            value = None
+        values.append(default if value is None else value)
+    return np.asarray(values, dtype=dtype)
+
+
 def _temcompany_system(spec: Dict[str, Any], row: Optional[sqlite3.Row] = None) -> Dict[str, Any]:
     """Map TEMcompany loop/receiver metadata to the workbench geometry."""
     area = float(spec.get("TxLoopArea", 0.0) or 0.0)
@@ -412,11 +431,8 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str,
 
         x = np.asarray([item["UtmX"] for item in rows], dtype=float)
         y = np.asarray([item["UtmY"] for item in rows], dtype=float)
-        elevation = np.asarray([item["Elevation"] for item in rows], dtype=float)
-        heights = np.asarray([
-            item["RxCoilHeight"] if item["RxCoilHeight"] is not None else np.nan
-            for item in rows
-        ], dtype=float)
+        elevation = _temcompany_column(rows, "Elevation")
+        heights = _temcompany_column(rows, "RxCoilHeight")
         zone = spec.get("UTMZone")
         zone_letter = str(spec.get("UTMZoneLetter", "") or "").strip()
         coordinate_system = (
@@ -435,8 +451,8 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str,
             "y": y,
             # Kept alongside the UTM pair so a map view can place imagery
             # without a projection library (see visualization.basemap).
-            "longitude": np.asarray([item["Longitude"] for item in rows], dtype=float),
-            "latitude": np.asarray([item["Latitude"] for item in rows], dtype=float),
+            "longitude": _temcompany_column(rows, "Longitude"),
+            "latitude": _temcompany_column(rows, "Latitude"),
             "elevation": elevation,
             "heights": heights,
             "line_numbers": np.asarray([item["LineNumber"] for item in rows], dtype=int),
@@ -525,13 +541,10 @@ def _load_temcompany_joint_database(path: Path, sounding: int,
             "positions": _temcompany_positions(x, y),
             "x": x,
             "y": y,
-            "longitude": np.asarray([item["Longitude"] for item in rows], dtype=float),
-            "latitude": np.asarray([item["Latitude"] for item in rows], dtype=float),
-            "elevation": np.asarray([item["Elevation"] for item in rows], dtype=float),
-            "heights": np.asarray([
-                item["RxCoilHeight"] if item["RxCoilHeight"] is not None else np.nan
-                for item in rows
-            ], dtype=float),
+            "longitude": _temcompany_column(rows, "Longitude"),
+            "latitude": _temcompany_column(rows, "Latitude"),
+            "elevation": _temcompany_column(rows, "Elevation"),
+            "heights": _temcompany_column(rows, "RxCoilHeight"),
             "line_numbers": np.asarray([item["LineNumber"] for item in rows], dtype=int),
             "station_ids": np.asarray([str(item["StationId"]) for item in rows]),
             "average_data_ids": np.asarray(
