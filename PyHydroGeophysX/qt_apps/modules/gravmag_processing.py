@@ -45,6 +45,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     ReproduceBar,
     make_double_spinbox,
     merged_row,
+    select_directory,
     set_rows_enabled,
 )
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
@@ -284,6 +285,15 @@ class GravMagProcessingModule(BaseModule):
         self._inv_btn.setIcon(theme.icon("fa5s.cubes", color="#ffffff"))
         self._inv_btn.clicked.connect(self._run_inversion)
         form.addRow(self._inv_btn)
+        self._export_btn = QPushButton("Export model…")
+        self._export_btn.setIcon(theme.icon("fa5s.file-csv"))
+        self._export_btn.setToolTip(
+            "Save the recovered 3D model as CSV (one row per voxel, with its "
+            "centre and extent) plus the raw .npz, to a folder you choose."
+        )
+        self._export_btn.setEnabled(False)
+        self._export_btn.clicked.connect(self._export_model)
+        form.addRow(self._export_btn)
         self._backend_label = QLabel()
         self._backend_label.setWordWrap(True)
         self._backend_label.setStyleSheet("font-size:8pt;")
@@ -291,6 +301,52 @@ class GravMagProcessingModule(BaseModule):
         self._inv_progress = QProgressBar(); self._inv_progress.setVisible(False)
         form.addRow(self._inv_progress)
         return box
+
+    def _export_model(self) -> None:
+        """Write the recovered voxel model where someone else can read it.
+
+        The module's own output is a rectilinear grid rather than a PyGIMLi
+        mesh, so the table carries each voxel's extent as well as its centre.
+        """
+        result = self._inv_result
+        if not result:
+            self.log("Run the 3D inversion first.", "warn")
+            return
+        folder = select_directory(
+            self, "Export 3D model to folder", self.state.output_dir or Path.cwd()
+        )
+        if not folder:
+            return
+        try:
+            from PyHydroGeophysX.data_processing.model_csv import write_grid_model_csv
+
+            out = io_utils.ensure_dir(folder)
+            kind = str(result.get("kind") or self._kind.currentText()).lower()
+            if kind.startswith("grav"):
+                value_name, units = "density_contrast", "g/cc"
+            else:
+                value_name, units = "susceptibility", "SI"
+            edges = [np.asarray(edge, dtype=float) for edge in result["edges"]]
+            model = np.asarray(result["model3d"], dtype=float)
+            csv_path = write_grid_model_csv(
+                out / "model_cells.csv", edges, model,
+                value_name=value_name, units=units,
+            )
+            np.savez(
+                out / "model3d.npz",
+                model3d=model, x_edges=edges[0], y_edges=edges[1], z_edges=edges[2],
+            )
+            self.log(
+                f"Exported {model.size} model cells to {csv_path.name} and model3d.npz "
+                f"in {out}", "success",
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"3D model export failed: {exc}", "error")
+
+    def export_actions(self):
+        if not self._inv_result:
+            return []
+        return [("3D model (CSV + npz)", self._export_model)]
 
     def _set_solver(self, value: str) -> None:
         index = self._solver.findData(str(value).strip().lower())
@@ -679,6 +735,7 @@ class GravMagProcessingModule(BaseModule):
 
     def _on_inversion_ok(self, result: dict) -> None:
         self._inv_result = result
+        self._export_btn.setEnabled(True)
         self._model_view.show_model(result["edges"], result["model3d"],
                                     label=result["label"], cmap=result["cmap"],
                                     log_scale=result.get("log_scale", False))

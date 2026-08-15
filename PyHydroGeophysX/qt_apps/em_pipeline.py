@@ -26,6 +26,7 @@ from PyHydroGeophysX.workflows.em1d import (
     model_arrays,
     model_depth_profile,
     save_inversion,
+    save_line_csv,
     tdem_forward,
     tdem_invert,
     tdem_joint_invert,
@@ -61,4 +62,5 @@ __all__ = [
     "invert_line",
     "build_em_config",
     "save_inversion",
+    "save_line_csv",
 ]

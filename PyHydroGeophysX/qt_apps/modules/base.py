@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QLabel, QTextEdit, QVBoxLayout, QWidget
 
 LogFn = Callable[..., None]
+#: One offer in a module's export menu: what it writes, and how to write it.
+ExportAction = Tuple[str, Callable[[], Any]]
 
 
 class BaseModule(QWidget):
@@ -42,6 +44,17 @@ class BaseModule(QWidget):
     def report_result(self, data: Dict[str, Any]) -> None:
         self.state.update_module_result(self.module_key, data)
         self.resultsUpdated.emit()
+
+    def export_actions(self) -> List[ExportAction]:
+        """What ``File > Export Results…`` should offer while this page is open.
+
+        Every module writes its own products in its own formats, and before this
+        hook the only way to reach them was to know which button on which tab
+        did it. A module returns the exports that make sense *right now* — an
+        entry it leaves out is one there is no result for yet — and the window
+        runs the single offer directly or asks when there is more than one.
+        """
+        return []
 
     def begin_persisted_run(
         self, operation_id: str, workflow_id: str = "", *, label: str = ""

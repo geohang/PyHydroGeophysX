@@ -20,6 +20,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Sequence, Tuple
 
+import numpy as np
+
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (
     QCheckBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,

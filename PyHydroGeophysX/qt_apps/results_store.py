@@ -1,9 +1,19 @@
-"""Durable, Qt-free run history for the desktop workbench.
+"""Qt-free run history for the desktop workbench.
 
-Each run owns a small ``run.json`` record.  The root index is deliberately a
-cache: it can always be rebuilt by scanning those records, so an interrupted
+Each saved run owns a small ``run.json`` record.  The root index is deliberately
+a cache: it can always be rebuilt by scanning those records, so an interrupted
 OneDrive update cannot make the expensive scientific outputs disappear from
 the workbench.
+
+**A finished computation is not part of the history until the user saves it.**
+A solver has to write its outputs somewhere, so a run still gets a directory
+under ``runs/`` while it computes, and that directory is marked with an
+``UNSAVED`` file.  What it does not get is ``run.json``: without that record the
+run is invisible to :meth:`ResultsStore.rebuild_index`, to the Model Viewer, and
+to any later session that opens the Project.  :meth:`ResultsStore.save_run`
+writes the record and clears the marker; :meth:`ResultsStore.discard_run`
+removes the directory.  Nothing moves on disk in either case, so a path a module
+captured while computing still resolves afterwards.
 """
 
 from __future__ import annotations
@@ -25,6 +35,16 @@ RUN_SCHEMA_VERSION = "1"
 INDEX_FILENAME = "phgx_results_index.json"
 RUN_FILENAME = "run.json"
 IMPORTS_DIRNAME = "imports"
+#: Written into a run directory while it is unsaved, and removed on save. The
+#: absence of ``run.json`` is what actually keeps a run out of the history; this
+#: names the state for anyone browsing the folder, and lets a later session tell
+#: an abandoned run from a directory it does not recognize.
+UNSAVED_MARKER = "UNSAVED"
+_UNSAVED_NOTE = (
+    "This run has not been saved to the Project.\n"
+    "It is invisible to the workbench's run history until you save it there,\n"
+    "and deleting this folder discards it.\n"
+)
 _AUTO_DISCOVER_LIMIT = 200
 _AUTO_DISCOVER_FORMATS = {
     "bms", "csv", "dat", "json", "jpg", "jpeg", "npy", "npz", "png",
@@ -264,6 +284,12 @@ class ResultsStore:
         self.index_path = self.root / INDEX_FILENAME
         self.last_warning = ""
         self._records: Dict[str, RunRecord] = {}
+        #: Runs computed this session that the user has not saved. Held here and
+        #: not on disk as ``run.json``, which is what keeps them out of the
+        #: history; the payload is kept so a later save writes the same
+        #: ``result.json`` the run produced.
+        self._unsaved: Dict[str, RunRecord] = {}
+        self._unsaved_payloads: Dict[str, Dict[str, Any]] = {}
         if not self.read_only:
             self.runs_dir.mkdir(parents=True, exist_ok=True)
             self.imports_dir.mkdir(parents=True, exist_ok=True)
@@ -312,10 +338,14 @@ class ResultsStore:
             workflow_id=str(workflow_id),
             label=display,
         )
-        # This write is a precondition for launching expensive work.
-        _atomic_write_json(record.metadata_path, record.to_dict())
-        self._records[record.run_id] = record
-        self._write_index_nonfatal(self.list_runs())
+        # No run.json: the solver needs a directory to write into, but the run
+        # does not join the Project's history until the user saves it. The marker
+        # says so in the folder itself, where someone browsing will look.
+        try:
+            (run_dir / UNSAVED_MARKER).write_text(_UNSAVED_NOTE, encoding="utf-8")
+        except OSError as exc:
+            self.last_warning = f"Could not mark the run folder unsaved: {exc}"
+        self._unsaved[record.run_id] = record
         return RunHandle(record)
 
     @staticmethod
@@ -374,24 +404,14 @@ class ResultsStore:
             record.warnings.append(
                 f"{undiscovered} additional output files were not individually listed."
             )
-        self._persist_finished(record, payload, handle.result_path)
+        self._stage(record, payload)
         return record
 
-    def _persist_finished(self, record: RunRecord, result: Mapping[str, Any], result_path: Path) -> None:
-        try:
-            _atomic_write_json(result_path, result)
-            _atomic_write_json(record.metadata_path, record.to_dict())
-        except (OSError, TypeError, ValueError) as exc:
-            # The calculation has succeeded.  Preserve a uniquely named recovery
-            # record instead of turning a metadata lock into a failed inversion.
-            self.last_warning = f"Run metadata update is pending recovery: {exc}"
-            recovery = record.run_dir / f"run.recovery.{uuid.uuid4().hex[:8]}.json"
-            recovery.write_text(
-                json.dumps(_json_safe(record.to_dict()), indent=2, allow_nan=False),
-                encoding="utf-8",
-            )
-        self._records[record.run_id] = record
-        self._write_index_nonfatal(self.list_runs())
+    def _stage(self, record: RunRecord, payload: Optional[Mapping[str, Any]] = None) -> None:
+        """Hold a closed run in memory, awaiting the user's decision to save."""
+        self._unsaved[record.run_id] = record
+        if payload is not None:
+            self._unsaved_payloads[record.run_id] = dict(payload)
 
     def fail_run(self, handle: RunHandle, error: str, *, raw_status: str = "failed") -> RunRecord:
         return self._close_unsuccessful(handle, "failed", raw_status, error)
@@ -407,13 +427,142 @@ class ResultsStore:
         record.raw_status = raw_status
         record.error = str(error)
         record.finished_at = _utc_now()
+        # A failed run is staged like any other. Its inputs and log are often
+        # worth keeping to diagnose the failure, and that is the user's call.
+        self._stage(record)
+        return record
+
+    # -- saving --------------------------------------------------------------
+    def has_unsaved(self) -> bool:
+        return bool(self._unsaved)
+
+    def list_unsaved_runs(self) -> List[RunRecord]:
+        return sorted(
+            self._unsaved.values(),
+            key=lambda item: (item.created_at, item.run_id),
+            reverse=True,
+        )
+
+    def save_run(self, run_id: str) -> RunRecord:
+        """Write a staged run's record, putting it into the Project's history."""
+        if self.read_only:
+            raise PermissionError("This Result Store is read-only.")
+        key = str(run_id)
+        record = self._unsaved.get(key)
+        if record is None:
+            existing = self._records.get(key)
+            if existing is not None:
+                return existing          # already saved; saving twice is a no-op
+            raise KeyError(run_id)
+        if record.status == "running":
+            raise RuntimeError("A running computation cannot be saved yet.")
+        payload = self._unsaved_payloads.get(key)
         try:
+            if payload is not None:
+                _atomic_write_json(record.run_dir / (record.result_path or "result.json"),
+                                   payload)
             _atomic_write_json(record.metadata_path, record.to_dict())
-        except OSError as exc:
+        except (OSError, TypeError, ValueError) as exc:
+            # The calculation succeeded and the user asked to keep it. Preserve a
+            # uniquely named recovery record rather than losing the run to a
+            # metadata lock, and leave it staged so the save can be retried.
             self.last_warning = f"Run metadata update is pending recovery: {exc}"
+            recovery = record.run_dir / f"run.recovery.{uuid.uuid4().hex[:8]}.json"
+            recovery.write_text(
+                json.dumps(_json_safe(record.to_dict()), indent=2, allow_nan=False),
+                encoding="utf-8",
+            )
+            raise
+        try:
+            (record.run_dir / UNSAVED_MARKER).unlink(missing_ok=True)
+        except OSError:
+            pass                          # the record is what decides; the marker is a label
+        self._unsaved.pop(key, None)
+        self._unsaved_payloads.pop(key, None)
         self._records[record.run_id] = record
         self._write_index_nonfatal(self.list_runs())
         return record
+
+    def save_all_unsaved(self) -> List[RunRecord]:
+        """Save every staged run that has finished. Returns the ones saved."""
+        saved: List[RunRecord] = []
+        for record in self.list_unsaved_runs():
+            if record.status == "running":
+                continue
+            saved.append(self.save_run(record.run_id))
+        return saved
+
+    def discard_run(self, run_id: str) -> None:
+        """Delete a staged run's folder. Saved runs go through delete_run."""
+        if self.read_only:
+            raise PermissionError("This Result Store is read-only.")
+        key = str(run_id)
+        record = self._unsaved.get(key)
+        if record is None:
+            raise KeyError(run_id)
+        if record.status == "running":
+            raise RuntimeError("A running computation cannot be discarded.")
+        self._remove_run_directory(record.run_dir)
+        self._unsaved.pop(key, None)
+        self._unsaved_payloads.pop(key, None)
+
+    def discard_all_unsaved(self) -> int:
+        """Delete every staged run that has finished. Returns how many went."""
+        removed = 0
+        for record in self.list_unsaved_runs():
+            if record.status == "running":
+                continue
+            self.discard_run(record.run_id)
+            removed += 1
+        return removed
+
+    def abandoned_run_dirs(self) -> List[Path]:
+        """Run folders left unsaved by an earlier session.
+
+        A crash or a forced quit leaves a marked directory with no ``run.json``.
+        Nothing reads it, so it would sit in the Project consuming space without
+        appearing anywhere; this is how the workbench offers to clear it.
+        """
+        if not self.runs_dir.is_dir():
+            return []
+        live = {record.run_dir.resolve() for record in self._unsaved.values()}
+        found = []
+        for candidate in sorted(self.runs_dir.iterdir()):
+            if not candidate.is_dir() or candidate.is_symlink():
+                continue
+            if (candidate / RUN_FILENAME).exists():
+                continue
+            if candidate.resolve() in live:
+                continue
+            if any(candidate.glob("run.recovery.*.json")):
+                # A save the user asked for that could not write run.json. It is
+                # recovered on the next scan, so it is not abandoned.
+                continue
+            if (candidate / UNSAVED_MARKER).exists():
+                found.append(candidate)
+        return found
+
+    def clear_abandoned_runs(self) -> int:
+        """Delete the folders :meth:`abandoned_run_dirs` reports."""
+        if self.read_only:
+            raise PermissionError("This Result Store is read-only.")
+        removed = 0
+        for path in self.abandoned_run_dirs():
+            self._remove_run_directory(path)
+            removed += 1
+        return removed
+
+    def _remove_run_directory(self, run_dir: Path) -> None:
+        """Delete a run folder, refusing anything that is not one."""
+        target = Path(run_dir).resolve()
+        runs_root = self.runs_dir.resolve()
+        try:
+            relative = target.relative_to(runs_root)
+        except ValueError as exc:
+            raise ValueError("Refusing to delete a run outside this Result Store.") from exc
+        if len(relative.parts) != 1 or target == runs_root:
+            raise ValueError("Refusing to delete an invalid run directory.")
+        shutil.rmtree(target)
 
     def update_run(self, run_id: str, *, label: Optional[str] = None, notes: Optional[str] = None) -> RunRecord:
         record = self.get_run(run_id)
@@ -425,6 +574,10 @@ class ResultsStore:
             record.label = str(label).strip() or record.label
         if notes is not None:
             record.notes = str(notes)
+        if record.run_id in self._unsaved:
+            # Naming a run before deciding to keep it is normal. Writing run.json
+            # here would save it as a side effect of typing a label.
+            return record
         _atomic_write_json(record.metadata_path, record.to_dict())
         self._records[record.run_id] = record
         self._write_index_nonfatal(self.list_runs())
@@ -477,6 +630,14 @@ class ResultsStore:
             return []
         records: Dict[str, RunRecord] = {}
         paths = list(self.runs_dir.glob(f"*/{RUN_FILENAME}"))
+        # A save that hit a locked run.json leaves a recovery record beside it.
+        # The run was one the user asked to keep, so it is found by the name that
+        # did get written; ``_read_record`` repairs run.json from it.
+        paths.extend(
+            recovery.parent / RUN_FILENAME
+            for recovery in self.runs_dir.glob("*/run.recovery.*.json")
+            if not (recovery.parent / RUN_FILENAME).exists()
+        )
         # Read-only browsing of a legacy tree recognizes sidecars in place. A
         # writable Project stores small import pointers, so routine refreshes do
         # not walk every scientific output directory.
@@ -510,7 +671,11 @@ class ResultsStore:
         )
 
     def get_run(self, run_id: str) -> Optional[RunRecord]:
-        return self._records.get(str(run_id))
+        key = str(run_id)
+        return self._records.get(key) or self._unsaved.get(key)
+
+    def is_unsaved(self, run_id: str) -> bool:
+        return str(run_id) in self._unsaved
 
     def rebuild_index(self, *, recover_running: bool = False) -> List[RunRecord]:
         records = self._scan_records(recover_running=recover_running)
@@ -596,19 +761,14 @@ class ResultsStore:
         record = self.get_run(run_id)
         if record is None:
             raise KeyError(run_id)
+        if self.is_unsaved(record.run_id):
+            self.discard_run(record.run_id)
+            return
         if record.status == "running":
             raise RuntimeError("A running operation cannot be deleted.")
         if not record.managed or record.imported:
             raise PermissionError("Imported runs are not managed and cannot be deleted here.")
-        target = record.run_dir.resolve()
-        runs_root = self.runs_dir.resolve()
-        try:
-            relative = target.relative_to(runs_root)
-        except ValueError as exc:
-            raise ValueError("Refusing to delete a run outside this Result Store.") from exc
-        if len(relative.parts) != 1 or target == runs_root:
-            raise ValueError("Refusing to delete an invalid run directory.")
-        shutil.rmtree(target)
+        self._remove_run_directory(record.run_dir)
         self._records.pop(record.run_id, None)
         self._write_index_nonfatal(self.list_runs())
 
@@ -723,6 +883,7 @@ class ResultsStore:
 __all__ = [
     "INDEX_FILENAME",
     "RUN_FILENAME",
+    "UNSAVED_MARKER",
     "RunHandle",
     "RunRecord",
     "ResultsStore",

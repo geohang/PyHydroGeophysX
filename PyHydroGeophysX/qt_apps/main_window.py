@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QMainWindow,
     QMessageBox,
@@ -100,6 +101,11 @@ class PyHydroGeophysXWorkbench(QMainWindow):
 
         self._status_label = QLabel("Ready")
         self.statusBar().addWidget(self._status_label)
+        # Runs are not recorded in the Project until saved, so how many are
+        # waiting has to be visible without opening a menu.
+        self._unsaved_label = QLabel()
+        self.statusBar().addPermanentWidget(self._unsaved_label)
+        self.state.on_runs_changed = self._refresh_unsaved_state
         # Every module writes under state.output_dir, so where that points belongs
         # on screen rather than only in whichever log line mentions a path.
         self._output_label = QLabel()
@@ -107,6 +113,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         self.statusBar().addPermanentWidget(self._output_label)
         self._restore_output_dir()
         self._activate_results_store(self.state.output_dir)
+        self._refresh_unsaved_state()
 
         self.log(f"Workbench started. Context: {self.state.context_path or '(none)'}", "info")
         if self.state.context_path and not self.state.context:
@@ -163,35 +170,44 @@ class PyHydroGeophysXWorkbench(QMainWindow):
                     "slower and fails outright if TEMP has the same problem. A path "
                     "without such characters avoids it." if warn else ""))
 
-    def _choose_output_dir(self) -> None:
-        """Choose where module results are written."""
-        start = str(self.state.output_dir or Path.cwd())
-        chosen = QFileDialog.getExistingDirectory(self, "Choose output folder", start)
-        if not chosen:
-            return
-        path = Path(chosen)
+    def _switch_project(self, path: Path, landing: str) -> bool:
+        """Point the workbench at *path* and open *landing*.
+
+        The Project folder is also the output folder — the two were separate
+        commands that set the same field, which left it possible to "open" one
+        Project and write results into another. Every entry point now runs the
+        same write probe, so an unwritable folder is refused before a run starts
+        rather than after one finishes.
+        """
+        # Unsaved runs live in the Project being left behind, so the decision has
+        # to happen before the store is swapped out from under them.
+        if not self._resolve_unsaved_runs(f"They belong to the Project you are leaving."):
+            return False
         try:
             path.mkdir(parents=True, exist_ok=True)
             probe = path / ".phgx_write_test"
             probe.touch()
             probe.unlink()
         except OSError as exc:
-            QMessageBox.warning(self, "Output folder",
+            QMessageBox.warning(self, "Project folder",
                                 f"{path} cannot be written to:\n{exc}")
-            return
+            return False
         if not self._activate_results_store(path):
-            return
+            return False
+        self._offer_to_clear_abandoned()
         self._reset_pages(clear_session=True)
-        self.show_module("home")
         QSettings("PyHydroGeophysX", "Workbench").setValue("main/outputDir", str(path))
         self._refresh_output_label()
-        self.log(f"Output folder set to {path}", "success")
+        self._refresh_unsaved_state()
+        self.log(f"Results for this session go to {path}", "success")
         if not mesh_serialization.ansi_safe(str(path)):
             self.log(
                 "This path contains characters Windows' ANSI codepage cannot represent. "
                 "PyGIMLi cannot open such paths directly, so mesh and model writes are "
                 "staged through a temporary folder. It works, but a plainer path is safer.",
                 "warn")
+        self.show_module(landing)
+        return True
 
     def _make_dock(self, title: str, widget: QWidget, area: Qt.DockWidgetArea) -> QDockWidget:
         dock = QDockWidget(title, self)
@@ -232,16 +248,38 @@ class PyHydroGeophysXWorkbench(QMainWindow):
     def _build_menus(self) -> None:
         menubar = self.menuBar()
 
+        # Three groups, in the order a session uses them: choose where results
+        # live, take them out, leave. Every computation is already persisted the
+        # moment it finishes, so nothing here is a "save your work or lose it"
+        # command and none of it is on the critical path.
         file_menu = menubar.addMenu("&File")
         self._add_action(file_menu, "New Project…", self._new_project)
         self._add_action(file_menu, "Open Project…", self._open_project)
         self._add_action(file_menu, "Import Existing Results…", self._import_existing_results)
-        self._add_action(file_menu, "Save Project", self._save_project)
         file_menu.addSeparator()
-        self._add_action(file_menu, "Open Project Context…", self._open_context)
-        self._add_action(file_menu, "Set Output Folder…", self._choose_output_dir)
-        self._add_action(file_menu, "Save Workbench Result", self._save_result)
-        self._add_action(file_menu, "Export Current Module Result…", self._export_current_result)
+        self._save_action = self._add_action(
+            file_menu, "Save Runs to Project", self._save_runs)
+        self._save_action.setShortcut("Ctrl+S")
+        self._save_action.setStatusTip(
+            "Add this session's finished runs to the Project's history. "
+            "Nothing is recorded there until you do."
+        )
+        self._discard_action = self._add_action(
+            file_menu, "Discard Unsaved Runs…", self._discard_runs)
+        export = self._add_action(file_menu, "Export Results…", self._export_results)
+        export.setShortcut("Ctrl+E")
+        export.setStatusTip(
+            "Write the current module's results to a folder you choose, CSV included."
+        )
+        file_menu.addSeparator()
+        # The Streamlit bridge and the raw module JSON are for driving this app
+        # from the web workflow. They are not how a person gets their results
+        # out, so they no longer sit next to the command that is.
+        bridge = file_menu.addMenu("Streamlit Bridge")
+        self._add_action(bridge, "Open Project Context…", self._open_context)
+        self._add_action(bridge, "Save Workbench Result", self._save_result)
+        self._add_action(bridge, "Export Module Result (JSON)…", self._export_current_result)
+        self._add_action(bridge, "Rebuild Run Index", self._save_project)
         file_menu.addSeparator()
         self._add_action(file_menu, "Exit", self.close)
 
@@ -273,18 +311,21 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         toolbar.setIconSize(QSize(18, 18))
         self.addToolBar(toolbar)
-        # Keep the long-standing bridge actions on the primary toolbar. Project
-        # lifecycle has its own explicit File menu entries.
-        self._add_action(toolbar, "Open", self._open_context, icon_name="fa5s.folder-open")
-        self._add_action(toolbar, "Save", self._save_result, icon_name="fa5s.save")
+        # The toolbar carries the two commands a session actually repeats. The
+        # bridge "Save" that used to sit here wrote a JSON manifest for the
+        # Streamlit app, which read as the button that saved your results.
+        self._add_action(toolbar, "Open Project", self._open_project, icon_name="fa5s.folder-open")
+        # "Save" now means what a user reads it to mean. It used to write the
+        # Streamlit bridge manifest, which is why it moved off the toolbar.
+        self._save_button = self._add_action(
+            toolbar, "Save", self._save_runs, icon_name="fa5s.save")
+        self._add_action(toolbar, "Export", self._export_results, icon_name="fa5s.file-export")
         toolbar.addSeparator()
         self._add_action(toolbar, "Select", lambda: self._set_mouse_mode(rect=False), icon_name="fa5s.mouse-pointer")
         self._add_action(toolbar, "Pan", lambda: self._set_mouse_mode(rect=False), icon_name="fa5s.arrows-alt")
         self._add_action(toolbar, "Zoom", lambda: self._set_mouse_mode(rect=True), icon_name="fa5s.search-plus")
         self._pick_action = self._add_action(toolbar, "Pick", self._toggle_pick, checkable=True, icon_name="fa5s.crosshairs")
         self._add_action(toolbar, "Delete", self._delete_last_marker, icon_name="fa5s.eraser")
-        toolbar.addSeparator()
-        self._add_action(toolbar, "Export", self._export_current_result, icon_name="fa5s.file-export")
 
     def _add_action(self, target, text: str, slot, checkable: bool = False, icon_name: str = "") -> QAction:
         action = QAction(text, self)
@@ -399,25 +440,185 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         chosen = QFileDialog.getExistingDirectory(
             self, "Choose or create Project folder", str(self.state.output_dir or Path.cwd())
         )
-        if not chosen:
-            return
-        if not self._activate_results_store(Path(chosen)):
-            return
-        self._reset_pages(clear_session=True)
-        QSettings("PyHydroGeophysX", "Workbench").setValue("main/outputDir", chosen)
-        self.show_module("home")
+        if chosen:
+            self._switch_project(Path(chosen), "home")
 
     def _open_project(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
             self, "Open Project", str(self.state.results_store_root or Path.cwd())
         )
-        if not chosen:
+        if chosen:
+            # Land on the run browser: opening an existing Project is almost
+            # always about looking at what is already in it.
+            self._switch_project(Path(chosen), "model_viewer")
+
+    # -- saving runs ---------------------------------------------------------
+    def _refresh_unsaved_state(self) -> None:
+        """Show how many finished runs are still outside the Project."""
+        runs = self.state.unsaved_runs()
+        pending = [record for record in runs if record.status != "running"]
+        for action in (getattr(self, "_save_action", None),
+                       getattr(self, "_discard_action", None),
+                       getattr(self, "_save_button", None)):
+            if action is not None:
+                action.setEnabled(bool(pending))
+        if not hasattr(self, "_unsaved_label"):
             return
-        if not self._activate_results_store(Path(chosen)):
+        if not pending:
+            self._unsaved_label.setText("")
+            self._unsaved_label.setToolTip("")
             return
-        self._reset_pages(clear_session=True)
-        QSettings("PyHydroGeophysX", "Workbench").setValue("main/outputDir", chosen)
-        self.show_module("model_viewer")
+        plural = "" if len(pending) == 1 else "s"
+        self._unsaved_label.setText(f"● {len(pending)} unsaved run{plural}")
+        self._unsaved_label.setToolTip(
+            "Finished runs that are not in the Project's history yet.\n"
+            "Ctrl+S adds them; closing the window will ask.\n\n"
+            + "\n".join(f"· {record.label}" for record in pending[:8])
+            + (f"\n… and {len(pending) - 8} more" if len(pending) > 8 else "")
+        )
+
+    def _save_runs(self) -> None:
+        try:
+            saved = self.state.save_all_runs()
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not save runs: {exc}", "error")
+            QMessageBox.warning(self, "Save runs", str(exc))
+            return
+        if not saved:
+            self.log("No finished runs are waiting to be saved.", "info")
+            return
+        self.log(
+            f"Saved {len(saved)} run(s) to {self.state.results_store_root}.", "success")
+        self._refresh_model_viewer()
+
+    def _discard_runs(self) -> None:
+        pending = [item for item in self.state.unsaved_runs() if item.status != "running"]
+        if not pending:
+            self.log("No unsaved runs to discard.", "info")
+            return
+        answer = QMessageBox.question(
+            self, "Discard unsaved runs",
+            f"Permanently delete {len(pending)} unsaved run folder(s)?\n\n"
+            "Their inputs, outputs, and logs go with them. This cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+        try:
+            removed = self.state.discard_all_runs()
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not discard runs: {exc}", "error")
+            QMessageBox.warning(self, "Discard runs", str(exc))
+            return
+        self.log(f"Discarded {removed} unsaved run(s).", "info")
+        self._refresh_model_viewer()
+
+    def _refresh_model_viewer(self) -> None:
+        viewer = self._pages.get("model_viewer")
+        if viewer is not None and hasattr(viewer, "refresh"):
+            try:
+                viewer.refresh()
+            except Exception:  # noqa: BLE001 - refreshing a view is best effort
+                pass
+
+    def _resolve_unsaved_runs(self, reason: str) -> bool:
+        """Ask what to do with unsaved runs. False means the user cancelled."""
+        pending = [item for item in self.state.unsaved_runs() if item.status != "running"]
+        if not pending:
+            return True
+        plural = "" if len(pending) == 1 else "s"
+        answer = QMessageBox.question(
+            self, "Unsaved runs",
+            f"{len(pending)} finished run{plural} {'is' if len(pending) == 1 else 'are'} "
+            f"not in the Project's history yet.\n\n{reason}\n\n"
+            "Save keeps them; Discard deletes their folders.",
+            QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+            QMessageBox.Save,
+        )
+        if answer == QMessageBox.Cancel:
+            return False
+        try:
+            if answer == QMessageBox.Save:
+                saved = self.state.save_all_runs()
+                self.log(f"Saved {len(saved)} run(s) before continuing.", "success")
+            else:
+                removed = self.state.discard_all_runs()
+                self.log(f"Discarded {removed} unsaved run(s).", "info")
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Unsaved runs", str(exc))
+            return False
+        return True
+
+    def _offer_to_clear_abandoned(self) -> None:
+        """Offer to remove run folders an earlier session left unsaved.
+
+        A crash or a forced quit leaves a marked folder with no record. Nothing
+        reads it and nothing lists it, so without this it would accumulate in
+        the Project unseen.
+        """
+        store = self.state.results_store
+        if store is None or store.read_only:
+            return
+        try:
+            abandoned = store.abandoned_run_dirs()
+        except OSError:
+            return
+        if not abandoned:
+            return
+        plural = "" if len(abandoned) == 1 else "s"
+        answer = QMessageBox.question(
+            self, "Unsaved runs from an earlier session",
+            f"This Project holds {len(abandoned)} run folder{plural} that an earlier "
+            "session never saved. They are not in the run history and nothing reads "
+            "them.\n\nDelete them now?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            self.log(
+                f"{len(abandoned)} abandoned run folder(s) left in place under "
+                f"{store.runs_dir}.", "info")
+            return
+        try:
+            removed = store.clear_abandoned_runs()
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not clear abandoned runs: {exc}", "warn")
+            return
+        self.log(f"Removed {removed} abandoned run folder(s).", "success")
+
+    def _export_results(self) -> None:
+        """Write the current module's results, whatever form they take.
+
+        Each module owns its own formats, so this asks the open page what it can
+        write rather than holding a table of them here. One offer runs straight
+        away; several present a chooser instead of making the user hunt for the
+        button that belongs to the tab they are on.
+        """
+        page = self._current_page()
+        title = getattr(page, "module_title", "This module")
+        actions = []
+        if page is not None and hasattr(page, "export_actions"):
+            try:
+                actions = list(page.export_actions() or [])
+            except Exception as exc:  # noqa: BLE001 - a broken hook must not block the menu
+                self.log(f"Could not list exports for {title}: {exc}", "warn")
+        if not actions:
+            store = self.state.results_store_root
+            QMessageBox.information(
+                self, "Export results",
+                f"{title} has no results to export yet. Run a computation first.\n\n"
+                + (f"Every run is also saved automatically under:\n{store}"
+                   if store else "No Project folder is open yet."),
+            )
+            return
+        if len(actions) == 1:
+            actions[0][1]()
+            return
+        labels = [str(label) for label, _ in actions]
+        choice, accepted = QInputDialog.getItem(
+            self, "Export results", f"{title} can export:", labels, 0, False
+        )
+        if accepted and choice in labels:
+            actions[labels.index(choice)][1]()
 
     def _save_project(self) -> None:
         try:
@@ -482,10 +683,17 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         QMessageBox.information(self, "Result saved", f"Workbench result written to:\n{path}")
 
     def _export_current_result(self) -> None:
-        key = self.state.selected_module
+        # Ask the page for its own key rather than reusing the navigator's.
+        # The two differ for four modules ("ert" navigates to a page whose
+        # module_key is "ert_processing"), and a module writes its result under
+        # the page's key. Looking it up by the navigator's key found nothing on
+        # exactly the modules that had something, and reported it as no result.
+        page = self._current_page()
+        key = getattr(page, "module_key", None) or self.state.selected_module
         result = self.state.module_results.get(key)
         if not result:
-            self.log(f"No result to export for module '{key}'.", "warn")
+            title = getattr(page, "module_title", key)
+            self.log(f"No result to export for module '{title}'.", "warn")
             return
         path, _ = QFileDialog.getSaveFileName(self, "Export module result", f"{key}_result.json", "JSON (*.json)")
         if not path:
@@ -531,14 +739,22 @@ class PyHydroGeophysXWorkbench(QMainWindow):
 
     # -- shutdown ------------------------------------------------------------
     def closeEvent(self, event) -> None:
-        """Persist the layout, then cancel/join module workers before closing."""
-        try:
-            self._save_window_settings()
-        except Exception:  # noqa: BLE001 - persistence is best effort
-            pass
+        """Settle unsaved runs, persist the layout, then join module workers.
+
+        Stopping the workers cancels any run still going, which itself produces
+        an unsaved record, so the workers are stopped first and the question is
+        asked once afterwards over everything that is pending.
+        """
         for page in list(self._pages.values()):
             try:
                 page.stop_workers()
             except Exception:  # noqa: BLE001 - shutdown is best effort
                 pass
+        if not self._resolve_unsaved_runs("They are lost if you close without saving."):
+            event.ignore()
+            return
+        try:
+            self._save_window_settings()
+        except Exception:  # noqa: BLE001 - persistence is best effort
+            pass
         super().closeEvent(event)

@@ -272,11 +272,12 @@ or change its label. Then export one or more of:
 
 - **Export electrode file...** for the corrected coordinate table;
 - **Export survey geometry JSON...** for a reusable survey definition;
-- **Export resistivity model...** for ``.npy``, PyGIMLi ``.bms``, and VTK files.
+- **Export resistivity model...** for ``model_cells.csv``, ``.npy``, PyGIMLi
+  ``.bms``, and VTK files.
 
-Use **File > Save Workbench Result** to save the cross-module result JSON used by
-the Streamlit bridge. This is different from exporting the scientific model
-files above.
+**File > Export Results...** (``Ctrl+E``) reaches the same exports without
+hunting for the button that belongs to the tab you are on. It asks the open
+module what it can write; when there is more than one answer it offers a choice.
 
 Time-Lapse ERT
 --------------
@@ -402,16 +403,83 @@ What this changes in practice:
 Saving, Exporting, and Reopening Work
 -------------------------------------
 
-- **File > Save Workbench Result** writes ``full_workbench_result.json`` for the
-  web/desktop bridge.
-- **File > Export Current Module Result...** writes the current module's
-  JSON-serializable summary.
-- Module-specific Export buttons save scientific arrays, meshes, VTK files,
-  tables, and figures.
-- **File > Open Project Context...** reopens a bridge context JSON and rebuilds
-  module pages against that project.
+**A computation is not recorded until you save it.** A finished run is held as
+"unsaved" and joins the Project's history only on your say-so.
+
+- **File > Save Runs to Project** (``Ctrl+S``), or the **Save** button on the
+  toolbar, adds every finished run from this session to the Project. The status
+  bar shows how many are waiting; hover it for the list.
+- **File > Discard Unsaved Runs...** deletes their folders instead.
+- Closing the workbench, or switching Project, asks what to do with anything
+  still unsaved: **Save**, **Discard**, or **Cancel**.
+- The Model Viewer lists unsaved runs first, under **Unsaved (this session)**,
+  with **Save to Project** and **Discard** for the selected one. Label and notes
+  typed before saving are kept with it.
+- **File > Export Results...** (``Ctrl+E``) writes the open module's results to a
+  folder you choose. Each module offers what it can write; if it has several
+  exports, you pick from a list. This is the same set of exports the module's own
+  buttons run. Exporting is independent of saving: a run can be exported without
+  being kept, and kept without being exported.
+- Module-specific Export buttons remain where they were, next to the results they
+  belong to.
+- **File > New Project...**, **Open Project...** — the Project folder is also the
+  output folder. Both check that the folder is writable before anything runs, and
+  the status bar shows which one is active.
+- **File > Import Existing Results...** registers an older results directory in
+  place, without moving the files.
+- **File > Streamlit Bridge >** holds the commands that serve the web app rather
+  than the person at the keyboard: **Save Workbench Result** (writes
+  ``full_workbench_result.json`` for the bridge), **Export Module Result (JSON)**
+  (the current module's JSON summary, which carries no arrays), **Open Project
+  Context...** (reopen a bridge context JSON), and **Rebuild Run Index** (rescan
+  the Project's run folders).
 - Window geometry and dock positions persist between sessions. Use
   **View > Reset Layout** if a dock is hidden or misplaced.
+
+What "unsaved" means on disk
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A solver has to write its outputs somewhere while it runs, so a run does get a
+folder under ``<project>/runs/`` from the moment it starts. What it does not get
+is ``run.json``, the record that puts it in the history. Until you save, the
+folder holds a file named ``UNSAVED`` and:
+
+- the run does not appear in the Model Viewer's saved history;
+- it is absent from ``phgx_results_index.json``;
+- another session opening the Project does not see it at all.
+
+Saving writes ``run.json`` and ``result.json`` and removes the marker. Nothing
+moves, so a path captured while the run was computing still resolves afterwards.
+
+If a session ends without answering — a crash, or a forced quit — the marked
+folder is left behind. Opening that Project again reports how many such folders
+there are and offers to delete them, because nothing else would ever list them.
+
+CSV Output
+~~~~~~~~~~
+
+Every model export also writes ``model_cells.csv``: one row per mesh cell or
+voxel, each carrying its own coordinate, so a section can be replotted without
+PyGIMLi, SimPEG, or knowledge of the cell ordering.
+
+.. code-block:: python
+
+   import pandas as pd, matplotlib.pyplot as plt
+
+   cells = pd.read_csv("model_cells.csv")
+   plt.tricontourf(cells.x, cells.z, cells.resistivity_ohm_m)
+
+Column names carry their units (``resistivity_ohm_m``, ``velocity_m_per_s``,
+``density_contrast_g_per_cc``, ``susceptibility_SI``). A time-lapse run gets one
+value column per step, named from the step labels where they exist. Coverage or
+ray density is written alongside when the inversion produced it, and a cell whose
+value is not finite is left as an empty field rather than as ``nan``.
+
+``mesh_nodes.csv`` and ``mesh_cell_nodes.csv`` accompany the mesh-based exports
+for anyone who wants the true cell polygons instead of an interpolation through
+the centroids. The rectilinear gravity and magnetics grids instead carry each
+voxel's ``x_min``/``x_max`` extent on its own row, and layered EM models are
+written as one row per layer per sounding.
 
 Modules
 -------
@@ -468,13 +536,14 @@ The bridge directory is ``<output_dir>/qt_bridge/`` (default
    to reuse).
 2. Streamlit starts the Qt workbench as a separate process and passes that context path.
 3. The Qt app reads the context on startup, so it points at the same project and data.
-4. When you save in the Qt app (File -> Save Workbench Result, or after a forward
-   run), it writes ``full_workbench_result.json`` with the per-module results.
+4. When you save in the Qt app (File -> Streamlit Bridge -> Save Workbench Result,
+   or after a forward run), it writes ``full_workbench_result.json`` with the
+   per-module results.
 5. Back in the browser, the results panel reads that file and displays it.
 
-Modules can also export their own files (picks CSV, electrode geometry JSON, processed
-EM curves, corrected gravity data, survey configuration JSON, figures) into the output
-directory.
+Modules can also export their own files (model cell tables in CSV, picks CSV,
+electrode geometry JSON, processed EM curves, corrected gravity data, survey
+configuration JSON, figures) into a folder you choose.
 
 Remote Servers and Download Mode
 --------------------------------

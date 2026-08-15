@@ -126,6 +126,30 @@ _EXPORTS: Dict[str, Tuple[str, str]] = {
         "PyHydroGeophysX.data_processing.ert_io",
         "save_edited_ert_container",
     ),
+    "export_model_csv": (
+        "PyHydroGeophysX.data_processing.model_csv",
+        "export_model_csv",
+    ),
+    "model_cell_table": (
+        "PyHydroGeophysX.data_processing.model_csv",
+        "model_cell_table",
+    ),
+    "write_grid_model_csv": (
+        "PyHydroGeophysX.data_processing.model_csv",
+        "write_grid_model_csv",
+    ),
+    "write_layered_model_csv": (
+        "PyHydroGeophysX.data_processing.model_csv",
+        "write_layered_model_csv",
+    ),
+    "write_mesh_geometry_csv": (
+        "PyHydroGeophysX.data_processing.model_csv",
+        "write_mesh_geometry_csv",
+    ),
+    "write_model_csv": (
+        "PyHydroGeophysX.data_processing.model_csv",
+        "write_model_csv",
+    ),
     "ensure_dir": ("PyHydroGeophysX.data_processing.table_io", "ensure_dir"),
     "load_2d_array": (
         "PyHydroGeophysX.data_processing.table_io",

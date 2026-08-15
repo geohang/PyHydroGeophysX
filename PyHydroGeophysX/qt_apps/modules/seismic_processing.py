@@ -1435,14 +1435,28 @@ class SeismicProcessingModule(BaseModule):
         if not folder:
             return
         try:
+            from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
+            from PyHydroGeophysX.data_processing.model_csv import export_model_csv
+
             out = io_utils.ensure_dir(folder)
             mesh = mgr.paraDomain
             velocity = np.asarray(velocity_of(mgr), dtype=float)
             np.save(out / "velocity_model.npy", velocity)
-            mesh.save(str(out / "velocity_mesh.bms"))
+            try:
+                coverage = np.asarray(mgr.coverage(), dtype=float)
+            except Exception:  # noqa: BLE001 - ray coverage is optional
+                coverage = None
+            export_model_csv(
+                out, mesh, velocity,
+                value_name="velocity", units="m/s", coverage=coverage,
+            )
+            # PyGIMLi's writers take a narrow path and cannot open one Windows'
+            # ANSI codepage cannot represent; via_ascii_path stages those writes.
+            # Without it an export to a localized folder leaves only the .npy.
+            via_ascii_path(mesh.save, out / "velocity_mesh.bms", mode="write")
             mesh["velocity"] = velocity
-            mesh.exportVTK(str(out / "velocity_model.vtk"))
-            self.log(f"Exported velocity model (npy + bms + vtk) to {out}", "success")
+            via_ascii_path(mesh.exportVTK, out / "velocity_model.vtk", mode="write")
+            self.log(f"Exported velocity model (csv + npy + bms + vtk) to {out}", "success")
         except Exception as exc:  # noqa: BLE001
             self.log(f"Velocity model export failed: {exc}", "error")
 
@@ -1456,6 +1470,18 @@ class SeismicProcessingModule(BaseModule):
             self._srt_busy = None
         self._srt_btn.setText("Run SRT inversion")
         self._srt_progress.setVisible(False)
+
+    def export_actions(self):
+        actions = []
+        if getattr(self, "_srt_mgr", None) is not None:
+            actions.append((
+                "Velocity model (CSV + npy + mesh + VTK)",
+                self._export_velocity_model,
+            ))
+        if self._picks:
+            actions.append(("First-arrival picks (CSV)", self._export_picks))
+            actions.append(("Travel-time container (PyGIMLi .dat)", self._export_traveltime))
+        return actions
 
     def _publish(self, picks_csv: Optional[str] = None, traveltime_dat: Optional[str] = None) -> None:
         result = {

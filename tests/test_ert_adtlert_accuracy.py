@@ -11,6 +11,7 @@ from PyHydroGeophysX.inversion.ert_inversion import (  # noqa: E402
     _ADTLertEngine,
     _diverged,
     _enable_adtlert_float64,
+    _fit_to_plateau,
 )
 
 
@@ -56,6 +57,49 @@ def test_single_inversion_uses_paper_sensitivity_configuration(monkeypatch):
     assert config.max_log_step == 1.0
     assert config.line_search is True
     assert result.metrics["sensitivity_profile"] == "paper"
+
+
+def test_auto_lambda_trial_disables_adtlert_target_with_none(monkeypatch):
+    """The shared zero sentinel must not reach ADTLERT's positive-only config."""
+    import adtlert.inversion as adtlert_inversion
+
+    captured = {}
+
+    def fake_invert(forward, observed, initial, *, reference_model, config):
+        captured["config"] = config
+        return SimpleNamespace(
+            iteration_chi2=[8.0, 6.0],
+            final_model=np.asarray(initial, dtype=float),
+            predicted_data=np.asarray(observed, dtype=float),
+            coverage=np.ones_like(initial, dtype=float),
+        )
+
+    monkeypatch.setattr(
+        adtlert_inversion, "invert_single_log_resistivity", fake_invert
+    )
+    engine = _ADTLertEngine.__new__(_ADTLertEngine)
+    engine._forward = object()
+    engine._observed = np.array([100.0, 120.0])
+    engine._errors = np.array([0.05, 0.05])
+    engine._initial_model = np.array([110.0, 110.0, 110.0])
+    engine._model_constraints = (1.0, 1.0e5)
+    engine._solver = "gpu_cgls"
+    engine._adtlert_version = "test"
+    engine.mesh = object()
+    engine.container = SimpleNamespace(size=lambda: 2)
+
+    result = _fit_to_plateau(
+        engine,
+        lam=12.5,
+        max_iterations=5,
+        plateau_tolerance=1.0e-4,
+        target_chi2=1.0,
+        max_total_iterations=5,
+        stop_on_target=False,
+    )
+
+    assert captured["config"].target_chi2 is None
+    assert result.stop != "target"
 
 
 def test_a_climbing_misfit_is_reported_as_divergence():

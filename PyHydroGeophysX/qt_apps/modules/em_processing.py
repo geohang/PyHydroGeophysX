@@ -113,7 +113,6 @@ class EMProcessingModule(BaseModule):
         self._last_section: Optional[Dict[str, Any]] = None
         self._inv_worker: Optional[WorkflowWorker] = None
         self._inv_busy: Optional[BusyStateController] = None
-        self._parallel_workers = 0      # 0: sized from the machine
         self._line_worker: Optional[TaskWorker] = None
         self._workflow_recipe_path = ""
         self._geom_positions: Optional[np.ndarray] = None
@@ -381,6 +380,13 @@ class EMProcessingModule(BaseModule):
         self._max_thick = self._dspin(d["max_thickness"], 1.0, 500.0, 1.0, 2)
         # Two ends of one setting: the layer grid is geometric between them.
         self._thick_row = merged_row(self._min_thick, "to", self._max_thick, "m")
+        self._start_res = self._dspin(
+            float(d.get("starting_resistivity", 100.0)), 1.0, 1e5, 10.0, 1)
+        self._start_res.setToolTip(
+            "Uniform resistivity assigned to every layer at the start of the "
+            "inversion. It sets the optimizer's initial model but does not constrain "
+            "the final resistivity. For a line inversion this seeds the first solve; "
+            "later refinement passes may warm-start from the preceding result.")
         self._smooth = self._dspin(d["smoothness"], 0.0, 10.0, 0.1, 2)
         self._smooth.setToolTip(
             "Vertical smoothness down each sounding's layer stack. Higher gives a "
@@ -391,6 +397,7 @@ class EMProcessingModule(BaseModule):
             "or when the misfit stops improving.")
         form.addRow("Layers", self._n_layers)
         form.addRow("Thickness", self._thick_row)
+        form.addRow("Initial model ρ (Ω·m)", self._start_res)
         form.addRow("Smoothness", self._smooth)
         form.addRow("Max iterations", self._max_iter)
         return box
@@ -472,10 +479,27 @@ class EMProcessingModule(BaseModule):
         self._lci_mode_row = merged_row(
             self._lci_mode, self._lci_passes_label, self._lci_passes)
         self._lci_mode.currentIndexChanged.connect(self._sync_lci_mode)
+        import os as _os
+
+        cores = getattr(_os, "process_cpu_count", None)
+        available = int((cores() if cores is not None else _os.cpu_count()) or 1)
+        # BaseModule._workers is the live QThread registry. Keep this widget on
+        # a distinct name or line inversion replaces that list with a QSpinBox.
+        self._parallel_workers_spin = self._ispin(0, 0, max(1, available))
+        self._parallel_workers_spin.setSpecialValueText("auto")
+        self._parallel_workers_spin.setToolTip(
+            f"Threads used for the per-sounding forward and Jacobian. This "
+            f"machine reports {available} usable cores; auto takes one thread "
+            f"per sounding up to that number.\n\n"
+            "Each sounding owns its forward operator and the threads only read "
+            "the shared model, so the models come back identical whatever this "
+            "is set to. The work is NumPy underneath and releases the GIL for "
+            "most of its duration, so scaling is real but short of linear.")
         form.addRow("Sounding spacing (m)", self._line_spacing)
         form.addRow("Max soundings", self._line_max)
         form.addRow("Lateral smoothness", self._lateral_smooth)
         form.addRow("Coupling", self._lci_mode_row)
+        form.addRow("CPU threads", self._parallel_workers_spin)
         self._sync_lci_mode()
         self._line_rows = box
         box.setVisible(False)
@@ -771,18 +795,12 @@ class EMProcessingModule(BaseModule):
             "outlier_passes": int(self._reject_passes.value()),
             "min_data_fraction": float(self._min_keep.value()) / 100.0,
             "min_gates_per_sounding": int(self._min_gates.value()),
-            # 0 lets the solver size its own thread pool from the machine. It is
-            # a performance knob with no effect on the result, so it is settable
-            # through set_params rather than taking a row in the panel.
-            "parallel_workers": int(self._parallel_workers),
+            # 0 lets the solver size its own thread pool from the machine.
+            "parallel_workers": int(self._parallel_workers_spin.value()),
             "rel_error": self._rel_err.value(),
             "max_iterations": self._max_iter.value(),
             "data_scale": self._data_scale.value(),
-            "starting_resistivity": float(
-                (self._data or {}).get("inversion_defaults", {}).get(
-                    "starting_resistivity", 100.0
-                )
-            ),
+            "starting_resistivity": float(self._start_res.value()),
         }
         project_layers = self._project_layer_thicknesses
         if (
@@ -1046,6 +1064,8 @@ class EMProcessingModule(BaseModule):
                 inversion.get("max_thickness", self._max_thick.value())))
             self._smooth.setValue(float(
                 inversion.get("smoothness", self._smooth.value())))
+            self._start_res.setValue(float(
+                inversion.get("starting_resistivity", self._start_res.value())))
             self._lateral_smooth.setValue(float(
                 inversion.get("lateral_smoothness", self._lateral_smooth.value())))
             self._project_layer_thicknesses = np.asarray(
@@ -1429,12 +1449,16 @@ class EMProcessingModule(BaseModule):
         self._model_stack.setCurrentWidget(self._overview_view)
         self._tabs.setCurrentWidget(self._model_tab)
         rng = result.get("model_range", [float("nan"), float("nan")])
-        chi2 = result.get("chi2")
+        chi2 = result.get("chi2_global", result.get("chi2"))
+        sounding_mean = result.get("chi2_sounding_mean")
+        sounding_median = result.get("chi2_sounding_median")
         report = result.get("lci_report") or {}
         coupled = report.get("mode") == "simultaneous"
         chi_txt = ""
         if isinstance(chi2, float) and chi2 == chi2:
-            chi_txt = f", chi2={chi2:.2f}" if coupled else f", mean chi2={chi2:.2f}"
+            chi_txt = f", global χ²={chi2:.2f}"
+            if isinstance(sounding_median, float) and sounding_median == sounding_median:
+                chi_txt += f", sounding median χ²={sounding_median:.2f}"
         self.log(f"{result['method']} line inversion complete: {result['n_soundings']} soundings, "
                  f"resistivity {rng[0]:.3g}..{rng[1]:.3g} Ω·m{chi_txt}.", "success")
         if coupled:
@@ -1454,6 +1478,12 @@ class EMProcessingModule(BaseModule):
                        else "block-coordinate LCI" if report
                        else "independent 1D") + ")"
         extra = {"soundings": result.get("n_soundings"), "layers": result.get("n_layers")}
+        if (isinstance(sounding_mean, float) and sounding_mean == sounding_mean
+                and isinstance(sounding_median, float) and sounding_median == sounding_median):
+            extra["sounding χ²"] = f"mean {sounding_mean:.2f}, median {sounding_median:.2f}"
+        residual_median = result.get("data_residual_sounding_median")
+        if isinstance(residual_median, float) and residual_median == residual_median:
+            extra["normalized residual (√χ²)"] = f"median {residual_median:.2f}"
         if coupled:
             extra["stop"] = report.get("stop_reason", "")
         outliers = dict(result.get("outliers") or {})
@@ -1473,14 +1503,14 @@ class EMProcessingModule(BaseModule):
              "extra": extra,
              "convergence_track": report.get("convergence_track"),
              "note": (
-                 "Whole-line weighted residual from one coupled solve; every "
+                 "Global gate-weighted χ² from one coupled solve; every "
                  "sounding was fitted with its neighbours' models constrained "
                  "at the same time."
                  if coupled else
-                 "Mean weighted residual over the line; adjacent models on each "
-                 "survey line are coupled by the selected lateral smoothness."
+                 "Global gate-weighted χ² from the final sounding fits; adjacent "
+                 "models are coupled by the selected lateral smoothness."
                  if report else
-                 "Mean weighted residual over independently inverted soundings."
+                 "Global gate-weighted χ² over independently inverted soundings."
              )},
             convergence=(report.get("chi2_history") if coupled else None),
             title=f"{result['method']} line inversion",
@@ -1496,7 +1526,9 @@ class EMProcessingModule(BaseModule):
         for path in saved:
             self.log(f"Saved {Path(path).name} to {path}", "info")
         self.report_result({"method": result["method"], "n_soundings": result.get("n_soundings"),
-                            "mean_chi2": chi2, "section_npz": saved[0] if saved else None})
+                            "global_chi2": chi2,
+                            "sounding_median_chi2": sounding_median,
+                            "section_npz": saved[0] if saved else None})
 
     def _finish_line_run(self, result: dict) -> None:
         self.finish_persisted_run({
@@ -1506,7 +1538,11 @@ class EMProcessingModule(BaseModule):
                 "n_soundings": result.get("n_soundings"),
                 "model_range": result.get("model_range"),
             },
-            "metrics": {"mean_chi2": result.get("chi2")},
+            "metrics": {
+                "global_chi2": result.get("chi2_global", result.get("chi2")),
+                "sounding_mean_chi2": result.get("chi2_sounding_mean"),
+                "sounding_median_chi2": result.get("chi2_sounding_median"),
+            },
             "artifacts": [],
             "warnings": [],
             "provenance": {"operation_id": "em.line_inversion"},
@@ -1633,14 +1669,26 @@ class EMProcessingModule(BaseModule):
         )
         if not folder:
             return
-        if section:
-            paths = em_pipeline.save_line_csv(section, Path(folder))
-            self.log(f"Exported the section as {len(paths)} CSV file(s) to {folder}: "
-                     f"{int(section.get('n_soundings', 0))} soundings x "
-                     f"{int(section.get('n_layers', 0))} layers.", "success")
-            return
-        paths = em_pipeline.save_inversion(self._last_result, folder)
-        self.log(f"Exported recovered model ({len(paths)} files) to {folder}", "success")
+        # An export that fails silently looks the same as one that wrote nothing,
+        # so the failure has to reach the log rather than only stderr.
+        try:
+            if section:
+                paths = em_pipeline.save_line_csv(section, Path(folder))
+                self.log(f"Exported the section as {len(paths)} CSV file(s) to {folder}: "
+                         f"{int(section.get('n_soundings', 0))} soundings x "
+                         f"{int(section.get('n_layers', 0))} layers.", "success")
+                return
+            paths = em_pipeline.save_inversion(self._last_result, folder)
+            self.log(f"Exported recovered model ({len(paths)} files) to {folder}", "success")
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"EM model export failed: {exc}", "error")
+
+    def export_actions(self):
+        if getattr(self, "_last_section", None):
+            return [("Line section model (CSV)", self._export_inversion)]
+        if self._last_result:
+            return [("Recovered sounding model (CSV + npy)", self._export_inversion)]
+        return []
 
     def _show_format_help(self) -> None:
         doc_path = Path(__file__).with_name("em_input_format.md")
@@ -1687,7 +1735,8 @@ class EMProcessingModule(BaseModule):
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
                  "desc": ("Set parameters. Geometry: source_radius, loop_area, tx_rx_sep, height, orientation "
                           "(z/x/y), component (secondary/total/both), waveform. Inversion: n_layers, "
-                          "min_thickness, max_thickness, smoothness, rel_error, data_scale "
+                          "min_thickness, max_thickness, starting_resistivity, smoothness, "
+                          "rel_error, data_scale "
                           "(calibration multiplier), auto_scale (bool, rough), ref_resistivity "
                           "(ohm-m; calibrate the absolute level to a known value, the reliable "
                           "option), max_iterations. TEMcompany: tem_moment "
@@ -1845,6 +1894,7 @@ class EMProcessingModule(BaseModule):
             "n_layers": lambda v: self._n_layers.setValue(int(v)),
             "min_thickness": lambda v: self._min_thick.setValue(float(v)),
             "max_thickness": lambda v: self._max_thick.setValue(float(v)),
+            "starting_resistivity": lambda v: self._start_res.setValue(float(v)),
             "smoothness": lambda v: self._smooth.setValue(float(v)),
             "lateral_smoothness": lambda v: self._lateral_smooth.setValue(float(v)),
             "lci_mode": lambda v: self._set_lci_mode(str(v)),
@@ -1853,7 +1903,8 @@ class EMProcessingModule(BaseModule):
             "target_chi2": lambda v: self._target_chi2.setValue(float(v)),
             "chi2_tolerance": lambda v: self._chi2_tol.setValue(float(v)),
             "max_lambda_trials": lambda v: self._lam_trials.setValue(int(v)),
-            "parallel_workers": lambda v: setattr(self, "_parallel_workers", int(v)),
+            "parallel_workers": lambda v: self._parallel_workers_spin.setValue(
+                max(0, min(int(v), self._parallel_workers_spin.maximum()))),
             "reject_outliers": lambda v: self._reject.setChecked(bool(v)),
             "outlier_threshold": lambda v: self._reject_sigma.setValue(float(v)),
             "outlier_passes": lambda v: self._reject_passes.setValue(int(v)),

@@ -130,6 +130,55 @@ def test_model3d_log_view_explains_nonpositive_model(app, monkeypatch) -> None:
     view.close()
 
 
+def test_model3d_pyvista_log_path_masks_nonpositive_values(app, monkeypatch) -> None:
+    """The interactive renderer must have module-level access to NumPy."""
+    import PyHydroGeophysX.qt_apps.widgets.model3d_view as model3d
+
+    monkeypatch.setattr(
+        model3d, "try_import_pyvista", lambda: (False, None, None, "disabled")
+    )
+
+    class FakeGrid:
+        def __init__(self):
+            self.cell_data = {}
+
+        def outline(self):
+            return self
+
+    class FakePV:
+        grid = None
+
+        @classmethod
+        def RectilinearGrid(cls, *_edges):
+            cls.grid = FakeGrid()
+            return cls.grid
+
+    class FakePlotter:
+        def clear(self): pass
+        def add_mesh(self, *_args, **_kwargs): pass
+        def add_axes(self): pass
+        def reset_camera(self): pass
+
+    class NoClip:
+        @staticmethod
+        def isChecked():
+            return False
+
+    view = model3d.Model3DView()
+    view._mode = "pyvista"
+    view._pv = FakePV
+    view._plotter = FakePlotter()
+    view._clip_cb = NoClip()
+    view.show_model(
+        (np.arange(3.0), np.arange(2.0), np.arange(3.0)),
+        np.array([[[-1.0, 10.0]], [[np.nan, 20.0]]]),
+        log_scale=True,
+    )
+    rendered = FakePV.grid.cell_data["value"]
+    assert np.count_nonzero(np.isfinite(rendered)) == 2
+    view.close()
+
+
 def test_model_viewer_preserves_resistivity_artifact_semantics(
     app, tmp_path: Path
 ) -> None:

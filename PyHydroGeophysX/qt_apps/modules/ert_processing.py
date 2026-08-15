@@ -2327,8 +2327,37 @@ class ERTProcessingModule(BaseModule):
                 copied += 1
             except Exception as exc:  # noqa: BLE001
                 self.log(f"Could not copy {Path(f).name}: {exc}", "warn")
-        self.log(f"Exported {copied} time-lapse result file(s) to {dest}", "success")
+        written = self._write_tl_csv(dest)
+        self.log(f"Exported {copied + written} time-lapse result file(s) to {dest}", "success")
         return str(dest)
+
+    def _write_tl_csv(self, dest: Path) -> int:
+        """Write the per-cell time-lapse table; return how many files it added.
+
+        The copied files are all PyGIMLi meshes and NumPy arrays.  This is the
+        one export a collaborator can open without either, with one row per cell
+        and one column per time step.
+        """
+        if self._tl_mesh is None or self._tl_models is None:
+            self.log(
+                "Time-lapse models are not in memory, so no CSV was written; "
+                "the mesh and .npy files were still copied.",
+                "warn",
+            )
+            return 0
+        try:
+            from PyHydroGeophysX.data_processing.model_csv import export_model_csv
+
+            paths = export_model_csv(
+                dest, self._tl_mesh, self._tl_models,
+                value_name="resistivity", units="ohm.m",
+                coverage=self._tl_coverage,
+                step_labels=self._tl_step_titles or None,
+            )
+            return len(paths)
+        except Exception as exc:  # noqa: BLE001 - the copies already succeeded
+            self.log(f"Could not write the time-lapse CSV: {exc}", "warn")
+            return 0
 
     def _open_tl_output(self) -> None:
         out = self._tl_out or str(self.state.output_dir or "")
@@ -2528,11 +2557,24 @@ class ERTProcessingModule(BaseModule):
             import numpy as np
 
             from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
+            from PyHydroGeophysX.data_processing.model_csv import export_model_csv
 
             out = io_utils.ensure_dir(folder)
             mesh = mgr.paraDomain
             model = np.asarray(mgr.model, dtype=float)  # resistivity (ohm-m)
             np.save(out / "resistivity_model.npy", model)
+            try:
+                cov = np.asarray(mgr.coverage(), dtype=float)
+                np.save(out / "coverage.npy", cov)
+            except Exception:  # noqa: BLE001 - coverage is optional
+                cov = None
+            # The CSV is written before the PyGIMLi files because it is the one
+            # a collaborator without PyGIMLi can actually open, and a .bms write
+            # that fails should not cost them the table as well.
+            export_model_csv(
+                out, mesh, model,
+                value_name="resistivity", units="ohm.m", coverage=cov,
+            )
             # numpy takes wide paths, PyGIMLi's writers do not; a folder Windows'
             # ANSI codepage cannot represent needs the write staged through a
             # temporary ASCII one. Export to a localized "文档" folder otherwise
@@ -2540,14 +2582,26 @@ class ERTProcessingModule(BaseModule):
             via_ascii_path(mesh.save, out / "resistivity_mesh.bms", mode="write")
             mesh["resistivity"] = model
             via_ascii_path(mesh.exportVTK, out / "resistivity_model.vtk", mode="write")
-            try:
-                cov = np.asarray(mgr.coverage(), dtype=float)
-                np.save(out / "coverage.npy", cov)
-            except Exception:  # noqa: BLE001 - coverage is optional
-                pass
-            self.log(f"Exported resistivity model (npy + bms + vtk) to {out}", "success")
+            self.log(f"Exported resistivity model (csv + npy + bms + vtk) to {out}", "success")
         except Exception as exc:  # noqa: BLE001
             self.log(f"Resistivity model export failed: {exc}", "error")
+
+    def export_actions(self):
+        actions = []
+        if getattr(self, "_inv_mgr", None) is not None:
+            actions.append((
+                "Resistivity model (CSV + npy + mesh + VTK)",
+                self._export_resistivity_model,
+            ))
+        if self._tl_result:
+            actions.append((
+                "Time-lapse results (CSV + npy + mesh + VTK + figures)",
+                self._export_tl_results,
+            ))
+        if self._x:
+            actions.append(("Electrode positions (CSV)", self._export_electrodes))
+            actions.append(("Survey geometry (JSON)", self._export_geometry))
+        return actions
 
     def _publish(self, geometry_path: Optional[str] = None) -> None:
         result = {

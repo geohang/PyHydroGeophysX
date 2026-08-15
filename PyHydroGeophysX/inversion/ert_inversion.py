@@ -760,13 +760,18 @@ class _ADTLertEngine:
             if start_model is None
             else np.asarray(start_model, dtype=float)
         )
+        # The shared lambda-search contract uses 0.0 to disable target-based
+        # stopping while a trial is run to its plateau. ADTLERT represents the
+        # same state with None and deliberately rejects non-positive values.
+        requested_target = float(target_chi2)
+        adtlert_target = requested_target if requested_target > 0.0 else None
         config = InversionConfig(
             max_iterations=int(max_iterations),
             data_std=self._errors,
             regularization=float(lam),
             spatial_regularization="first_order",
             model_bounds=self._model_constraints,
-            target_chi2=float(target_chi2),
+            target_chi2=adtlert_target,
             step_tolerance=float(plateau_tolerance),
             linearized_solver=self._solver,
             normal_sensitivity=True,
@@ -784,7 +789,8 @@ class _ADTLertEngine:
         history = [float(value) for value in inverted.iteration_chi2]
         chi2 = history[-1] if history else float("nan")
         iterations = len(history)
-        if np.isfinite(chi2) and chi2 < float(target_chi2):
+        if (adtlert_target is not None and np.isfinite(chi2)
+                and chi2 < adtlert_target):
             stop = "target"
         elif iterations >= int(max_iterations):
             stop = "iteration_cap"

@@ -61,6 +61,10 @@ _STATUS_DISPLAY = {
 #: Metrics worth putting in the run summary before the raw record.
 _HEADLINE_METRICS = ("chi2", "rrms", "mean_chi2", "iterations", "n_data", "lambda")
 
+#: Heading for runs this session produced that are not in the Project yet.
+_UNSAVED_GROUP = "⬤ Unsaved (this session)"
+_UNSAVED_COLOUR = "#1565c0"
+
 
 def _human_size(size: int) -> str:
     value = float(size)
@@ -85,18 +89,34 @@ def _close_array_resource(resource: Any) -> None:
 def _module_title(module_key: str) -> str:
     """Return the navigator's wording for a module key, e.g. ``ert`` -> ``ERT``.
 
+    A stored record carries the module's *result* key (``ert_processing``) while
+    the navigator is keyed by its navigation key (``ert``). Translating through
+    the registry keeps both spellings in one group; matching the raw string put
+    older runs under a separate "Ert Processing" heading beside "ERT Processing".
+
     Imported lazily: the modules package builds pages on demand, and a top-level
     import from one of those pages back into the package is a needless cycle.
     """
     try:
         from PyHydroGeophysX.qt_apps.modules import MODULE_SPECS
+        from PyHydroGeophysX.workflows.registry import navigation_key_for
 
-        spec = MODULE_SPECS.get(str(module_key))
+        spec = MODULE_SPECS.get(navigation_key_for(module_key))
         if spec and len(spec) > 2 and spec[2]:
             return str(spec[2])
     except Exception:  # noqa: BLE001 - a label must never break the viewer
         pass
     return str(module_key).replace("_", " ").title() or "Other"
+
+
+def _group_key(module_key: str) -> str:
+    """Collapse a module's spellings onto one tree group."""
+    try:
+        from PyHydroGeophysX.workflows.registry import navigation_key_for
+
+        return navigation_key_for(module_key)
+    except Exception:  # noqa: BLE001 - grouping must never break the viewer
+        return str(module_key)
 
 
 def _operation_title(record_workflow: str, record_operation: str) -> str:
@@ -220,6 +240,8 @@ class ModelViewerModule(BaseModule):
         super().__init__(state, log, parent)
         self._store: Optional[ResultsStore] = None
         self._records: Dict[str, RunRecord] = {}
+        #: Runs finished this session that are not in the Project's history yet.
+        self._unsaved_ids: set[str] = set()
         self._current: Optional[RunRecord] = None
         self._current_artifacts: List[Dict[str, Any]] = []
         self._size_cache: Dict[str, int] = {}
@@ -283,6 +305,13 @@ class ModelViewerModule(BaseModule):
         save_meta = QPushButton("Save label/notes")
         save_meta.setToolTip("Name this run so you can tell it apart later.")
         save_meta.clicked.connect(self._save_metadata)
+        self._save_run = QPushButton("Save to Project")
+        self._save_run.setToolTip(
+            "Add this run to the Project's history. Until then it exists only as "
+            "a folder this session wrote, and closing the workbench will ask."
+        )
+        self._save_run.setVisible(False)
+        self._save_run.clicked.connect(self._save_current_run)
         self._open_run = QPushButton("Open Folder")
         self._open_run.setToolTip("Open this run's folder in the system file manager.")
         self._open_run.clicked.connect(self.open_run_folder)
@@ -291,6 +320,7 @@ class ModelViewerModule(BaseModule):
         edit_row.addWidget(self._label, stretch=1)
         edit_row.addWidget(self._size)
         edit_row.addWidget(save_meta)
+        edit_row.addWidget(self._save_run)
         edit_row.addWidget(self._open_run)
         edit_row.addWidget(self._delete)
         right_layout.addLayout(edit_row)
@@ -388,19 +418,31 @@ class ModelViewerModule(BaseModule):
             else "New computations are written here, one folder per run."
         )
         self._tree.clear()
-        self._records = {item.run_id: item for item in self._store.list_runs()}
+        # Unsaved runs lead the list. They are the ones that disappear if the
+        # session ends without a decision, so they should not be found by
+        # scrolling past a year of history.
+        unsaved = self._store.list_unsaved_runs() if not self._store.read_only else []
+        self._unsaved_ids = {record.run_id for record in unsaved}
+        self._records = {item.run_id: item for item in [*unsaved, *self._store.list_runs()]}
         groups: Dict[tuple[str, str, str], QTreeWidgetItem] = {}
         counts: Dict[tuple[str, str, str], int] = {}
         for record in self._records.values():
-            module_name = _module_title(record.module_key)
+            pending = record.run_id in self._unsaved_ids
+            module_name = (
+                _UNSAVED_GROUP if pending else _module_title(record.module_key)
+            )
             operation_name = _operation_title(record.workflow_id, record.operation_id)
             # Group by the day the user saw, not the stored UTC day.
             started = _local_time(record.created_at)
             date_name = started.split(" ")[0] if started != "—" else "Unknown date"
+            # Group on the navigation key so a managed run ("ert_processing") and
+            # a legacy import of the same module ("ert") land in one heading
+            # rather than in two that read identically.
+            group_key = "\x00unsaved" if pending else _group_key(record.module_key)
             path = [
-                (record.module_key, "", ""),
-                (record.module_key, operation_name, ""),
-                (record.module_key, operation_name, date_name),
+                (group_key, "", ""),
+                (group_key, operation_name, ""),
+                (group_key, operation_name, date_name),
             ]
             for depth, (key, name) in enumerate(
                 zip(path, (module_name, operation_name, date_name))
@@ -408,7 +450,12 @@ class ModelViewerModule(BaseModule):
                 if key not in groups:
                     groups[key] = self._group_item(name)
                     if depth == 0:
-                        self._tree.addTopLevelItem(groups[key])
+                        if pending:
+                            # Ahead of the saved history, not appended to it.
+                            self._tree.insertTopLevelItem(0, groups[key])
+                            groups[key].setForeground(0, QColor(_UNSAVED_COLOUR))
+                        else:
+                            self._tree.addTopLevelItem(groups[key])
                     else:
                         groups[path[depth - 1]].addChild(groups[key])
                 counts[key] = counts.get(key, 0) + 1
@@ -429,6 +476,11 @@ class ModelViewerModule(BaseModule):
                 tooltip.append(f"Error: {record.error}")
             if record.imported:
                 tooltip.append("Imported in place from an existing results folder.")
+            if pending:
+                item.setForeground(0, QColor(_UNSAVED_COLOUR))
+                tooltip.append(
+                    "Not saved to the Project. Use “Save to Project” to keep it."
+                )
             item.setToolTip(0, "\n".join(tooltip))
             groups[path[2]].addChild(item)
             for key in path:
@@ -450,6 +502,7 @@ class ModelViewerModule(BaseModule):
         self._notes.clear()
         self._size.setText("Size: —")
         self._delete.setEnabled(False)
+        self._save_run.setVisible(False)
         self._open_run.setEnabled(False)
         self._overview.setHtml("")
         self._metrics.setRowCount(0)
@@ -468,8 +521,8 @@ class ModelViewerModule(BaseModule):
         """Explain an empty list rather than leaving the user with blank space."""
         if not self._records:
             self._hint.setText(
-                "No runs recorded in this Project yet. Run a computation from any "
-                "module — each one is saved here automatically, in its own folder."
+                "No runs in this Project yet. Run a computation from any module; it "
+                "appears here under “Unsaved” until you save it to the Project."
             )
             self._hint.setVisible(True)
             return
@@ -584,8 +637,16 @@ class ModelViewerModule(BaseModule):
         )
         self._label.setReadOnly(not editable)
         self._notes.setReadOnly(not editable)
+        pending = record.run_id in self._unsaved_ids
+        self._save_run.setVisible(pending)
+        self._save_run.setEnabled(editable and pending and record.status != "running")
         self._delete.setEnabled(editable and record.managed and not record.imported and record.status != "running")
+        # Discarding an unsaved run and deleting a saved one remove the same
+        # folder, but only one of them loses something the Project was keeping.
+        self._delete.setText("Discard…" if pending else "Delete Run…")
         self._delete.setToolTip(
+            "This run was never added to the Project. Discarding deletes its folder."
+            if pending else
             "Imported runs point at files this Project does not own."
             if record.imported else
             "A running computation cannot be deleted." if record.status == "running"
@@ -1042,6 +1103,26 @@ class ModelViewerModule(BaseModule):
         except Exception as exc:
             self._clear_visual(f"Mesh viewer is unavailable or the bundle is incomplete:\n{exc}")
 
+    def _save_current_run(self) -> None:
+        """Put the selected run into the Project's history."""
+        if self._current is None or self._store is None:
+            return
+        # Any label or notes typed above are part of what is being saved; without
+        # this they would be written only on the next edit, after the record has
+        # already gone to disk.
+        try:
+            self._store.update_run(
+                self._current.run_id,
+                label=self._label.text(),
+                notes=self._notes.toPlainText(),
+            )
+            record = self._store.save_run(self._current.run_id)
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Save run", str(exc))
+            return
+        self.log(f"Saved '{record.label}' to {self._store.root}", "success")
+        self.refresh()
+
     def _save_metadata(self) -> None:
         if self._current is None or self._store is None or self._store.read_only:
             return
@@ -1057,15 +1138,18 @@ class ModelViewerModule(BaseModule):
         if self._current is None or self._store is None:
             return
         record_id = self._current.run_id
+        pending = record_id in self._unsaved_ids
         size_value = self._size_cache.get(self._current.run_id)
         if size_value is None:
             size_value = self._store.run_size(self._current)
             self._size_cache[self._current.run_id] = size_value
         size = _human_size(size_value)
         answer = QMessageBox.question(
-            self, "Delete run permanently",
+            self,
+            "Discard unsaved run" if pending else "Delete run permanently",
             f"Permanently delete '{self._current.label}' and {size} of files?\n\n"
-            "This cannot be undone.",
+            + ("This run was never saved to the Project. This cannot be undone."
+               if pending else "This cannot be undone."),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         )
         if answer != QMessageBox.Yes:

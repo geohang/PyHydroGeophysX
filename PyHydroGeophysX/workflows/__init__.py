@@ -17,7 +17,10 @@ from .registry import (
     WorkflowDescriptor,
     get_workflow,
     list_workflows,
+    module_descriptor_for,
+    navigation_key_for,
     register_workflow,
+    result_key_for,
 )
 from .runner import run_workflow
 from .walkthrough import generate_notebook, generate_walkthrough
@@ -39,7 +42,10 @@ __all__ = [
     "list_workflows",
     "iter_artifact_refs",
     "load_recipe",
+    "module_descriptor_for",
+    "navigation_key_for",
     "register_workflow",
+    "result_key_for",
     "run_workflow",
     "save_recipe",
     "teaching_paths",

@@ -46,6 +46,55 @@ LogFn = Callable[[str], None]
 METHODS = ("FDEM", "TDEM")
 
 
+def _line_chi2_summary(
+    chi2_per_sounding, data_counts, *, objective_chi2=None,
+) -> Dict[str, float]:
+    """Summarise line misfit without confusing gate and sounding weighting.
+
+    Each sounding value is the mean squared uncertainty-normalised residual for
+    that sounding.  The line objective therefore weights it by the number of
+    retained gates.  Equal-sounding mean and median values are useful QC
+    summaries, but they are not substitutes for the objective used by the fit.
+    Aarhus software's per-model ``data residual`` is also reported on a
+    residual/RMS scale, hence the square-root values returned here as a useful
+    scale comparison. Its documented tTEM calculation uses log-data space, so
+    the two values need not be numerically identical.
+    """
+    values = np.asarray(chi2_per_sounding, dtype=float).ravel()
+    counts = np.asarray(data_counts, dtype=float).ravel()
+    n = min(values.size, counts.size)
+    values, counts = values[:n], counts[:n]
+    valid = np.isfinite(values) & np.isfinite(counts) & (counts > 0)
+
+    weighted = float("nan")
+    if valid.any():
+        weighted = float(np.sum(values[valid] * counts[valid]) / np.sum(counts[valid]))
+    try:
+        reported = float(objective_chi2)
+    except (TypeError, ValueError):
+        reported = float("nan")
+    if np.isfinite(reported):
+        weighted = reported
+
+    finite_values = values[valid]
+    sounding_mean = (float(np.mean(finite_values)) if finite_values.size
+                     else float("nan"))
+    sounding_median = (float(np.median(finite_values)) if finite_values.size
+                       else float("nan"))
+    return {
+        "global": weighted,
+        "sounding_mean": sounding_mean,
+        "sounding_median": sounding_median,
+        "data_residual_global": (float(math.sqrt(weighted))
+                                 if np.isfinite(weighted) and weighted >= 0
+                                 else float("nan")),
+        "data_residual_sounding_median": (float(math.sqrt(sounding_median))
+                                           if np.isfinite(sounding_median)
+                                           and sounding_median >= 0
+                                           else float("nan")),
+    }
+
+
 def backend_status(method: Optional[str] = None) -> Dict[str, Any]:
     """Report whether the requested EM forward/inversion backend is usable.
 
@@ -611,43 +660,20 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     # analytic Jacobian the coupled solver used.
     doi_blocks: Dict[int, Any] = {}
     if simultaneous:
-        from PyHydroGeophysX.inversion.em1d import (
-            ForwardOperatorCache,
-            build_sounding_block,
-        )
+        from PyHydroGeophysX.inversion.em1d import build_sounding_block
         from PyHydroGeophysX.inversion.em1d_lci import (
             invert_lci,
             invert_lci_rejecting_outliers,
         )
 
         usable = [s for s in range(n_pos) if datasets[s] is not None]
-        # Stations that kept the same gates share one forward operator, which is
-        # what keeps a long line from paying SimPEG's first-call setup once per
-        # station. Planned before anything is built, so the groups that get to
-        # keep an exact operator are the ones carrying the most stations.
-        operators = ForwardOperatorCache(int(inv.get("max_forward_operators", 0)))
-        if method != "FDEM":
-            thick_lci = _inversion_layer_thicknesses(inv)
-            signatures = []
-            for s in usable:
-                moments = dict((datasets[s] or {}).get("moments") or {})
-                items = ([(nm, moments[nm]) for nm in ("LM", "HM") if nm in moments]
-                         or [("TDEM", datasets[s])])
-                for nm, item in items:
-                    times = np.asarray(item.get("times", []), dtype=float).ravel()
-                    if times.size:
-                        signatures.append(operators._signature(
-                            nm, times,
-                            {**geometries[s], **(item.get("transmitter") or {})}))
-            operators.plan(signatures)
-
         def build(s: int):
             """Assemble one station's block, or hand back why it could not be."""
             try:
                 return s, build_sounding_block(
                     datasets[s], geometries[s], inv, method,
                     position=float(pos_lci[s]), line=int(line_numbers[s]),
-                    label=f"sounding {s + 1}", operators=operators), None
+                    label=f"sounding {s + 1}"), None
             except Exception as exc:  # noqa: BLE001 - one bad station is not fatal
                 return s, None, exc
 
@@ -657,9 +683,6 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         with _worker_pool(resolve_worker_count(len(usable), workers)) as executor:
             built = ([build(s) for s in usable] if executor is None
                      else list(executor.map(build, usable)))
-        if len(operators):
-            log(f"  forward operators: {len(operators)} shared across "
-                f"{len(usable)} soundings")
         sounding_blocks = []
         kept: List[int] = []
         for s, block, failure in built:
@@ -901,14 +924,16 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     ey = np.array([-step / 2.0, step / 2.0], dtype=float)
 
     finite = np.isfinite(model)
-    # The coupled solve reports a data-weighted whole-line chi-squared, which is
-    # the honest number for a single fit; averaging per-sounding values would
-    # weight a 6-gate station the same as a 40-gate one.
-    chi2_mean = (
-        float(lci_report["chi2"]) if "chi2" in lci_report
-        else float(np.nanmean(chi2_list)) if np.any(np.isfinite(chi2_list))
-        else float("nan")
+    # Keep the optimizer's gate-weighted objective as the headline value.  The
+    # equal-sounding mean and median remain available for spatial QC.
+    chi2_summary = _line_chi2_summary(
+        chi2_list, data_count_list, objective_chi2=lci_report.get("chi2"),
     )
+    chi2_global = chi2_summary["global"]
+    data_residual_list = [
+        float(math.sqrt(value)) if np.isfinite(value) and value >= 0 else float("nan")
+        for value in chi2_list
+    ]
     result = {
         "method": method, "edges": (ex, ey, ez), "model3d": model,
         "label": "resistivity (Ω·m)", "cmap": "turbo", "log_scale": True,
@@ -922,7 +947,15 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         "longitude": longitude, "latitude": latitude,
         "station_ids": station_ids,
         "coordinate_system": str(head.get("coordinate_system", "")),
-        "chi2": chi2_mean, "chi2_list": chi2_list, "n_soundings": n_pos,
+        # ``chi2`` remains an alias for compatibility. It is the whole-line,
+        # gate-weighted mean squared normalized residual for every solve mode.
+        "chi2": chi2_global, "chi2_global": chi2_global,
+        "chi2_sounding_mean": chi2_summary["sounding_mean"],
+        "chi2_sounding_median": chi2_summary["sounding_median"],
+        "data_residual_global": chi2_summary["data_residual_global"],
+        "data_residual_sounding_median": chi2_summary["data_residual_sounding_median"],
+        "chi2_list": chi2_list, "data_residual_list": data_residual_list,
+        "n_soundings": n_pos,
         "n_layers": n_layers, "n_data": int(sum(data_count_list)),
         "data_count_list": data_count_list, "data_scale": data_scale_used,
         "joint_moments": joint, "lci": bool(lci_report),

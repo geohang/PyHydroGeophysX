@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PyHydroGeophysX.qt_apps import io_utils
 from PyHydroGeophysX.qt_apps.results_store import ResultsStore, RunHandle
@@ -53,6 +53,10 @@ class WorkbenchState:
     _active_run_handles: Dict[Tuple[str, str], RunHandle] = field(
         default_factory=dict, repr=False
     )
+    #: Called with no arguments whenever the set of runs awaiting a save may have
+    #: changed. The window uses it to keep its unsaved-run indicator honest. A
+    #: plain callable rather than a signal, so this module stays Qt-free.
+    on_runs_changed: Optional[Callable[[], None]] = field(default=None, repr=False)
 
     # -- construction --------------------------------------------------------
     @classmethod
@@ -137,6 +141,7 @@ class WorkbenchState:
                     # runs deliberately never persist paths outside their run root.
                     handle.record.recipe_path = ""
             self.results_store.finish_run(handle, result_dict)
+            self._notify_runs_changed()
 
     # -- durable Result Store ----------------------------------------------
     def set_results_store(self, root: str | Path, *, read_only: bool = False) -> ResultsStore:
@@ -222,17 +227,27 @@ class WorkbenchState:
             )
         return self._active_run_handles.pop(keys[0], None) if keys else None
 
+    def _notify_runs_changed(self) -> None:
+        if self.on_runs_changed is None:
+            return
+        try:
+            self.on_runs_changed()
+        except Exception:  # noqa: BLE001 - an indicator must not break a run
+            pass
+
     def finish_run(
         self, module_name: str, result: Any, operation_id: str = ""
     ) -> None:
         handle = self._pop_active_run(module_name, operation_id)
         if handle is not None:
             self.ensure_results_store().finish_run(handle, result)
+            self._notify_runs_changed()
 
     def fail_run(self, module_name: str, error: str, operation_id: str = "") -> None:
         handle = self._pop_active_run(module_name, operation_id)
         if handle is not None:
             self.ensure_results_store().fail_run(handle, error)
+            self._notify_runs_changed()
 
     def cancel_run(
         self, module_name: str, error: str = "", operation_id: str = ""
@@ -240,12 +255,43 @@ class WorkbenchState:
         handle = self._pop_active_run(module_name, operation_id)
         if handle is not None:
             self.ensure_results_store().cancel_run(handle, error)
+            self._notify_runs_changed()
 
     def cancel_module_runs(self, module_name: str, error: str = "") -> None:
         module_key = str(module_name)
         for key in [key for key in self._active_run_handles if key[0] == module_key]:
             handle = self._active_run_handles.pop(key)
             self.ensure_results_store().cancel_run(handle, error)
+            self._notify_runs_changed()
+
+    # -- saving --------------------------------------------------------------
+    def has_unsaved_runs(self) -> bool:
+        """Whether any finished run is still waiting on the user's decision."""
+        store = self.results_store
+        return bool(store is not None and store.has_unsaved())
+
+    def unsaved_runs(self) -> List[Any]:
+        store = self.results_store
+        return store.list_unsaved_runs() if store is not None else []
+
+    def save_all_runs(self) -> List[Any]:
+        """Put every finished-but-unsaved run into the Project's history."""
+        store = self.results_store
+        if store is None:
+            return []
+        try:
+            return store.save_all_unsaved()
+        finally:
+            self._notify_runs_changed()
+
+    def discard_all_runs(self) -> int:
+        store = self.results_store
+        if store is None:
+            return 0
+        try:
+            return store.discard_all_unsaved()
+        finally:
+            self._notify_runs_changed()
 
     def clear_project_session(self) -> None:
         """Drop process-local results when the active Project changes."""

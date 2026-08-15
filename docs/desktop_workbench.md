@@ -72,13 +72,25 @@ The bridge directory is `<output_dir>/qt_bridge/` (default
    result, the demo selection, and the Python executable to reuse).
 2. Streamlit starts the Qt workbench as a separate process and passes that context path.
 3. The Qt app reads the context on startup, so it points at the same project and data.
-4. When you save in the Qt app (File → Save Workbench Result, or after a forward run),
-   it writes `full_workbench_result.json` with the per-module results.
+4. When you save in the Qt app (File → Streamlit Bridge → Save Workbench Result, or
+   after a forward run), it writes `full_workbench_result.json` with the per-module
+   results.
 5. Back in the browser, **Refresh result** reads that file and displays it.
 
-Modules can also export their own files (picks CSV, electrode geometry JSON, processed
-EM curves, corrected gravity data, survey configuration JSON, figures) into the output
-directory.
+That manifest is for the bridge, not for keeping or getting out your results.
+
+**Keeping a result:** a finished run is not recorded in the Project until you say so.
+**File → Save Runs to Project** (`Ctrl+S`) or the toolbar **Save** button adds this
+session's runs; the status bar shows how many are waiting, and closing the workbench
+asks. The Model Viewer lists unsaved runs first and can save or discard them one at a
+time.
+
+**Getting a result out:** **File → Export Results…** (`Ctrl+E`) writes the open
+module's products to a folder you choose. Every model export includes
+`model_cells.csv`, one row per cell with its own coordinate, so a section can be
+replotted without PyGIMLi. Modules also export their own supporting files (picks CSV,
+electrode geometry JSON, processed EM curves, corrected gravity data, survey
+configuration JSON, figures). Exporting and saving are independent.
 
 ## 5. Why a remote Streamlit server cannot open a Qt window
 

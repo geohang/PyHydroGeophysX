@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-import threading
 from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
@@ -191,106 +190,8 @@ def _occam_1d(forward_vec: Callable[[np.ndarray], np.ndarray], dobs_vec: np.ndar
     return res, chi2, int(sol.nfev), convergence
 
 
-class ForwardOperatorCache:
-    """Forward operators shared between the stations that can use them.
-
-    A ``Simulation1DLayered`` costs about fifty times as much on its first call
-    as on every call after it, because SimPEG builds its filter coefficients and
-    time spline then and caches them on the instance. Building one per station
-    pays that once per station: on an 887-station survey it is minutes of work
-    before the first iteration starts, and it is Python object construction, so
-    threads do not remove it.
-
-    Stations that kept exactly the same gates can share an operator with no
-    change to the arithmetic at all, which on real surveys is already most of
-    the saving: 116 stations carry 35 distinct gate sets, 887 carry 230, because
-    the in-use flags switch off similar gates at neighbouring stations.
-
-    ``max_operators`` goes further, at a price. The largest groups keep their own
-    operator and stay exact; the remaining long tail, which is where the count
-    comes from (149 of those 230 groups hold a single station), shares one
-    operator built on the union of their gates. A station then reads its gates
-    out of a simulation that also carries times it did not measure, which moves
-    the predicted response by about 1e-6 relative, four orders of magnitude
-    below the 3 % uncertainty the data carry. ``0`` disables the merging and
-    keeps only the exact sharing.
-    """
-
-    def __init__(self, max_operators: int = 0) -> None:
-        self.max_operators = max(0, int(max_operators))
-        self._operators: Dict[Any, Any] = {}
-        self._unions: Dict[Any, np.ndarray] = {}
-        self._lock = threading.Lock()
-
-    @staticmethod
-    def _signature(name: str, times: np.ndarray, geometry: Dict[str, Any]) -> tuple:
-        """What makes two stations able to share: same gates, same geometry."""
-        return (str(name), np.asarray(times, dtype=float).tobytes(),
-                tuple(sorted((str(k), _hashable(v)) for k, v in geometry.items())))
-
-    def plan(self, signatures: "List[tuple]") -> None:
-        """Decide which gate sets get merged, before any operator is built.
-
-        Counted over the whole survey rather than per station, so the groups
-        that keep their own operator are the ones that carry the most stations.
-        """
-        if not self.max_operators:
-            return
-        from collections import Counter
-
-        counts = Counter(signatures)
-        if len(counts) <= self.max_operators:
-            return
-        keep = {sig for sig, _ in counts.most_common(max(1, self.max_operators - 1))}
-        with self._lock:
-            for sig in counts:
-                if sig in keep:
-                    continue
-                times = np.frombuffer(sig[1], dtype=float)
-                merged = (sig[0], b"merged", sig[2])
-                previous = self._unions.get(merged)
-                self._unions[merged] = (times if previous is None
-                                        else np.union1d(previous, times))
-
-    def _target(self, signature: tuple) -> tuple:
-        merged = (signature[0], b"merged", signature[2])
-        return merged if merged in self._unions else signature
-
-    def times_for(self, signature: tuple, times: np.ndarray) -> np.ndarray:
-        """The time vector the operator for ``signature`` is built on."""
-        target = self._target(signature)
-        return self._unions.get(target, np.asarray(times, dtype=float))
-
-    def operator(self, signature: tuple, build) -> Any:
-        """The shared operator for ``signature``, building it on first use."""
-        target = self._target(signature)
-        with self._lock:
-            found = self._operators.get(target)
-        if found is not None:
-            return found
-        made = build()
-        with self._lock:
-            # Another thread may have built the same one while this was working;
-            # keeping the first keeps the operator count at what was planned.
-            return self._operators.setdefault(target, made)
-
-    def __len__(self) -> int:
-        return len(self._operators)
-
-
-def _hashable(value: Any):
-    """A hashable stand-in for a geometry value, arrays included."""
-    if isinstance(value, np.ndarray):
-        return value.tobytes()
-    if isinstance(value, (list, tuple)):
-        return tuple(_hashable(item) for item in value)
-    return value
-
-
 def tdem_moment_blocks(data: Dict[str, Any], geom: Dict[str, Any],
-                       inv: Dict[str, Any], thick: np.ndarray,
-                       operators: Optional[ForwardOperatorCache] = None
-                       ) -> List[Dict[str, Any]]:
+                       inv: Dict[str, Any], thick: np.ndarray) -> List[Dict[str, Any]]:
     """One forward block per usable moment at a TDEM station.
 
     Stations carrying separate ``LM`` and ``HM`` gate sets produce one block
@@ -298,10 +199,6 @@ def tdem_moment_blocks(data: Dict[str, Any], geom: Dict[str, Any],
     Returning the same shape for both is what lets the per-sounding inversion
     and the coupled line inversion share this assembly instead of each writing
     its own copy of the uncertainty and gate-selection rules.
-
-    ``operators`` shares the forward operators between stations that can use
-    the same one; see :class:`ForwardOperatorCache`. Without it every station
-    builds its own, which is what a single-sounding inversion wants.
     """
     try:
         from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling
@@ -336,18 +233,13 @@ def tdem_moment_blocks(data: Dict[str, Any], geom: Dict[str, Any],
         # The turn-off ramp and the gate windows belong to the moment, not to
         # the station, so the geometry a block needs is the moment's.
         geometry = {**geom, **(item.get("transmitter") or {})}
-        if operators is not None:
-            signature = operators._signature(name, model_times, geometry)
-            model_times = operators.times_for(signature, model_times)
-            modeler = operators.operator(signature, lambda: TDEMForwardModeling(
-                thicknesses=thick,
-                survey_config=_tdem_config(geometry, model_times)))
-        else:
-            modeler = TDEMForwardModeling(
-                thicknesses=thick,
-                survey_config=_tdem_config(geometry, model_times))
-        # Against the operator's own time vector, which a shared operator may
-        # have built from more stations than this one.
+        # One simulation per station. Sharing them between stations would save
+        # SimPEG's first-call setup, which is minutes on a long line, but a
+        # Simulation1DLayered caches state on the instance and two threads
+        # calling getJ on the same one corrupt it; the per-sounding threading is
+        # worth more than the setup it would save.
+        modeler = TDEMForwardModeling(
+            thicknesses=thick, survey_config=_tdem_config(geometry, model_times))
         channel_indices = np.asarray([
             int(np.argmin(np.abs(model_times - value))) for value in times
         ], dtype=int)
@@ -434,8 +326,7 @@ def _fdem_pieces(data: Dict[str, Any], geom: Dict[str, Any], inv: Dict[str, Any]
 
 def build_sounding_block(data: Dict[str, Any], geom: Dict[str, Any],
                          inv: Dict[str, Any], method: str = "TDEM", *,
-                         position: float = 0.0, line: int = 0, label: str = "",
-                         operators: Optional[ForwardOperatorCache] = None):
+                         position: float = 0.0, line: int = 0, label: str = ""):
     """Package one sounding for the coupled line inversion.
 
     The observed vector, uncertainty, and forward operator are built by the
@@ -450,7 +341,7 @@ def build_sounding_block(data: Dict[str, Any], geom: Dict[str, Any],
         observed, uncertainty, forward_vec, jacobian, _, _ = _fdem_pieces(
             data, geom, inv, thick)
     else:
-        blocks = tdem_moment_blocks(data, geom, inv, thick, operators)
+        blocks = tdem_moment_blocks(data, geom, inv, thick)
         observed = np.concatenate([item["observed"] for item in blocks])
         uncertainty = np.concatenate([item["uncertainty"] for item in blocks])
         forward_vec = _moment_forward(blocks)

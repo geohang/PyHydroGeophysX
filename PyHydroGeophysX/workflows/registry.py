@@ -97,6 +97,41 @@ MODULE_DESCRIPTORS: Dict[str, ModuleDescriptor] = {
 }
 
 
+def _module_lookup() -> Dict[str, ModuleDescriptor]:
+    """Index every spelling of a module key onto its descriptor."""
+    table: Dict[str, ModuleDescriptor] = {}
+    for descriptor in MODULE_DESCRIPTORS.values():
+        for spelling in (descriptor.navigation_key, descriptor.result_key,
+                         *descriptor.aliases):
+            table[str(spelling)] = descriptor
+    return table
+
+
+def module_descriptor_for(key: str) -> ModuleDescriptor | None:
+    """Find the descriptor a key belongs to, whichever spelling it uses.
+
+    A module is addressed by two names on purpose: the navigation key (``ert``)
+    is what the CLI flag, the agent's ``navigate`` tool, and the Streamlit bridge
+    pass around, while the result key (``ert_processing``) is what a page
+    publishes its results under and what the stored run records carry. Anything
+    that receives one and needs the other goes through here, so the pairing lives
+    in this table rather than in each caller's head.
+    """
+    return _module_lookup().get(str(key))
+
+
+def navigation_key_for(key: str) -> str:
+    """Return the key that navigates to a module; unknown keys pass through."""
+    descriptor = module_descriptor_for(key)
+    return descriptor.navigation_key if descriptor is not None else str(key)
+
+
+def result_key_for(key: str) -> str:
+    """Return the key a module publishes results under; unknown keys pass through."""
+    descriptor = module_descriptor_for(key)
+    return descriptor.result_key if descriptor is not None else str(key)
+
+
 def _register_builtins(descriptors: Iterable[WorkflowDescriptor]) -> None:
     for descriptor in descriptors:
         register_workflow(descriptor)
@@ -194,5 +229,8 @@ __all__ = [
     "WorkflowDescriptor",
     "get_workflow",
     "list_workflows",
+    "module_descriptor_for",
+    "navigation_key_for",
     "register_workflow",
+    "result_key_for",
 ]

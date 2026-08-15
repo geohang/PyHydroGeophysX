@@ -37,6 +37,7 @@ def test_multiple_runs_do_not_overwrite_and_index_rebuilds(tmp_path: Path) -> No
     )
     store.finish_run(first, result)
     store.cancel_run(second)
+    store.save_all_unsaved()
 
     store.index_path.write_text("not json", encoding="utf-8")
     reopened = ResultsStore.open_or_create(tmp_path)
@@ -46,13 +47,89 @@ def test_multiple_runs_do_not_overwrite_and_index_rebuilds(tmp_path: Path) -> No
     assert json.loads(reopened.index_path.read_text(encoding="utf-8"))["runs"]
 
 
-def test_running_run_is_recovered_as_interrupted(tmp_path: Path) -> None:
+def test_a_finished_run_stays_out_of_the_history_until_saved(tmp_path: Path) -> None:
+    """A computation is the user's to keep, so nothing records it on its own."""
+    store = ResultsStore.open_or_create(tmp_path)
+    handle = store.begin_run("ert", "ert.single_inversion", "ert.single_inversion")
+    (handle.outputs_dir / "model.npy").write_bytes(b"model")
+    store.finish_run(handle, {"status": "ok", "metrics": {"chi2": 1.1}})
+
+    assert store.list_runs() == []
+    assert store.has_unsaved()
+    assert [record.run_id for record in store.list_unsaved_runs()] == [handle.run_id]
+    assert not handle.record.metadata_path.exists()
+    assert (handle.run_dir / results_store_module.UNSAVED_MARKER).is_file()
+    # A second session opening the same Project must not find it either.
+    assert ResultsStore.open_or_create(tmp_path).list_runs() == []
+
+
+def test_saving_records_the_run_and_clears_the_marker(tmp_path: Path) -> None:
+    store = ResultsStore.open_or_create(tmp_path)
+    handle = store.begin_run("ert", "ert.single_inversion", "ert.single_inversion")
+    (handle.outputs_dir / "model.npy").write_bytes(b"model")
+    store.finish_run(handle, {"status": "ok", "metrics": {"chi2": 1.1}})
+
+    saved = store.save_run(handle.run_id)
+    assert saved.status == "success"
+    assert not store.has_unsaved()
+    assert handle.record.metadata_path.is_file()
+    assert handle.result_path.is_file()
+    assert not (handle.run_dir / results_store_module.UNSAVED_MARKER).exists()
+    # The run's own outputs never moved, so a path captured earlier still works.
+    assert (handle.outputs_dir / "model.npy").is_file()
+
+    reopened = ResultsStore.open_or_create(tmp_path)
+    assert [record.run_id for record in reopened.list_runs()] == [handle.run_id]
+    assert reopened.get_run(handle.run_id).metrics["chi2"] == 1.1
+    # Saving twice is a no-op rather than an error.
+    assert store.save_run(handle.run_id).run_id == handle.run_id
+
+
+def test_discarding_removes_the_folder(tmp_path: Path) -> None:
+    store = ResultsStore.open_or_create(tmp_path)
+    handle = store.begin_run("em", "em.inversion")
+    store.finish_run(handle, {"status": "ok"})
+    store.discard_run(handle.run_id)
+    assert not handle.run_dir.exists()
+    assert not store.has_unsaved()
+    assert store.get_run(handle.run_id) is None
+
+
+def test_a_labelled_run_is_still_not_saved_by_labelling_it(tmp_path: Path) -> None:
+    """Naming a run is not a decision to keep it."""
+    store = ResultsStore.open_or_create(tmp_path)
+    handle = store.begin_run("em", "em.inversion")
+    store.finish_run(handle, {"status": "ok"})
+    store.update_run(handle.run_id, label="East line", notes="dry season")
+    assert not handle.record.metadata_path.exists()
+    assert store.has_unsaved()
+    # …and the label survives into the record once it is saved.
+    assert store.save_run(handle.run_id).label == "East line"
+    assert ResultsStore.open_or_create(tmp_path).get_run(
+        handle.run_id).notes == "dry season"
+
+
+def test_an_earlier_sessions_unsaved_runs_are_reported_as_abandoned(tmp_path: Path) -> None:
+    """A crash leaves a marked folder with no record; nothing else would list it."""
     store = ResultsStore.open_or_create(tmp_path)
     handle = store.begin_run("em", "em.inversion", "em.inversion")
+    (handle.outputs_dir / "values.bin").write_bytes(b"12345")
+    store.finish_run(handle, {"status": "ok"})
+    assert store.abandoned_run_dirs() == []      # this session still owns it
+
     reopened = ResultsStore.open_or_create(tmp_path)
-    record = reopened.get_run(handle.run_id)
-    assert record is not None
-    assert record.status == "interrupted"
+    assert reopened.list_runs() == []
+    assert reopened.abandoned_run_dirs() == [handle.run_dir]
+    assert reopened.clear_abandoned_runs() == 1
+    assert not handle.run_dir.exists()
+
+
+def test_a_saved_run_is_never_reported_as_abandoned(tmp_path: Path) -> None:
+    store = ResultsStore.open_or_create(tmp_path)
+    handle = store.begin_run("em", "em.inversion")
+    store.finish_run(handle, {"status": "ok"})
+    store.save_run(handle.run_id)
+    assert ResultsStore.open_or_create(tmp_path).abandoned_run_dirs() == []
 
 
 def test_artifact_path_must_stay_inside_run(tmp_path: Path) -> None:
@@ -81,10 +158,16 @@ def test_label_notes_size_and_delete(tmp_path: Path) -> None:
 def test_read_only_store_does_not_recover_or_mutate(tmp_path: Path) -> None:
     writable = ResultsStore.open_or_create(tmp_path)
     handle = writable.begin_run("ert", "ert.single_inversion")
+    writable.finish_run(handle, {"status": "ok"})
+    writable.save_run(handle.run_id)
     readonly = ResultsStore.open_or_create(tmp_path, read_only=True)
-    assert readonly.get_run(handle.run_id).status == "running"
-    with pytest.raises(PermissionError):
-        readonly.begin_run("ert", "ert.single_inversion")
+    assert readonly.get_run(handle.run_id).status == "success"
+    for call in (lambda: readonly.begin_run("ert", "ert.single_inversion"),
+                 lambda: readonly.save_run(handle.run_id),
+                 lambda: readonly.discard_run(handle.run_id),
+                 lambda: readonly.clear_abandoned_runs()):
+        with pytest.raises(PermissionError):
+            call()
 
 
 def test_atomic_replace_retries_transient_windows_lock(monkeypatch, tmp_path: Path) -> None:
@@ -105,9 +188,11 @@ def test_atomic_replace_retries_transient_windows_lock(monkeypatch, tmp_path: Pa
     assert json.loads(target.read_text(encoding="utf-8"))["status"] == "success"
 
 
-def test_finish_metadata_failure_recovers_as_success(monkeypatch, tmp_path: Path) -> None:
+def test_save_metadata_failure_leaves_a_recovery_record(monkeypatch, tmp_path: Path) -> None:
+    """A locked run.json must not cost the user the run they asked to keep."""
     store = ResultsStore.open_or_create(tmp_path)
     handle = store.begin_run("ert", "ert.single_inversion")
+    store.finish_run(handle, {"status": "ok", "metrics": {"chi2": float("nan")}})
     original = results_store_module._atomic_write_json
 
     def locked_run_json(path, payload, **kwargs):
@@ -116,16 +201,24 @@ def test_finish_metadata_failure_recovers_as_success(monkeypatch, tmp_path: Path
         return original(path, payload, **kwargs)
 
     monkeypatch.setattr(results_store_module, "_atomic_write_json", locked_run_json)
-    record = store.finish_run(handle, {"status": "ok", "metrics": {"chi2": float("nan")}})
-    assert record.status == "success"
+    with pytest.raises(PermissionError):
+        store.save_run(handle.run_id)
     assert list(handle.run_dir.glob("run.recovery.*.json"))
+    # Still staged, so the user can retry rather than losing the run.
+    assert store.has_unsaved()
 
+    # Even if the session ends here, the run the user asked to keep comes back:
+    # the next scan finds the recovery record and repairs run.json from it.
     monkeypatch.setattr(results_store_module, "_atomic_write_json", original)
-    reopened = ResultsStore.open_or_create(tmp_path)
-    recovered = reopened.get_run(handle.run_id)
+    crashed = ResultsStore.open_or_create(tmp_path)
+    assert crashed.abandoned_run_dirs() == [], (
+        "a partly-written save is recovered, not treated as abandoned"
+    )
+    recovered = crashed.get_run(handle.run_id)
     assert recovered is not None
     assert recovered.status == "success"
     assert recovered.metrics["chi2"] is None
+    assert handle.record.metadata_path.is_file()
 
 
 def test_running_and_imported_runs_cannot_be_deleted(tmp_path: Path) -> None:
@@ -225,6 +318,7 @@ def test_ert_two_runs_keep_independent_reloadable_model_bundles(tmp_path: Path) 
             ],
         ))
 
+    store.save_all_unsaved()
     records = ResultsStore.open_or_create(tmp_path).list_runs()
     assert len(records) == 2
     assert len({record.run_dir for record in records}) == 2
@@ -261,6 +355,9 @@ def test_operations_in_same_module_can_run_concurrently(tmp_path: Path) -> None:
     assert state.active_run("ert") is None
     state.finish_run("ert", {"status": "ok"}, "ert.single_inversion")
     state.cancel_run("ert", "test complete", "ert.timelapse_inversion")
+    assert state.results_store.list_runs() == []          # nothing saved yet
+    assert {item.status for item in state.unsaved_runs()} == {"success", "cancelled"}
+    state.save_all_runs()
     assert {item.status for item in state.results_store.list_runs()} == {
         "success", "cancelled"
     }
@@ -269,6 +366,8 @@ def test_operations_in_same_module_can_run_concurrently(tmp_path: Path) -> None:
 def test_list_and_get_use_memory_index_after_open(monkeypatch, tmp_path: Path) -> None:
     store = ResultsStore.open_or_create(tmp_path)
     handle = store.begin_run("ert", "ert.single_inversion")
+    store.finish_run(handle, {"status": "ok"})
+    store.save_run(handle.run_id)
     monkeypatch.setattr(
         store, "_scan_records", lambda **_kwargs: (_ for _ in ()).throw(
             AssertionError("routine lookup should not rescan the tree")
@@ -309,5 +408,6 @@ def test_auto_discovery_is_bounded_and_large_arrays_are_described(tmp_path: Path
     record = store.get_run(handle.run_id)
     assert len(record.artifacts) == 200
     assert any("additional output files" in warning for warning in record.warnings)
+    store.save_run(handle.run_id)
     result = json.loads(handle.result_path.read_text(encoding="utf-8"))
     assert result["summary"]["large"]["$array"]["shape"] == [5000]

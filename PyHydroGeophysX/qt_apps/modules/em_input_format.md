@@ -6,6 +6,10 @@ geometry (loop radius, height, waveform, etc.) is set in the panel on the right,
 columns are read correctly. A header line is optional; a non-numeric first row is
 ignored.
 
+In the **Inversion** group, **Initial model ρ (Ω·m)** sets the homogeneous
+starting resistivity assigned to every layer. It controls only the optimizer's
+initial point; the recovered layers remain free to move to different values.
+
 ## TEMcompany / TEM2Go projects
 
 Set **Data format** to **TEMcompany / TEM2Go**, click **Load data…**, and select

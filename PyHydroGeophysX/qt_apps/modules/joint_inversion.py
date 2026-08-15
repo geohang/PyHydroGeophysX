@@ -52,6 +52,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     ReproduceBar,
     WizardNavigator,
     make_double_spinbox,
+    select_directory,
 )
 from PyHydroGeophysX.qt_apps.workers import WorkflowWorker
 from PyHydroGeophysX.workflows import (
@@ -1036,6 +1037,7 @@ class JointInversionModule(BaseModule):
 
     def _on_success(self, result: JointInversionResult) -> None:
         self._result = result
+        self._export_button.setEnabled(True)
         self._populate_results(result)
         self.report_result(result.summary())
         if hasattr(self.state, "register_geophysical_resource"):
@@ -1067,6 +1069,15 @@ class JointInversionModule(BaseModule):
         page = QWidget(); layout = QVBoxLayout(page)
         header = QHBoxLayout(); header.addWidget(QLabel("<h3>Step 6 · Joint inversion results</h3>"))
         header.addStretch(1)
+        self._export_button = QPushButton("Export models as CSV…")
+        self._export_button.setIcon(theme.icon("fa5s.file-csv"))
+        self._export_button.setToolTip(
+            "Write one table per method that carries its own coordinates, so the "
+            "models can be replotted without PyGIMLi or SimPEG."
+        )
+        self._export_button.setEnabled(False)
+        self._export_button.clicked.connect(self._export_models_csv)
+        header.addWidget(self._export_button)
         open_button = QPushButton("Open output folder"); open_button.clicked.connect(self._open_output)
         header.addWidget(open_button); layout.addLayout(header)
         self._result_tabs = QTabWidget(); layout.addWidget(self._result_tabs, stretch=1)
@@ -1284,6 +1295,116 @@ class JointInversionModule(BaseModule):
         summary = self._result.artifacts.get("summary")
         if summary:
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(summary).parent)))
+
+    # -- CSV export ----------------------------------------------------------
+    def export_actions(self):
+        if self._result is None:
+            return []
+        return [("Joint models (CSV)", self._export_models_csv)]
+
+    def _export_models_csv(self) -> None:
+        """Write each recovered model as a table that carries its own coordinates.
+
+        The three registered pairs solve on three different domains, so there is
+        no single table shape: ERT+SRT shares a PyGIMLi mesh, Gravity+Magnetics
+        a rectilinear voxel grid, and FDEM+TDEM a layered 1-D model.  Each gets
+        the table its geometry admits rather than a flattened cell index.
+        """
+        result = self._result
+        if result is None:
+            self.log("Run the joint inversion first.", "warn")
+            return
+        folder = select_directory(
+            self, "Export joint models to folder", self.state.output_dir or Path.cwd()
+        )
+        if not folder:
+            return
+        try:
+            out = io_utils.ensure_dir(folder)
+            written = self._write_joint_csv(result, out)
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Joint model export failed: {exc}", "error")
+            return
+        if not written:
+            self.log("This joint result carries no model array to tabulate.", "warn")
+            return
+        self.log(
+            f"Exported {len(written)} CSV file(s) to {out}: "
+            + ", ".join(Path(item).name for item in written),
+            "success",
+        )
+
+    def _write_joint_csv(self, result: JointInversionResult, out: Path) -> List[str]:
+        from PyHydroGeophysX.data_processing.model_csv import (
+            export_model_csv,
+            write_grid_model_csv,
+            write_layered_model_csv,
+        )
+
+        units = {"ERT": ("resistivity", "ohm.m"), "SRT": ("velocity", "m/s"),
+                 "Gravity": ("density_contrast", "g/cc"),
+                 "Magnetics": ("susceptibility", "SI")}
+        written: List[str] = []
+
+        if result.methods == ("ERT", "SRT"):
+            mesh = result.meta.get("mesh")
+            if mesh is None:
+                raise ValueError("The ERT+SRT result did not carry its mesh.")
+            for index, method in enumerate(result.methods):
+                values = np.asarray(result.models.get(method, []), dtype=float).ravel()
+                if values.size == 0:
+                    # The sequential strategy constrains ERT with an SRT-derived
+                    # interface and never forms an SRT cell model.
+                    continue
+                name, unit = units[method]
+                # The mesh geometry is identical for both methods, so it is
+                # written once beside the first table rather than duplicated.
+                paths = export_model_csv(
+                    out, mesh, values,
+                    value_name=name, units=unit,
+                    coverage=result.coverage.get(method),
+                    geometry=not written,
+                )
+                target = out / f"{method.lower()}_model_cells.csv"
+                Path(paths[0]).replace(target)
+                written.append(str(target))
+                written.extend(paths[1:])
+            interface = result.meta.get("interface_coords")
+            if interface is not None:
+                x_values, z_values = (np.asarray(item, dtype=float).ravel()
+                                      for item in interface)
+                written.append(str(io_utils.write_csv(
+                    out / "srt_interface.csv",
+                    list(zip(x_values.tolist(), z_values.tolist())),
+                    header=["x", "z"],
+                )))
+            return written
+
+        if result.methods == ("Gravity", "Magnetics"):
+            edges = [np.asarray(item, dtype=float) for item in result.meta.get("edges", ())]
+            if len(edges) != 3:
+                raise ValueError("The potential-field result did not carry its grid edges.")
+            for method in result.methods:
+                values = np.asarray(result.models.get(method, []), dtype=float)
+                if values.size == 0:
+                    continue
+                name, unit = units[method]
+                written.append(str(write_grid_model_csv(
+                    out / f"{method.lower()}_model_cells.csv", edges, values,
+                    value_name=name, units=unit,
+                )))
+            return written
+
+        model = result.models.get("resistivity")
+        if model is None:
+            return written
+        written.append(str(write_layered_model_csv(
+            out / "layered_model.csv",
+            result.meta.get("thicknesses", []), model,
+            value_name="resistivity", units="ohm.m",
+            positions=result.meta.get("positions"),
+        )))
+        return written
 
     # -- AQUAH --------------------------------------------------------------
     def agent_describe(self) -> Dict[str, Any]:
