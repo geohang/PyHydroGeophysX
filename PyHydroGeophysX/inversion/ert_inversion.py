@@ -653,6 +653,55 @@ def _adtlert_survey_supported(container) -> bool:
     )
 
 
+def _canonicalize_adtlert_polarity(container, *, log=_noop_log):
+    """Return an equivalent positive-geometric-factor survey for ADTLERT.
+
+    ADTLERT's fast normal-sensitivity path expects the receiver polarity that
+    gives a positive geometric factor.  A negative factor is physically valid,
+    so canonicalize only the ADTLERT survey copy by exchanging M and N for the
+    affected rows.  Apparent resistivity and errors keep their original order
+    and values; the caller's container is never modified.
+    """
+    n_data = int(container.size())
+    geometric_factors = np.asarray(container["k"], dtype=float).reshape(-1)
+    if geometric_factors.shape != (n_data,):
+        raise ValueError("ADTLERT requires one geometric factor per datum")
+
+    invalid = ~np.isfinite(geometric_factors) | (geometric_factors == 0.0)
+    if np.any(invalid):
+        count = int(np.count_nonzero(invalid))
+        raise ValueError(
+            "ADTLERT requires finite, non-zero geometric factors; "
+            f"found {count} invalid value(s)"
+        )
+
+    negative = geometric_factors < 0.0
+    if not np.any(negative):
+        return container
+
+    normalized = pg.DataContainerERT(container)
+    receiver_m = np.asarray(container["m"], dtype=np.int64).copy()
+    receiver_n = np.asarray(container["n"], dtype=np.int64).copy()
+    normalized_m = receiver_m.copy()
+    normalized_n = receiver_n.copy()
+    normalized_m[negative] = receiver_n[negative]
+    normalized_n[negative] = receiver_m[negative]
+    normalized["m"] = normalized_m
+    normalized["n"] = normalized_n
+
+    normalized_k = geometric_factors.copy()
+    normalized_k[negative] *= -1.0
+    normalized["k"] = normalized_k
+    normalized["r"] = np.asarray(container["rhoa"], dtype=float) / normalized_k
+
+    count = int(np.count_nonzero(negative))
+    log(
+        "  ADTLERT polarity normalization: swapped M/N for "
+        f"{count}/{n_data} negative-k measurements; rhoa and err unchanged"
+    )
+    return normalized
+
+
 def _build_adtlert_forward(container, mesh, *, log=_noop_log):
     """Build one shared ADTLERT forward context for single or windowed ERT."""
     _enable_adtlert_float64()
@@ -690,7 +739,8 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log):
     result_mesh = mesh.createMeshByCellIdx(pg.IVector(active_ids.tolist()))
     forward_mesh = mesh_to_adtlert(mesh)
     parameter_mesh = mesh_to_adtlert(result_mesh)
-    survey = survey_to_adtlert(container, dimension=2)
+    adtlert_container = _canonicalize_adtlert_polarity(container, log=log)
+    survey = survey_to_adtlert(adtlert_container, dimension=2)
     geometric_mode = (
         "analytic" if bool(forward_mesh.is_flat_surface) else "numerical"
     )
