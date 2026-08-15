@@ -26,6 +26,7 @@ from PyHydroGeophysX.inversion.ert_inversion import (  # noqa: E402
     _adtlert_cuda_available,
     _adtlert_forward_solver_backend,
     _adtlert_solver_name,
+    _canonicalize_adtlert_polarity,
     run_ert_manager_inversion,
 )
 from PyHydroGeophysX.inversion.windowed import (  # noqa: E402
@@ -36,6 +37,61 @@ from PyHydroGeophysX.inversion.windowed import (  # noqa: E402
 from PyHydroGeophysX.inversion.time_lapse import (  # noqa: E402
     run_timelapse_ert,
 )
+
+
+def _polarity_test_container(k_values=(-10.0, 20.0)):
+    data = ert_inversion.pg.DataContainerERT()
+    for x in range(5):
+        data.createSensor(ert_inversion.pg.Pos(float(x), 0.0))
+    data.resize(2)
+    data["a"] = [0, 0]
+    data["b"] = [3, 4]
+    data["m"] = [1, 1]
+    data["n"] = [2, 2]
+    data["k"] = k_values
+    data["rhoa"] = [100.0, 200.0]
+    data["r"] = [-10.0, 10.0]
+    data["err"] = [0.03, 0.04]
+    return data
+
+
+def test_adtlert_polarity_normalization_is_copy_on_write() -> None:
+    data = _polarity_test_container()
+    original_m = np.asarray(data["m"], dtype=int).copy()
+    original_n = np.asarray(data["n"], dtype=int).copy()
+    messages = []
+
+    normalized = _canonicalize_adtlert_polarity(data, log=messages.append)
+
+    assert normalized is not data
+    np.testing.assert_array_equal(data["m"], original_m)
+    np.testing.assert_array_equal(data["n"], original_n)
+    np.testing.assert_allclose(data["k"], [-10.0, 20.0])
+    np.testing.assert_allclose(data["r"], [-10.0, 10.0])
+    np.testing.assert_array_equal(normalized["m"], [2, 1])
+    np.testing.assert_array_equal(normalized["n"], [1, 2])
+    np.testing.assert_allclose(normalized["k"], [10.0, 20.0])
+    np.testing.assert_allclose(normalized["r"], [10.0, 10.0])
+    np.testing.assert_allclose(normalized["rhoa"], data["rhoa"])
+    np.testing.assert_allclose(normalized["err"], data["err"])
+    assert "1/2 negative-k measurements" in messages[0]
+
+
+def test_adtlert_polarity_normalization_leaves_positive_survey_untouched(
+) -> None:
+    data = _polarity_test_container(k_values=(10.0, 20.0))
+
+    normalized = _canonicalize_adtlert_polarity(data)
+
+    assert normalized is data
+
+
+@pytest.mark.parametrize("invalid_k", [0.0, np.nan, np.inf])
+def test_adtlert_polarity_normalization_rejects_invalid_k(invalid_k) -> None:
+    data = _polarity_test_container(k_values=(invalid_k, 20.0))
+
+    with pytest.raises(ValueError, match="finite, non-zero geometric factors"):
+        _canonicalize_adtlert_polarity(data)
 
 
 def test_adtlert_window_events_are_forwarded_as_readable_progress() -> None:
