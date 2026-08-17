@@ -19,8 +19,10 @@ from PyHydroGeophysX.data_processing.em1d import (
     is_ttem_source,
     load_line_geometry,
     load_sounding,
+    load_sounding_container,
     load_temcompany_sounding,
     load_ttem_sounding,
+    save_sounding_container,
 )
 from PyHydroGeophysX.forward.em1d import (
     DEFAULT_FDEM,
@@ -409,6 +411,65 @@ def _sounding_data_count(data: Dict[str, Any], method: str) -> int:
     return int(np.asarray(data.get("times", [])).size)
 
 
+#: Half-spaces the automatic starting model is chosen from, in ohm-m. Twelve
+#: values over three and a half decades put the grid about a third of a decade
+#: apart, which is finer than the starting model needs to be: the inversion
+#: moves from wherever it starts, and what matters is not landing a decade away.
+_STARTING_HALF_SPACES = np.geomspace(3.0, 5000.0, 12)
+
+#: Soundings the search evaluates. The starting model is one number for the
+#: whole line, so it does not need every station to choose it, and a dozen
+#: spread along the survey rank the candidates the same way the full set does.
+_STARTING_SAMPLE = 12
+
+
+def _best_starting_resistivity(blocks, n_layers: int, workers: int, *,
+                               default: float, log: LogFn = _noop) -> float:
+    """Pick the half-space whose forward response best matches the data.
+
+    A starting model far from the ground costs more than iterations. The
+    Gauss-Newton step is built from a linearization about the current model, and
+    from a decade and a half away that linearization describes a different
+    problem; the line search then shortens the step, the run spends its budget
+    crossing the gap, and where it stops depends on where it started. On one
+    ground survey the project's own 40 ohm-m default begins at a chi-squared of
+    3.1e6 while the best half-space begins at 164.
+
+    Cheap because it runs after the blocks are built: the first candidate warms
+    the forward operators the inversion is about to use anyway, and every
+    candidate after it is one forward per sampled sounding. Returns ``default``
+    if nothing can be evaluated, so a forward that will not run here fails in
+    the inversion rather than in the search.
+    """
+    from PyHydroGeophysX.inversion.em1d_lci import (
+        _forward_line, _misfit, _worker_pool, resolve_worker_count,
+    )
+
+    if not blocks:
+        return default
+    step = max(1, len(blocks) // _STARTING_SAMPLE)
+    sampled = list(blocks)[::step][:_STARTING_SAMPLE]
+    n_data = int(sum(block.dobs.size for block in sampled))
+    if n_data <= 0:
+        return default
+    best_rho, best_chi2 = float(default), float("inf")
+    try:
+        with _worker_pool(resolve_worker_count(len(sampled), workers)) as pool:
+            for rho in _STARTING_HALF_SPACES:
+                x = np.full(len(sampled) * n_layers, math.log10(float(rho)))
+                residual, _ = _misfit(sampled, _forward_line(sampled, x, n_layers, pool))
+                chi2 = float(residual @ residual) / n_data
+                if np.isfinite(chi2) and chi2 < best_chi2:
+                    best_rho, best_chi2 = float(rho), chi2
+    except Exception as exc:  # noqa: BLE001 - the inversion is the thing that must run
+        log(f"  Starting-model search skipped ({exc}); using {default:g} ohm-m.")
+        return default
+    log(f"  Starting model: {best_rho:.0f} ohm-m, chosen from "
+        f"{_STARTING_HALF_SPACES.size} half-spaces on {len(sampled)} soundings "
+        f"(initial chi2 {best_chi2:.3g}).")
+    return best_rho
+
+
 def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any],
                 *, spacing: float = 50.0, positions: Optional[np.ndarray] = None,
                 heights: Optional[np.ndarray] = None, max_soundings: int = 12,
@@ -711,11 +772,16 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
             log(f"Simultaneous LCI: {len(kept)} soundings, lateral="
                 f"{lateral:g}, vertical={float(inv.get('smoothness', 0.3)):g}")
             warm = (surface_models[kept] if use_warm_models else None)
+            start_resistivity = float(inv.get("starting_resistivity", 100.0))
+            if warm is None and bool(inv.get("auto_starting_model", True)):
+                start_resistivity = _best_starting_resistivity(
+                    sounding_blocks, n_layers, workers,
+                    default=start_resistivity, log=log)
             lci_kwargs = dict(
                 smoothness=float(inv.get("smoothness", 0.3)),
                 lateral_smoothness=lateral * lateral_weight_scale,
                 reference_distance=reference_distance,
-                starting_resistivity=float(inv.get("starting_resistivity", 100.0)),
+                starting_resistivity=start_resistivity,
                 max_iterations=int(inv.get("max_iterations", 20)),
                 convergence_tolerance=float(inv.get("convergence_tolerance", 0.02)),
                 min_iterations=int(inv.get("min_iterations", 2)),
@@ -1113,6 +1179,8 @@ __all__ = [
     "load_temcompany_sounding",
     "load_ttem_sounding",
     "load_sounding",
+    "load_sounding_container",
+    "save_sounding_container",
     "load_line_geometry",
     "fdem_forward",
     "tdem_forward",

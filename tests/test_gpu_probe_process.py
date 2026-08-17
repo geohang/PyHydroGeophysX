@@ -102,6 +102,14 @@ def test_adtlert_probe_cli_serializes_native_import_error(monkeypatch, capsys) -
 
 
 def test_ert_gpu_preflight_no_longer_imports_torch_in_gui_module() -> None:
+    try:
+        # The page imports pyqtgraph as well as PySide6, and both are absent
+        # from a run without the desktop extras.
+        import PySide6.QtGui  # noqa: F401
+        import pyqtgraph  # noqa: F401
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        pytest.skip(f"Qt stack unavailable: {exc}")
+
     from PyHydroGeophysX.qt_apps.modules.ert_processing import ERTProcessingModule
 
     assert not hasattr(ERTProcessingModule, "_probe_adtlert_runtime")

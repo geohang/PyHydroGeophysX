@@ -43,6 +43,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from PyHydroGeophysX.data_processing import run_inputs
 from PyHydroGeophysX.data_processing import ert_io as ert_load
 from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
@@ -2056,12 +2057,24 @@ class ERTProcessingModule(BaseModule):
         # them keeps a stale model out of the viewer if the run fails.
         self._tl_models = None
         self._tl_coverage = None
-        persisted_files = []
+        # One compressed bundle rather than a copy of every step. A time-lapse
+        # run is as many raw files as it has time steps, and BERT data files are
+        # ASCII, so this is where the run directory grew fastest.
         try:
-            for index, source in enumerate(self._tl_files):
-                target = run.inputs_dir / f"step_{index:04d}{Path(source).suffix}"
-                shutil.copy2(source, target)
-                persisted_files.append(target)
+            stored = run_inputs.save_file_bundle(
+                run.inputs_dir / "ert_timesteps",
+                {
+                    f"step_{index:04d}{Path(source).suffix}": Path(source)
+                    for index, source in enumerate(self._tl_files)
+                },
+                kind="ert_timelapse_observations",
+                meta={
+                    "measurement_times": [
+                        float(times[index]) if times is not None else float(index)
+                        for index in range(len(self._tl_files))
+                    ]
+                },
+            )
         except Exception as exc:  # noqa: BLE001
             self.fail_persisted_run(str(exc), "ert.timelapse_inversion")
             self.log(f"Could not persist time-lapse inputs: {exc}", "error")
@@ -2069,21 +2082,13 @@ class ERTProcessingModule(BaseModule):
         spec = WorkflowSpec(
             workflow_id="ert.timelapse_inversion",
             inputs={
-                "data_files": [
-                    ArtifactRef.from_path(
-                        Path(path),
-                        artifact_id=f"ert-timestep:{index}",
-                        kind="ert_observations",
-                        base_dir=run.run_dir,
-                        metadata={
-                            "sequence_index": index,
-                            "measurement_time": (
-                                float(times[index]) if times is not None else index
-                            ),
-                        },
-                    )
-                    for index, path in enumerate(persisted_files)
-                ],
+                "data_bundle": ArtifactRef.from_path(
+                    stored,
+                    artifact_id="ert-timesteps",
+                    kind="ert_timelapse_observations",
+                    base_dir=run.run_dir,
+                    metadata={"step_count": len(self._tl_files)},
+                ),
                 "measurement_times": list(times or range(len(self._tl_files))),
             },
             parameters=params,
@@ -2312,7 +2317,6 @@ class ERTProcessingModule(BaseModule):
             folder = str(selected) if selected else ""
             if not folder:
                 return None
-        import shutil
         src_root = Path(self._tl_result.get("output_dir") or "")
         dest = io_utils.ensure_dir(Path(folder))
         copied = 0

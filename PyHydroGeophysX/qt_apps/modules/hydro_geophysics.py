@@ -12,7 +12,6 @@ pygimli forward run with a config-export fallback).
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -40,6 +39,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from PyHydroGeophysX.data_processing import run_inputs
 from PyHydroGeophysX.Hydro_modular import hydro_to_geophysics as hydro_pipeline
 from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
@@ -1172,30 +1172,37 @@ class HydroGeophysicsModule(BaseModule):
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not prepare Project run: {exc}", "error")
             return
-        hydro_files: Dict[str, ArtifactRef] = {}
+        # One compressed bundle rather than a copy of each array: these are read
+        # back only as a set, and the run is what has to stay small.
+        inputs: Dict[str, Any] = {"context": {}}
         if data_dir is not None:
-            for filename in ("Watercontent.npy", "Porosity.npy", "top.npy", "bot.npy"):
-                path = data_dir / filename
-                if path.is_file():
-                    stored = run.inputs_dir / filename
-                    try:
-                        shutil.copy2(path, stored)
-                    except OSError as exc:
-                        self.fail_persisted_run(str(exc))
-                        self.log(f"Could not persist {filename}: {exc}", "error")
-                        return
-                    hydro_files[filename] = ArtifactRef.from_path(
-                        stored,
-                        artifact_id=f"hydro-input:{filename}",
-                        kind="hydrology_array",
-                        base_dir=run.run_dir,
+            present = {
+                filename: data_dir / filename
+                for filename in ("Watercontent.npy", "Porosity.npy", "top.npy", "bot.npy")
+                if (data_dir / filename).is_file()
+            }
+            if present:
+                try:
+                    stored = run_inputs.save_file_bundle(
+                        run.inputs_dir / "hydro_inputs",
+                        present,
+                        kind="hydrology_arrays",
+                        meta={"source_dir": str(data_dir)},
                     )
+                except OSError as exc:
+                    self.fail_persisted_run(str(exc))
+                    self.log(f"Could not persist the hydrology arrays: {exc}", "error")
+                    return
+                inputs["hydro_bundle"] = ArtifactRef.from_path(
+                    stored,
+                    artifact_id="hydro-input:bundle",
+                    kind="hydrology_arrays",
+                    base_dir=run.run_dir,
+                    metadata={"files": sorted(present)},
+                )
         spec = WorkflowSpec(
             workflow_id="hydro_geophysics.forward",
-            inputs={
-                "context": {},
-                "hydro_files": hydro_files,
-            },
+            inputs=inputs,
             parameters={
                 **params,
                 "methods": methods,

@@ -10,10 +10,15 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from PyHydroGeophysX.data_processing import table_io
+from PyHydroGeophysX.data_processing import run_inputs, table_io
 from PyHydroGeophysX.data_processing.ttem import is_ttem_source, load_ttem_sounding
 
 TEMCOMPANY_MOMENTS = ("LM+HM", "HM", "LM")
+
+#: What :func:`save_sounding_container` writes and :func:`load_sounding` reads
+#: back, so a recorded run carries the soundings it imported rather than the
+#: acquisition folder they were parsed out of.
+SOUNDING_CONTAINER_KIND = "em_soundings"
 
 
 def is_temcompany_source(path: str) -> bool:
@@ -757,6 +762,8 @@ def load_sounding(
     ``use_flags`` applies only to TEMcompany project databases; see
     :func:`load_temcompany_sounding`.
     """
+    if run_inputs.is_container(path):
+        return load_sounding_container(path, method, sounding=sounding)
     if is_ttem_source(path):
         if method != "TDEM":
             raise ValueError("TEMcompany tTEM raw data are time-domain EM data; select TDEM.")
@@ -788,6 +795,74 @@ def load_sounding(
     s = max(0, min(int(sounding), n_soundings - 1))
     return {"times": x, "response": table[:, 1 + s],
             "n_soundings": n_soundings, "sounding": s}
+
+
+def save_sounding_container(
+    destination: str | Path, path: str, method: str, *, moment: str = "HM",
+    use_flags: bool = True, max_relative_std: Optional[float] = None,
+    ttem_loop_area: Optional[float] = None, ttem_gex_path: Optional[str] = None,
+    ttem_tfi_path: Optional[str] = None, progress=None,
+) -> Path:
+    """Materialize every sounding in ``path`` into one compressed container.
+
+    A recorded run used to keep its input by copying the acquisition folder,
+    which for a TEMcompany project is hundreds of megabytes per inversion. The
+    soundings themselves are a few hundred kilobytes, and they are the only part
+    the inversion reads, so this parses the survey once and stores the result.
+
+    The load settings are baked in, because they decide what the arrays contain:
+    a container written for ``LM+HM`` holds joint moments, and re-reading it
+    under another moment would silently return the wrong gates. They travel in
+    the manifest so a reader can report what it was given.
+    """
+    settings = dict(
+        moment=moment, use_flags=use_flags, max_relative_std=max_relative_std,
+        ttem_loop_area=ttem_loop_area, ttem_gex_path=ttem_gex_path,
+        ttem_tfi_path=ttem_tfi_path,
+    )
+    head = load_sounding(path, method, sounding=0, **settings)
+    total = max(1, int(head.get("n_soundings", 1)))
+    soundings: List[Dict[str, Any]] = [head]
+    for index in range(1, total):
+        soundings.append(load_sounding(path, method, sounding=index, **settings))
+        if progress is not None and index % 100 == 0:
+            progress(f"  materialized {index + 1}/{total} soundings")
+    return run_inputs.save_sequence_container(
+        destination,
+        soundings,
+        kind=SOUNDING_CONTAINER_KIND,
+        meta={
+            "method": str(method).upper(),
+            "n_soundings": total,
+            "source_name": Path(path).name,
+            "source_format": str(head.get("source_format", "")),
+            **{key: value for key, value in settings.items() if value is not None},
+        },
+    )
+
+
+def load_sounding_container(
+    path: str | Path, method: str, sounding: int = 0
+) -> Dict[str, Any]:
+    """Return one sounding from a container written by :func:`save_sounding_container`.
+
+    The moment and flag settings are not arguments here: they were applied when
+    the container was written, and the stored arrays are what they produced.
+    """
+    manifest = run_inputs.read_manifest(path)
+    stored_method = str(manifest.get("meta", {}).get("method", "")).upper()
+    if stored_method and str(method).upper() != stored_method:
+        raise ValueError(
+            f"{Path(path).name} holds {stored_method} soundings; {str(method).upper()} "
+            "was requested. Re-import the survey to invert it as the other method."
+        )
+    if run_inputs.sequence_length(path) < 1:
+        raise ValueError(f"{Path(path).name} holds no soundings.")
+    return dict(
+        run_inputs.load_sequence_item(
+            path, int(sounding), kind=SOUNDING_CONTAINER_KIND
+        )
+    )
 
 
 def load_line_geometry(path: str) -> Dict[str, Any]:
@@ -839,11 +914,14 @@ def load_line_geometry(path: str) -> Dict[str, Any]:
             "n": int(positions.size), "has_heights": heights is not None, "has_xy": has_xy}
 
 __all__ = [
+    "SOUNDING_CONTAINER_KIND",
     "TEMCOMPANY_MOMENTS",
     "is_temcompany_source",
     "is_ttem_source",
     "load_temcompany_sounding",
     "load_ttem_sounding",
     "load_sounding",
+    "load_sounding_container",
     "load_line_geometry",
+    "save_sounding_container",
 ]

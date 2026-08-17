@@ -559,6 +559,13 @@ _ADTLERT_SOLVERS: Dict[str, str] = {
     "gpu_cgls": "gpu_cgls",
 }
 
+# Workbench's plateau tolerance measures relative chi-squared improvement.
+# ADTLERT's step_tolerance instead measures the RMS update in log-model space;
+# treating the former as the latter made the default 0.5% stop ADTLERT after a
+# single small model step. Keep ADTLERT's own conservative numerical threshold
+# and let _fit_to_plateau apply the chi-squared criterion between runs.
+_ADTLERT_STEP_TOLERANCE = 1.0e-4
+
 def _adtlert_solver_name(method: str, *, prefer_gpu: bool = False) -> str:
     if prefer_gpu and str(method).lower() == "cgls":
         try:
@@ -792,7 +799,8 @@ class _ADTLertEngine:
             "  ADTLERT paper configuration: "
             "normal_sensitivity=True, "
             "include_robin_boundary_derivative=False, "
-            f"linearized_solver={self._solver}"
+            f"linearized_solver={self._solver}, "
+            f"step_tolerance={_ADTLERT_STEP_TOLERANCE:g}"
         )
 
     def reference_model(self):
@@ -822,7 +830,9 @@ class _ADTLertEngine:
             spatial_regularization="first_order",
             model_bounds=self._model_constraints,
             target_chi2=adtlert_target,
-            step_tolerance=float(plateau_tolerance),
+            # ``plateau_tolerance`` is a chi-squared improvement threshold in
+            # our public API, not ADTLERT's log-model update norm.
+            step_tolerance=_ADTLERT_STEP_TOLERANCE,
             linearized_solver=self._solver,
             normal_sensitivity=True,
             include_robin_boundary_derivative=False,

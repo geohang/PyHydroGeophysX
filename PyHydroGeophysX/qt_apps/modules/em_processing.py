@@ -11,7 +11,6 @@ forward operators). Results export to npy / csv.
 from __future__ import annotations
 
 from pathlib import Path
-import shutil
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -113,6 +112,7 @@ class EMProcessingModule(BaseModule):
         self._last_section: Optional[Dict[str, Any]] = None
         self._inv_worker: Optional[WorkflowWorker] = None
         self._inv_busy: Optional[BusyStateController] = None
+        self._project_start_res = 100.0   # fallback when auto is off
         self._line_worker: Optional[TaskWorker] = None
         self._workflow_recipe_path = ""
         self._geom_positions: Optional[np.ndarray] = None
@@ -380,13 +380,25 @@ class EMProcessingModule(BaseModule):
         self._max_thick = self._dspin(d["max_thickness"], 1.0, 500.0, 1.0, 2)
         # Two ends of one setting: the layer grid is geometric between them.
         self._thick_row = merged_row(self._min_thick, "to", self._max_thick, "m")
-        self._start_res = self._dspin(
-            float(d.get("starting_resistivity", 100.0)), 1.0, 1e5, 10.0, 1)
+        # 0 is "auto": the search below picks the half-space. One control rather
+        # than a number plus a checkbox, because the two can never both apply.
+        self._start_res = self._dspin(0.0, 0.0, 1e5, 10.0, 1)
+        self._start_res.setSpecialValueText("auto")
         self._start_res.setToolTip(
             "Uniform resistivity assigned to every layer at the start of the "
-            "inversion. It sets the optimizer's initial model but does not constrain "
-            "the final resistivity. For a line inversion this seeds the first solve; "
-            "later refinement passes may warm-start from the preceding result.")
+            "inversion. It sets the optimizer's initial model and does not "
+            "constrain the final resistivity.\n\n"
+            "auto tries a set of uniform half-spaces on a sample of the "
+            "soundings and starts from the one whose forward response comes "
+            "closest to the data. Where a run starts decides which minimum it "
+            "settles in: the Gauss-Newton step is built from a linearization "
+            "about the current model, so a start a decade away from the ground "
+            "describes a different problem. On one ground survey the project's "
+            "own 40 Ω·m default reached χ² 387 where auto reached 8.7, and the "
+            "40 Ω·m run drove a tenth of the section onto the 1 Ω·m bound.\n\n"
+            "A value uses that resistivity, which is what a project file "
+            "carries. For a line inversion this seeds the first solve; later "
+            "refinement passes warm-start from the preceding result.")
         self._smooth = self._dspin(d["smoothness"], 0.0, 10.0, 0.1, 2)
         self._smooth.setToolTip(
             "Vertical smoothness down each sounding's layer stack. Higher gives a "
@@ -800,7 +812,13 @@ class EMProcessingModule(BaseModule):
             "rel_error": self._rel_err.value(),
             "max_iterations": self._max_iter.value(),
             "data_scale": self._data_scale.value(),
-            "starting_resistivity": float(self._start_res.value()),
+            # 0 in the field is "auto": the workflow picks the half-space from
+            # the data. The fallback below is only what a disabled auto would
+            # have started from, and is ignored while auto is on.
+            "auto_starting_model": float(self._start_res.value()) <= 0.0,
+            "starting_resistivity": (float(self._start_res.value())
+                                     if self._start_res.value() > 0.0
+                                     else float(self._project_start_res)),
         }
         project_layers = self._project_layer_thicknesses
         if (
@@ -1064,8 +1082,11 @@ class EMProcessingModule(BaseModule):
                 inversion.get("max_thickness", self._max_thick.value())))
             self._smooth.setValue(float(
                 inversion.get("smoothness", self._smooth.value())))
-            self._start_res.setValue(float(
-                inversion.get("starting_resistivity", self._start_res.value())))
+            # Kept as the fallback for when auto is switched off, rather than
+            # written into the field: auto reads the ground from the data, and a
+            # project's stored value is what auto exists to improve on.
+            self._project_start_res = float(
+                inversion.get("starting_resistivity", self._project_start_res))
             self._lateral_smooth.setValue(float(
                 inversion.get("lateral_smoothness", self._lateral_smooth.value())))
             self._project_layer_thicknesses = np.asarray(
@@ -1262,7 +1283,7 @@ class EMProcessingModule(BaseModule):
             self._reset_inv_button()
             return
         try:
-            source = self._persist_source(run.inputs_dir)
+            source = self._persist_source(run.inputs_dir, method)
         except OSError as exc:
             self.fail_persisted_run(str(exc), "em.inversion")
             self._on_inversion_failed(f"Could not persist EM input: {exc}", False)
@@ -1323,7 +1344,7 @@ class EMProcessingModule(BaseModule):
             self._reset_inv_button()
             return
         try:
-            source = self._persist_source(run.inputs_dir)
+            source = self._persist_source(run.inputs_dir, method)
         except OSError as exc:
             self.fail_persisted_run(str(exc), "em.line_inversion")
             self._on_line_failed(f"Could not persist EM input: {exc}")
@@ -1364,23 +1385,43 @@ class EMProcessingModule(BaseModule):
         self._line_worker = self.register_worker(worker)
         worker.start()
 
-    def _persist_source(self, inputs_dir: Path) -> Path:
-        """Copy the selected file/folder so a recorded EM run is self-contained."""
+    def _persist_source(self, inputs_dir: Path, method: str) -> Path:
+        """Store the imported soundings so a recorded EM run is self-contained.
+
+        This used to copy whatever the user selected, which made every inversion
+        cost another copy of the acquisition: a TEMcompany project folder is
+        hundreds of megabytes, and a Project opened on the survey folder itself
+        made ``copytree`` walk into the duplicate it was still writing. The
+        soundings are the only part the inversion reads and they compress to a
+        fraction of that, so the run keeps those instead.
+        """
         if self._source_path is None:
             raise FileNotFoundError("No persisted EM source is available.")
         source = self._source_path
-        if self._data and self._data.get("ttem"):
-            # Raw tTEM surveys are commonly hundreds of MB.  ArtifactRef accepts
-            # an absolute directory, so keep one external reference rather than
-            # duplicating the acquisition for every single/line inversion.
-            self.log("Using the original tTEM raw folder without copying it into the run.", "info")
+        geom = self._collect_geom()
+        try:
+            return em_pipeline.save_sounding_container(
+                inputs_dir / "em_soundings",
+                str(source),
+                method,
+                moment=str(self._tem_moment.currentText()),
+                use_flags=bool(geom.get("use_project_flags", True)),
+                max_relative_std=geom.get("tail_max_relative_std"),
+                ttem_loop_area=geom.get("loop_area"),
+                ttem_gex_path=geom.get("ttem_gex_path"),
+                ttem_tfi_path=geom.get("ttem_tfi_path"),
+                progress=lambda message: self.log(message, "info"),
+            )
+        except Exception as exc:  # noqa: BLE001 - a run must not die on bookkeeping
+            # Falling back to a reference keeps the run going and keeps the
+            # recipe resolvable; it only costs the self-contained property,
+            # which is what an unreadable survey would have cost anyway.
+            self.log(
+                f"Could not store the imported soundings ({exc}); the run "
+                "references the original data where it is.",
+                "warn",
+            )
             return source
-        target = inputs_dir / source.name
-        if source.is_dir():
-            shutil.copytree(source, target)
-        else:
-            shutil.copy2(source, target)
-        return target
 
     def _reset_inv_button(self) -> None:
         if self._inv_busy is not None:
@@ -1751,6 +1792,8 @@ class EMProcessingModule(BaseModule):
                           "the model cannot explain and re-solve), "
                           "outlier_threshold (sigma), outlier_passes, "
                           "min_data_fraction (0-1 floor on the gates kept). "
+                          "Start: auto_starting_model (bool; pick the starting half-space "
+                          "from the data before inverting). "
                           "Speed: parallel_workers (threads for the per-sounding "
                           "forward and Jacobian; 0 sizes it from the machine, and "
                           "the result is identical either way).")},
@@ -1905,6 +1948,8 @@ class EMProcessingModule(BaseModule):
             "max_lambda_trials": lambda v: self._lam_trials.setValue(int(v)),
             "parallel_workers": lambda v: self._parallel_workers_spin.setValue(
                 max(0, min(int(v), self._parallel_workers_spin.maximum()))),
+            "auto_starting_model": lambda v: (self._start_res.setValue(0.0)
+                                              if bool(v) else None),
             "reject_outliers": lambda v: self._reject.setChecked(bool(v)),
             "outlier_threshold": lambda v: self._reject_sigma.setValue(float(v)),
             "outlier_passes": lambda v: self._reject_passes.setValue(int(v)),

@@ -2,14 +2,48 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import asdict, is_dataclass
 import json
 from pathlib import Path
-from typing import Any, Dict, Mapping
+import tempfile
+from typing import Any, Dict, Iterator, Mapping, Optional
 
 import numpy as np
 
+from PyHydroGeophysX.data_processing import run_inputs
+
 from .models import ArtifactRef, RunContext, WorkflowRunResult, WorkflowSpec
+
+
+@contextmanager
+def _input_directory(
+    bundle: Optional[str], fallback: Mapping[str, str]
+) -> Iterator[Optional[str]]:
+    """Yield a directory holding the run's inputs under their original names.
+
+    A run stores these inputs as one compressed bundle rather than as the loose
+    files it used to copy, because a time-lapse sequence or a hydrology array
+    set is several files that only ever get read together. The readers below are
+    PyGIMLi's loaders and ``np.load``, which want a real path, so the bundle is
+    expanded for the length of the run and thrown away afterwards; only the
+    compressed copy is what the Project keeps.
+
+    ``fallback`` is the older ``{name: path}`` mapping. Runs recorded before the
+    bundle existed still carry it, and their copied files are already a
+    directory, so those are used where they are.
+    """
+    if bundle:
+        with tempfile.TemporaryDirectory(prefix="phgx_inputs_") as scratch:
+            yield str(run_inputs.expand_file_bundle(bundle, scratch))
+        return
+    if not fallback:
+        yield None
+        return
+    parents = {str(Path(path).parent) for path in fallback.values()}
+    if len(parents) != 1:
+        raise ValueError("Input artifacts must share one directory.")
+    yield parents.pop()
 
 
 def _materialize(value: Any, context: RunContext) -> Any:
@@ -117,20 +151,19 @@ def run_hydro_geophysics(spec: WorkflowSpec, context: RunContext) -> WorkflowRun
     parameters = dict(_materialize(spec.parameters, context))
     parameters["seed"] = int(spec.seed)
     parameters["output_dir"] = str(context.output_dir)
-    hydro_files = dict(inputs.get("hydro_files") or {})
-    if hydro_files:
-        parents = {str(Path(path).parent) for path in hydro_files.values()}
-        if len(parents) != 1:
-            raise ValueError("Hydrology input artifacts must share one directory.")
-        parameters["hydro_data_dir"] = parents.pop()
     domain_context = dict(inputs.get("context") or inputs)
     domain_context.setdefault("output_dir", str(context.output_dir))
     methods = list(parameters.pop("methods", inputs.get("methods", [])))
     point1 = parameters.pop("point1", inputs.get("point1"))
     point2 = parameters.pop("point2", inputs.get("point2"))
-    result = run_hydro_forward(
-        domain_context, parameters, methods, point1, point2, log=context.progress
-    )
+    with _input_directory(
+        inputs.get("hydro_bundle"), dict(inputs.get("hydro_files") or {})
+    ) as data_dir:
+        if data_dir:
+            parameters["hydro_data_dir"] = data_dir
+        result = run_hydro_forward(
+            domain_context, parameters, methods, point1, point2, log=context.progress
+        )
     return _legacy_result(spec, context, result)
 
 
@@ -141,17 +174,15 @@ def run_geo_hydrology(spec: WorkflowSpec, context: RunContext) -> WorkflowRunRes
     parameters = dict(_materialize(spec.parameters, context))
     parameters["seed"] = int(spec.seed)
     parameters["output_dir"] = str(context.output_dir)
-    model_files = dict(inputs.get("model_files") or {})
-    if model_files:
-        parents = {str(Path(path).parent) for path in model_files.values()}
-        if len(parents) != 1:
-            raise ValueError("ERT model artifacts must share one directory.")
-        parameters["model_data_dir"] = parents.pop()
     domain_context = dict(inputs.get("context") or inputs)
     domain_context.setdefault("output_dir", str(context.output_dir))
-    return _legacy_result(
-        spec, context, run_ert_to_wc(domain_context, parameters, log=context.progress)
-    )
+    with _input_directory(
+        inputs.get("model_bundle"), dict(inputs.get("model_files") or {})
+    ) as data_dir:
+        if data_dir:
+            parameters["model_data_dir"] = data_dir
+        result = run_ert_to_wc(domain_context, parameters, log=context.progress)
+    return _legacy_result(spec, context, result)
 
 
 def run_seismic3d(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
@@ -160,12 +191,27 @@ def run_seismic3d(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
     inputs = _materialize(spec.inputs, context)
     parameters = dict(_materialize(spec.parameters, context))
     parameters["output_dir"] = str(context.output_dir)
-    parameters["lines"] = list(inputs.get("lines") or [])
+    lines = list(inputs.get("lines") or [])
     domain_context = dict(inputs.get("context") or inputs)
     domain_context.setdefault("output_dir", str(context.output_dir))
-    return _legacy_result(
-        spec, context, build_3d_model(domain_context, parameters, log=context.progress)
-    )
+    with _input_directory(inputs.get("line_bundle"), {}) as scratch:
+        if scratch:
+            # The page stored bundle member names in place of the paths, so
+            # point each line back at the file the bundle just wrote.
+            lines = [
+                {
+                    **line,
+                    **{
+                        field: str(Path(scratch) / str(line[field]))
+                        for field in ("mesh", "velocity")
+                        if field in line
+                    },
+                }
+                for line in lines
+            ]
+        parameters["lines"] = lines
+        result = build_3d_model(domain_context, parameters, log=context.progress)
+    return _legacy_result(spec, context, result)
 
 
 def run_mesh3d(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
@@ -204,15 +250,22 @@ def run_ert_timelapse(spec: WorkflowSpec, context: RunContext) -> WorkflowRunRes
     from PyHydroGeophysX.inversion.time_lapse import run_timelapse_ert
 
     inputs = _materialize(spec.inputs, context)
-    files = list(inputs.get("data_files") or [])
-    times = list(inputs.get("measurement_times") or range(len(files)))
-    result = run_timelapse_ert(
-        files,
-        times,
-        dict(_materialize(spec.parameters, context)),
-        str(context.output_dir),
-        log=context.progress,
-    )
+    bundle = inputs.get("data_bundle")
+    parameters = dict(_materialize(spec.parameters, context))
+    with _input_directory(bundle, {}) as scratch:
+        if scratch:
+            # Names were written in sequence order, and the order is the whole
+            # point of a time-lapse: step n is what step n-1 is compared to.
+            files = [
+                str(Path(scratch) / name)
+                for name in run_inputs.bundle_file_names(bundle)
+            ]
+        else:
+            files = list(inputs.get("data_files") or [])
+        times = list(inputs.get("measurement_times") or range(len(files)))
+        result = run_timelapse_ert(
+            files, times, parameters, str(context.output_dir), log=context.progress,
+        )
     return _legacy_result(spec, context, result)
 
 

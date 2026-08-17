@@ -18,6 +18,21 @@ from PyHydroGeophysX.workflows.registry import (
 )
 
 
+def _require_qt():
+    """Skip the two tests that reach the Qt pages when Qt is absent.
+
+    The registry itself is pure Python and always tested. The pages import
+    PySide6 and pyqtgraph at module scope. Not importorskip: Qt fails with a
+    plain ImportError on a machine that has PySide6 but not the GL libraries it
+    links against, and that skips only on ModuleNotFoundError.
+    """
+    try:
+        import PySide6.QtGui  # noqa: F401
+        import pyqtgraph  # noqa: F401
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        pytest.skip(f"Qt stack unavailable: {exc}")
+
+
 @pytest.mark.parametrize("descriptor", list(MODULE_DESCRIPTORS.values()),
                          ids=lambda item: item.navigation_key)
 def test_every_spelling_of_a_module_resolves_to_the_same_descriptor(descriptor):
@@ -59,6 +74,8 @@ def test_no_two_modules_claim_the_same_spelling():
 
 def test_navigator_keys_match_the_registry():
     """``MODULE_SPECS`` drives the navigator; drift there breaks navigation."""
+    _require_qt()
+
     from PyHydroGeophysX.qt_apps.modules import MODULE_SPECS
 
     for key in MODULE_DESCRIPTORS:
@@ -88,7 +105,8 @@ def test_each_page_publishes_under_its_registered_result_key(
     ``Export Module Result`` came to report "no result" on exactly the four
     modules that had one.
     """
-    pytest.importorskip("PySide6.QtGui")
+    _require_qt()
+
     import importlib
 
     page_class = getattr(

@@ -5,6 +5,7 @@ from pathlib import Path
 import struct
 
 import numpy as np
+import pytest
 
 from PyHydroGeophysX.data_processing.em1d import load_sounding
 from PyHydroGeophysX.data_processing.ttem import is_ttem_source
@@ -167,6 +168,10 @@ def test_ttem_applies_gex_and_tfi(tmp_path: Path) -> None:
 
 
 def test_gex_analog_filter_is_causal_and_has_unity_dc_gain() -> None:
+    # The filter itself is plain NumPy, but it lives beside the SimPEG survey
+    # builders and ``tdem_forward`` imports SimPEG at module scope.
+    pytest.importorskip("simpeg")
+
     from PyHydroGeophysX.forward.tdem_forward import _analog_filter_matrix_cached
 
     times = tuple(np.linspace(0.0, 10e-6, 101))

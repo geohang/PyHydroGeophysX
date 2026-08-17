@@ -6,8 +6,27 @@ rather than as an error. Both cases below shipped that way.
 """
 
 import inspect
+import os
 
 import pytest
+
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+
+def _require_qt():
+    """Skip when the workbench pages cannot be imported.
+
+    The pages import PySide6 and pyqtgraph at module scope, so a run without
+    the desktop extras cannot reach them at all. Not importorskip: Qt fails
+    with a plain ImportError on a machine that has PySide6 but not the GL
+    libraries it links against, and that skips only on ModuleNotFoundError.
+    """
+    try:
+        import PySide6.QtGui  # noqa: F401
+        import pyqtgraph  # noqa: F401
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        pytest.skip(f"Qt stack unavailable: {exc}")
 
 
 def test_the_em_compatibility_shim_reexports_every_public_name():
@@ -27,6 +46,8 @@ def test_the_em_compatibility_shim_reexports_every_public_name():
 def test_the_em_module_only_calls_names_the_shim_provides():
     """Every ``em_pipeline.<name>`` the Qt page calls must resolve."""
     import re
+
+    _require_qt()
 
     from PyHydroGeophysX.qt_apps import em_pipeline
     from PyHydroGeophysX.qt_apps.modules import em_processing
@@ -55,6 +76,8 @@ def test_model_exports_stage_pygimli_writes_through_an_ascii_path(module_path, f
     """
     import importlib
 
+    _require_qt()
+
     module = importlib.import_module(module_path)
     page_class = next(
         value for _name, value in vars(module).items()
@@ -75,6 +98,8 @@ def test_the_base_page_answers_the_export_hook_with_nothing():
     no exports of its own. The body ignores ``self``, so it is called unbound
     rather than building a QWidget.
     """
+    _require_qt()
+
     from PyHydroGeophysX.qt_apps.modules.base import BaseModule
 
     assert BaseModule.export_actions(None) == []
@@ -97,6 +122,8 @@ def test_pages_with_exporters_advertise_them(module_path, class_name):
     the arrangement the single Export command replaced.
     """
     import importlib
+
+    _require_qt()
 
     from PyHydroGeophysX.qt_apps.modules.base import BaseModule
 

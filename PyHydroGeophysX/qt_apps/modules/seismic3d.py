@@ -11,7 +11,6 @@ turn reuses ``Geophy_modular.seismic_processor`` and ``core.kriging_3d``).
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -41,6 +40,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from PyHydroGeophysX.data_processing import run_inputs
 from PyHydroGeophysX.Geophy_modular import structure_integration as seismic3d_pipeline
 from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
@@ -666,10 +666,15 @@ class Seismic3DModule(BaseModule):
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not prepare Project run: {exc}", "error")
             return
+        # One compressed bundle for every line's mesh and velocity, rather than
+        # a folder of copies per line. The bundle member name carries which line
+        # and which field a file belongs to, so the run expands back to the same
+        # pairing.
         serialized_lines: List[Dict[str, Any]] = []
+        members: Dict[str, Path] = {}
         for index, line in enumerate(params.pop("lines")):
             item = dict(line)
-            for field, kind in (("mesh", "seismic_mesh"), ("velocity", "velocity_array")):
+            for field in ("mesh", "velocity"):
                 path = Path(str(item.get(field, "")))
                 if not path.is_file():
                     self.fail_persisted_run(f"Missing input file: {path}")
@@ -678,25 +683,35 @@ class Seismic3DModule(BaseModule):
                         "error",
                     )
                     return
-                stored_dir = io_utils.ensure_dir(run.inputs_dir / f"line_{index + 1}")
-                stored = stored_dir / path.name
-                try:
-                    shutil.copy2(path, stored)
-                except OSError as exc:
-                    self.fail_persisted_run(str(exc))
-                    self.log(f"Could not persist {path.name}: {exc}", "error")
-                    return
-                item[field] = ArtifactRef.from_path(
-                    stored,
-                    artifact_id=f"seismic3d-line-{index + 1}:{field}",
-                    kind=kind,
-                    base_dir=run.run_dir,
-                )
+                name = f"line_{index + 1}_{field}{path.suffix}"
+                members[name] = path
+                item[field] = name
             serialized_lines.append(item)
+        try:
+            stored = run_inputs.save_file_bundle(
+                run.inputs_dir / "seismic3d_lines",
+                members,
+                kind="seismic3d_lines",
+                meta={"line_count": len(serialized_lines)},
+            )
+        except OSError as exc:
+            self.fail_persisted_run(str(exc))
+            self.log(f"Could not persist the seismic3d line inputs: {exc}", "error")
+            return
         params.pop("output_dir", None)
         spec = WorkflowSpec(
             workflow_id="seismic3d.build",
-            inputs={"context": {}, "lines": serialized_lines},
+            inputs={
+                "context": {},
+                "lines": serialized_lines,
+                "line_bundle": ArtifactRef.from_path(
+                    stored,
+                    artifact_id="seismic3d:lines",
+                    kind="seismic3d_lines",
+                    base_dir=run.run_dir,
+                    metadata={"members": sorted(members)},
+                ),
+            },
             parameters=params,
             metadata={"source": "qt", "line_count": len(serialized_lines)},
         )

@@ -101,13 +101,32 @@ def _variable(name: str) -> str:
     return cleaned if not cleaned[:1].isdigit() else f"_{cleaned}"
 
 
-def _bundle_directory(spec: WorkflowSpec, key: str, constant: str) -> List[str]:
+def _bundle_directory(
+    spec: WorkflowSpec, key: str, constant: str, *, bundle_key: str = ""
+) -> List[str]:
     """Emit the one directory a file-bundle input resolves to.
 
     ``geo_hydrology`` and ``hydro_geophysics`` do not take individual files;
-    their domain functions take the directory the files share, and the engine
-    derives it from the artifact parents.
+    their domain functions take the directory the files share.
+
+    A run records those files as one compressed bundle, so the generated script
+    expands it into a temporary directory exactly as the engine does. Recipes
+    written before the bundle existed still list the copied files under ``key``,
+    and for those the directory is derived from the artifact parents.
     """
+    bundle = next(iter(iter_artifact_refs(spec.inputs.get(bundle_key) or {})), None)
+    if bundle is not None:
+        return [
+            "import tempfile",
+            "from PyHydroGeophysX.data_processing.run_inputs import expand_file_bundle",
+            "",
+            "# The run stores these inputs as one compressed bundle. The reader "
+            "below wants",
+            "# loose files in a directory, so expand it for the length of the script.",
+            '_bundle_scratch = tempfile.TemporaryDirectory(prefix="phgx_inputs_")',
+            f'{constant} = expand_file_bundle('
+            f'DATA_DIR / "{Path(bundle.path).name}", _bundle_scratch.name)',
+        ]
     refs = list(iter_artifact_refs(spec.inputs.get(key) or {}))
     if not refs:
         return []
@@ -117,6 +136,8 @@ def _bundle_directory(spec: WorkflowSpec, key: str, constant: str) -> List[str]:
     parent = parents.pop()
     suffix = "" if parent in {"", "."} else f' / "{parent}"'
     return [f"{constant} = DATA_DIR{suffix}"]
+
+
 
 
 def default_inputs(spec: WorkflowSpec) -> List[str]:
@@ -1221,7 +1242,7 @@ WALKTHROUGHS["geo_hydrology.ert_to_wc"] = Walkthrough(
         "from PyHydroGeophysX.Geophy_modular.ERT_to_WC import run_ert_to_wc",
     ),
     parameters=_passthrough_parameters,
-    inputs=lambda spec: _bundle_directory(spec, "model_files", "MODEL_DIR"),
+    inputs=lambda spec: _bundle_directory(spec, "model_files", "MODEL_DIR", bundle_key="model_bundle"),
     steps=(
         Step(
             title="Convert resistivity to water content",
@@ -1279,7 +1300,7 @@ WALKTHROUGHS["hydro_geophysics.forward"] = Walkthrough(
         "from PyHydroGeophysX.Hydro_modular.hydro_to_geophysics import run_hydro_forward",
     ),
     parameters=_hydro_parameters,
-    inputs=lambda spec: _bundle_directory(spec, "hydro_files", "HYDRO_DIR"),
+    inputs=lambda spec: _bundle_directory(spec, "hydro_files", "HYDRO_DIR", bundle_key="hydro_bundle"),
     steps=(
         Step(
             title="Run the coupled forward simulation",
