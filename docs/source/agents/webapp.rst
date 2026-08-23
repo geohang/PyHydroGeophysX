@@ -8,7 +8,7 @@ PyHydroGeophysX ships two interactive Streamlit applications:
 
 .. tip::
 
-   Prefer a native desktop app? The :doc:`Qt Desktop Workbench <desktop_workbench>` is
+   Prefer a native desktop app? The :doc:`Qt Desktop Studio <desktop_studio>` is
    available as a downloadable Windows / macOS application (a small *light* build and a
    *full* build with the geophysics engines included).
 
@@ -16,7 +16,7 @@ PyHydroGeophysX ships two interactive Streamlit applications:
       :color: secondary
       :expand:
 
-      Download the Desktop Workbench (Windows / macOS)
+      Download the Desktop Studio (Windows / macOS)
 
 .. contents:: On this page
    :local:

@@ -25,8 +25,8 @@ MANIFEST
 # PyInstaller
 *.manifest
 *.spec
-# ...but keep the hand-authored desktop workbench build spec
-!packaging/pyinstaller_workbench.spec
+# ...but keep the hand-authored desktop studio build spec
+!packaging/pyinstaller_studio.spec
 # Generated app icons (packaging/make_icons.py builds them from logo.png)
 packaging/app_icon.ico
 packaging/app_icon.icns
@@ -71,7 +71,7 @@ tests/test_readme_install_paths.py
 tests/test_reproduce_bar.py
 tests/test_srt_workflow_roundtrip.py
 tests/test_stall_watch.py
-tests/test_start_workbench_launcher.py
+tests/test_start_studio_launcher.py
 tests/test_streamlit_guided_tutorials.py
 tests/test_walkthroughs.py
 tests/test_windowed_parallel.py
@@ -81,8 +81,8 @@ tests/test_workflows.py
 .env
 .venv
 .venv-webapp/
-# Created by examples/start_workbench.bat when no suitable Python is found
-.venv-workbench/
+# Created by examples/start_studio.bat when no suitable Python is found
+.venv-studio/
 env/
 venv/
 ENV/

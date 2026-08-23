@@ -1,4 +1,4 @@
-"""Main application window for the PyHydroGeophysX professional workbench."""
+"""Main application window for the PyHydroGeophysX professional studio."""
 
 from __future__ import annotations
 
@@ -29,26 +29,26 @@ from PySide6.QtWidgets import (
 from PyHydroGeophysX.core import mesh_serialization
 from PyHydroGeophysX.qt_apps import theme
 from PyHydroGeophysX.qt_apps.agent.chat_panel import AquahChatPanel
-from PyHydroGeophysX.qt_apps.agent.controller import WorkbenchController
+from PyHydroGeophysX.qt_apps.agent.controller import StudioController
 from PyHydroGeophysX.qt_apps import stall_watch
 from PyHydroGeophysX.qt_apps.layout_fit import elide_label, relax_minimum_width
 from PyHydroGeophysX.qt_apps.modules import build_module
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule
-from PyHydroGeophysX.qt_apps.state import WorkbenchState
+from PyHydroGeophysX.qt_apps.state import StudioState
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.log_panel import LogPanel
 from PyHydroGeophysX.qt_apps.widgets.project_tree import ProjectTree
 
-WINDOW_TITLE = "PyHydroGeophysX Professional Workbench"
+WINDOW_TITLE = "PyHydroGeophysX Professional Studio"
 
 
-class PyHydroGeophysXWorkbench(QMainWindow):
+class PyHydroGeophysXStudio(QMainWindow):
     """Top-level window: tree | stacked modules | properties, with a log dock."""
 
     def __init__(self, context_path: Optional[str] = None, initial_module: str = "home") -> None:
         super().__init__()
         self.setWindowTitle(WINDOW_TITLE)
-        self.state = WorkbenchState.from_context(context_path)
+        self.state = StudioState.from_context(context_path)
         if initial_module and initial_module != "home":
             self.state.selected_module = initial_module
         self._pages: Dict[str, BaseModule] = {}
@@ -79,7 +79,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         # Right: AQUAH chat assistant + properties summary, in a tabbed dock.
         self._properties = QTextEdit()
         self._properties.setReadOnly(True)
-        self._controller = WorkbenchController(self)
+        self._controller = StudioController(self)
         self._chat = AquahChatPanel(self._controller, self.log)
         right_tabs = QTabWidget()
         right_tabs.addTab(self._chat, "AQUAH Chat")
@@ -115,7 +115,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         self._activate_results_store(self.state.output_dir)
         self._refresh_unsaved_state()
 
-        self.log(f"Workbench started. Context: {self.state.context_path or '(none)'}", "info")
+        self.log(f"Studio started. Context: {self.state.context_path or '(none)'}", "info")
         if self.state.context_path and not self.state.context:
             self.log("Context file missing or unreadable; running with defaults.", "warn")
         self.show_module(self.state.selected_module or "home")
@@ -127,7 +127,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         Returns True when a saved geometry was applied, so the launcher knows
         not to override it with the default window size.
         """
-        settings = QSettings("PyHydroGeophysX", "Workbench")
+        settings = QSettings("PyHydroGeophysX", "Studio")
         geometry = settings.value("main/geometry")
         window_state = settings.value("main/windowState")
         if geometry is not None:
@@ -137,7 +137,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         return geometry is not None
 
     def _save_window_settings(self) -> None:
-        settings = QSettings("PyHydroGeophysX", "Workbench")
+        settings = QSettings("PyHydroGeophysX", "Studio")
         settings.setValue("main/geometry", self.saveGeometry())
         settings.setValue("main/windowState", self.saveState())
 
@@ -149,7 +149,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         so it outranks a remembered preference.
         """
         if not self.state.context:
-            saved = QSettings("PyHydroGeophysX", "Workbench").value("main/outputDir")
+            saved = QSettings("PyHydroGeophysX", "Studio").value("main/outputDir")
             if saved:
                 self.state.output_dir = Path(str(saved))
         self._refresh_output_label()
@@ -171,7 +171,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
                     "without such characters avoids it." if warn else ""))
 
     def _switch_project(self, path: Path, landing: str) -> bool:
-        """Point the workbench at *path* and open *landing*.
+        """Point the studio at *path* and open *landing*.
 
         The Project folder is also the output folder — the two were separate
         commands that set the same field, which left it possible to "open" one
@@ -196,7 +196,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
             return False
         self._offer_to_clear_abandoned()
         self._reset_pages(clear_session=True)
-        QSettings("PyHydroGeophysX", "Workbench").setValue("main/outputDir", str(path))
+        QSettings("PyHydroGeophysX", "Studio").setValue("main/outputDir", str(path))
         self._refresh_output_label()
         self._refresh_unsaved_state()
         self.log(f"Results for this session go to {path}", "success")
@@ -232,7 +232,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
 
         text_box = QVBoxLayout()
         text_box.setSpacing(0)
-        title = QLabel("Professional Workbench")
+        title = QLabel("Professional Studio")
         title.setObjectName("HeaderTitle")
         subtitle = QLabel("AQUAH — Autonomous Query-driven Understanding Agent for Hydrogeophysics")
         subtitle.setObjectName("HeaderSubtitle")
@@ -277,7 +277,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         # out, so they no longer sit next to the command that is.
         bridge = file_menu.addMenu("Streamlit Bridge")
         self._add_action(bridge, "Open Project Context…", self._open_context)
-        self._add_action(bridge, "Save Workbench Result", self._save_result)
+        self._add_action(bridge, "Save Studio Result", self._save_result)
         self._add_action(bridge, "Export Module Result (JSON)…", self._export_current_result)
         self._add_action(bridge, "Rebuild Run Index", self._save_project)
         file_menu.addSeparator()
@@ -667,7 +667,7 @@ class PyHydroGeophysXWorkbench(QMainWindow):
         if not path:
             return
         self._reset_pages()
-        self.state = WorkbenchState.from_context(path)
+        self.state = StudioState.from_context(path)
         self._activate_results_store(self.state.output_dir or Path(path).parent)
         self.log(f"Loaded context {path}", "success")
         self.show_module(self.state.selected_module or "home")
@@ -679,8 +679,8 @@ class PyHydroGeophysXWorkbench(QMainWindow):
             self.log(f"Failed to save result: {exc}", "error")
             QMessageBox.warning(self, "Save failed", str(exc))
             return
-        self.log(f"Saved workbench result to {path}", "success")
-        QMessageBox.information(self, "Result saved", f"Workbench result written to:\n{path}")
+        self.log(f"Saved studio result to {path}", "success")
+        QMessageBox.information(self, "Result saved", f"Studio result written to:\n{path}")
 
     def _export_current_result(self) -> None:
         # Ask the page for its own key rather than reusing the navigator's.

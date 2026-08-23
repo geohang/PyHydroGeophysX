@@ -99,19 +99,19 @@ Optional Dependencies
    pip install pygimli simpeg resipy joblib
    pip install "cupy-cuda12x[ctk]"
 
-Desktop App (Qt Workbench)
+Desktop App (Qt Studio)
 --------------------------
 
 Prebuilt Windows and macOS bundles are published on `GitHub Releases
 <https://github.com/geohang/PyHydroGeophysX/releases/latest>`_ and need no Python
-environment. To run the workbench from a Python install instead:
+environment. To run the studio from a Python install instead:
 
 .. code-block:: bash
 
    pip install "pyhydrogeophysx[desktop]"
-   pyhydrogeophysx-workbench
+   pyhydrogeophysx-studio
 
-See :doc:`agents/desktop_workbench` for the full usage guide.
+See :doc:`agents/desktop_studio` for the full usage guide.
 
 Verification
 ------------

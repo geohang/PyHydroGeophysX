@@ -193,7 +193,7 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
     """Estimate the amplitude calibration (``data_scale``) for normalized data.
 
     Normalized airborne responses (e.g. moment-normalized dB/dt) differ from the
-    workbench's 1D forward by a near-constant amplitude factor. This fits each
+    studio's 1D forward by a near-constant amplitude factor. This fits each
     sounding's decay SHAPE to a grid of half-space forward responses at the current
     geometry and takes the geometric-mean amplitude ratio ``forward/observed`` at
     the best-fitting resistivity. Returns ``1.0`` if it cannot be estimated (so the

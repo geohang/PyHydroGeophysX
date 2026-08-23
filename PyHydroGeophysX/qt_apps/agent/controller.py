@@ -1,8 +1,8 @@
-"""Main-thread command layer the AQUAH assistant uses to drive the workbench.
+"""Main-thread command layer the AQUAH assistant uses to drive the studio.
 
 The chat panel never touches Qt widgets directly. Instead it calls
-:meth:`WorkbenchController.dispatch`, which maps a small set of generic tool
-names to operations on the live ``PyHydroGeophysXWorkbench``. Each call runs on
+:meth:`StudioController.dispatch`, which maps a small set of generic tool
+names to operations on the live ``PyHydroGeophysXStudio``. Each call runs on
 the Qt main thread (the panel invokes it from a button slot) and returns a plain,
 JSON-serialisable ``dict`` so the result can be handed straight back to the
 language model. ``dispatch`` never raises: any error becomes
@@ -50,8 +50,8 @@ MODULE_PURPOSES: Dict[str, str] = {
 }
 
 
-class WorkbenchController(QObject):
-    """A thin, JSON-friendly facade over the workbench main window."""
+class StudioController(QObject):
+    """A thin, JSON-friendly facade over the studio main window."""
 
     #: Tool names handled directly by :meth:`dispatch`.
     GENERIC_TOOLS = (
@@ -59,7 +59,7 @@ class WorkbenchController(QObject):
         "navigate",
         "describe_current_module",
         "apply_action",
-        "get_workbench_state",
+        "get_studio_state",
         "capture_view",
     )
 
@@ -80,7 +80,7 @@ class WorkbenchController(QObject):
                 return self._describe_current()
             if name == "apply_action":
                 return self._apply_action(args)
-            if name == "get_workbench_state":
+            if name == "get_studio_state":
                 return self._get_state()
             if name == "capture_view":
                 return self._capture_view(args)

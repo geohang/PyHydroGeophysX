@@ -52,8 +52,8 @@ Start Here
 
       Open the Streamlit app and agent usage guidance.
 
-   .. grid-item-card:: Desktop Workbench
-      :link: agents/desktop_workbench
+   .. grid-item-card:: Desktop Studio
+      :link: agents/desktop_studio
       :link-type: doc
       :class-card: sd-card-hover
 
@@ -126,9 +126,9 @@ Web App and Desktop App
 
 Open the hosted app: `pyhydrogeophysx.streamlit.app <https://pyhydrogeophysx.streamlit.app/>`_
 
-Download the desktop workbench (Windows / macOS): `GitHub Releases
+Download the desktop studio (Windows / macOS): `GitHub Releases
 <https://github.com/geohang/PyHydroGeophysX/releases/latest>`_; usage guide:
-:doc:`agents/desktop_workbench`.
+:doc:`agents/desktop_studio`.
 
 Citation
 --------

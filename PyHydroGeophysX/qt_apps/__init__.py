@@ -1,4 +1,4 @@
-"""PyHydroGeophysX professional Qt desktop workbench.
+"""PyHydroGeophysX professional Qt desktop studio.
 
 This subpackage is intentionally lightweight at import time: importing
 ``PyHydroGeophysX.qt_apps`` must NOT pull in PySide6, pyqtgraph, pygimli, or any

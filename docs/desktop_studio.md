@@ -1,14 +1,14 @@
-# PyHydroGeophysX Professional Desktop Workbench
+# PyHydroGeophysX Professional Desktop Studio
 
-> Published on the docs site: <https://geohang.github.io/PyHydroGeophysX/agents/desktop_workbench.html>
-> (Sphinx source: `docs/source/agents/desktop_workbench.rst`). When editing this guide,
+> Published on the docs site: <https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.html>
+> (Sphinx source: `docs/source/agents/desktop_studio.rst`). When editing this guide,
 > update the Sphinx page too; the site builds only the `.rst` version.
 
 PyHydroGeophysX ships two complementary front ends:
 
 - **Streamlit web app** (`examples/app_geophysics_workflow.py`) is the agent, report,
   tutorial, and deployment portal. It runs in a browser and can be hosted remotely.
-- **Qt desktop workbench** (`PyHydroGeophysX/qt_apps/`) is a local desktop application
+- **Qt desktop studio** (`PyHydroGeophysX/qt_apps/`) is a local desktop application
   for professional mouse interaction: data processing, hydro-to-geophysics profile
   selection, point picking, geometry editing, and forward modeling.
 
@@ -17,7 +17,7 @@ the browser and finish the interactive work on the desktop.
 
 ## 1. Install desktop dependencies
 
-The desktop workbench needs PySide6 and pyqtgraph in addition to numpy and pandas:
+The desktop studio needs PySide6 and pyqtgraph in addition to numpy and pandas:
 
 ```bash
 pip install -r requirements-desktop.txt
@@ -33,20 +33,20 @@ Optional packages add features:
 - `pygimli` — the real hydro-to-geophysics forward modeling (ERT, SRT, TDEM, FDEM,
   gravity). Without it, the Hydro module still exports a survey configuration JSON.
 
-## 2. Run the Qt workbench locally
+## 2. Run the Qt studio locally
 
 ```bash
 python -m PyHydroGeophysX.qt_apps.launcher
 # open directly into a module:
 python -m PyHydroGeophysX.qt_apps.launcher --module hydro_geophysics
 # attach to a bridge context written by Streamlit:
-python -m PyHydroGeophysX.qt_apps.launcher --context results/streamlit_workflow/qt_bridge/full_workbench_context.json
+python -m PyHydroGeophysX.qt_apps.launcher --context results/streamlit_workflow/qt_bridge/full_studio_context.json
 ```
 
 Helper scripts are provided in `scripts/`:
 
-- Windows: `scripts\start_qt_workbench.bat`
-- macOS / Linux: `scripts/start_qt_workbench.sh`
+- Windows: `scripts\start_qt_studio.bat`
+- macOS / Linux: `scripts/start_qt_studio.sh`
 
 Module keys for `--module`: `home`, `seismic`, `ert`, `mesh3d`, `em`, `gravmag`,
 `hydro_geophysics`.
@@ -57,8 +57,8 @@ Module keys for `--module`: `home`, `seismic`, `ert`, `mesh3d`, `em`, `gravmag`,
 streamlit run examples/app_geophysics_workflow.py
 ```
 
-Open the **🖥️ Professional Workbench** tab. On a local desktop it shows buttons to
-launch the Qt workbench (whole app, or directly into Geophysical Data Processing or
+Open the **🖥️ Professional Studio** tab. On a local desktop it shows buttons to
+launch the Qt studio (whole app, or directly into Geophysical Data Processing or
 Hydro to Geophysics). The tab also shows the bridge file paths and a **Refresh result**
 button.
 
@@ -67,13 +67,13 @@ button.
 The bridge directory is `<output_dir>/qt_bridge/` (default
 `results/streamlit_workflow/qt_bridge/`).
 
-1. When you click a launch button, Streamlit writes `full_workbench_context.json`
+1. When you click a launch button, Streamlit writes `full_studio_context.json`
    (project root, output directory, hydro data directory, current workflow config and
    result, the demo selection, and the Python executable to reuse).
-2. Streamlit starts the Qt workbench as a separate process and passes that context path.
+2. Streamlit starts the Qt studio as a separate process and passes that context path.
 3. The Qt app reads the context on startup, so it points at the same project and data.
-4. When you save in the Qt app (File → Streamlit Bridge → Save Workbench Result, or
-   after a forward run), it writes `full_workbench_result.json` with the per-module
+4. When you save in the Qt app (File → Streamlit Bridge → Save Studio Result, or
+   after a forward run), it writes `full_studio_result.json` with the per-module
    results.
 5. Back in the browser, **Refresh result** reads that file and displays it.
 
@@ -81,7 +81,7 @@ That manifest is for the bridge, not for keeping or getting out your results.
 
 **Keeping a result:** a finished run is not recorded in the Project until you say so.
 **File → Save Runs to Project** (`Ctrl+S`) or the toolbar **Save** button adds this
-session's runs; the status bar shows how many are waiting, and closing the workbench
+session's runs; the status bar shows how many are waiting, and closing the studio
 asks. The Model Viewer lists unsaved runs first and can save or discard them one at a
 time.
 
@@ -97,7 +97,7 @@ configuration JSON, figures). Exporting and saving are independent.
 A Qt window is a native desktop window that opens on the machine where the Python
 process runs. When Streamlit is hosted on a remote server, that server has no display
 attached to your screen, so it cannot show a window in your browser. The Professional
-Workbench tab detects this case and switches to **download mode**.
+Studio tab detects this case and switches to **download mode**.
 
 Detection rules:
 
@@ -117,7 +117,7 @@ default links with environment variables:
 - `PHGX_QT_DOWNLOAD_LINUX`
 - `PHGX_QT_DOWNLOAD_SOURCE`
 
-To run the desktop workbench from source on the same project, install the desktop
+To run the desktop studio from source on the same project, install the desktop
 dependencies and run the launcher as in section 2.
 
 ## 7. Modules
@@ -144,20 +144,20 @@ Hydro to Geophysics:
 
 ## 8. Performance note
 
-The hydro arrays are stored on a regular grid, so the workbench samples a profile with
+The hydro arrays are stored on a regular grid, so the studio samples a profile with
 `scipy.ndimage.map_coordinates` (bilinear) rather than a Delaunay-based `griddata`. On
 the test machine this reduced one profile extraction from minutes to under a second.
 The mesh-side interpolation used by the forward models is unchanged.
 
 ## 9. Prebuilt bundles and persistence
 
-- `packaging/pyinstaller_workbench.spec` deliberately excludes the heavy engines
+- `packaging/pyinstaller_studio.spec` deliberately excludes the heavy engines
   (pygimli, SimPEG, pyvista/VTK) to keep the bundle small. A prebuilt executable can
   therefore load, view, QC, and export data, but forward modeling, inversion, and the
   3D mesh viewer are unavailable in it. Install from source (this repository) for the
   full feature set.
 - Window size and dock layout persist between sessions via `QSettings`
-  (organization "PyHydroGeophysX", application "Workbench"). Delete that settings key
+  (organization "PyHydroGeophysX", application "Studio"). Delete that settings key
   to reset the layout to defaults.
 - Uncaught errors show an error dialog with a copyable traceback instead of closing
   the app silently; the same text also goes to stderr and can be reported as a GitHub

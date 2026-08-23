@@ -139,7 +139,7 @@ pyhydrogeophysx-gui = "PyHydroGeophysX.gui:main"
 pyhydrogeophysx-workflow = "PyHydroGeophysX.workflows.cli:main"
 
 [project.gui-scripts]
-pyhydrogeophysx-workbench = "PyHydroGeophysX.qt_apps.launcher:main"
+pyhydrogeophysx-studio = "PyHydroGeophysX.qt_apps.launcher:main"
 
 [project.urls]
 "Homepage" = "https://github.com/geohang/PyHydroGeophysX"

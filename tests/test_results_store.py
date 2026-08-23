@@ -6,7 +6,7 @@ import pytest
 
 from PyHydroGeophysX.qt_apps import results_store as results_store_module
 from PyHydroGeophysX.qt_apps.results_store import ResultsStore, normalize_status
-from PyHydroGeophysX.qt_apps.state import WorkbenchState
+from PyHydroGeophysX.qt_apps.state import StudioState
 from PyHydroGeophysX.workflows import ArtifactRef, WorkflowRunResult
 
 
@@ -333,8 +333,8 @@ def test_ert_two_runs_keep_independent_reloadable_model_bundles(tmp_path: Path) 
     assert recovered_values == {100.0, 250.0}
 
 
-def test_workbench_cannot_switch_project_during_active_run(tmp_path: Path) -> None:
-    state = WorkbenchState(output_dir=tmp_path / "first")
+def test_studio_cannot_switch_project_during_active_run(tmp_path: Path) -> None:
+    state = StudioState(output_dir=tmp_path / "first")
     state.set_results_store(tmp_path / "first")
     state.begin_run("ert", "ert.single_inversion", "ert.single_inversion")
     with pytest.raises(RuntimeError, match="computation is running"):
@@ -344,7 +344,7 @@ def test_workbench_cannot_switch_project_during_active_run(tmp_path: Path) -> No
 
 
 def test_operations_in_same_module_can_run_concurrently(tmp_path: Path) -> None:
-    state = WorkbenchState(output_dir=tmp_path)
+    state = StudioState(output_dir=tmp_path)
     state.set_results_store(tmp_path)
     single = state.begin_run("ert", "ert.single_inversion", "ert.single_inversion")
     timelapse = state.begin_run(

@@ -45,10 +45,10 @@ class _ResistanceOnlyData:
 
 def test_more_checks_explains_fields_missing_from_bert_file(qt_app) -> None:
     from PyHydroGeophysX.qt_apps.modules.ert_processing import ERTProcessingModule
-    from PyHydroGeophysX.qt_apps.state import WorkbenchState
+    from PyHydroGeophysX.qt_apps.state import StudioState
 
     view = ERTProcessingModule(
-        WorkbenchState(output_dir=Path.cwd()),
+        StudioState(output_dir=Path.cwd()),
         lambda *_args: None,
     )
     view._ert_data_full = _ResistanceOnlyData()

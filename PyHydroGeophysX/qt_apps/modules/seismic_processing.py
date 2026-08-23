@@ -1914,7 +1914,7 @@ class SeismicProcessingModule(BaseModule):
             "current_record": self._current_record,
             "pick_times_ms": dict(sorted(picks.items())),
             "suspect_traces": self._suspect_pick_traces(),
-            "note": ("Trace indices come from the workbench and are exact. Use the image to "
+            "note": ("Trace indices come from the studio and are exact. Use the image to "
                      "judge whether each pick follows the first arrival, and these numbers "
                      "to say which trace you mean."),
         }

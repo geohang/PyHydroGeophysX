@@ -1,4 +1,4 @@
-"""Isolated ADTLERT GPU preflight used by the Qt workbench.
+"""Isolated ADTLERT GPU preflight used by the Qt studio.
 
 This module intentionally imports no Qt package. It is launched with
 ``python -m`` so Torch, CuPy, cuDSS, and their native DLLs are loaded in a fresh

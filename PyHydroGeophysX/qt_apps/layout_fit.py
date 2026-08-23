@@ -2,7 +2,7 @@
 
 Qt propagates a widget's content width upward as a hard minimum. A paragraph of
 guidance text in a QLabel that forgot ``setWordWrap`` therefore becomes a floor
-on the whole window: the workbench asked for 2699 px on a 1920 px monitor, which
+on the whole window: the studio asked for 2699 px on a 1920 px monitor, which
 Windows cannot grant, so every layout pass logged ``QWindowsWindow::setGeometry:
 Unable to set geometry`` and the panels were squeezed anyway.
 

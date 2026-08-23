@@ -20,9 +20,9 @@ except ImportError as exc:  # pragma: no cover - environment dependent
 
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox
 
-from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXWorkbench
+from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXStudio
 from PyHydroGeophysX.qt_apps.modules.model_viewer import ModelViewerModule
-from PyHydroGeophysX.qt_apps.state import WorkbenchState
+from PyHydroGeophysX.qt_apps.state import StudioState
 
 
 @pytest.fixture(autouse=True)
@@ -91,7 +91,7 @@ def test_tools_model_viewer_opens_and_selects_missing_artifact(
     app = QApplication.instance() or QApplication([])
     context = tmp_path / "context.json"
     context.write_text(json.dumps({"output_dir": str(tmp_path)}), encoding="utf-8")
-    window = PyHydroGeophysXWorkbench(context_path=str(context))
+    window = PyHydroGeophysXStudio(context_path=str(context))
     store = window.state.ensure_results_store()
     assert store.root == tmp_path.resolve()
     handle = store.begin_run("ert", "ert.single_inversion", "ert.single_inversion")
@@ -120,7 +120,7 @@ def test_tools_model_viewer_opens_and_selects_missing_artifact(
     # The bridge manifest moved off the toolbar into File > Streamlit Bridge,
     # because it wrote JSON for the Streamlit app while reading as the button
     # that saved your science.
-    _menu_action(window, "File", "Save Workbench Result").trigger()
+    _menu_action(window, "File", "Save Studio Result").trigger()
     assert window.state.result_path.is_file()
 
     window.close()
@@ -134,7 +134,7 @@ def test_export_results_reports_when_a_module_has_nothing_to_write(
     app = QApplication.instance() or QApplication([])
     context = tmp_path / "context.json"
     context.write_text(json.dumps({"output_dir": str(tmp_path)}), encoding="utf-8")
-    window = PyHydroGeophysXWorkbench(context_path=str(context))
+    window = PyHydroGeophysXStudio(context_path=str(context))
 
     shown: list = []
     monkeypatch.setattr(
@@ -156,7 +156,7 @@ def test_export_results_runs_a_modules_only_offer(monkeypatch, tmp_path: Path) -
     app = QApplication.instance() or QApplication([])
     context = tmp_path / "context.json"
     context.write_text(json.dumps({"output_dir": str(tmp_path)}), encoding="utf-8")
-    window = PyHydroGeophysXWorkbench(context_path=str(context))
+    window = PyHydroGeophysXStudio(context_path=str(context))
 
     called: list = []
     page = window.current_module()
@@ -199,7 +199,7 @@ def test_module_result_export_uses_the_pages_own_key(monkeypatch, tmp_path: Path
     app = QApplication.instance() or QApplication([])
     context = tmp_path / "context.json"
     context.write_text(json.dumps({"output_dir": str(tmp_path)}), encoding="utf-8")
-    window = PyHydroGeophysXWorkbench(context_path=str(context))
+    window = PyHydroGeophysXStudio(context_path=str(context))
 
     window.show_module("ert")
     app.processEvents()
@@ -228,7 +228,7 @@ def _window_with_finished_run(tmp_path: Path):
     app = QApplication.instance() or QApplication([])
     context = tmp_path / "context.json"
     context.write_text(json.dumps({"output_dir": str(tmp_path)}), encoding="utf-8")
-    window = PyHydroGeophysXWorkbench(context_path=str(context))
+    window = PyHydroGeophysXStudio(context_path=str(context))
     handle = window.state.begin_run("ert", "ert.single_inversion", "ert.single_inversion")
     (handle.outputs_dir / "model.npy").write_bytes(b"model")
     window.state.finish_run("ert", {"status": "ok", "metrics": {"chi2": 1.1}},
@@ -345,7 +345,7 @@ def test_import_keeps_active_project(monkeypatch, tmp_path: Path) -> None:
     (legacy / "ert_process_result.json").write_text(
         json.dumps({"status": "ok"}), encoding="utf-8"
     )
-    window = PyHydroGeophysXWorkbench(context_path=str(context))
+    window = PyHydroGeophysXStudio(context_path=str(context))
     monkeypatch.setattr(
         "PyHydroGeophysX.qt_apps.main_window.QFileDialog.getExistingDirectory",
         lambda *_args, **_kwargs: str(legacy),
@@ -365,7 +365,7 @@ def test_rendered_memmap_is_released_before_run_deletion(
     monkeypatch, tmp_path: Path
 ) -> None:
     app = QApplication.instance() or QApplication([])
-    state = WorkbenchState(output_dir=tmp_path)
+    state = StudioState(output_dir=tmp_path)
     store = state.set_results_store(tmp_path)
     handle = store.begin_run("ert", "ert.timelapse_inversion")
     model_path = handle.outputs_dir / "models.npy"

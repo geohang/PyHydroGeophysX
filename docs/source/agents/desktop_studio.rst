@@ -1,11 +1,11 @@
-Desktop Workbench (Qt)
+Desktop Studio (Qt)
 ======================
 
 PyHydroGeophysX ships two complementary front ends:
 
 - The **Streamlit web app** (:doc:`webapp`) is the agent, report, tutorial, and
   deployment portal. It runs in a browser and can be hosted remotely.
-- The **Qt desktop workbench** (``PyHydroGeophysX/qt_apps/``) is a local desktop
+- The **Qt desktop studio** (``PyHydroGeophysX/qt_apps/``) is a local desktop
   application for hands-on mouse interaction: data processing, first-arrival picking,
   electrode geometry editing, hydro-to-geophysics profile selection, mesh building,
   and forward modeling and inversion.
@@ -17,15 +17,15 @@ the browser and finish the interactive work on the desktop.
    :local:
    :depth: 2
 
-Workbench at a Glance
+Studio at a Glance
 ---------------------
 
-.. figure:: /_static/workbench_overview.png
-   :alt: PyHydroGeophysX Professional Workbench main window
+.. figure:: /_static/studio_overview.png
+   :alt: PyHydroGeophysX Professional Studio main window
    :align: center
    :width: 100%
 
-   The Workbench home screen. The project tree is on the left, the active
+   The Studio home screen. The project tree is on the left, the active
    scientific module is in the center, AQUAH Chat and Properties are on the
    right, and the activity log is at the bottom.
 
@@ -56,7 +56,7 @@ has two variants, so you can pick what fits your machine:
    :color: primary
    :expand:
 
-   Download the Desktop Workbench (Windows / macOS)
+   Download the Desktop Studio (Windows / macOS)
 
 .. list-table::
    :header-rows: 1
@@ -64,20 +64,20 @@ has two variants, so you can pick what fits your machine:
 
    * - Bundle
      - What it includes
-   * - ``PyHydroGeophysX-Workbench-windows-light.zip``
+   * - ``PyHydroGeophysX-Studio-windows-light.zip``
      - Windows. Load, view, QC, pick, edit geometry, and export data in every module.
        Small download; starts fast.
-   * - ``PyHydroGeophysX-Workbench-windows-full.zip``
+   * - ``PyHydroGeophysX-Studio-windows-full.zip``
      - Windows. Everything in light, plus the geophysics engines (PyGIMLi, SimPEG,
        PyVista/VTK): forward modeling, inversion, and the 3D mesh viewer work out of
        the box. Much larger download.
-   * - ``PyHydroGeophysX-Workbench-macos-light.zip``
+   * - ``PyHydroGeophysX-Studio-macos-light.zip``
      - macOS. Same feature set as the Windows light build.
-   * - ``PyHydroGeophysX-Workbench-macos-full.zip``
+   * - ``PyHydroGeophysX-Studio-macos-full.zip``
      - macOS. Same feature set as the Windows full build.
 
-After unzipping, run ``PyHydroGeophysX-Workbench.exe`` inside the extracted folder
-(Windows) or open ``PyHydroGeophysX-Workbench.app`` (macOS).
+After unzipping, run ``PyHydroGeophysX-Studio.exe`` inside the extracted folder
+(Windows) or open ``PyHydroGeophysX-Studio.app`` (macOS).
 
 .. note::
 
@@ -90,14 +90,14 @@ After unzipping, run ``PyHydroGeophysX-Workbench.exe`` inside the extracted fold
 
    The macOS bundles are not code-signed. If macOS blocks the first launch,
    right-click the app and choose **Open** once, or clear the quarantine flag with
-   ``xattr -cr PyHydroGeophysX-Workbench.app``.
+   ``xattr -cr PyHydroGeophysX-Studio.app``.
 
 .. _desktop-install-source:
 
 Install and Run from Source
 ---------------------------
 
-The workbench needs PySide6 and pyqtgraph in addition to numpy and pandas:
+The studio needs PySide6 and pyqtgraph in addition to numpy and pandas:
 
 .. code-block:: bash
 
@@ -113,7 +113,7 @@ Optional packages add features:
 - ``simpeg``: gravity and magnetics 3D inversion.
 - ``scipy``: gridding and interpolation in several modules.
 
-Launch the workbench:
+Launch the studio:
 
 .. code-block:: bash
 
@@ -123,34 +123,34 @@ Launch the workbench:
    python -m PyHydroGeophysX.qt_apps.launcher --module hydro_geophysics
 
    # attach to a bridge context written by Streamlit:
-   python -m PyHydroGeophysX.qt_apps.launcher --context results/streamlit_workflow/qt_bridge/full_workbench_context.json
+   python -m PyHydroGeophysX.qt_apps.launcher --context results/streamlit_workflow/qt_bridge/full_studio_context.json
 
 If the package is installed (``pip install pyhydrogeophysx[desktop]``), the
-``pyhydrogeophysx-workbench`` command starts the same application.
+``pyhydrogeophysx-studio`` command starts the same application.
 
 Start Without a Terminal
 ------------------------
 
-``examples/start_workbench.bat`` opens the workbench from a double-click in
+``examples/start_studio.bat`` opens the studio from a double-click in
 Explorer, the desktop counterpart of ``start_webapp.bat``. It needs no activated
 environment and no ``PATH`` entry: it looks for a Python that already has PySide6
 and pyqtgraph, checking its own reusable environment, ``PYHYDROGEOPHYSX_PYTHON``,
 an inherited conda environment, the ``py`` launcher, and the usual per-user conda
-installation folders. Finding none, it creates ``.venv-workbench`` beside the
+installation folders. Finding none, it creates ``.venv-studio`` beside the
 repository and installs the ``desktop`` extra there, leaving existing environments
 untouched. That first run takes several minutes; later runs reuse it.
 
 The console window it opens is the log: startup messages and any error stay
-visible there, and it closes when the workbench does.
+visible there, and it closes when the studio does.
 
-``examples/start_workbench.sh`` is the macOS / Linux counterpart. Copy it to
-``start_workbench.command`` to make it double-clickable from Finder. Unlike the
+``examples/start_studio.sh`` is the macOS / Linux counterpart. Copy it to
+``start_studio.command`` to make it double-clickable from Finder. Unlike the
 Windows launcher it installs nothing, reporting the ``pip install`` command
 instead when the dependencies are missing.
 
 Both forward their arguments, so a shortcut can open a specific module::
 
-   start_workbench.bat --module hydro_geophysics
+   start_studio.bat --module hydro_geophysics
 
 .. note::
 
@@ -158,7 +158,7 @@ Both forward their arguments, so a shortcut can open a specific module::
    because they are large: ``desktop-3d`` (``pyvista``, ``pyvistaqt``, ``vtk``)
    for the 3D viewers, and ``geophysics`` for forward modeling and inversion.
    Without them those panels show an install message and the rest of the
-   workbench is unaffected.
+   studio is unaffected.
 
    .. code-block:: bash
 
@@ -192,16 +192,16 @@ next to a pip-installed PySide6 puts two Qt runtimes in one environment.
 Module keys for ``--module``: ``home``, ``seismic``, ``ert``, ``mesh3d``, ``em``,
 ``gravmag``, ``hydro_geophysics``, ``geo_hydrology``, ``seismic3d``.
 
-Your First Workbench Run: ERT Inversion
+Your First Studio Run: ERT Inversion
 ---------------------------------------
 
 This walkthrough uses the ERT module because it demonstrates the complete
-Workbench pattern: load, inspect, QC, configure, run, evaluate, and export. From
+Studio pattern: load, inspect, QC, configure, run, evaluate, and export. From
 a source checkout, use ``examples/data/ERT/Bert/fielddataline2.dat``. You can use
 your own BERT/unified, E4D, Syscal, or other supported resistivity file instead.
 
-.. figure:: /_static/workbench_ert.png
-   :alt: ERT Processing module in the Qt Workbench
+.. figure:: /_static/studio_ert.png
+   :alt: ERT Processing module in the Qt Studio
    :align: center
    :width: 100%
 
@@ -231,7 +231,7 @@ Step 2 -- load and inspect data
    **Pseudosection** to inspect spatial coverage and apparent-resistivity
    outliers.
 4. If electrode positions are stored separately, click **Electrode file
-   (optional)...**. The Workbench accepts an ``x, z`` table.
+   (optional)...**. The Studio accepts an ``x, z`` table.
 
 Step 3 -- apply QC filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -410,7 +410,7 @@ Saving, Exporting, and Reopening Work
   toolbar, adds every finished run from this session to the Project. The status
   bar shows how many are waiting; hover it for the list.
 - **File > Discard Unsaved Runs...** deletes their folders instead.
-- Closing the workbench, or switching Project, asks what to do with anything
+- Closing the studio, or switching Project, asks what to do with anything
   still unsaved: **Save**, **Discard**, or **Cancel**.
 - The Model Viewer lists unsaved runs first, under **Unsaved (this session)**,
   with **Save to Project** and **Discard** for the selected one. Label and notes
@@ -428,8 +428,8 @@ Saving, Exporting, and Reopening Work
 - **File > Import Existing Results...** registers an older results directory in
   place, without moving the files.
 - **File > Streamlit Bridge >** holds the commands that serve the web app rather
-  than the person at the keyboard: **Save Workbench Result** (writes
-  ``full_workbench_result.json`` for the bridge), **Export Module Result (JSON)**
+  than the person at the keyboard: **Save Studio Result** (writes
+  ``full_studio_result.json`` for the bridge), **Export Module Result (JSON)**
   (the current module's JSON summary, which carries no arrays), **Open Project
   Context...** (reopen a bridge context JSON), and **Rebuild Run Index** (rescan
   the Project's run folders).
@@ -519,7 +519,7 @@ Modules
    * - Seismic -> Structure
      - Derive 3D structural surfaces from seismic lines.
 
-The workbench also includes **AQUAH Chat**, an in-app assistant that can drive the
+The studio also includes **AQUAH Chat**, an in-app assistant that can drive the
 modules through natural language (OpenAI, Anthropic, or any OpenAI-compatible
 provider; bring your own API key). Every proposed action shows an Approve / Reject
 button before it runs.
@@ -530,14 +530,14 @@ How the Streamlit / Qt Bridge Works
 The bridge directory is ``<output_dir>/qt_bridge/`` (default
 ``results/streamlit_workflow/qt_bridge/``).
 
-1. In the web app's **Professional Workbench** tab, a launch button writes
-   ``full_workbench_context.json`` (project root, output directory, hydro data
+1. In the web app's **Professional Studio** tab, a launch button writes
+   ``full_studio_context.json`` (project root, output directory, hydro data
    directory, current workflow configuration and result, and the Python executable
    to reuse).
-2. Streamlit starts the Qt workbench as a separate process and passes that context path.
+2. Streamlit starts the Qt studio as a separate process and passes that context path.
 3. The Qt app reads the context on startup, so it points at the same project and data.
-4. When you save in the Qt app (File -> Streamlit Bridge -> Save Workbench Result,
-   or after a forward run), it writes ``full_workbench_result.json`` with the
+4. When you save in the Qt app (File -> Streamlit Bridge -> Save Studio Result,
+   or after a forward run), it writes ``full_studio_result.json`` with the
    per-module results.
 5. Back in the browser, the results panel reads that file and displays it.
 
@@ -550,7 +550,7 @@ Remote Servers and Download Mode
 
 A Qt window opens on the machine where the Python process runs. When Streamlit is
 hosted on a remote server, that server has no display attached to your screen, so the
-**Professional Workbench** tab switches to **download mode** and shows the download
+**Professional Studio** tab switches to **download mode** and shows the download
 links above instead of launch buttons. The default links point at the latest GitHub
 Release and can be overridden with environment variables:
 
@@ -566,27 +566,27 @@ Persistence and Troubleshooting
 -------------------------------
 
 - Window size and dock layout persist between sessions via ``QSettings``
-  (organization "PyHydroGeophysX", application "Workbench"). Delete that settings key
+  (organization "PyHydroGeophysX", application "Studio"). Delete that settings key
   to reset the layout to defaults.
 - Uncaught errors show a dialog with a copyable traceback instead of closing the app
   silently; the same text also goes to stderr and can be reported as a GitHub issue.
 - If a module page shows a "could not be loaded" message, it names the missing
-  optional package and the install command; the rest of the workbench is unaffected.
+  optional package and the install command; the rest of the studio is unaffected.
 
 Building the Bundles Yourself
 -----------------------------
 
-The PyInstaller configuration lives at ``packaging/pyinstaller_workbench.spec``. The
+The PyInstaller configuration lives at ``packaging/pyinstaller_studio.spec``. The
 ``PHGX_BUILD_VARIANT`` environment variable selects ``light`` (default) or ``full``.
 Helper scripts build and zip a bundle in one step:
 
 .. code-block:: bash
 
    # Windows (PowerShell)
-   scripts/build_workbench_exe.ps1 light
+   scripts/build_studio_exe.ps1 light
 
    # macOS / Linux
-   bash scripts/build_workbench_exe.sh light
+   bash scripts/build_studio_exe.sh light
 
 The GitHub Actions workflow ``.github/workflows/build-desktop.yml`` builds all four
 bundles and attaches them to the Release for every version tag.

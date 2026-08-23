@@ -1,4 +1,4 @@
-"""Guards on the workbench export paths that fail silently when they break.
+"""Guards on the studio export paths that fail silently when they break.
 
 An export button that raises inside a Qt slot prints to stderr and leaves the
 window looking idle, so these failures reach the user as "nothing happened"
@@ -15,7 +15,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 def _require_qt():
-    """Skip when the workbench pages cannot be imported.
+    """Skip when the studio pages cannot be imported.
 
     The pages import PySide6 and pyqtgraph at module scope, so a run without
     the desktop extras cannot reach them at all. Not importorskip: Qt fails

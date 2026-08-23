@@ -1,4 +1,4 @@
-"""Qt-free 3D ERT mesh builder shared by the desktop workbench.
+"""Qt-free 3D ERT mesh builder shared by the desktop studio.
 
 Turns a plain ``config`` dict (the same keys the Streamlit 3D mesh builder uses)
 into electrode positions and a PyGIMLi 3D mesh:

@@ -28,7 +28,7 @@ if exist docs\source\auto_examples\images\*.png (
 )
 
 REM Generate API documentation (qt_apps is excluded: the desktop GUI is covered
-REM by the user guide docs\source\agents\desktop_workbench.rst, matching the
+REM by the user guide docs\source\agents\desktop_studio.rst, matching the
 REM docs CI in .github\workflows\docs.yml)
 sphinx-apidoc -f -o docs\source\api PyHydroGeophysX PyHydroGeophysX\qt_apps
 

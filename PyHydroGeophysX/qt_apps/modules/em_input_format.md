@@ -13,7 +13,7 @@ initial point; the recovered layers remain free to move to different values.
 ## TEMcompany / TEM2Go projects
 
 Set **Data format** to **TEMcompany / TEM2Go**, click **Load data…**, and select
-the project directory (the folder containing `project.db`). The workbench reads
+the project directory (the folder containing `project.db`). The studio reads
 the station-stacked TDEM data
 directly from the project database and automatically imports:
 
@@ -26,14 +26,14 @@ directly from the project database and automatically imports:
 Choose **LM+HM** (the default) to fit all available early- and late-time gates to
 one shared layered model. **HM** and **LM** remain available for moment-specific
 diagnostics. Disabled/dummy gates are omitted separately for every sounding.
-For a project line, the Workbench also reads the saved layer grid and L2
+For a project line, the Studio also reads the saved layer grid and L2
 vertical/lateral smoothness settings. Lateral constraints connect adjacent
 stations only within the same survey-line number.
 
 The self-describing `project_StationData.xyz` and `project_RawData.xyz` exports
 can also be opened with **Load sounding(s)…**. `StationData` is preferred for
 inversion because it contains station stacks. A standalone XYZ file has
-latitude/longitude but not the database UTM fields, so the workbench derives
+latitude/longitude but not the database UTM fields, so the studio derives
 local metric map coordinates. A complete project folder preserves the original
 UTM coordinates and enabled-gate flags.
 

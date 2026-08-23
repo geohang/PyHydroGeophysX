@@ -200,7 +200,7 @@ Rules: show me a dry run and what would change before you modify my environment.
 Do not accept any channel Terms of Service for me; if a package manager asks,
 stop and give me the exact command to run myself.
 
-Optional, for the desktop workbench: also install the `desktop` and `desktop-3d`
+Optional, for the desktop studio: also install the `desktop` and `desktop-3d`
 groups, then verify with
   python -c "import PyHydroGeophysX, pygimli, PySide6, pyvista; print('ok')"
   python -m PyHydroGeophysX.qt_apps.launcher --self-test
@@ -224,7 +224,7 @@ groups, then verify with
 | `all` | all general-purpose groups above; ADTLERT remains opt-in |
 
 `desktop-3d` is separate because `vtk` is a large binary wheel. Without it the
-workbench runs and exports meshes as usual, and the 3D panels show an install
+studio runs and exports meshes as usual, and the 3D panels show an install
 message instead of a viewer.
 
 ---
@@ -306,21 +306,21 @@ rather than only that the server started. If port 8501 is busy, use the next
 free port and tell me which one.
 ```
 
-**Desktop workbench (Qt):**
+**Desktop studio (Qt):**
 
 ```bash
 python -m PyHydroGeophysX.qt_apps.launcher
 # or, after (re)installing the package:
-pyhydrogeophysx-workbench
+pyhydrogeophysx-studio
 ```
 
-On Windows, `examples\start_workbench.bat` opens the workbench from a
+On Windows, `examples\start_studio.bat` opens the studio from a
 double-click, the desktop counterpart of `start_webapp.bat`: no activated
 environment and no `PATH` entry needed, and it creates a local
-`.venv-workbench` with the desktop dependencies when it finds none.
-`examples/start_workbench.sh` is the macOS and Linux version.
+`.venv-studio` with the desktop dependencies when it finds none.
+`examples/start_studio.sh` is the macOS and Linux version.
 
-Desktop dependencies come from the `desktop` extra (`pip install "pyhydrogeophysx[desktop]"`) or `requirements-desktop.txt`, plus `desktop-3d` for the 3D viewers. Prebuilt Windows/macOS bundles (light and full variants) are on [GitHub Releases](https://github.com/geohang/PyHydroGeophysX/releases/latest); the usage guide is at [Desktop Workbench documentation](https://geohang.github.io/PyHydroGeophysX/agents/desktop_workbench.html).
+Desktop dependencies come from the `desktop` extra (`pip install "pyhydrogeophysx[desktop]"`) or `requirements-desktop.txt`, plus `desktop-3d` for the 3D viewers. Prebuilt Windows/macOS bundles (light and full variants) are on [GitHub Releases](https://github.com/geohang/PyHydroGeophysX/releases/latest); the usage guide is at [Desktop Studio documentation](https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.html).
 
 ---
 

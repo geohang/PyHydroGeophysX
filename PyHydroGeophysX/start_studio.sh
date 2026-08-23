@@ -1,9 +1,9 @@
 #!/bin/bash
-# PyHydroGeophysX Desktop Workbench Launcher (Linux/macOS)
+# PyHydroGeophysX Desktop Studio Launcher (Linux/macOS)
 # Starts the Qt desktop application. Extra arguments pass through, for example:
-#   ./start_workbench.sh --module hydro_geophysics
+#   ./start_studio.sh --module hydro_geophysics
 #
-# On macOS, copy this file to start_workbench.command to make it double-clickable
+# On macOS, copy this file to start_studio.command to make it double-clickable
 # from Finder.
 
 set -u
@@ -14,15 +14,15 @@ REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 export PYTHONPATH="${REPO_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
 
 echo "========================================"
-echo "PyHydroGeophysX Desktop Workbench"
+echo "PyHydroGeophysX Desktop Studio"
 echo "========================================"
 echo ""
 
 if [ ! -f "${REPO_DIR}/PyHydroGeophysX/qt_apps/launcher.py" ]; then
-    echo "[ERROR] The workbench was not found under:"
+    echo "[ERROR] The studio was not found under:"
     echo "        ${REPO_DIR}"
     echo ""
-    echo "Keep start_workbench.sh in the examples folder of the downloaded"
+    echo "Keep start_studio.sh in the examples folder of the downloaded"
     echo "PyHydroGeophysX source package."
     exit 1
 fi
@@ -69,13 +69,13 @@ if [ -n "${PYSIDE6_PLUGIN_DIR}" ] && [ -d "${PYSIDE6_PLUGIN_DIR}" ]; then
     export QT_QPA_PLATFORM_PLUGIN_PATH="${PYSIDE6_PLUGIN_DIR}/platforms"
 fi
 
-echo "Starting the workbench. Keep this terminal open while using the app:"
+echo "Starting the studio. Keep this terminal open while using the app:"
 echo "it carries the startup log and any error message."
 echo "========================================"
 echo ""
 
 # Used by automated checks; a normal run never sets this variable.
-if [ "${PHGX_WORKBENCH_DRY_RUN:-}" = "1" ]; then
+if [ "${PHGX_STUDIO_DRY_RUN:-}" = "1" ]; then
     exit 0
 fi
 

@@ -1,4 +1,4 @@
-"""Generic background worker for the workbench.
+"""Generic background worker for the studio.
 
 ``TaskWorker`` handles non-workflow support tasks such as file parsing and
 preview generation. ``WorkflowWorker`` runs cooperative workflows in a Qt
@@ -131,7 +131,7 @@ class ProcessProbeWorker(QObject):
     """Run a JSON-emitting diagnostic module in a clean Python process.
 
     GPU libraries load several native Windows DLLs. Importing them from a
-    ``QThread`` still uses the workbench process and can therefore inherit a
+    ``QThread`` still uses the studio process and can therefore inherit a
     conflicting OpenMP DLL that another visualization dependency loaded first.
     A fresh interpreter has its own DLL namespace and matches the isolation used
     by the actual ERT inversion workflow.
@@ -308,7 +308,7 @@ class ProcessWorkflowWorker(QObject):
     Some long-running extension calls do not release that GIL often enough, so
     the window stops painting even though the workflow is nominally off-thread.
     ``QProcess`` gives the workflow its own interpreter and makes cancellation
-    enforceable without terminating the workbench.
+    enforceable without terminating the studio.
     """
 
     succeeded = Signal(object)
@@ -345,7 +345,7 @@ class ProcessWorkflowWorker(QObject):
         environment.insert("PYTHONIOENCODING", "utf-8")
         self.process.setProcessEnvironment(environment)
         # ``sys.executable`` can resolve to the Windows Store base executable
-        # even when the workbench was launched through ``.venv\Scripts``.  A
+        # even when the studio was launched through ``.venv\Scripts``.  A
         # direct QProcess launch of that MSIX executable bypasses the venv
         # launcher and has crashed in extension DLL initialization (notably
         # pyarrow/arrow.dll).  Prefer the console launcher belonging to the

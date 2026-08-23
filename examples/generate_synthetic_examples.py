@@ -1,6 +1,6 @@
-"""Generate synthetic *Hydro -> Geophysics* example datasets for the Qt workbench.
+"""Generate synthetic *Hydro -> Geophysics* example datasets for the Qt studio.
 
-The desktop workbench ships three coupled modules whose bundled "Use example"
+The desktop studio ships three coupled modules whose bundled "Use example"
 button loads a small dataset:
 
 * ``hydro_geophysics``  (navigator "Hydro -> Geophysics")  -> a gridded hydrology model

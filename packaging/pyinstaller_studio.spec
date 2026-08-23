@@ -1,13 +1,13 @@
-# PyInstaller spec for the PyHydroGeophysX Qt desktop workbench.
+# PyInstaller spec for the PyHydroGeophysX Qt desktop studio.
 #
 # Build (from the repository root, in an environment with the desktop deps):
 #     pip install pyinstaller pillow
 #     python packaging/make_icons.py     # generates app_icon.ico / app_icon.icns
-#     pyinstaller --noconfirm packaging/pyinstaller_workbench.spec
+#     pyinstaller --noconfirm packaging/pyinstaller_studio.spec
 #
 # Or use the helper scripts, which do all three steps and zip the result:
-#     scripts/build_workbench_exe.ps1 [light|full]     (Windows)
-#     bash scripts/build_workbench_exe.sh [light|full] (macOS / Linux)
+#     scripts/build_studio_exe.ps1 [light|full]     (Windows)
+#     bash scripts/build_studio_exe.sh [light|full] (macOS / Linux)
 #
 # Variants -- selected with the PHGX_BUILD_VARIANT environment variable:
 #
@@ -26,7 +26,7 @@
 #
 # Notes
 # -----
-# * The result is dist/PyHydroGeophysX-Workbench/ (plus a .app bundle on macOS).
+# * The result is dist/PyHydroGeophysX-Studio/ (plus a .app bundle on macOS).
 # * upx is disabled: UPX-compressed Qt DLLs are a known source of broken
 #   Windows builds.
 # * Set ``console=True`` below while debugging to see tracebacks in a terminal.
@@ -44,7 +44,7 @@ launcher = os.path.join(repo_root, "PyHydroGeophysX", "qt_apps", "launcher.py")
 variant = os.environ.get("PHGX_BUILD_VARIANT", "light").strip().lower()
 if variant not in ("light", "full"):
     raise SystemExit(f"PHGX_BUILD_VARIANT must be 'light' or 'full', got {variant!r}")
-print(f"[workbench spec] building the '{variant}' variant")
+print(f"[studio spec] building the '{variant}' variant")
 
 hiddenimports = []
 hiddenimports += collect_submodules("PyHydroGeophysX.qt_apps")
@@ -105,7 +105,7 @@ else:
         try:
             _d, _b, _h = collect_all(_pkg)
         except Exception as _exc:  # noqa: BLE001 - engine absent from the build env
-            print(f"[workbench spec] full variant: skipping '{_pkg}' ({_exc})")
+            print(f"[studio spec] full variant: skipping '{_pkg}' ({_exc})")
             continue
         datas += _d
         binaries += _b
@@ -120,7 +120,7 @@ else:
     _icon_candidate = None
 icon = _icon_candidate if _icon_candidate and os.path.exists(_icon_candidate) else None
 if _icon_candidate and icon is None:
-    print(f"[workbench spec] no icon at {_icon_candidate}; run packaging/make_icons.py first")
+    print(f"[studio spec] no icon at {_icon_candidate}; run packaging/make_icons.py first")
 
 block_cipher = None
 
@@ -147,7 +147,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="PyHydroGeophysX-Workbench",
+    name="PyHydroGeophysX-Studio",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -164,15 +164,15 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="PyHydroGeophysX-Workbench",
+    name="PyHydroGeophysX-Studio",
 )
 
 if sys.platform == "darwin":
     app = BUNDLE(
         coll,
-        name="PyHydroGeophysX-Workbench.app",
+        name="PyHydroGeophysX-Studio.app",
         icon=icon,
-        bundle_identifier="io.github.geohang.pyhydrogeophysx.workbench",
+        bundle_identifier="io.github.geohang.pyhydrogeophysx.studio",
         info_plist={
             "NSHighResolutionCapable": True,
             "NSPrincipalClass": "NSApplication",

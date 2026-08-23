@@ -1,9 +1,9 @@
-"""AQUAH in-app assistant for the PyHydroGeophysX Qt workbench.
+"""AQUAH in-app assistant for the PyHydroGeophysX Qt studio.
 
 This subpackage wires a natural-language chat panel (the right-hand dock) to the
-workbench through a small, stable command layer:
+studio through a small, stable command layer:
 
-- :class:`controller.WorkbenchController` exposes a handful of generic,
+- :class:`controller.StudioController` exposes a handful of generic,
   JSON-friendly operations (list modules, navigate, describe the current module,
   apply an action, read state) over the live main window. All of these run on
   the Qt main thread.

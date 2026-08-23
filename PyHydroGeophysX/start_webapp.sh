@@ -46,7 +46,7 @@ try_python() {
     fi
 }
 
-# Use the same discovery order as the desktop workbench: the reusable launcher
+# Use the same discovery order as the desktop studio: the reusable launcher
 # environment, an explicitly selected interpreter, an active Conda environment,
 # and finally Python commands available on PATH.
 try_python "${VENV_DIR}/bin/python"

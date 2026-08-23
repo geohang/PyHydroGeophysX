@@ -1180,7 +1180,7 @@ def export_electrodes_to_csv(electrode_positions: pd.DataFrame,
     all_electrodes.to_csv(output_path, index=False)
 
 
-# Public workbench-oriented builders promoted from qt_apps. The private sibling
+# Public studio-oriented builders promoted from qt_apps. The private sibling
 # keeps this already-large module navigable; this file is the canonical path.
 from ._mesh_3d_builder import (  # noqa: E402
     build_electrodes,

@@ -1,4 +1,4 @@
-"""Geophysics -> hydrology inverse pipeline for the desktop workbench.
+"""Geophysics -> hydrology inverse pipeline for the desktop studio.
 
 This is the inverse counterpart to ``hydro_pipeline.py``. It takes an
 already-inverted (time-lapse) ERT resistivity model on a mesh and converts it to

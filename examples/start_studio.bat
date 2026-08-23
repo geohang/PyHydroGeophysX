@@ -1,12 +1,12 @@
 @echo off
 setlocal EnableExtensions
-title PyHydroGeophysX Desktop Workbench
+title PyHydroGeophysX Desktop Studio
 
 rem Always resolve paths relative to this file, not the directory from which
 rem Explorer or a terminal happened to start the launcher.
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%..") do set "REPO_DIR=%%~fI"
-set "VENV_DIR=%REPO_DIR%\.venv-workbench"
+set "VENV_DIR=%REPO_DIR%\.venv-studio"
 set "PYTHON_EXE="
 set "PYTHON_ARGS="
 set "FALLBACK_EXE="
@@ -20,15 +20,15 @@ if defined PYTHONPATH (
 )
 
 echo ========================================
-echo PyHydroGeophysX Desktop Workbench
+echo PyHydroGeophysX Desktop Studio
 echo ========================================
 echo.
 
 if not exist "%REPO_DIR%\PyHydroGeophysX\qt_apps\launcher.py" (
-    echo [ERROR] The workbench was not found under:
+    echo [ERROR] The studio was not found under:
     echo         "%REPO_DIR%"
     echo.
-    echo Keep start_workbench.bat in the examples folder of the downloaded
+    echo Keep start_studio.bat in the examples folder of the downloaded
     echo PyHydroGeophysX source package.
     goto :failed
 )
@@ -99,13 +99,13 @@ rem isolated environment so the user's existing environments are not changed.
 if not defined FALLBACK_EXE goto :no_python
 
 echo The desktop dependencies (PySide6, pyqtgraph) are not installed in an
-echo available Python environment. Creating a reusable workbench environment:
+echo available Python environment. Creating a reusable studio environment:
 echo   "%VENV_DIR%"
 echo.
 "%FALLBACK_EXE%" %FALLBACK_ARGS% -m venv "%VENV_DIR%"
 if errorlevel 1 (
     echo.
-    echo [ERROR] Python could not create the workbench environment.
+    echo [ERROR] Python could not create the studio environment.
     goto :failed
 )
 
@@ -135,19 +135,19 @@ set "PYTHON_ARGS="
 echo Using Python:
 "%PYTHON_EXE%" %PYTHON_ARGS% -c "import sys; print('  ' + sys.executable)"
 echo.
-echo Starting the workbench. The window opens in a moment.
+echo Starting the studio. The window opens in a moment.
 echo Keep this window open while using the app: it carries the startup log and
-echo any error message. Closing the workbench closes this window too.
+echo any error message. Closing the studio closes this window too.
 echo ========================================
 echo.
 
 rem Used by automated checks; normal double-clicks never set this variable.
-if /i "%PHGX_WORKBENCH_DRY_RUN%"=="1" exit /b 0
+if /i "%PHGX_STUDIO_DRY_RUN%"=="1" exit /b 0
 
 "%PYTHON_EXE%" %PYTHON_ARGS% -m PyHydroGeophysX.qt_apps.launcher %*
 if errorlevel 1 (
     echo.
-    echo [ERROR] The workbench stopped unexpectedly. See the message above.
+    echo [ERROR] The studio stopped unexpectedly. See the message above.
     goto :failed
 )
 exit /b 0

@@ -1,4 +1,4 @@
-"""Compatibility exports for the Qt gravity/magnetics workbench module."""
+"""Compatibility exports for the Qt gravity/magnetics studio module."""
 
 from PyHydroGeophysX._internal.deprecations import warn_legacy_path
 from PyHydroGeophysX.workflows.gravmag import (

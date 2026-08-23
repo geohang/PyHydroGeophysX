@@ -1,4 +1,4 @@
-"""Read-only-first browser for durable workbench Result Store runs."""
+"""Read-only-first browser for durable studio Result Store runs."""
 
 from __future__ import annotations
 
@@ -308,7 +308,7 @@ class ModelViewerModule(BaseModule):
         self._save_run = QPushButton("Save to Project")
         self._save_run.setToolTip(
             "Add this run to the Project's history. Until then it exists only as "
-            "a folder this session wrote, and closing the workbench will ask."
+            "a folder this session wrote, and closing the studio will ask."
         )
         self._save_run.setVisible(False)
         self._save_run.clicked.connect(self._save_current_run)
@@ -367,7 +367,7 @@ class ModelViewerModule(BaseModule):
         """Build the convergence chart, or a stand-in if it cannot be created.
 
         ``InversionQualityView`` embeds a matplotlib Qt canvas. Where matplotlib
-        has bound a different Qt binding than the workbench uses, constructing it
+        has bound a different Qt binding than the studio uses, constructing it
         raises — and without this guard the factory would replace the entire
         Model Viewer with a placeholder over one optional chart.
         """

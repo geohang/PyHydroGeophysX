@@ -56,6 +56,7 @@ def test_single_inversion_uses_paper_sensitivity_configuration(monkeypatch):
     assert config.linearized_solver == "gpu_cgls"
     assert config.max_log_step == 1.0
     assert config.line_search is True
+    assert config.step_tolerance == pytest.approx(1.0e-4)
     assert result.metrics["sensitivity_profile"] == "paper"
 
 
@@ -92,13 +93,16 @@ def test_auto_lambda_trial_disables_adtlert_target_with_none(monkeypatch):
         engine,
         lam=12.5,
         max_iterations=5,
-        plateau_tolerance=1.0e-4,
+        # This controls chi2 plateau detection in the Studio contract; it
+        # must not become ADTLERT's log-model step tolerance.
+        plateau_tolerance=0.005,
         target_chi2=1.0,
         max_total_iterations=5,
         stop_on_target=False,
     )
 
     assert captured["config"].target_chi2 is None
+    assert captured["config"].step_tolerance == pytest.approx(1.0e-4)
     assert result.stop != "target"
 
 

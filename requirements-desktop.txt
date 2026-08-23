@@ -1,8 +1,8 @@
-# Desktop (Qt) workbench dependencies for PyHydroGeophysX.
+# Desktop (Qt) studio dependencies for PyHydroGeophysX.
 # Install into the same Python environment that runs the package / Streamlit app:
 #     pip install -r requirements-desktop.txt
 #
-# These power PyHydroGeophysX.qt_apps (the professional desktop workbench).
+# These power PyHydroGeophysX.qt_apps (the professional desktop studio).
 
 PySide6>=6.5
 pyqtgraph>=0.13
@@ -12,7 +12,7 @@ pandas>=1.3.0
 
 # The 3D viewers (Mesh 3D, velocity volume, clip-plane preview). Left commented
 # out because vtk is a large binary wheel; without them those panels show an
-# install message and the rest of the workbench is unaffected. Equivalent to
+# install message and the rest of the studio is unaffected. Equivalent to
 #     pip install "pyhydrogeophysx[desktop-3d]"
 #
 # Before installing, check which tool manages this environment's packages:

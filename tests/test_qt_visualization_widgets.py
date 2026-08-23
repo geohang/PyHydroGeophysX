@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QApplication
 
 from PyHydroGeophysX.qt_apps.modules.ert_processing import ERTProcessingModule
 from PyHydroGeophysX.qt_apps.modules.model_viewer import ModelViewerModule
-from PyHydroGeophysX.qt_apps.state import WorkbenchState
+from PyHydroGeophysX.qt_apps.state import StudioState
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.em_overview_view import EMOverviewView
 from PyHydroGeophysX.qt_apps.widgets.plan_slice_view import PlanSliceView
@@ -35,7 +35,7 @@ def test_ert_pseudosection_has_stable_static_markers_and_physical_colour_scale(
     app, tmp_path: Path
 ) -> None:
     view = ERTProcessingModule(
-        WorkbenchState(output_dir=tmp_path), lambda *_args: None
+        StudioState(output_dir=tmp_path), lambda *_args: None
     )
     view._pseudo = [(0.0, 1.0, 10.0), (1.0, 2.0, 100.0), (2.0, 3.0, 1000.0)]
     view._draw_pseudosection()
@@ -184,7 +184,7 @@ def test_model_viewer_preserves_resistivity_artifact_semantics(
 ) -> None:
     path = tmp_path / "apparent_resistivity.npy"
     np.save(path, np.geomspace(1.0, 1000.0, 20).reshape(4, 5))
-    state = WorkbenchState(output_dir=tmp_path)
+    state = StudioState(output_dir=tmp_path)
     view = ModelViewerModule(state, lambda *_args: None)
     view._render_numpy(
         path,
@@ -216,7 +216,7 @@ def test_ert_names_the_reader_that_handled_the_file(app, tmp_path: Path, monkeyp
     holds, which makes "who read this" a question about the numbers on screen
     rather than a detail of the implementation.
     """
-    view = ERTProcessingModule(WorkbenchState(output_dir=tmp_path), lambda *_a: None)
+    view = ERTProcessingModule(StudioState(output_dir=tmp_path), lambda *_a: None)
 
     monkeypatch.setattr(type(view), "_resipy_version", staticmethod(lambda: "3.6.6"))
     view._show_reader_status()

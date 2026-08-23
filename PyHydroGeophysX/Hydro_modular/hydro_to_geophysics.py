@@ -1,4 +1,4 @@
-"""Hydro -> multi-geophysics forward pipeline for the desktop workbench.
+"""Hydro -> multi-geophysics forward pipeline for the desktop studio.
 
 This module is a thin, parameterized re-use of
 ``examples/Ex_hydro_to_multigeophys.py``. It is deliberately Qt-free so it can run

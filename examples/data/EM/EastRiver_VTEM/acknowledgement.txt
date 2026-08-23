@@ -31,7 +31,7 @@ sensor height above bare earth (ALT) and a NAVD88 ground elevation are provided.
 Files in this folder
 --------------------
 eastriver_vtem_line22030.csv
-    Workbench TDEM multi-sounding demo. Column 0 = gate center time (s); each
+    Studio TDEM multi-sounding demo. Column 0 = gate center time (s); each
     following column (snd01..snd22) = one sounding's normalized dB/dt across the
     gates. Built from flight line 22030 in the 200-series processed data: a
     3.0-km height-stable segment (sensor altitude 53-105 m, median 82 m),
@@ -40,7 +40,7 @@ eastriver_vtem_line22030.csv
 
 eastriver_vtem_line22030_geometry.csv
     Per-sounding metadata: index, distance along line (m), UTM easting/northing
-    (WGS84 zone 13N), and sensor altitude above ground (m). The workbench auto-loads
+    (WGS84 zone 13N), and sensor altitude above ground (m). The studio auto-loads
     this companion file with the data; its easting/northing put the plan-view map on
     real UTM coordinates, and its distances set the section's x-axis.
 
@@ -50,8 +50,8 @@ eastriver_vtem_line22030_usgs_resistivity.csv
     = that sounding's resistivity (ohm-m) from the 30-layer smooth 1D AarhusInv
     inversion in the data release.
 
-eastriver_workbench_vs_usgs.png
-    The workbench stitched 1D inversion of the dB/dt data (top) next to the USGS
+eastriver_studio_vs_usgs.png
+    The studio stitched 1D inversion of the dB/dt data (top) next to the USGS
     published model (bottom) for line 22030.
 
 eastriver_vtem_area.csv
@@ -69,7 +69,7 @@ eastriver_area_depthslices.png
     The area demo inverted and shown as plan-view resistivity maps at 13, 52 and
     95 m depth. This is what the "Plan slice" view produces.
 
-Recommended workbench settings (EM module, TDEM)
+Recommended studio settings (EM module, TDEM)
 ------------------------------------------------
 Load eastriver_vtem_line22030.csv, set the geometry, and press "Run inversion":
   Geometry:   source radius 13 m (the VTEM ET transmitter loop is about 26 m
@@ -95,7 +95,7 @@ the settings above.
 
 Calibration and the absolute resistivity
 ----------------------------------------
-The published dB/dt is normalized by the transmitter moment, while the workbench's
+The published dB/dt is normalized by the transmitter moment, while the studio's
 1D forward is not, so the two differ by an amplitude factor ("data scale"). Without
 it the inversion rails to the resistivity bounds (mean chi-square about 9). But the
 absolute resistivity LEVEL and the data scale are mathematically degenerate: any
@@ -108,7 +108,7 @@ To get reliable, consistent absolute values, set "Reference ρ (Ω·m)" to a
 known/expected background resistivity (from a borehole or regional geology). For
 this valley about 300-320 ohm-m is a good choice; it yields data scale about 0.25
 (which independently matches the constant obtained by forward-modeling the USGS
-models through the workbench forward), a mean chi-square below 1, and a near-surface
+models through the studio forward), a mean chi-square below 1, and a near-surface
 resistivity consistent with the USGS model and consistent between the line and the
 area datasets. In the top ~200 m (the early-time depth of investigation) the
 recovered structure follows the USGS model, including the central conductor near

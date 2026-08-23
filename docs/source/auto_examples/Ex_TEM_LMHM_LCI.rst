@@ -20,7 +20,7 @@
 Synthetic LM+HM line inversion with lateral constraints.
 
 This example loads the bundled nine-station SQLite project through the same
-TEMcompany/TEM2Go reader used by the Qt Workbench. It jointly fits the LM and HM
+TEMcompany/TEM2Go reader used by the Qt Studio. It jointly fits the LM and HM
 gates, applies same-line L2 lateral constraints, and compares the recovered
 section with the known synthetic resistivity model.
 

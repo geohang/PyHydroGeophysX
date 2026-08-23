@@ -1,4 +1,4 @@
-"""Robust ERT file loading for the desktop workbench (Qt-free).
+"""Robust ERT file loading for the desktop studio (Qt-free).
 
 A single source of truth for turning an ERT data file into a pygimli
 ``DataContainerERT`` with correct geometry, topography, and apparent

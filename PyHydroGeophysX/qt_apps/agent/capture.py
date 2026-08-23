@@ -1,6 +1,6 @@
-"""Render a live workbench panel to PNG bytes so the agent can look at it.
+"""Render a live studio panel to PNG bytes so the agent can look at it.
 
-The workbench already tells AQUAH what happened in numbers; this module is how it
+The studio already tells AQUAH what happened in numbers; this module is how it
 shows what happened. Panels are discovered generically by widget class, so a new
 module page gets capture support without registering anything, and a page may
 override the choice by defining ``agent_views() -> {name: widget}``.

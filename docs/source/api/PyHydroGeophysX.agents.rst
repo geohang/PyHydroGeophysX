@@ -148,10 +148,10 @@ PyHydroGeophysX.agents.water\_content\_agent module
    :show-inheritance:
    :undoc-members:
 
-PyHydroGeophysX.agents.workbench\_tools module
+PyHydroGeophysX.agents.studio\_tools module
 ----------------------------------------------
 
-.. automodule:: PyHydroGeophysX.agents.workbench_tools
+.. automodule:: PyHydroGeophysX.agents.studio_tools
    :members:
    :show-inheritance:
    :undoc-members:

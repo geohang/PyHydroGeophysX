@@ -70,7 +70,7 @@ _P = theme.PALETTE
 
 
 class JointInversionModule(BaseModule):
-    """Six-step workbench page for joint and cooperative inversion."""
+    """Six-step studio page for joint and cooperative inversion."""
 
     module_key = "joint_inversion"
     module_title = "Joint Inversion"

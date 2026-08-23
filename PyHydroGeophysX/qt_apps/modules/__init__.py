@@ -1,4 +1,4 @@
-"""Module pages for the workbench and a defensive factory to build them.
+"""Module pages for the studio and a defensive factory to build them.
 
 ``build_module`` imports each page lazily so that a failure in one module (for
 example a missing optional dependency) degrades to a clean placeholder page
@@ -50,7 +50,7 @@ def _missing_dependency_hint(exc: BaseException) -> str:
     hint = installation_hint(exc)
     return (
         f"<br>Missing package: <b>{root}</b>. Install it with "
-        f"<code>{hint}</code> and restart the workbench."
+        f"<code>{hint}</code> and restart the studio."
     )
 
 
@@ -76,7 +76,7 @@ def build_module(key: str, state: Any, log: LogFn) -> BaseModule:
             title,
             f"This module could not be loaded:<br><br><code>{exc}</code>"
             f"{dependency_hint}<br><br>"
-            "The rest of the workbench is unaffected.",
+            "The rest of the studio is unaffected.",
             key=key,
         )
 

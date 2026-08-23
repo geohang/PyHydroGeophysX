@@ -14,7 +14,7 @@ to right, while a fixed depth-dependent multiplier gives vertical structure.
 LM has 7 gates, HM has 11 gates, and deterministic Gaussian relative noise is
 3% (`seed=20260730`).
 
-## Workbench quick test
+## Studio quick test
 
 In **EM Processing**, select the `TEMcompany / TEM2Go` data format, click
 **Load data...**, and choose this folder. Keep `LM+HM`, then run the line

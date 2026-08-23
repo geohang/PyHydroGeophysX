@@ -1,6 +1,6 @@
 """Report where the UI thread stalls, with the stack that was running.
 
-"The window freezes sometimes" is not actionable: the compute in this workbench
+"The window freezes sometimes" is not actionable: the compute in this studio
 already runs on worker threads, so a freeze means something else is holding the
 thread that paints, and only a stack taken *during* the stall says what.
 
@@ -14,7 +14,7 @@ Off unless asked for. Set the threshold in milliseconds::
 
     PHGX_STALL_WATCH_MS=300
 
-Findings go to stderr immediately and to the workbench log once the UI thread is
+Findings go to stderr immediately and to the studio log once the UI thread is
 free again. ``PHGX_STALL_WATCH_FILE`` also appends them to a file, which survives
 a hard kill when the freeze never ends.
 """

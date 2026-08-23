@@ -1,4 +1,4 @@
-"""Launch the PyHydroGeophysX professional desktop workbench.
+"""Launch the PyHydroGeophysX professional desktop studio.
 
 Usage::
 
@@ -34,7 +34,7 @@ def _install_excepthook(show_dialog: bool) -> None:
                 if QApplication.instance() is not None:
                     box = QMessageBox()
                     box.setIcon(QMessageBox.Icon.Critical)
-                    box.setWindowTitle("PyHydroGeophysX Workbench: unexpected error")
+                    box.setWindowTitle("PyHydroGeophysX Studio: unexpected error")
                     box.setText(
                         "An unexpected error occurred. The application will try to "
                         "keep running; details are below."
@@ -48,7 +48,7 @@ def _install_excepthook(show_dialog: bool) -> None:
 
 
 def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="PyHydroGeophysX Professional Workbench")
+    parser = argparse.ArgumentParser(description="PyHydroGeophysX Professional Studio")
     parser.add_argument("--context", default=None, help="Path to the bridge context JSON.")
     parser.add_argument("--module", default="home", help="Initial module key to open.")
     parser.add_argument(
@@ -83,15 +83,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     from PySide6.QtWidgets import QApplication
 
     from PyHydroGeophysX.qt_apps import theme
-    from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXWorkbench
+    from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXStudio
 
     app = QApplication.instance() or QApplication(sys.argv[:1])
-    app.setApplicationName("PyHydroGeophysX Professional Workbench")
+    app.setApplicationName("PyHydroGeophysX Professional Studio")
     _install_excepthook(show_dialog=not args.self_test)
     # Apply the brand theme before building widgets (also sets pyqtgraph colors).
     theme.apply_theme(app)
 
-    window = PyHydroGeophysXWorkbench(
+    window = PyHydroGeophysXStudio(
         context_path=args.context,
         initial_module=("em" if args.em_data else (args.module or "home")),
     )

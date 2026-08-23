@@ -1,6 +1,6 @@
-"""Workbench state and the Streamlit <-> Qt JSON bridge (Qt-free).
+"""Studio state and the Streamlit <-> Qt JSON bridge (Qt-free).
 
-``WorkbenchState`` owns the context that Streamlit handed us (where the project
+``StudioState`` owns the context that Streamlit handed us (where the project
 lives, where to read hydro data, where to write results) and accumulates
 per-module results. It can persist those results back to the bridge file that
 Streamlit polls. Nothing here imports PySide6 so it stays easy to test.
@@ -16,13 +16,13 @@ from PyHydroGeophysX.qt_apps import io_utils
 from PyHydroGeophysX.qt_apps.results_store import ResultsStore, RunHandle
 from PyHydroGeophysX._internal.utils import utc_now as _utc_now
 
-RESULT_FILENAME = "full_workbench_result.json"
-APP_NAME = "PyHydroGeophysX Professional Workbench"
+RESULT_FILENAME = "full_studio_result.json"
+APP_NAME = "PyHydroGeophysX Professional Studio"
 
 
 @dataclass
-class WorkbenchState:
-    """Mutable state shared across the workbench main window and its modules."""
+class StudioState:
+    """Mutable state shared across the studio main window and its modules."""
 
     context_path: Optional[Path] = None
     result_path: Optional[Path] = None
@@ -60,7 +60,7 @@ class WorkbenchState:
 
     # -- construction --------------------------------------------------------
     @classmethod
-    def from_context(cls, context_path: Optional[str]) -> "WorkbenchState":
+    def from_context(cls, context_path: Optional[str]) -> "StudioState":
         """Build a state object, loading the context JSON when one is given."""
         state = cls()
         if context_path:

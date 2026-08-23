@@ -1,4 +1,4 @@
-"""Base classes shared by all workbench module pages."""
+"""Base classes shared by all studio module pages."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ ExportAction = Tuple[str, Callable[[], Any]]
 class BaseModule(QWidget):
     """A page in the central stacked widget.
 
-    Subclasses get ``self.state`` (the shared :class:`WorkbenchState`) and a
+    Subclasses get ``self.state`` (the shared :class:`StudioState`) and a
     ``self.log(message, level)`` helper wired to the bottom log panel. They call
     ``self.report_result(dict)`` to publish their result into the bridge state.
     """
@@ -137,7 +137,7 @@ class BaseModule(QWidget):
                 pass
         if had_workers:
             self.state.cancel_module_runs(
-                self.module_key, "Workbench closed during computation"
+                self.module_key, "Studio closed during computation"
             )
 
 
@@ -150,7 +150,7 @@ class HomePage(BaseModule):
     def __init__(self, state: Any, log: LogFn, parent=None) -> None:
         super().__init__(state, log, parent)
         layout = QVBoxLayout(self)
-        title = QLabel("<h2>PyHydroGeophysX Professional Workbench</h2>")
+        title = QLabel("<h2>PyHydroGeophysX Professional Studio</h2>")
         intro = QLabel(
             "Select a module from the project tree on the left.<br><br>"
             "<b>Geophysical Data Processing</b>: Seismic, ERT, Mesh 3D, EM, "

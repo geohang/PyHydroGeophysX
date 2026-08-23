@@ -338,7 +338,7 @@ def _temcompany_column(rows, key: str, dtype=float, default=np.nan) -> np.ndarra
 
 
 def _temcompany_system(spec: Dict[str, Any], row: Optional[sqlite3.Row] = None) -> Dict[str, Any]:
-    """Map TEMcompany loop/receiver metadata to the workbench geometry."""
+    """Map TEMcompany loop/receiver metadata to the studio geometry."""
     area = float(spec.get("TxLoopArea", 0.0) or 0.0)
     if area <= 0.0:
         xy = np.asarray(spec.get("TxLoopXYlength", []), dtype=float).ravel()

@@ -1,9 +1,9 @@
-"""Qt-free run history for the desktop workbench.
+"""Qt-free run history for the desktop studio.
 
 Each saved run owns a small ``run.json`` record.  The root index is deliberately
 a cache: it can always be rebuilt by scanning those records, so an interrupted
 OneDrive update cannot make the expensive scientific outputs disappear from
-the workbench.
+the studio.
 
 **A finished computation is not part of the history until the user saves it.**
 A solver has to write its outputs somewhere, so a run still gets a directory
@@ -42,7 +42,7 @@ IMPORTS_DIRNAME = "imports"
 UNSAVED_MARKER = "UNSAVED"
 _UNSAVED_NOTE = (
     "This run has not been saved to the Project.\n"
-    "It is invisible to the workbench's run history until you save it there,\n"
+    "It is invisible to the studio's run history until you save it there,\n"
     "and deleting this folder discards it.\n"
 )
 _AUTO_DISCOVER_LIMIT = 200
@@ -274,7 +274,7 @@ class RunHandle:
 
 
 class ResultsStore:
-    """Folder-backed history of workbench operations and workflow outputs."""
+    """Folder-backed history of studio operations and workflow outputs."""
 
     def __init__(self, root: Path, *, read_only: bool = False) -> None:
         self.root = Path(root).expanduser().resolve()
@@ -521,7 +521,7 @@ class ResultsStore:
 
         A crash or a forced quit leaves a marked directory with no ``run.json``.
         Nothing reads it, so it would sit in the Project consuming space without
-        appearing anywhere; this is how the workbench offers to clear it.
+        appearing anywhere; this is how the studio offers to clear it.
         """
         if not self.runs_dir.is_dir():
             return []

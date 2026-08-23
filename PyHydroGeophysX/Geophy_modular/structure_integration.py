@@ -1,4 +1,4 @@
-"""Seismic -> 3D subsurface model pipeline for the desktop workbench.
+"""Seismic -> 3D subsurface model pipeline for the desktop studio.
 
 Takes one or more 2D seismic velocity sections (each an inverted velocity model on
 a pyGIMLi mesh, positioned in map coordinates) and builds a 3D subsurface model:

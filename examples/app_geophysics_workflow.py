@@ -108,7 +108,7 @@ def _is_streamlit_cloud() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Streamlit <-> Qt desktop workbench bridge (Streamlit side)
+# Streamlit <-> Qt desktop studio bridge (Streamlit side)
 # ---------------------------------------------------------------------------
 QT_DOWNLOAD_LINKS = {
     "windows": os.environ.get("PHGX_QT_DOWNLOAD_WINDOWS", "https://github.com/geohang/PyHydroGeophysX/releases/latest"),
@@ -207,7 +207,7 @@ def _write_qt_context(app_key: str, sidebar_state: Dict[str, Any], initial_modul
     """Write the bridge context JSON that the Qt app reads on startup."""
     ss = st.session_state
     context = {
-        "app_key": app_key or "full_workbench",
+        "app_key": app_key or "full_studio",
         "initial_module": initial_module,
         "project_root": str(_project_root()),
         "streamlit_app_dir": str(_streamlit_app_dir()),
@@ -224,14 +224,14 @@ def _write_qt_context(app_key: str, sidebar_state: Dict[str, Any], initial_modul
         "python_executable": sys.executable,
         "cwd": str(Path.cwd()),
     }
-    context_path = _qt_bridge_dir() / "full_workbench_context.json"
+    context_path = _qt_bridge_dir() / "full_studio_context.json"
     with context_path.open("w", encoding="utf-8") as handle:
         json.dump(context, handle, indent=2, default=str)
     return context_path
 
 
 def _launch_qt_app(context_path: Path, initial_module: str = "") -> Tuple[int, bool]:
-    """Spawn the Qt workbench as a separate process. Returns (pid, started_ok)."""
+    """Spawn the Qt studio as a separate process. Returns (pid, started_ok)."""
     cmd = [
         sys.executable,
         "-m",
@@ -241,7 +241,7 @@ def _launch_qt_app(context_path: Path, initial_module: str = "") -> Tuple[int, b
         "--module",
         initial_module or "home",
     ]
-    # The workbench is a PySide6 app; force qtpy-based deps (pyvistaqt) to PySide6
+    # The studio is a PySide6 app; force qtpy-based deps (pyvistaqt) to PySide6
     # so they do not bind to a PyQt5 install in the subprocess.
     env = dict(os.environ)
     env.setdefault("QT_API", "pyside6")
@@ -249,13 +249,13 @@ def _launch_qt_app(context_path: Path, initial_module: str = "") -> Tuple[int, b
         proc = subprocess.Popen(cmd, cwd=str(_project_root()), env=env)
         return proc.pid, True
     except Exception as exc:  # noqa: BLE001
-        st.error(f"Could not launch the Qt workbench: {exc}")
+        st.error(f"Could not launch the Qt studio: {exc}")
         return -1, False
 
 
 def _read_qt_result() -> Optional[Dict[str, Any]]:
     """Read the Qt result JSON if the desktop app has written one."""
-    result_path = _qt_bridge_dir() / "full_workbench_result.json"
+    result_path = _qt_bridge_dir() / "full_studio_result.json"
     if not result_path.exists():
         return None
     try:
@@ -325,12 +325,12 @@ def _qt_module_for_config(config: Dict[str, Any]) -> str:
 
 
 def _launch_qt_at(sidebar_state: Dict[str, Any], module: str) -> None:
-    """Write the current project context and launch the Qt workbench at ``module``."""
-    ctx = _write_qt_context("full_workbench", sidebar_state, module)
+    """Write the current project context and launch the Qt studio at ``module``."""
+    ctx = _write_qt_context("full_studio", sidebar_state, module)
     pid, ok = _launch_qt_app(ctx, module)
     if ok:
         st.session_state["qt_pid"] = pid
-        st.success(f"Launched Qt workbench (PID {pid}) at '{module}'.")
+        st.success(f"Launched Qt studio (PID {pid}) at '{module}'.")
 
 
 def _qt_result_artifacts(res: Dict[str, Any]) -> List[str]:
@@ -375,7 +375,7 @@ def _render_qt_results(result: Optional[Dict[str, Any]]) -> None:
     """Render the full Qt result payload (status + per-module cards)."""
     if not result:
         st.info(
-            "**No Qt results yet.** Launch the workbench above, run a module, then click "
+            "**No Qt results yet.** Launch the studio above, run a module, then click "
             "**File → Save Result** in Qt — the outputs appear here within a few seconds.",
             icon="🕐",
         )
@@ -387,7 +387,7 @@ def _render_qt_results(result: Optional[Dict[str, Any]]) -> None:
     )
     mod_results = result.get("module_results") or {}
     if not mod_results:
-        st.caption("Workbench connected — no module results saved yet (use *Save Result* in Qt).")
+        st.caption("Studio connected — no module results saved yet (use *Save Result* in Qt).")
         return
     for mod, res in mod_results.items():
         if not isinstance(res, dict):
@@ -425,9 +425,9 @@ def _render_qt_downloads(result: Dict[str, Any]) -> None:
         st.caption("No downloadable files in the imported result.")
 
 
-def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
+def render_professional_studio_tab(sidebar_state: Dict[str, Any]) -> None:
     """The web↔Qt desktop hub: pre-load the project into Qt and auto-sync results back."""
-    st.subheader("🖥️ Professional Workbench")
+    st.subheader("🖥️ Professional Studio")
     st.markdown(
         "Hands-on desktop companion to this web app: picking, geometry editing, QC, inversion, "
         "and forward modeling across eight modules. The web hands your current project to Qt; "
@@ -441,7 +441,7 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
     alive = _pid_alive(int(pid)) if pid else False
     s1, s2, s3 = st.columns(3)
     s1.metric("Desktop mode", "🟢 available" if can_launch else "🔴 unavailable")
-    s2.metric("Qt workbench", f"🟢 running (PID {pid})" if alive else ("⚪ closed" if pid else "⚪ not launched"))
+    s2.metric("Qt studio", f"🟢 running (PID {pid})" if alive else ("⚪ closed" if pid else "⚪ not launched"))
     last_seen = st.session_state.get("qt_last_result") or _read_qt_result()
     s3.metric("Last Qt result", _qt_result_age_label(last_seen) or ("none yet" if not last_seen else "saved"))
 
@@ -470,7 +470,7 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
                                       key=f"qt_open_{mod}"):
                             _launch_qt_at(sidebar_state, mod)
                 if alive:
-                    st.caption("The workbench is its own window — closing this browser tab does not close it.")
+                    st.caption("The studio is its own window — closing this browser tab does not close it.")
 
         with col_handoff:
             with st.container(border=True):
@@ -502,7 +502,7 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
         st.info(f"Remote / download mode: {reason}")
         st.markdown(
             "A remote Streamlit server cannot open a Qt window in your browser. Download and run "
-            "the desktop workbench locally against the same project, or install the desktop "
+            "the desktop studio locally against the same project, or install the desktop "
             "dependencies and run it from source."
         )
         st.markdown(
@@ -510,17 +510,17 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
             "(load / view / QC / pick / export) and a **full** build with the geophysics "
             "engines (forward modeling, inversion, 3D viewer) included:\n\n"
             f"- **Windows**: [latest release]({QT_DOWNLOAD_LINKS['windows']}) — "
-            "`PyHydroGeophysX-Workbench-windows-light.zip` or `…-windows-full.zip`\n"
+            "`PyHydroGeophysX-Studio-windows-light.zip` or `…-windows-full.zip`\n"
             f"- **macOS**: [latest release]({QT_DOWNLOAD_LINKS['macos']}) — "
-            "`PyHydroGeophysX-Workbench-macos-light.zip` or `…-macos-full.zip`\n"
+            "`PyHydroGeophysX-Studio-macos-light.zip` or `…-macos-full.zip`\n"
             f"- **Linux / source**: [run from a source checkout]({QT_DOWNLOAD_LINKS['source']}) "
             "(commands below)\n\n"
-            "Usage guide: [Desktop Workbench documentation]"
-            "(https://geohang.github.io/PyHydroGeophysX/agents/desktop_workbench.html)"
+            "Usage guide: [Desktop Studio documentation]"
+            "(https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.html)"
         )
         st.code(
             'pip install "pyhydrogeophysx[desktop]"\n'
-            "pyhydrogeophysx-workbench\n\n"
+            "pyhydrogeophysx-studio\n\n"
             "# or from a source checkout\n"
             "pip install -r requirements-desktop.txt\n"
             "python -m PyHydroGeophysX.qt_apps.launcher",
@@ -553,8 +553,8 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
 
     with st.expander("Bridge files & maintenance (advanced)"):
         bridge = _qt_bridge_dir()
-        result_file = bridge / "full_workbench_result.json"
-        st.caption(f"Context JSON: `{bridge / 'full_workbench_context.json'}`")
+        result_file = bridge / "full_studio_result.json"
+        st.caption(f"Context JSON: `{bridge / 'full_studio_context.json'}`")
         st.caption(f"Result JSON: `{result_file}`")
         m1, m2 = st.columns(2)
         if m1.button("🧹 Clear saved Qt result", key="qt_clear_result",
@@ -573,15 +573,15 @@ def render_professional_workbench_tab(sidebar_state: Dict[str, Any]) -> None:
             except Exception as exc:  # noqa: BLE001
                 st.warning(f"Could not open the folder: {exc}")
 
-    # Legacy in-browser workbenches are retired from the main UI; reachable only when
-    # PHGX_SHOW_LEGACY_WORKBENCHES=1 so the code path is not lost.
-    if os.getenv("PHGX_SHOW_LEGACY_WORKBENCHES") == "1":
-        with st.expander("Legacy in-browser workbenches (deprecated)"):
+    # Legacy in-browser studioes are retired from the main UI; reachable only when
+    # PHGX_SHOW_LEGACY_STUDIOES=1 so the code path is not lost.
+    if os.getenv("PHGX_SHOW_LEGACY_STUDIOES") == "1":
+        with st.expander("Legacy in-browser studioes (deprecated)"):
             choice = st.radio(
-                "Show legacy workbench",
+                "Show legacy studio",
                 ["None", "Geophysical Data Processing", "Hydro → Geophysics"],
                 horizontal=True,
-                key="legacy_workbench_choice",
+                key="legacy_studio_choice",
             )
             if choice == "Geophysical Data Processing":
                 render_geophysical_data_processing_tab(sidebar_state)
@@ -1178,7 +1178,7 @@ INTERACTIVE_TUTORIALS: List[Dict[str, Any]] = [
         "route": ["Web/model-output preparation", "Hydro → Geophysics"],
         "objective": (
             "Turn raw MODFLOW or ParFlow output into the standard water-content, "
-            "porosity, surface, and layer-bottom bundle used by the workbench."
+            "porosity, surface, and layer-bottom bundle used by the studio."
         ),
         "quick_mode": "Auto (LLM)",
         "one_click_requests": [
@@ -1877,7 +1877,7 @@ def _render_interactive_tutorial(
             else:
                 st.caption(
                     "Direct Qt launch is unavailable in this session. Open or download the "
-                    f"Professional Workbench and start at {_QT_MODULE_LABELS.get(module, module)}. "
+                    f"Professional Studio and start at {_QT_MODULE_LABELS.get(module, module)}. "
                     f"({launch_reason})"
                 )
 
@@ -1895,7 +1895,7 @@ def render_tutorial_tab(sidebar_state: Dict[str, Any]) -> None:
     st.title("Step-by-Step Tutorials")
     st.markdown(
         "Start with a complete web workflow, build it conversationally with AQUAH, or work through "
-        "each processing decision in the Qt Professional Workbench. The five scientific examples use "
+        "each processing decision in the Qt Professional Studio. The five scientific examples use "
         "the same structure so you can compare the fast One-click path with the guided Qt path."
     )
     st.markdown("### 1. Choose how you want to work")
@@ -1912,7 +1912,7 @@ def render_tutorial_tab(sidebar_state: Dict[str, Any]) -> None:
             "Clarify inputs and assumptions conversationally, adjust the plan, and approve it before running.",
         ),
         (
-            "🖥️ Qt Workbench + AQUAH",
+            "🖥️ Qt Studio + AQUAH",
             "Most control and inspection",
             "Inspect data, picks, parameters, inversions, intermediate results, and module-to-module handoffs.",
         ),
@@ -1970,12 +1970,12 @@ def render_tutorial_tab(sidebar_state: Dict[str, Any]) -> None:
             st.markdown("**Hydro-to-Geophysics Workflow**")
             st.video("https://www.youtube.com/watch?v=1SuqL_JhiwI")
 
-    # Desktop workbench module-by-module guide (new functionality)
+    # Desktop studio module-by-module guide (new functionality)
     st.markdown("---")
-    st.markdown("### Explore the complete Qt Workbench")
+    st.markdown("### Explore the complete Qt Studio")
     st.markdown(
-        "The **Professional Workbench** is a PySide6 desktop app with eight modules for hands-on "
-        "processing, inversion, and forward modeling. Launch it from the **🖥️ Professional Workbench** "
+        "The **Professional Studio** is a PySide6 desktop app with eight modules for hands-on "
+        "processing, inversion, and forward modeling. Launch it from the **🖥️ Professional Studio** "
         "tab (**Open in Qt with current project**), or start it standalone:"
     )
     st.table([
@@ -2002,7 +2002,7 @@ def render_tutorial_tab(sidebar_state: Dict[str, Any]) -> None:
     ])
     st.code(
         "# after installing the package\n"
-        "pyhydrogeophysx-workbench\n\n"
+        "pyhydrogeophysx-studio\n\n"
         "# or, from a source checkout\n"
         "python -m PyHydroGeophysX.qt_apps.launcher",
         language="bash",
@@ -2124,7 +2124,7 @@ set the grid and interpolation (griddata or kriging), **Run** the build, and opt
 """
         )
 
-    with st.expander("💬 AQUAH assistant (inside the workbench)", expanded=False):
+    with st.expander("💬 AQUAH assistant (inside the studio)", expanded=False):
         st.markdown(
             """
 The right-hand **AQUAH Chat** dock drives any module in plain language. It proposes one tool call at a
@@ -3412,7 +3412,7 @@ def render_local_deployment_tab() -> None:
     st.subheader("🚀 Run locally")
     st.markdown(
         "Run this same web interface on your own machine for full compute (large datasets, live "
-        "inversions) and to use the **Qt desktop workbench** with the web↔desktop round-trip."
+        "inversions) and to use the **Qt desktop studio** with the web↔desktop round-trip."
     )
 
     st.markdown("#### 1 · Get the code")
@@ -3421,7 +3421,7 @@ def render_local_deployment_tab() -> None:
     st.markdown("#### 2 · Install")
     st.markdown("Core (web app + agents):")
     st.code("pip install -e .\npip install streamlit openai anthropic", language="bash")
-    st.markdown("Desktop workbench (optional — enables the Qt round-trip):")
+    st.markdown("Desktop studio (optional — enables the Qt round-trip):")
     st.code("pip install -r requirements-desktop.txt", language="bash")
 
     st.markdown("#### 3 · Launch the web app")
@@ -3443,7 +3443,7 @@ def render_local_deployment_tab() -> None:
     st.markdown("#### 5 · Two ways to work")
     st.markdown(
         "- **Workflow tab** — *One-click* (describe + run) or *AQUAH chat* (converse step by step).\n"
-        "- **Professional Workbench tab** — open the **Qt desktop** for hands-on picking / editing; "
+        "- **Professional Studio tab** — open the **Qt desktop** for hands-on picking / editing; "
         "results sync back to the web automatically."
     )
 
@@ -11933,20 +11933,20 @@ def main() -> None:
     
     sidebar_state = render_sidebar()
 
-    tab_workflow, tab_workbench, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs(
-        ["Workflow", "Workbench", "Tutorials", "Learn", "Local setup", "About"],
+    tab_workflow, tab_studio, tab_tutorial, tab_concepts, tab_local, tab_author = st.tabs(
+        ["Workflow", "Studio", "Tutorials", "Learn", "Local setup", "About"],
         key="primary_navigation",
         on_change="rerun",
     )
 
-    # Only render the selected top-level page. This keeps hidden workbenches from
+    # Only render the selected top-level page. This keeps hidden studioes from
     # doing expensive imports and plotting work on every interaction.
     if tab_workflow.open:
         with tab_workflow:
             render_workflow_tab(sidebar_state)
-    elif tab_workbench.open:
-        with tab_workbench:
-            render_professional_workbench_tab(sidebar_state)
+    elif tab_studio.open:
+        with tab_studio:
+            render_professional_studio_tab(sidebar_state)
     elif tab_tutorial.open:
         with tab_tutorial:
             render_tutorial_tab(sidebar_state)

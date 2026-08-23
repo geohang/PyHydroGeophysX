@@ -1,4 +1,4 @@
-"""Compatibility exports for the Qt electromagnetic workbench module."""
+"""Compatibility exports for the Qt electromagnetic studio module."""
 
 from PyHydroGeophysX._internal.deprecations import warn_legacy_path
 from PyHydroGeophysX.workflows.em1d import (

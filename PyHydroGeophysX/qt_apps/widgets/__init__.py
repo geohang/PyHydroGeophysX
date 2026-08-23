@@ -1,4 +1,4 @@
-"""Reusable Qt widgets for the workbench (PySide6 + pyqtgraph).
+"""Reusable Qt widgets for the studio (PySide6 + pyqtgraph).
 
 Importing this package pulls in PySide6 and pyqtgraph, so only do it inside the
 desktop process (never from the Streamlit app).

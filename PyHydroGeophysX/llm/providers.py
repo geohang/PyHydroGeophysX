@@ -469,7 +469,7 @@ TEXT_ONLY_MODEL_HINTS = ("deepseek-chat", "deepseek-reasoner", "deepseek-coder")
 def supports_vision(provider_id: str, model: Optional[str]) -> bool:
     """Whether ``model`` on ``provider_id`` can read image blocks.
 
-    Used to gate the workbench ``capture_view`` tool: offering a screenshot tool
+    Used to gate the studio ``capture_view`` tool: offering a screenshot tool
     to a text-only model wastes a turn and returns an API error.
     """
     meta = PROVIDER_META.get(provider_id) or {}

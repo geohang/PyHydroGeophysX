@@ -1,4 +1,4 @@
-"""Small Qt UI helpers shared across workbench modules."""
+"""Small Qt UI helpers shared across studio modules."""
 
 from __future__ import annotations
 

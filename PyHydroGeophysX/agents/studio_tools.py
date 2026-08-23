@@ -1,4 +1,4 @@
-"""Provider-neutral tool specs for the AQUAH workbench command layer.
+"""Provider-neutral tool specs for the AQUAH studio command layer.
 
 Each spec is ``{"name", "description", "parameters"(JSON schema)}``. The provider
 adapters in :mod:`providers` wrap these into OpenAI ``function`` tools or
@@ -16,7 +16,7 @@ from typing import Any, Dict, List
 
 
 def tool_specs(vision: bool = False) -> List[Dict[str, Any]]:
-    """Return the neutral tool spec list for the workbench command layer.
+    """Return the neutral tool spec list for the studio command layer.
 
     Pass ``vision=True`` when the selected model accepts image input, which adds
     the ``capture_view`` screenshot tool.
@@ -24,12 +24,12 @@ def tool_specs(vision: bool = False) -> List[Dict[str, Any]]:
     specs = [
         {
             "name": "list_modules",
-            "description": "List the workbench modules that can be opened, with their keys and titles.",
+            "description": "List the studio modules that can be opened, with their keys and titles.",
             "parameters": {"type": "object", "properties": {}},
         },
         {
             "name": "navigate",
-            "description": "Open a workbench module by key (e.g. 'hydro_geophysics'). Returns a description of the opened module.",
+            "description": "Open a studio module by key (e.g. 'hydro_geophysics'). Returns a description of the opened module.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -73,8 +73,8 @@ def tool_specs(vision: bool = False) -> List[Dict[str, Any]]:
             },
         },
         {
-            "name": "get_workbench_state",
-            "description": "Read the overall workbench state: project context, the selected module, and which modules already have results.",
+            "name": "get_studio_state",
+            "description": "Read the overall studio state: project context, the selected module, and which modules already have results.",
             "parameters": {"type": "object", "properties": {}},
         },
     ]

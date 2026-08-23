@@ -1,4 +1,4 @@
-"""Time-lapse ERT inversion pipeline for the desktop workbench (Qt-free).
+"""Time-lapse ERT inversion pipeline for the desktop studio (Qt-free).
 
 A thin wrapper around ``PyHydroGeophysX.inversion.time_lapse.TimeLapseERTInversion``
 (temporal-regularized full time-lapse inversion). It builds a mesh from the first

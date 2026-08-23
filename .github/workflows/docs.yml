@@ -40,7 +40,7 @@ jobs:
 
       - name: Build the Sphinx site
         # qt_apps is excluded from apidoc: the desktop GUI is documented as a
-        # user guide (agents/desktop_workbench), not as API pages, and its
+        # user guide (agents/desktop_studio), not as API pages, and its
         # PySide6 imports are not available on the docs runner.
         run: |
           sphinx-apidoc -f -o docs/source/api PyHydroGeophysX "PyHydroGeophysX/qt_apps"

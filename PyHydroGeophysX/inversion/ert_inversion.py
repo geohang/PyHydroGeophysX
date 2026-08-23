@@ -559,7 +559,7 @@ _ADTLERT_SOLVERS: Dict[str, str] = {
     "gpu_cgls": "gpu_cgls",
 }
 
-# Workbench's plateau tolerance measures relative chi-squared improvement.
+# Studio's plateau tolerance measures relative chi-squared improvement.
 # ADTLERT's step_tolerance instead measures the RMS update in log-model space;
 # treating the former as the latter made the default 0.5% stop ADTLERT after a
 # single small model step. Keep ADTLERT's own conservative numerical threshold

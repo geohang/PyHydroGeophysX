@@ -1,5 +1,5 @@
 This folder holds two open-source potential-field demo datasets, reformatted to
-the workbench station format (x_m, y_m, value). Local x/y in metres come from an
+the studio station format (x_m, y_m, value). Local x/y in metres come from an
 equirectangular projection of the original longitude/latitude; the anomaly values
 are unchanged.
 

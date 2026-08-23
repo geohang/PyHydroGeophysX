@@ -1,4 +1,4 @@
-# Build the Qt desktop workbench bundles (Windows + macOS, light + full) and,
+# Build the Qt desktop studio bundles (Windows + macOS, light + full) and,
 # on version tags, attach them to the GitHub Release.
 #
 # - light: pip-only PySide6 stack; small, reliable; forward modeling / inversion /
@@ -83,35 +83,35 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           python packaging/make_icons.py
-          pyinstaller --noconfirm packaging/pyinstaller_workbench.spec
+          pyinstaller --noconfirm packaging/pyinstaller_studio.spec
 
       - name: Smoke test (--self-test, offscreen)
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
-            ./dist/PyHydroGeophysX-Workbench/PyHydroGeophysX-Workbench.exe --self-test
+            ./dist/PyHydroGeophysX-Studio/PyHydroGeophysX-Studio.exe --self-test
           else
-            ./dist/PyHydroGeophysX-Workbench/PyHydroGeophysX-Workbench --self-test
+            ./dist/PyHydroGeophysX-Studio/PyHydroGeophysX-Studio --self-test
           fi
 
       - name: Package bundle (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: >
-          Compress-Archive -Path dist/PyHydroGeophysX-Workbench
-          -DestinationPath "PyHydroGeophysX-Workbench-${{ matrix.os-name }}-${{ matrix.variant }}.zip" -Force
+          Compress-Archive -Path dist/PyHydroGeophysX-Studio
+          -DestinationPath "PyHydroGeophysX-Studio-${{ matrix.os-name }}-${{ matrix.variant }}.zip" -Force
 
       - name: Package bundle (macOS)
         if: runner.os == 'macOS'
         run: >
-          ditto -c -k --keepParent dist/PyHydroGeophysX-Workbench.app
-          "PyHydroGeophysX-Workbench-${{ matrix.os-name }}-${{ matrix.variant }}.zip"
+          ditto -c -k --keepParent dist/PyHydroGeophysX-Studio.app
+          "PyHydroGeophysX-Studio-${{ matrix.os-name }}-${{ matrix.variant }}.zip"
 
       - uses: actions/upload-artifact@v6
         with:
-          name: PyHydroGeophysX-Workbench-${{ matrix.os-name }}-${{ matrix.variant }}
-          path: PyHydroGeophysX-Workbench-${{ matrix.os-name }}-${{ matrix.variant }}.zip
+          name: PyHydroGeophysX-Studio-${{ matrix.os-name }}-${{ matrix.variant }}
+          path: PyHydroGeophysX-Studio-${{ matrix.os-name }}-${{ matrix.variant }}.zip
           if-no-files-found: error
 
   release:

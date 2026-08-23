@@ -1,4 +1,4 @@
-"""Compare the Workbench joint LM+HM LCI with archived TEMcompany models."""
+"""Compare the Studio joint LM+HM LCI with archived TEMcompany models."""
 
 from __future__ import annotations
 
@@ -95,33 +95,33 @@ def compare(
     comparison_rows: List[Dict[str, Any]] = []
     layer_rows: List[Dict[str, Any]] = []
     company_models: List[np.ndarray] = []
-    workbench_models: List[np.ndarray] = []
+    studio_models: List[np.ndarray] = []
     compared_lines: List[int] = []
     for index, average_id in enumerate(average_ids):
         row = company_rows.get(int(average_id))
         if row is None or not np.all(np.isfinite(recovered[index])):
             continue
         company = np.asarray(json.loads(row["Resistivity"]), dtype=float)
-        workbench = recovered[index]
-        if company.size != workbench.size:
+        studio = recovered[index]
+        if company.size != studio.size:
             continue
-        delta = np.log10(workbench / company)
+        delta = np.log10(studio / company)
         correlation = float(np.corrcoef(
-            np.log10(company), np.log10(workbench))[0, 1])
+            np.log10(company), np.log10(studio))[0, 1])
         comparison_rows.append({
             "average_data_id": int(average_id),
             "station_id": str(station_ids[index]),
             "line": int(lines[index]),
             "company_data_fit": float(row["DataFit"]),
-            "workbench_chi2": float(result["chi2_list"][index]),
+            "studio_chi2": float(result["chi2_list"][index]),
             "model_log_rmse": float(np.sqrt(np.mean(delta ** 2))),
             "model_log_correlation": correlation,
-            "median_resistivity_ratio": float(np.median(workbench / company)),
+            "median_resistivity_ratio": float(np.median(studio / company)),
         })
         thickness = np.asarray(json.loads(row["Thickness"]), dtype=float)
         tops = np.concatenate([[0.0], np.cumsum(thickness)])
-        for layer, (top, company_value, workbench_value) in enumerate(
-            zip(tops, company, workbench), start=1
+        for layer, (top, company_value, studio_value) in enumerate(
+            zip(tops, company, studio), start=1
         ):
             layer_rows.append({
                 "average_data_id": int(average_id),
@@ -130,14 +130,14 @@ def compare(
                 "layer": layer,
                 "depth_top_m": float(top),
                 "company_resistivity_ohm_m": float(company_value),
-                "workbench_resistivity_ohm_m": float(workbench_value),
+                "studio_resistivity_ohm_m": float(studio_value),
             })
         company_models.append(company)
-        workbench_models.append(workbench)
+        studio_models.append(studio)
         compared_lines.append(int(lines[index]))
 
     company_array = np.asarray(company_models, dtype=float)
-    workbench_array = np.asarray(workbench_models, dtype=float)
+    studio_array = np.asarray(studio_models, dtype=float)
     line_array = np.asarray(compared_lines, dtype=int)
     summary = {
         "project": str(project),
@@ -158,26 +158,26 @@ def compare(
             "median_resistivity_ratio": float(np.nanmedian([
                 row["median_resistivity_ratio"] for row in comparison_rows])),
             "median_chi2": float(np.nanmedian([
-                row["workbench_chi2"] for row in comparison_rows])),
+                row["studio_chi2"] for row in comparison_rows])),
         },
         "lateral_roughness": {
             "company_median_adjacent_log_difference": _lateral_roughness(
                 company_array, line_array),
-            "workbench_median_adjacent_log_difference": _lateral_roughness(
-                workbench_array, line_array),
+            "studio_median_adjacent_log_difference": _lateral_roughness(
+                studio_array, line_array),
         },
     }
     _write_csv(output / "lci_inversion_comparison.csv", comparison_rows)
     _write_csv(output / "lci_layer_comparison.csv", layer_rows)
     (output / "lci_summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8")
-    _plot(company_array, workbench_array, comparison_rows, layer_rows, output)
+    _plot(company_array, studio_array, comparison_rows, layer_rows, output)
     return summary
 
 
 def _plot(
     company: np.ndarray,
-    workbench: np.ndarray,
+    studio: np.ndarray,
     comparison_rows: List[Dict[str, Any]],
     layer_rows: List[Dict[str, Any]],
     output: Path,
@@ -185,14 +185,14 @@ def _plot(
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
-    axes[0].scatter(company.ravel(), workbench.ravel(), s=8, alpha=0.35)
+    axes[0].scatter(company.ravel(), studio.ravel(), s=8, alpha=0.35)
     limits = [
-        float(np.nanmin([company.min(), workbench.min()])),
-        float(np.nanmax([company.max(), workbench.max()])),
+        float(np.nanmin([company.min(), studio.min()])),
+        float(np.nanmax([company.max(), studio.max()])),
     ]
     axes[0].plot(limits, limits, color="black", linestyle="--", linewidth=1)
     axes[0].set(xscale="log", yscale="log", xlabel="TEMcompany resistivity",
-                ylabel="Workbench resistivity", title="All layers")
+                ylabel="Studio resistivity", title="All layers")
     axes[0].grid(alpha=0.25)
 
     line_values = sorted({int(row["line"]) for row in comparison_rows})
@@ -213,13 +213,13 @@ def _plot(
         depth = np.asarray([item["depth_top_m"] for item in records])
         company_profile = np.asarray([
             item["company_resistivity_ohm_m"] for item in records])
-        workbench_profile = np.asarray([
-            item["workbench_resistivity_ohm_m"] for item in records])
+        studio_profile = np.asarray([
+            item["studio_resistivity_ohm_m"] for item in records])
         color = f"C{color_index}"
         axes[2].step(company_profile, depth, where="post", color=color,
                      label=f"L{line} company")
-        axes[2].step(workbench_profile, depth, where="post", color=color,
-                     linestyle="--", label=f"L{line} workbench")
+        axes[2].step(studio_profile, depth, where="post", color=color,
+                     linestyle="--", label=f"L{line} studio")
     axes[2].set(xscale="log", xlabel="Resistivity (ohm m)",
                 ylabel="Depth to layer top (m)", title="Representative profiles")
     axes[2].invert_yaxis()

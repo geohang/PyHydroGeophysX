@@ -1,9 +1,9 @@
-"""Compare Workbench TDEM modeling/inversion with a TEMcompany project result.
+"""Compare Studio TDEM modeling/inversion with a TEMcompany project result.
 
 The comparison has two deliberately separate parts:
 
 1. Forward-check every TEMcompany model against its archived HM observations,
-   allowing one global unit-normalization scalar for the Workbench response.
+   allowing one global unit-normalization scalar for the Studio response.
 2. Independently invert a spatially representative subset of HM soundings on
    the same 20-layer grid and compare recovered resistivity with TEMcompany's
    joint laterally constrained inversion (LCI).
@@ -117,19 +117,19 @@ def compare(
         thickness = np.asarray(json.loads(row["Thickness"]), dtype=float)
         modeler = TDEMForwardModeling(
             thickness, survey_config=_tdem_config(geom, times))
-        workbench_forward = (
+        studio_forward = (
             float(geom.get("response_sign", 1.0))
             * np.asarray(modeler.forward(1.0 / resistivity), dtype=float).ravel()
         )
-        wb_metrics = _positive_log_metrics(observed, workbench_forward)
+        studio_metrics = _positive_log_metrics(observed, studio_forward)
         company_metrics = _positive_log_metrics(observed, company_forward)
         mask = (
-            np.isfinite(observed) & np.isfinite(workbench_forward)
-            & (observed > 0.0) & (workbench_forward > 0.0)
+            np.isfinite(observed) & np.isfinite(studio_forward)
+            & (observed > 0.0) & (studio_forward > 0.0)
         )
         if np.any(mask):
             forward_logs.append(
-                np.log(observed[mask] / workbench_forward[mask]))
+                np.log(observed[mask] / studio_forward[mask]))
         record = {
             "average_data_id": int(row["AverageDataID"]),
             "station_id": str(row["StationId"] or row["AverageDataID"]),
@@ -139,9 +139,9 @@ def compare(
             "company_data_fit": float(row["DataFit"]),
             "company_shape_log_rmse": company_metrics["log_rmse"],
             "company_shape_correlation": company_metrics["correlation"],
-            "workbench_shape_scale": wb_metrics["scale"],
-            "workbench_shape_log_rmse": wb_metrics["log_rmse"],
-            "workbench_shape_correlation": wb_metrics["correlation"],
+            "studio_shape_scale": studio_metrics["scale"],
+            "studio_shape_log_rmse": studio_metrics["log_rmse"],
+            "studio_shape_correlation": studio_metrics["correlation"],
             "gate_count": int(observed.size),
         }
         forward_rows.append(record)
@@ -187,14 +187,14 @@ def compare(
             "station_id": row["station_id"],
             "line": row["line"],
             "gate_count": row["gate_count"],
-            "workbench_chi2": float(result["chi2"]),
+            "studio_chi2": float(result["chi2"]),
             "model_log_rmse": float(np.sqrt(np.mean(log_delta ** 2))),
             "model_log_correlation": model_correlation,
             "median_resistivity_ratio": float(
                 np.median(recovered / company_resistivity)),
         })
         tops = np.concatenate([[0.0], np.cumsum(thickness)])
-        for layer, (top, company_value, workbench_value) in enumerate(
+        for layer, (top, company_value, studio_value) in enumerate(
             zip(tops, company_resistivity, recovered), start=1
         ):
             layer_rows.append({
@@ -204,7 +204,7 @@ def compare(
                 "layer": layer,
                 "depth_top_m": float(top),
                 "company_resistivity_ohm_m": float(company_value),
-                "workbench_resistivity_ohm_m": float(workbench_value),
+                "studio_resistivity_ohm_m": float(studio_value),
             })
 
     def write_csv(path: Path, rows: Iterable[Dict[str, Any]]) -> None:
@@ -224,19 +224,19 @@ def compare(
         "project": str(project),
         "moment": moment,
         "company_models_compared": len(forward_rows),
-        "workbench_inversions_compared": len(inversion_rows),
+        "studio_inversions_compared": len(inversion_rows),
         "native_format_scale_used": native_scale,
         "independent_auto_scale": independent_scale,
         "company_model_global_forward_scale": global_scale,
         "forward_shape": {
             "company_median_log_rmse": float(np.nanmedian([
                 row["company_shape_log_rmse"] for row in forward_rows])),
-            "workbench_median_log_rmse": float(np.nanmedian([
-                row["workbench_shape_log_rmse"] for row in forward_rows])),
+            "studio_median_log_rmse": float(np.nanmedian([
+                row["studio_shape_log_rmse"] for row in forward_rows])),
             "company_median_correlation": float(np.nanmedian([
                 row["company_shape_correlation"] for row in forward_rows])),
-            "workbench_median_correlation": float(np.nanmedian([
-                row["workbench_shape_correlation"] for row in forward_rows])),
+            "studio_median_correlation": float(np.nanmedian([
+                row["studio_shape_correlation"] for row in forward_rows])),
         },
         "inversion_model": {
             "median_log_rmse": float(np.nanmedian([
@@ -246,7 +246,7 @@ def compare(
             "median_resistivity_ratio": float(np.nanmedian([
                 row["median_resistivity_ratio"] for row in inversion_rows])),
             "median_chi2": float(np.nanmedian([
-                row["workbench_chi2"] for row in inversion_rows])),
+                row["studio_chi2"] for row in inversion_rows])),
         },
         "interpretation": (
             "Forward decay shapes test format/geometry compatibility after a unit scalar. "
@@ -272,14 +272,14 @@ def _plot_comparison(
     fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
     company_shape = np.asarray(
         [row["company_shape_log_rmse"] for row in forward_rows], dtype=float)
-    workbench_shape = np.asarray(
-        [row["workbench_shape_log_rmse"] for row in forward_rows], dtype=float)
+    studio_shape = np.asarray(
+        [row["studio_shape_log_rmse"] for row in forward_rows], dtype=float)
     axes[0].boxplot(
         [
             company_shape[np.isfinite(company_shape)],
-            workbench_shape[np.isfinite(workbench_shape)],
+            studio_shape[np.isfinite(studio_shape)],
         ],
-        tick_labels=["TEMcompany", "Workbench\n(company model)"],
+        tick_labels=["TEMcompany", "Studio\n(company model)"],
         showmeans=True,
     )
     axes[0].set_ylabel("Decay-shape log10 RMSE")
@@ -305,13 +305,13 @@ def _plot_comparison(
         ]
         depth = np.asarray([row["depth_top_m"] for row in records])
         company = np.asarray([row["company_resistivity_ohm_m"] for row in records])
-        workbench = np.asarray([row["workbench_resistivity_ohm_m"] for row in records])
+        studio = np.asarray([row["studio_resistivity_ohm_m"] for row in records])
         color = f"C{index}"
         line_label = str(int(chosen_row["line"]))
         axes[2].step(company, depth, where="post", color=color,
                      label=f"L{line_label} company")
-        axes[2].step(workbench, depth, where="post", color=color, linestyle="--",
-                     label=f"L{line_label} workbench")
+        axes[2].step(studio, depth, where="post", color=color, linestyle="--",
+                     label=f"L{line_label} studio")
     axes[2].set_xscale("log")
     axes[2].invert_yaxis()
     axes[2].set_xlabel("Resistivity (ohm m)")
@@ -321,7 +321,7 @@ def _plot_comparison(
     axes[2].legend(fontsize=8)
 
     fig.tight_layout()
-    fig.savefig(output / "temcompany_workbench_comparison.png", dpi=180)
+    fig.savefig(output / "temcompany_studio_comparison.png", dpi=180)
     plt.close(fig)
 
 

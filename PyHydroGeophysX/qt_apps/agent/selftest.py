@@ -81,9 +81,9 @@ def main() -> int:
     app = _build_app()
     from PyHydroGeophysX.qt_apps.agent import providers
     from PyHydroGeophysX.qt_apps.agent.chat_panel import AquahChatPanel
-    from PyHydroGeophysX.qt_apps.agent.controller import WorkbenchController
+    from PyHydroGeophysX.qt_apps.agent.controller import StudioController
     from PyHydroGeophysX.qt_apps.agent.tools import tool_specs
-    from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXWorkbench
+    from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXStudio
     from PyHydroGeophysX.qt_apps.modules import MODULE_SPECS
     from PyHydroGeophysX.qt_apps.modules.base import BaseModule
 
@@ -142,8 +142,8 @@ def main() -> int:
     ok &= _check("all modules implement agent interface", not missing, f"missing={missing}")
 
     # 5. Command layer + per-module live drive.
-    window = PyHydroGeophysXWorkbench()
-    controller = WorkbenchController(window)
+    window = PyHydroGeophysXStudio()
+    controller = StudioController(window)
 
     res = controller.dispatch("list_modules", {})
     ok &= _check("list_modules", res.get("status") == "ok"

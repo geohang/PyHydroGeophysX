@@ -1,4 +1,4 @@
-"""Central light theme for the PyHydroGeophysX workbench (brand-matched).
+"""Central light theme for the PyHydroGeophysX studio (brand-matched).
 
 One module owns the whole look so it stays consistent: a brand color palette, a
 hand-crafted QSS stylesheet, pyqtgraph plot colors, a ``qtawesome`` icon helper

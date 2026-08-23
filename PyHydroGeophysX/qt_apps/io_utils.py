@@ -1,4 +1,4 @@
-"""Lightweight, Qt-free I/O helpers for the desktop workbench.
+"""Lightweight, Qt-free I/O helpers for the desktop studio.
 
 The generic numeric-table loaders live in
 :mod:`PyHydroGeophysX.data_processing.table_io` and are re-exported here so
