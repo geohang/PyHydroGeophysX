@@ -14,6 +14,7 @@ The examples are organized to show the complete workflow from loading hydrologic
 
 * **Ex_Time_lapse_measurement.py**: Creating synthetic time-lapse ERT measurements
 * **Ex_TL_inversion.py**: Time-lapse ERT inversion techniques
+* **Ex_TL_inversion_memory.py**: Comparing memory-optimized and standard time-lapse ERT inversion
 * **Ex_structure_TLresinv.py**: Structure-constrained time-lapse inversion
 
 **Field Data Processing and Inversion:**
@@ -33,6 +34,7 @@ The examples are organized to show the complete workflow from loading hydrologic
 
 * **Ex_Structure_resinv.py**: Structure-constrained resistivity inversion
 * **Ex_joint_inversion.py**: Joint ERT-SRT inversion with cross-gradient coupling and geostatistical regularization
+* **Ex_hydro_to_multigeophys.py**: Converting one hydrological profile to ERT, SRT, TDEM, FDEM, and gravity responses
 * **Ex_MC_Hydro.py**: Monte Carlo uncertainty quantification for water content estimation
 
 Each example includes detailed comments and demonstrates best practices for watershed geophysical monitoring applications.

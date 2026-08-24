@@ -353,6 +353,7 @@ All examples have paired `.ipynb` notebooks and `.py` scripts under `examples/`.
 | `Ex_ERT_workflow` | End-to-end ERT forward + inversion |
 | `Ex_Time_lapse_measurement` | Synthetic time-lapse ERT schedules |
 | `Ex_TL_inversion` | Time-lapse ERT inversion |
+| `Ex_TL_inversion_memory` | Memory-optimized versus standard time-lapse ERT inversion |
 | `Ex_Structure_resinv` | Structure-constrained resistivity inversion |
 | `Ex_structure_TLresinv` | Structure-constrained time-lapse inversion |
 | `EX_SRT_forward` | SRT forward modeling |
