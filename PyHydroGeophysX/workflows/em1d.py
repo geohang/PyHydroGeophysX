@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 
@@ -17,12 +17,14 @@ from PyHydroGeophysX.data_processing.em1d import (
     _response_on_times,
     is_temcompany_source,
     is_ttem_source,
+    gate_report,
     load_line_geometry,
     load_sounding,
     load_sounding_container,
     load_temcompany_sounding,
     load_ttem_sounding,
     save_sounding_container,
+    survey_summary,
 )
 from PyHydroGeophysX.forward.em1d import (
     DEFAULT_FDEM,
@@ -30,6 +32,7 @@ from PyHydroGeophysX.forward.em1d import (
     DEFAULT_TDEM,
     _fdem_config,
     _tdem_config,
+    _tdem_geometry,
     fdem_forward,
     model_arrays,
     model_depth_profile,
@@ -37,7 +40,10 @@ from PyHydroGeophysX.forward.em1d import (
 )
 from PyHydroGeophysX.inversion.em1d import (
     DEFAULT_INVERSION,
+    INVERSION_PRESETS,
+    preset_inversion,
     _inversion_layer_thicknesses,
+    _log_resistivity_bounds,
     fdem_invert,
     tdem_invert,
     tdem_joint_invert,
@@ -45,7 +51,78 @@ from PyHydroGeophysX.inversion.em1d import (
 
 LogFn = Callable[[str], None]
 
+
+def _scale_bounds(inv: Dict[str, Any]) -> "tuple[float, float]":
+    """How far auto-lambda may scale the smoothness, as ``(low, high)``.
+
+    Kept beside :func:`_log_resistivity_bounds` so both box constraints reach the
+    coupled solver by the same route, and so a bad pair fails at the call rather
+    than inside the search.
+    """
+    pair = inv.get("scale_bounds")
+    pair = (1e-4, 1e4) if pair is None else tuple(pair)
+    if len(pair) != 2:
+        raise ValueError(
+            f"scale_bounds must hold exactly two values; got {len(pair)}.")
+    low, high = (float(value) for value in pair)
+    if not (0.0 < low <= high):
+        raise ValueError(
+            f"scale_bounds must be positive and ordered; got {low} and {high}.")
+    return low, high
+
 METHODS = ("FDEM", "TDEM")
+
+
+def _tdem_calibration_view(
+    data: Dict[str, Any], geom: Dict[str, Any]
+) -> "tuple[Dict[str, Any], Dict[str, Any]]":
+    """Data block and complete instrument geometry used for TDEM calibration."""
+    moments = dict(data.get("moments", {}))
+    if not moments:
+        return data, _tdem_geometry(data, geom)
+    requested = _normalise_temcompany_moment(str(geom.get("tem_moment", "LM+HM")))
+    if requested in moments:
+        name = requested
+    elif "HM" in moments:
+        # The joint reader exposes HM as its preview whenever HM exists.
+        name = "HM"
+    else:
+        name = next(iter(moments))
+    item = dict(moments[name])
+    return item, _tdem_geometry(data, geom, item.get("transmitter"))
+
+
+def _line_block(head: Dict[str, Any],
+                lines: Optional[Sequence[int]]) -> "tuple[int, int]":
+    """First station and count for a line selection, as an offset into the file.
+
+    ``None`` means the whole file from its first station. Otherwise the stations
+    on the named lines, which are contiguous because the reader orders them by
+    line. A gap means the request would have to span a line nobody asked for, and
+    that is refused: inverting an unrequested line under settings chosen for its
+    neighbours is worse than declining.
+    """
+    n_total = int(head.get("n_soundings", 1))
+    if lines is None:
+        return 0, n_total
+    wanted = {int(v) for v in np.asarray(lines, dtype=int).ravel()}
+    if not wanted:
+        raise ValueError("lines must name at least one survey line.")
+    numbers = np.asarray(head.get("line_numbers", []), dtype=int).ravel()
+    if numbers.size < n_total:
+        raise ValueError(
+            "this source does not record a line number per station, so it "
+            "cannot be inverted one line at a time.")
+    found = np.flatnonzero(np.isin(numbers[:n_total], sorted(wanted)))
+    if not found.size:
+        raise ValueError(
+            f"no station is on line {sorted(wanted)}; the survey holds "
+            f"{sorted(set(numbers[:n_total].tolist()))}.")
+    if found.size != int(found[-1] - found[0] + 1):
+        raise ValueError(
+            f"lines {sorted(wanted)} are not adjacent in this survey, so they "
+            "cannot be run as one block. Invert them one at a time.")
+    return int(found[0]), int(found.size)
 
 
 def _line_chi2_summary(
@@ -202,10 +279,16 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
     moment = str(geom.get("tem_moment", "HM"))
     use_flags = bool(geom.get("use_project_flags", True))
     tail_cut = geom.get("tail_max_relative_std")
+    gate_rejection = str(geom.get("gate_rejection", "truncate"))
+    reject_negative = bool(geom.get("reject_negative", False))
+    min_gates_per_moment = geom.get("min_gates_per_moment")
     try:
         head = load_sounding(
             path, method, sounding=0, moment=moment, use_flags=use_flags,
-            max_relative_std=tail_cut, ttem_loop_area=geom.get("loop_area"),
+            max_relative_std=tail_cut, gate_rejection=gate_rejection,
+            reject_negative=reject_negative,
+            min_gates_per_moment=min_gates_per_moment,
+            ttem_loop_area=geom.get("loop_area"),
             ttem_gex_path=geom.get("ttem_gex_path"),
             ttem_tfi_path=geom.get("ttem_tfi_path"),
         )
@@ -218,13 +301,15 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
     try:
         if method == "TDEM":
             from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling
-            abscissa = np.asarray(head["times"], dtype=float).ravel()
-            cfg = _tdem_config(geom, abscissa)
+            calibration_data, calibration_geom = _tdem_calibration_view(head, geom)
+            abscissa = np.asarray(calibration_data["times"], dtype=float).ravel()
+            cfg = _tdem_config(calibration_geom, abscissa)
+            md = TDEMForwardModeling(
+                thicknesses=np.array([50.0]), survey_config=cfg)
             grid = []
             for R in np.geomspace(25.0, 3000.0, 20):
-                md = TDEMForwardModeling(thicknesses=np.array([50.0]), survey_config=cfg)
                 grid.append(
-                    float(geom.get("response_sign", 1.0))
+                    float(calibration_geom.get("response_sign", 1.0))
                     * np.asarray(md.forward(np.array([1.0 / R, 1.0 / R])),
                                  dtype=float).ravel()[:abscissa.size]
                 )
@@ -235,6 +320,9 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
                     load_sounding(
                         path, method, sounding=int(s), moment=moment,
                         use_flags=use_flags, max_relative_std=tail_cut,
+                        gate_rejection=gate_rejection,
+                        reject_negative=reject_negative,
+                        min_gates_per_moment=min_gates_per_moment,
                         ttem_loop_area=geom.get("loop_area"),
                         ttem_gex_path=geom.get("ttem_gex_path"),
                         ttem_tfi_path=geom.get("ttem_tfi_path"),
@@ -258,6 +346,9 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
                 d = load_sounding(
                     path, method, sounding=int(s), moment=moment,
                     use_flags=use_flags, max_relative_std=tail_cut,
+                        gate_rejection=gate_rejection,
+                        reject_negative=reject_negative,
+                        min_gates_per_moment=min_gates_per_moment,
                     ttem_loop_area=geom.get("loop_area"),
                     ttem_gex_path=geom.get("ttem_gex_path"),
                     ttem_tfi_path=geom.get("ttem_tfi_path"),
@@ -311,10 +402,16 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
     moment = str(geom.get("tem_moment", "HM"))
     use_flags = bool(geom.get("use_project_flags", True))
     tail_cut = geom.get("tail_max_relative_std")
+    gate_rejection = str(geom.get("gate_rejection", "truncate"))
+    reject_negative = bool(geom.get("reject_negative", False))
+    min_gates_per_moment = geom.get("min_gates_per_moment")
     try:
         head = load_sounding(
             path, method, sounding=0, moment=moment, use_flags=use_flags,
-            max_relative_std=tail_cut, ttem_loop_area=geom.get("loop_area"),
+            max_relative_std=tail_cut, gate_rejection=gate_rejection,
+            reject_negative=reject_negative,
+            min_gates_per_moment=min_gates_per_moment,
+            ttem_loop_area=geom.get("loop_area"),
             ttem_gex_path=geom.get("ttem_gex_path"),
             ttem_tfi_path=geom.get("ttem_tfi_path"),
         )
@@ -322,10 +419,13 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
         probe = np.unique(np.linspace(0, n_total - 1, min(int(max_probe), n_total)).astype(int))
         if method == "TDEM":
             from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling
-            abscissa = np.asarray(head["times"], dtype=float).ravel()
-            md = TDEMForwardModeling(thicknesses=np.array([50.0]), survey_config=_tdem_config(geom, abscissa))
+            calibration_data, calibration_geom = _tdem_calibration_view(head, geom)
+            abscissa = np.asarray(calibration_data["times"], dtype=float).ravel()
+            md = TDEMForwardModeling(
+                thicknesses=np.array([50.0]),
+                survey_config=_tdem_config(calibration_geom, abscissa))
             pred = (
-                float(geom.get("response_sign", 1.0))
+                float(calibration_geom.get("response_sign", 1.0))
                 * np.asarray(md.forward(np.array([1.0 / ref, 1.0 / ref])),
                              dtype=float).ravel()[:abscissa.size]
             )
@@ -335,6 +435,9 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
                     load_sounding(
                         path, method, sounding=int(s), moment=moment,
                         use_flags=use_flags, max_relative_std=tail_cut,
+                        gate_rejection=gate_rejection,
+                        reject_negative=reject_negative,
+                        min_gates_per_moment=min_gates_per_moment,
                         ttem_loop_area=geom.get("loop_area"),
                         ttem_gex_path=geom.get("ttem_gex_path"),
                         ttem_tfi_path=geom.get("ttem_tfi_path"),
@@ -354,6 +457,9 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
                 d = load_sounding(
                     path, method, sounding=int(s), moment=moment,
                     use_flags=use_flags, max_relative_std=tail_cut,
+                        gate_rejection=gate_rejection,
+                        reject_negative=reject_negative,
+                        min_gates_per_moment=min_gates_per_moment,
                     ttem_loop_area=geom.get("loop_area"),
                     ttem_gex_path=geom.get("ttem_gex_path"),
                     ttem_tfi_path=geom.get("ttem_tfi_path"),
@@ -378,6 +484,101 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
     k = float(np.clip(np.exp(np.mean(np.log(ks))), 1e-4, 1e4))
     log(f"Reference calibration to a half-space at {ref:.0f} ohm-m: data_scale = {k:.4g}.")
     return k
+
+
+#: Geometry a station measures for itself rather than inheriting from the survey.
+#:
+#: A TEMcompany project records the transmitter-receiver distance and the two
+#: heights per station. Only the distance actually varies on a walking ground
+#: system, and it varies by more than the nominal layout suggests: one survey
+#: spans 11.58 to 17.63 m against a spec that states 15.0 m for every station.
+#: It is a per-station quantity.
+_STATION_GEOMETRY_KEYS = ("tx_rx_sep", "height", "rx_height", "tx_height")
+
+#: Distance bin the per-station transmitter-receiver separation is rounded to.
+#:
+#: Only used when ``per_station_geometry`` is switched on; see
+#: :func:`_station_geometry` for why that is off by default. A quarter of a
+#: metre is 1.7 percent of a typical 15 m offset, which is well inside what the
+#: response can tell apart, and it takes one survey's 794 distinct distances
+#: down to 25.
+STATION_DISTANCE_BIN_M = 0.25
+
+
+def _station_geometry(geom: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
+    """Overlay one station's measured geometry on the survey-wide dictionary.
+
+    On by default. The project records the distance per station, and a walking
+    ground survey genuinely records a different one at nearly every station: 794
+    distinct values over 929 stations on one line, spanning 11.58 to 17.63 m
+    against a nominal 15.0.
+
+    It was briefly off, because with the earlier forward path an operator took
+    about fourteen seconds to build and a distinct distance per station turned a
+    line inversion from minutes into hours. The native-order instrument chain
+    removed that: SimPEG now models a compact step response, a build costs about
+    twenty milliseconds, and the reason to switch it off went with it.
+
+    It is also worth more than an earlier measurement suggested, because that
+    measurement predated the instrument model above. Replacing the measured
+    column with the nominal 15 m moves one survey's low-moment response by 1.4
+    percent at the median and 18 percent at its worst gate.
+
+    ``tx_rx_sep`` is still rounded to ``tx_rx_sep_bin`` metres, defaulting to
+    :data:`STATION_DISTANCE_BIN_M`, which keeps the operator cache useful for
+    little cost; set it to zero to pass the measured value through.
+
+    A value the station did not record, or recorded as non-positive, leaves the
+    survey-wide entry alone. That matters for ``tx_rx_sep``, where zero is how a
+    failed measurement is stored rather than a coincident loop and coil.
+    """
+    if not bool(geom.get("per_station_geometry", True)):
+        return geom
+    system = data.get("system")
+    if not isinstance(system, dict):
+        return geom
+    try:
+        bin_m = float(geom.get("tx_rx_sep_bin", STATION_DISTANCE_BIN_M))
+    except (TypeError, ValueError):
+        bin_m = STATION_DISTANCE_BIN_M
+    updates: Dict[str, Any] = {}
+    for key in _STATION_GEOMETRY_KEYS:
+        value = system.get(key)
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            continue
+        if not np.isfinite(number):
+            continue
+        if key == "tx_rx_sep":
+            if number <= 0.0:
+                continue
+            if bin_m > 0.0:
+                number = round(number / bin_m) * bin_m
+        updates[key] = number
+    return {**geom, **updates} if updates else geom
+
+
+def _with_sensor_height(geom: Dict[str, Any], height: Any) -> Dict[str, Any]:
+    """Put a caller's own sensor height in charge of the whole geometry.
+
+    All three keys, or the override does nothing. The forward reads
+    ``rx_height`` and ``tx_height`` in preference to ``height``, and the station
+    dictionary carries both, so setting ``height`` alone leaves a caller's
+    heights silently ignored while looking as though they were applied.
+
+    The loop and the coil end up at the same height, which is what a single
+    number can say. Every TEMcompany project seen so far records them equal
+    anyway; a survey that does not should pass its own geometry rather than one
+    height per station.
+    """
+    try:
+        value = float(height)
+    except (TypeError, ValueError):
+        return geom
+    if not np.isfinite(value):
+        return geom
+    return {**geom, "height": value, "rx_height": value, "tx_height": value}
 
 
 def _latest_gate(data: Dict[str, Any]) -> Optional[float]:
@@ -422,7 +623,6 @@ _STARTING_HALF_SPACES = np.geomspace(3.0, 5000.0, 12)
 #: spread along the survey rank the candidates the same way the full set does.
 _STARTING_SAMPLE = 12
 
-
 def _best_starting_resistivity(blocks, n_layers: int, workers: int, *,
                                default: float, log: LogFn = _noop) -> float:
     """Pick the half-space whose forward response best matches the data.
@@ -440,6 +640,35 @@ def _best_starting_resistivity(blocks, n_layers: int, workers: int, *,
     candidate after it is one forward per sampled sounding. Returns ``default``
     if nothing can be evaluated, so a forward that will not run here fails in
     the inversion rather than in the search.
+
+    A half-space is a poor start for a layered conductive site, and two richer
+    searches were built, measured and removed. Both are recorded here because
+    neither failure is visible from the idea.
+
+    **Layered candidates, ranked the same way, changed nothing.** On one
+    conductive site running about 126, 27, 300 and 21 ohm-m with depth, a
+    22.7 ohm-m half-space still scored best on initial misfit, 117 against 145
+    for the two- and three-layer shapes, and the run ended identically. Initial
+    misfit says how close a model already is, which on a multi-minimum problem
+    is not where the solver goes from it: after four iterations those same
+    layered candidates reached 37.6 while the half-space reached 46.2.
+
+    **Deciding by trial worked where it was aimed and broke everything else.**
+    Ranking cheaply and giving the best four a short run found the better
+    minimum: that survey went from DataFit 3.39 to 2.83, and its median deep
+    resistivity from a tenth of the reference model's to a half. But full-line
+    trials cost more than the inversion they prepare, running past ten minutes
+    on a 518-station line against a forty-second run. Sampling them to thirty
+    soundings restored the cost and destroyed the answer, because a sampled
+    ranking is not the full-line ranking: the same survey then chose the
+    half-space again and lost the gain, while another regressed from
+    chi-squared 1.6 to 9.5. A search that helps one survey and ruins another is
+    worse than no search.
+
+    What does work, on the same survey, is starting from an existing model:
+    DataFit 1.79, better than the reference's own 1.98. Until a search can be
+    made both cheap and representative of the whole line, pass
+    ``initial_models`` rather than extending the scan here.
     """
     from PyHydroGeophysX.inversion.em1d_lci import (
         _forward_line, _misfit, _worker_pool, resolve_worker_count,
@@ -473,6 +702,7 @@ def _best_starting_resistivity(blocks, n_layers: int, workers: int, *,
 def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any],
                 *, spacing: float = 50.0, positions: Optional[np.ndarray] = None,
                 heights: Optional[np.ndarray] = None, max_soundings: int = 12,
+                lines: Optional[Sequence[int]] = None,
                 doi_blank: bool = True, doi_factor: float = 0.5, ref_resistivity: float = 0.0,
                 out_dir: Optional[Path] = None,
                 initial_models: Optional[np.ndarray] = None,
@@ -504,8 +734,12 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     (a diffusion-depth estimate scaled by ``doi_factor``) are blanked (NaN) so the
     unconstrained deep part of an early-time sounding is not shown as railed.
 
-    Two settings answer a chi-squared that stays high, the same pair the ERT
-    module offers. ``inv["auto_lambda"]`` re-solves the line at other smoothness
+    ``inv["robust_errors"]`` retains all imported gates and iteratively inflates
+    effective errors for large residuals. It overrides hard rejection. The main
+    chi2 uses ORIGINAL errors; ``result["robust"]`` records effective errors and
+    a separate effective chi2. Import-time flags and QC still apply.
+
+    ``inv["auto_lambda"]`` re-solves the line at other smoothness
     weights to reach ``target_chi2``. ``inv["reject_outliers"]`` drops the gates
     the converged model cannot explain (beyond ``outlier_threshold`` sigma, over
     ``outlier_passes`` cycles, never below ``min_data_fraction`` of the gates)
@@ -513,6 +747,19 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     They address different causes, so they can be used together: relaxing the
     smoothness helps when the model is too stiff for the data, rejection helps
     when a minority of gates are simply wrong.
+
+    ``lines`` restricts the run to the named survey lines, so a line whose data
+    is thinner than the rest can be given its own settings instead of one set
+    having to suit every line. Passing ``None`` runs from the first station, as
+    before. The lateral constraint already groups by line, so a line inverted on
+    its own is tied exactly as it would be inside a whole-survey run; what
+    changes is which settings reach it, and that the other lines are not
+    re-solved. ``max_soundings`` then counts within the selection.
+
+    Stations arrive ordered by line, so a selection is a contiguous block. A set
+    of lines that is not contiguous is refused rather than quietly widened to
+    the span that encloses it, which would invert the lines in between under
+    settings chosen for their neighbours.
     """
     if method not in METHODS:
         raise ValueError(f"method must be one of {METHODS}, got {method!r}.")
@@ -523,9 +770,15 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     )
     use_flags = bool(geom.get("use_project_flags", True))
     tail_cut = geom.get("tail_max_relative_std")
+    gate_rejection = str(geom.get("gate_rejection", "truncate"))
+    reject_negative = bool(geom.get("reject_negative", False))
+    min_gates_per_moment = geom.get("min_gates_per_moment")
     head = load_sounding(
         path, method, sounding=0, moment=moment, use_flags=use_flags,
-        max_relative_std=tail_cut, ttem_loop_area=geom.get("loop_area"),
+        max_relative_std=tail_cut, gate_rejection=gate_rejection,
+        reject_negative=reject_negative,
+        min_gates_per_moment=min_gates_per_moment,
+        ttem_loop_area=geom.get("loop_area"),
         ttem_gex_path=geom.get("ttem_gex_path"),
         ttem_tfi_path=geom.get("ttem_tfi_path"),
     )
@@ -536,7 +789,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         else tdem_invert
     )
     n_total = int(head.get("n_soundings", 1))
-    n_pos = min(int(max_soundings), max(1, n_total))
+    offset, n_available = _line_block(head, lines)
+    n_pos = min(int(max_soundings), max(1, n_available))
 
     # The coupled solve needs at least two stations to tie together, and a
     # lateral weight to tie them with.
@@ -548,10 +802,18 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         and float(inv.get("lateral_smoothness", 0.0)) > 0.0
         and n_pos >= 2
     )
+    sequential = (
+        lci_mode == "sequential" and joint and n_pos >= 2
+        and float(inv.get("lateral_smoothness", 0.0)) > 0.0
+        and int(inv.get("lci_passes", 1)) > 0
+    )
     mode = ("simultaneous LCI" if simultaneous
             else "block-coordinate LCI" if (lci_mode == "sequential" and joint)
             else f"{method} independent 1D")
-    log(f"Line inversion: {n_pos} of {n_total} soundings ({mode})")
+    selected = ("" if lines is None
+                else f", line{'s' if len(set(lines)) > 1 else ''} "
+                     f"{','.join(str(v) for v in sorted(set(lines)))}")
+    log(f"Line inversion: {n_pos} of {n_total} soundings{selected} ({mode})")
 
     # Calibrate the amplitude scale to a known reference resistivity if requested
     # (breaks the data_scale <-> resistivity-level degeneracy with external info).
@@ -574,6 +836,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     data_count_list: List[int] = []
     datasets: List[Optional[Dict[str, Any]]] = [None] * n_pos
     geometries: List[Dict[str, Any]] = [geom] * n_pos
+    per_sounding_outliers: Dict[int, Dict[str, Any]] = {}
+    per_sounding_robust: Dict[int, Dict[str, Any]] = {}
     lateral_requested = float(inv.get("lateral_smoothness", 0.0))
     warm_models = np.asarray(initial_models, dtype=float) if initial_models is not None else None
     use_warm_models = (
@@ -587,8 +851,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         log("Using supplied line models as the LCI warm start.")
     use_common_lci_start = (
         not use_warm_models
-        and lateral_requested > 0.0
-        and (joint or simultaneous)
+        and (simultaneous or sequential)
     )
     if use_common_lci_start:
         start = float(inv.get("starting_resistivity", 100.0))
@@ -600,7 +863,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     from PyHydroGeophysX.inversion.em1d_lci import _worker_pool, resolve_worker_count
 
     workers = resolve_worker_count(n_pos, int(inv.get("parallel_workers", 0)))
-    lci_supplies_model = use_warm_models or use_common_lci_start
+    lci_supplies_model = (simultaneous or sequential) and (use_warm_models or use_common_lci_start)
+    prior_context = bool(inv.get("shallow_prior_enabled", False))
 
     def prepare(s: int):
         """Read one station, and fit it unless the LCI will supply its model.
@@ -612,20 +876,25 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         """
         try:
             data = load_sounding(
-                path, method, sounding=s, moment=moment, use_flags=use_flags,
-                max_relative_std=tail_cut, ttem_loop_area=geom.get("loop_area"),
+                path, method, sounding=offset + s, moment=moment,
+                use_flags=use_flags,
+                max_relative_std=tail_cut, gate_rejection=gate_rejection,
+                reject_negative=reject_negative,
+                min_gates_per_moment=min_gates_per_moment,
+                ttem_loop_area=geom.get("loop_area"),
                 ttem_gex_path=geom.get("ttem_gex_path"),
                 ttem_tfi_path=geom.get("ttem_tfi_path"),
             )
-            geom_s = geom
-            if hts is not None and s < hts.size and np.isfinite(hts[s]):
-                geom_s = {**geom, "height": float(hts[s])}
-            if lci_supplies_model:
+            geom_s = _station_geometry(geom, data)
+            if hts is not None and s < hts.size:
+                geom_s = _with_sensor_height(geom_s, hts[s])
+            if lci_supplies_model or prior_context:
                 return s, data, geom_s, None, None
             # Quiet inside the worker: the inner per-iteration lines would
             # interleave across stations. The caller logs one line per station,
             # in order, below.
-            return s, data, geom_s, invert(data, geom_s, inv, log=_noop), None
+            local_inv = {**inv, "starting_model": warm_models[s]} if use_warm_models else inv
+            return s, data, geom_s, invert(data, geom_s, local_inv, log=_noop), None
         except Exception as exc:  # noqa: BLE001 - keep the line going
             return s, None, geom, None, exc
 
@@ -658,6 +927,10 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         model[s, 0, :] = res[::-1]  # deepest layer first to match ez ordering
         chi2_list.append(float(result.get("chi2", np.nan)))
         data_count_list.append(int(result.get("n_data", 0)))
+        if bool(result.get("outliers", {}).get("enabled", False)):
+            per_sounding_outliers[s] = dict(result["outliers"])
+        if result.get("robust", {}).get("enabled"):
+            per_sounding_robust[s] = result["robust"]
         log(f"  sounding {s + 1}/{n_pos}: chi2={result.get('chi2', float('nan')):.3f}")
 
     embedded_positions = np.asarray(head.get("positions", []), dtype=float).ravel()
@@ -665,27 +938,29 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         np.asarray(positions, dtype=float).ravel()
         if positions is not None else embedded_positions
     )
-    if requested_positions.size >= n_pos:
-        pos_lci = requested_positions[:n_pos]
+    if requested_positions.size >= offset + n_pos:
+        pos_lci = requested_positions[offset:offset + n_pos]
     else:
         pos_lci = np.arange(n_pos, dtype=float) * float(spacing)
     # Ground level per sounding, carried through for plotting only.
     embedded_elevation = np.asarray(head.get("elevation", []), dtype=float).ravel()
     surface_elevation = (
-        embedded_elevation[:n_pos] if embedded_elevation.size >= n_pos
+        embedded_elevation[offset:offset + n_pos]
+        if embedded_elevation.size >= offset + n_pos
         else np.full(n_pos, np.nan, dtype=float)
     )
     embedded_lines = np.asarray(head.get("line_numbers", []), dtype=int).ravel()
     line_numbers = (
-        embedded_lines[:n_pos]
-        if embedded_lines.size >= n_pos else np.zeros(n_pos, dtype=int)
+        embedded_lines[offset:offset + n_pos]
+        if embedded_lines.size >= offset + n_pos
+        else np.zeros(n_pos, dtype=int)
     )
 
     def _per_sounding(key: str, dtype=float):
         """A per-station column from the source, cut to the inverted stations."""
         values = np.asarray(head.get(key, []), dtype=dtype).ravel()
-        if values.size >= n_pos:
-            return values[:n_pos]
+        if values.size >= offset + n_pos:
+            return values[offset:offset + n_pos]
         return np.full(n_pos, np.nan if dtype is float else "", dtype=dtype)
 
     # Map coordinates travel with the section so an export can place each model
@@ -693,6 +968,73 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     easting, northing = _per_sounding("x"), _per_sounding("y")
     longitude, latitude = _per_sounding("longitude"), _per_sounding("latitude")
     station_ids = _per_sounding("station_ids", dtype=object)
+
+    from PyHydroGeophysX.inversion.em1d_priors import shallow_prior_scores
+    quality_rows = None
+    if prior_context and any(data and "raw_lm_quality" in data for data in datasets):
+        from PyHydroGeophysX.inversion.em1d_priors import raw_lm_quality_rows
+        quality_rows = raw_lm_quality_rows(
+            datasets, int(inv.get("shallow_prior_reference_gate", 2)))
+    signal_limits = None
+    if prior_context and inv.get("shallow_prior_mode", "quality_trend") == "signal_threshold":
+        from PyHydroGeophysX.inversion.em1d_priors import shallow_signal_thresholds
+        log("Calibrating the resistive-background LM signal limit using the instrument forward model.")
+        signal_limits = shallow_signal_thresholds(datasets, geometries, inv)
+        available = signal_limits[np.isfinite(signal_limits)]
+        if available.size:
+            log(f"  LM signal threshold: {available.min():.4g} .. {available.max():.4g} "
+                "(stored project response units; homogeneous reference, not a depth estimate).")
+        else:
+            log("  No raw LM diagnostics available: absolute-signal prior cannot activate. Re-import the project.")
+    prior_scores, prior_report = shallow_prior_scores(
+        datasets, pos_lci, line_numbers, inv, quality_rows, signal_limits)
+
+    def station_inv(s):
+        options = {**inv, "_shallow_prior_score": float(prior_scores[s])}
+        if use_warm_models:
+            # The automatic soft target follows the model that actually starts
+            # this station, not a stale project fallback value.
+            valid = warm_models[s][np.isfinite(warm_models[s]) & (warm_models[s] > 0.)]
+            if valid.size:
+                options["_resistive_prior_reference_resistivity"] = float(
+                    10. ** np.mean(np.log10(valid)))
+        return options
+
+    if prior_context:
+        if quality_rows is None and inv.get("shallow_prior_mode", "quality_trend") == "quality_trend":
+            log("  Resistive-background prior uses imported LM quality; raw fixed-gate signal/noise "
+                "checks are unavailable for this input. Re-import a TEMcompany project "
+                "to preserve the raw quality diagnostics.")
+        log(f"Empirical resistive-background prior: "
+            f"{prior_report['active_soundings']}/{n_pos} stations activated; whole-model "
+            f"one-sided tendency (not a shallow-depth interpretation), weight "
+            f"{prior_report['weight']:g}.")
+        if not lci_supplies_model:
+            # Spatial quality needs the read-only first pass over the line before
+            # independent fits can receive their individual prior weights.
+            def fit_with_prior(s):
+                try:
+                    options = station_inv(s)
+                    if use_warm_models:
+                        options["starting_model"] = warm_models[s]
+                    return s, invert(datasets[s], geometries[s], options, log=_noop), None
+                except Exception as exc:
+                    return s, None, exc
+            usable_prior = [s for s in range(n_pos) if datasets[s] is not None]
+            with _worker_pool(workers) as pool:
+                fits = (list(map(fit_with_prior, usable_prior)) if pool is None
+                        else list(pool.map(fit_with_prior, usable_prior)))
+            for s, fit, failure in fits:
+                if failure:
+                    log(f"  sounding {s+1} failed: {failure}")
+                    data_count_list[s] = 0
+                    continue
+                surface_models[s] = fit["resistivity"]
+                chi2_list[s], data_count_list[s] = float(fit["chi2"]), int(fit["n_data"])
+                if fit.get("robust", {}).get("enabled"):
+                    per_sounding_robust[s] = fit["robust"]
+                if fit.get("outliers", {}).get("enabled"):
+                    per_sounding_outliers[s] = fit["outliers"]
 
     # LCI keeps model nodes even where the local gate set is too sparse for the
     # SimPEG time spline. Seed those nodes by log-resistivity interpolation along
@@ -715,8 +1057,11 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     lateral_weight_scale = max(float(inv.get("lateral_weight_scale", 1.0)), 0.0)
     lci_passes = max(0, int(inv.get("lci_passes", 1)))
     reference_distance = max(float(inv.get("reference_distance", 10.0)), 1e-6)
+    lateral_distance_power = max(
+        float(inv.get("lateral_distance_power", 1.0)), 0.0)
     lci_report: Dict[str, Any] = {}
     outlier_info: Dict[str, Any] = {"enabled": False}
+    robust_info: Dict[str, Any] = {"enabled": False}
     # Kept for the depth-of-investigation pass below, which reads the same
     # analytic Jacobian the coupled solver used.
     doi_blocks: Dict[int, Any] = {}
@@ -725,6 +1070,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         from PyHydroGeophysX.inversion.em1d_lci import (
             invert_lci,
             invert_lci_rejecting_outliers,
+            invert_lci_with_robust_errors,
         )
 
         usable = [s for s in range(n_pos) if datasets[s] is not None]
@@ -732,7 +1078,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
             """Assemble one station's block, or hand back why it could not be."""
             try:
                 return s, build_sounding_block(
-                    datasets[s], geometries[s], inv, method,
+                    datasets[s], geometries[s], station_inv(s), method,
                     position=float(pos_lci[s]), line=int(line_numbers[s]),
                     label=f"sounding {s + 1}"), None
             except Exception as exc:  # noqa: BLE001 - one bad station is not fatal
@@ -759,10 +1105,15 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
             simultaneous = False
             for s in usable:
                 try:
-                    result = invert(datasets[s], geometries[s], inv, log=log)
+                    result = invert(datasets[s], geometries[s], station_inv(s), log=log)
                     surface_models[s, :] = np.asarray(
                         result["resistivity"], dtype=float).ravel()
                     chi2_list[s] = float(result.get("chi2", np.nan))
+                    data_count_list[s] = int(result.get("n_data", 0))
+                    if bool(result.get("outliers", {}).get("enabled", False)):
+                        per_sounding_outliers[s] = dict(result["outliers"])
+                    if result.get("robust", {}).get("enabled"):
+                        per_sounding_robust[s] = result["robust"]
                     log(f"  sounding {s + 1}/{n_pos}: "
                         f"chi2={result.get('chi2', float('nan')):.3f}")
                 except Exception as exc:  # noqa: BLE001
@@ -777,10 +1128,50 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                 start_resistivity = _best_starting_resistivity(
                     sounding_blocks, n_layers, workers,
                     default=start_resistivity, log=log)
+            if prior_context:
+                # Block construction precedes the data-driven starting-model
+                # search. Rebuild only the cheap prior vectors here, using the
+                # half-space that the optimiser will actually start from; the
+                # expensive forward operators are retained unchanged.
+                from PyHydroGeophysX.inversion.em1d_priors import (
+                    resistive_prior_target,
+                    shallow_prior_terms,
+                )
+                targets = []
+                references = []
+                for block, s in zip(sounding_blocks, kept):
+                    options = station_inv(s)
+                    if warm is None:
+                        options["_resistive_prior_reference_resistivity"] = start_resistivity
+                    block.prior_lower, block.prior_weights = shallow_prior_terms(options, thick)
+                    reference, target, _, source = resistive_prior_target(options)
+                    references.append(reference)
+                    targets.append(target)
+                prior_report["reference_resistivity"] = float(np.median(references))
+                prior_report["target_resistivity"] = float(np.median(targets))
+                prior_report["minimum_resistivity"] = prior_report["target_resistivity"]
+                prior_report["target_source"] = source
+                if source == "explicit":
+                    target_description = (
+                        f"explicit {prior_report['target_resistivity']:.0f} ohm-m")
+                else:
+                    target_description = (
+                        f"effective starting model "
+                        f"{prior_report['reference_resistivity']:.0f} ohm-m × "
+                        f"{prior_report['resistivity_factor']:g} → "
+                        f"{prior_report['target_resistivity']:.0f} ohm-m")
+                log(f"  Background soft tendency: {target_description} "
+                    "(capped by rho_max; all layers, not a depth estimate).")
             lci_kwargs = dict(
+                solver=str(inv.get("lci_solver", "trf")),
+                trf_max_nfev=int(inv.get("lci_max_nfev", 90)),
+                trf_ftol=float(inv.get("lci_ftol", 1e-4)),
+                trf_xtol=float(inv.get("lci_xtol", 1e-6)),
+                trf_gtol=float(inv.get("lci_gtol", 1e-5)),
                 smoothness=float(inv.get("smoothness", 0.3)),
                 lateral_smoothness=lateral * lateral_weight_scale,
                 reference_distance=reference_distance,
+                lateral_distance_power=lateral_distance_power,
                 starting_resistivity=start_resistivity,
                 max_iterations=int(inv.get("max_iterations", 20)),
                 convergence_tolerance=float(inv.get("convergence_tolerance", 0.02)),
@@ -789,21 +1180,47 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                 target_chi2=float(inv.get("target_chi2", 1.0)),
                 chi2_tolerance=float(inv.get("chi2_tolerance", 0.2)),
                 max_lambda_trials=int(inv.get("max_lambda_trials", 5)),
+                # How far auto-lambda may move the smoothness. The default span
+                # is four decades either way, which on a station carrying four
+                # or five gates buys a chi-squared of 1 with a model that swings
+                # to match noise. A caller that wants the search available but
+                # bounded passes something like (0.5, 2.0).
+                scale_bounds=_scale_bounds(inv),
+                bounds=_log_resistivity_bounds(inv),
                 parallel_workers=workers,
                 verbose=bool(inv.get("verbose", True)),
             )
             doi_blocks.update(zip(kept, sounding_blocks))
-            if bool(inv.get("reject_outliers", False)):
+            if bool(inv.get("robust_errors", False)):
+                from PyHydroGeophysX.inversion.robust_errors import robust_error_options
+
+                log("Robust error weighting: retain every imported gate; hard rejection bypassed.")
+                error_options = robust_error_options(inv)
+                error_options["error_target_chi2"] = error_options.pop("target_chi2")
+                outcome, sounding_blocks, robust_info = invert_lci_with_robust_errors(
+                    sounding_blocks, n_layers, initial_model=warm, log=log,
+                    **error_options, **lci_kwargs)
+                robust_info["sounding_indices"] = list(kept)
+                log(f"  Robust weighting finished: {robust_info['kept']} gates retained; "
+                    f"{robust_info['downweighted']} downweighted; "
+                    f"{robust_info['unchanged_fraction']:.1%} errors unchanged.")
+                if robust_info.get("target_chi2", 0) > 0:
+                    log(f"  Effective chi2 target {robust_info['target_chi2']:g} "
+                        f"± {robust_info['target_tolerance']:g}: "
+                        f"{'reached' if robust_info['target_reached'] else 'not reached'}; "
+                        f"current-model lower bound under error limits="
+                        f"{robust_info['final_model_error_limits']['fixed_model_min_chi2']:.3f}.")
+            elif bool(inv.get("reject_outliers", False)):
                 log(f"Outlier rejection: cut beyond "
                     f"{float(inv.get('outlier_threshold', 3.0)):g} sigma, "
                     f"{int(inv.get('outlier_passes', 2))} pass(es), keeping at least "
-                    f"{int(float(inv.get('min_data_fraction', 0.5)) * 100)} % of the gates "
+                    f"{int(float(inv.get('min_data_fraction', 0.8)) * 100)} % of the gates "
                     f"and {int(inv.get('min_gates_per_sounding', 3))} per sounding.")
                 outcome, sounding_blocks, outlier_info = invert_lci_rejecting_outliers(
                     sounding_blocks, n_layers,
                     threshold=float(inv.get("outlier_threshold", 3.0)),
                     passes=int(inv.get("outlier_passes", 2)),
-                    min_fraction=float(inv.get("min_data_fraction", 0.5)),
+                    min_fraction=float(inv.get("min_data_fraction", 0.8)),
                     min_gates=int(inv.get("min_gates_per_sounding", 3)),
                     initial_model=warm, log=log, **lci_kwargs)
                 log(f"  Rejection finished: {outlier_info['kept']} of "
@@ -815,7 +1232,9 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
             surface_models[kept] = outcome.models
             model[:, 0, :] = surface_models[:, ::-1]
             for index, s in enumerate(kept):
-                chi2_list[s] = float(outcome.chi2_per_sounding[index])
+                chi2_list[s] = float(
+                    robust_info["chi2_per_sounding_original"][index]
+                    if robust_info["enabled"] else outcome.chi2_per_sounding[index])
                 # The blocks are what was actually fitted, so they, not the file,
                 # carry the gate count and the sensitivity once rejection has run.
                 data_count_list[s] = int(sounding_blocks[index].dobs.size)
@@ -829,6 +1248,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     "smoothness_scale", outcome.smoothness_scale)),
                 "chi2": list(outlier_info.get("initial", {}).get(
                     "convergence", outcome.chi2_history)),
+                "chi2_median": list(outlier_info.get("initial", {}).get(
+                    "convergence_median", outcome.chi2_median_history)),
                 "n_data": int(outlier_info.get("initial", {}).get(
                     "n_data", sum(b.dobs.size for b in sounding_blocks))),
             }]
@@ -837,25 +1258,40 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     "stage": f"reject {entry['pass']}",
                     "lambda": float(outcome.smoothness_scale),
                     "chi2": list(entry.get("convergence") or []),
+                    "chi2_median": list(entry.get("convergence_median") or []),
                     "n_data": int(entry.get("kept", 0)),
                 })
+            if robust_info["enabled"]:
+                # Each stage uses its own effective errors. The main chi2 below
+                # always uses original errors and all original gates.
+                track = [{"stage": "initial" if entry["pass"] == 0 else f"reweight {entry['pass']}",
+                          "lambda": float(outcome.smoothness_scale),
+                          "chi2": entry["convergence"], "n_data": entry["kept"],
+                          "chi2_median": list(entry.get("convergence_median") or []),
+                          "chi2_original_median": entry.get("chi2_original_median")}
+                         for entry in [robust_info["initial"], *robust_info["passes"]]]
             lci_report = {
                 "mode": "simultaneous",
-                "chi2": outcome.chi2,
+                "chi2": robust_info.get("chi2_original", outcome.chi2),
+                "chi2_effective": outcome.chi2,
                 "chi2_history": outcome.chi2_history,
+                "chi2_median_history": outcome.chi2_median_history,
+                "chi2_effective_sounding_median": float(np.nanmedian(outcome.chi2_per_sounding)),
                 "convergence_track": track,
-                "iterations": outcome.iterations,
+                "iterations": robust_info.get("total_iterations", outcome.iterations),
                 "stop_reason": outcome.stop_reason,
+                "diagnostics": outcome.diagnostics,
                 "smoothness_scale": outcome.smoothness_scale,
-                "lambda_search": outcome.lambda_search,
-                "seconds": outcome.seconds,
+                "lambda_search": robust_info.get("initial_lambda_search", outcome.lambda_search),
+                "seconds": robust_info.get("solve_seconds", outcome.seconds),
                 "n_soundings": len(kept),
-                "n_lateral_ties": max(len(kept) - 1, 0),
+                "n_lateral_ties": int(sum(max(count - 1, 0) for count in
+                    np.unique([b.line for b in sounding_blocks], return_counts=True)[1])),
             }
-            log(f"  LCI done: chi2={outcome.chi2:.3f} after "
-                f"{outcome.iterations} iteration(s) ({outcome.stop_reason}), "
-                f"{outcome.seconds:.1f}s")
-    if not simultaneous and joint and lateral > 0.0 and lci_passes > 0:
+            log(f"  LCI done: chi2={lci_report['chi2']:.3f} after "
+                f"{lci_report['iterations']} total iteration(s) ({outcome.stop_reason}), "
+                f"{lci_report['seconds']:.1f}s")
+    if not simultaneous and sequential:
         lci_report = {"mode": "sequential", "lci_passes": lci_passes}
         log(
             f"LCI refinement: {lci_passes} pass(es), lateral smoothness={lateral:g}, "
@@ -880,17 +1316,18 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     index for index in neighbors
                     if np.all(np.isfinite(previous[index]))
                 ]
-                if not neighbors:
-                    continue
                 distances = np.asarray([
                     max(abs(float(pos_lci[index] - pos_lci[s])), reference_distance)
                     for index in neighbors
                 ])
-                weights = reference_distance / distances
-                reference_log = np.average(
+                weights = (reference_distance / distances) ** lateral_distance_power
+                # A one-station survey line still needs a real independent fit,
+                # even when other lines make the overall selection sequential.
+                reference_log = (np.average(
                     np.log10(previous[neighbors]), axis=0, weights=weights)
+                    if neighbors else np.log10(previous[s]))
                 local_inv = {
-                    **inv,
+                    **station_inv(s),
                     "starting_model": previous[s],
                     "lateral_reference": np.power(10.0, reference_log),
                     "lateral_weight": (
@@ -914,6 +1351,11 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     updated[s] = np.asarray(
                         result["resistivity"], dtype=float).ravel()
                     chi2_list[s] = float(result.get("chi2", np.nan))
+                    data_count_list[s] = int(result.get("n_data", 0))
+                    if bool(result.get("outliers", {}).get("enabled", False)):
+                        per_sounding_outliers[s] = dict(result["outliers"])
+                    if result.get("robust", {}).get("enabled"):
+                        per_sounding_robust[s] = result["robust"]
                 except Exception as exc:  # noqa: BLE001
                     log(
                         f"  LCI pass {pass_index + 1}, sounding {s + 1} "
@@ -930,6 +1372,52 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                 if np.any(finite_pair) else float("nan")
             )
             log(f"  LCI pass {pass_index + 1}/{lci_passes}: model change={change:.4g}")
+
+    if not simultaneous and bool(inv.get("robust_errors", False)):
+        entries = [{"sounding": s, **report} for s, report in sorted(per_sounding_robust.items())]
+        total = sum(entry["kept"] for entry in entries)
+        robust_info = {
+            "enabled": True, "mode": "per_sounding", "soundings": entries,
+            "n_start": total, "kept": total, "dropped": 0,
+            "downweighted": sum(entry["downweighted"] for entry in entries),
+            "unchanged": sum(entry["unchanged"] for entry in entries),
+            "unchanged_fraction": (sum(entry["unchanged"] for entry in entries) / total
+                                   if total else float("nan")),
+            "min_unchanged_fraction": float(inv.get("robust_min_unchanged_fraction", 0.0)),
+            "fraction_scope": "per_sounding",
+            "target_chi2": float(inv.get("robust_target_chi2", 0.0)),
+            "target_tolerance": float(inv.get("robust_target_tolerance", .25)),
+            "chi2_original": (sum(e["chi2_original"] * e["kept"] for e in entries) / total
+                              if total else float("nan")),
+            "chi2_effective": (sum(e["chi2_effective"] * e["kept"] for e in entries) / total
+                               if total else float("nan")),
+        }
+        robust_info["target_reached"] = (
+            abs(robust_info["chi2_effective"] - robust_info["target_chi2"]) <= robust_info["target_tolerance"]
+            if robust_info["target_chi2"] > 0 else None)
+        # Carry the effective errors into sensitivity/DOI, not just the fit.
+        from PyHydroGeophysX.inversion.em1d import build_sounding_block
+        for s, report in per_sounding_robust.items():
+            try:
+                block = build_sounding_block(datasets[s], geometries[s], station_inv(s), method,
+                                            position=float(pos_lci[s]), line=int(line_numbers[s]))
+                block.uncertainty = np.asarray(report["uncertainty_effective"], dtype=float)
+                doi_blocks[s] = block
+            except Exception as exc:
+                log(f"  Robust sensitivity unavailable at sounding {s + 1}: {exc}")
+    elif not simultaneous and bool(inv.get("reject_outliers", False)):
+        entries = [
+            {"sounding": index, **per_sounding_outliers[index]}
+            for index in sorted(per_sounding_outliers)
+        ]
+        outlier_info = {
+            "enabled": True,
+            "mode": "per_sounding",
+            "soundings": entries,
+            "n_start": int(sum(item.get("n_start", 0) for item in entries)),
+            "kept": int(sum(item.get("kept", 0) for item in entries)),
+            "dropped": int(sum(item.get("dropped", 0) for item in entries)),
+        }
 
     # How far down the data still constrain each sounding, and what to hide.
     #
@@ -996,6 +1484,20 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         chi2_list, data_count_list, objective_chi2=lci_report.get("chi2"),
     )
     chi2_global = chi2_summary["global"]
+    chi2_effective_list = list(chi2_list)
+    if robust_info.get("enabled"):
+        chi2_effective_list = [float("nan")] * n_pos
+        if robust_info.get("mode") == "per_sounding":
+            for entry in robust_info.get("soundings", []):
+                chi2_effective_list[int(entry["sounding"])] = float(entry["chi2_effective"])
+        else:
+            weighted = (np.asarray(robust_info["residual_original"], float)
+                        / np.asarray(robust_info["error_factor"], float))
+            cursor = 0
+            for s, count in enumerate(data_count_list):
+                if count:
+                    chi2_effective_list[s] = float(np.mean(weighted[cursor:cursor+count]**2))
+                cursor += count
     data_residual_list = [
         float(math.sqrt(value)) if np.isfinite(value) and value >= 0 else float("nan")
         for value in chi2_list
@@ -1021,14 +1523,19 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         "data_residual_global": chi2_summary["data_residual_global"],
         "data_residual_sounding_median": chi2_summary["data_residual_sounding_median"],
         "chi2_list": chi2_list, "data_residual_list": data_residual_list,
+        "chi2_effective_list": chi2_effective_list,
         "n_soundings": n_pos,
         "n_layers": n_layers, "n_data": int(sum(data_count_list)),
         "data_count_list": data_count_list, "data_scale": data_scale_used,
         "joint_moments": joint, "lci": bool(lci_report),
         "lci_mode": lci_report.get("mode", "off"), "lci_report": lci_report,
         "outliers": outlier_info,
+        "robust": robust_info,
+        "shallow_prior": prior_report,
+        "chi2_effective": robust_info.get("chi2_effective", chi2_global),
         "lateral_smoothness": lateral, "lci_passes": lci_passes,
         "lateral_weight_scale": lateral_weight_scale,
+        "lateral_distance_power": lateral_distance_power,
         "line_numbers": line_numbers,
         "model_range": (float(np.nanmin(model)) if finite.any() else float("nan"),
                         float(np.nanmax(model)) if finite.any() else float("nan")),
@@ -1045,10 +1552,55 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                  surface_elevation=surface_elevation,
                  x=easting, y=northing, longitude=longitude, latitude=latitude)
         result["saved"] = [str(out / "resistivity_section.npz")]
+        if lci_report:
+            result["saved"].append(str(table_io.write_json(out / "lci_report.json", lci_report)))
+        if prior_report.get("enabled"):
+            result["saved"].append(str(table_io.write_json(out / "shallow_prior.json", prior_report)))
+            result["saved"].append(str(table_io.write_csv(
+                out / "shallow_prior.csv",
+                zip(station_ids, line_numbers, prior_report["line_distance_m"],
+                    prior_report["early_lm_snr"], prior_report["smoothed_snr_ratio"],
+                    prior_report["signal_ratio"], prior_report["noise_ratio"],
+                    prior_report["signal_threshold"], prior_report["signal_to_threshold"], prior_report["score"]),
+                header=["station", "line", "line_distance_m", "early_lm_snr",
+                        "smoothed_snr_ratio", "signal_ratio", "noise_ratio",
+                        "signal_threshold", "signal_to_threshold", "prior_score"])))
         log(f"  saved {out / 'resistivity_section.npz'}")
         for written in save_line_csv(result, out):
             result["saved"].append(written)
             log(f"  saved {written}")
+        if robust_info.get("enabled"):
+            # Gate order is LM then HM for joint TDEM, exactly as the block
+            # assembler uses it. Keep identifiers so sparse early gates can be audited.
+            rows = []
+            offsets = robust_info.get("block_offsets", [])
+            reports = ([(entry["sounding"], entry, 0, entry["kept"])
+                        for entry in robust_info["soundings"]]
+                       if robust_info.get("mode") == "per_sounding" else
+                       [(s, robust_info, offsets[i], offsets[i + 1])
+                        for i, s in enumerate(robust_info["sounding_indices"])])
+            for s, report, begin, end in reports:
+                data = datasets[s]
+                if method == "TDEM":
+                    moments = data.get("moments") or {"TDEM": data}
+                    labels = [(name, i, float(t)) for name in ("LM", "HM", "TDEM")
+                              if name in moments for i, t in enumerate(moments[name]["times"])]
+                else:
+                    labels = [(name, i, float(f)) for name in ("real", "imag")
+                              for i, f in enumerate(data["frequencies"])]
+                for j, k in enumerate(range(begin, end)):
+                    name, gate, coordinate = labels[j]
+                    rows.append((str(station_ids[s]), int(line_numbers[s]), name, gate, coordinate,
+                                 report["observed"][k], report["predicted"][k],
+                                 report["uncertainty_original"][k], report["uncertainty_effective"][k],
+                                 report["error_factor"][k], report["weights"][k],
+                                 report["residual_original"][k]))
+            result["saved"].append(str(table_io.write_csv(
+                out / "robust_gate_errors.csv", rows,
+                header=["station", "line", "moment", "gate_index", "time_s_or_frequency_hz",
+                        "observed", "predicted", "error_original", "error_effective",
+                        "error_factor", "inverse_variance_weight", "residual_original"])))
+            result["saved"].append(str(table_io.write_json(out / "robust_errors.json", robust_info)))
     return result
 
 
@@ -1160,6 +1712,25 @@ def save_inversion(result: Dict[str, Any], out_dir: Path) -> List[str]:
                        list(zip(depth.tolist(), rstep.tolist())),
                        header=["depth_m", "resistivity_ohm_m"])
     paths.append(str(out / "model_depth_resistivity.csv"))
+    robust = result.get("robust") or {}
+    if robust.get("enabled"):
+        keys = ("observed", "predicted", "uncertainty_original", "uncertainty_effective",
+                "error_factor", "weights", "residual_original")
+        if result["method"] == "FDEM":
+            labels = [(name, i, float(f)) for name in ("real", "imag")
+                      for i, f in enumerate(result["frequencies"])]
+        else:
+            moments = result.get("moments") or {"TDEM": result}
+            labels = [(name, i, float(t)) for name, item in moments.items()
+                      for i, t in enumerate(item["times"])]
+        rows = [(*labels[i], *(robust[key][i] for key in keys))
+                for i in range(robust["kept"])]
+        paths.append(str(table_io.write_csv(
+            out / "robust_gate_errors.csv", rows,
+            header=["moment", "gate_index", "time_s_or_frequency_hz", "observed", "predicted",
+                    "error_original", "error_effective", "error_factor",
+                    "inverse_variance_weight", "residual_original"])))
+        paths.append(str(table_io.write_json(out / "robust_errors.json", robust)))
     return paths
 
 __all__ = [

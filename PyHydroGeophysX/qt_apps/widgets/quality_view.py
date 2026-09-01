@@ -66,10 +66,15 @@ class InversionQualityView(QWidget):
         m = dict(metrics or {})
         chi2 = m.get("chi2")
         color, verdict = self._verdict(chi2)
+        robust = m.get("robust") or {}
+        weighted = bool(robust.get("enabled"))
+        if weighted:
+            verdict = "effective-error misfit (error-calibrated, not a raw-fit verdict)"
 
         parts: List[str] = []
         if chi2 is not None and chi2 == chi2:
-            parts.append(f"<b>χ² = {chi2:.2f}</b>")
+            label = m.get("chi2_label") or ('Weighted χ²' if weighted else 'χ²')
+            parts.append(f"<b>{label} = {chi2:.2f}</b>")
         if m.get("rrms") is not None:
             parts.append(f"RMS = {float(m['rrms']):.1f}%")
         if m.get("iterations") is not None:
@@ -92,7 +97,93 @@ class InversionQualityView(QWidget):
 
         self._draw_convergence(convergence, final_chi2=chi2,
                                track=m.get("convergence_track"),
-                               per_item=per_item)
+                               per_item=per_item, robust=robust)
+
+    def _draw_robust_convergence(self, ax, robust) -> None:
+        """Effective histories in solid lines; raw values at recorded endpoints.
+
+        Raw residuals are saved at solve endpoints, not at every inner iteration.
+        Do not invent a per-iteration raw curve by rescaling the weighted history.
+        """
+        import numpy as np
+
+        stages = [robust.get("initial", {})] + list(robust.get("passes", []))
+        cursor, raw_x, raw_y = 1, [], []
+        plotted = False
+        for stage in stages:
+            values = stage.get("convergence") or []
+            if not values and "chi2_effective" in stage:
+                values = [stage["chi2_effective"]]
+            if not values:
+                continue
+            values = np.asarray(values, float)
+            xs = np.arange(cursor, cursor + len(values))
+            ax.plot(xs, values, "o-", color="#1565ff", lw=1.6, ms=3,
+                    label="Weighted χ²" if not plotted else None)
+            if plotted:
+                ax.axvline(cursor-.5, color="#9e9e9e", ls=":", lw=.8)
+            if np.isfinite(stage.get("chi2_original", np.nan)):
+                raw_x.append(xs[-1])
+                raw_y.append(stage["chi2_original"])
+            cursor += len(values)
+            plotted = True
+        if not plotted:
+            # Independent soundings have no shared iteration axis.
+            ax.plot([1], [robust["chi2_effective"]], "o", color="#1565ff", label="Weighted χ²")
+            ax.axhline(robust["chi2_original"], color="#888888", ls="--", lw=1.2,
+                       label="Original-error χ² (final reference)")
+            ax.set_xticks([1], ["Final"])
+        elif raw_x:
+            if len(raw_x) == 1:
+                ax.axhline(raw_y[0], color="#888888", ls="--", lw=1.2,
+                           label="Original-error χ² (recorded endpoint)")
+            else:
+                ax.plot(raw_x, raw_y, "--", color="#888888", lw=1.2,
+                        label="Original-error χ² (solve endpoints)")
+        target = float(robust.get("target_chi2", 0) or 1.)
+        tolerance = float(robust.get("target_tolerance", 0.)) if robust.get("target_chi2", 0) else 0.
+        if tolerance:
+            ax.axhspan(max(target-tolerance, 1e-6), target+tolerance,
+                       color="#558b2f", alpha=.12, label=f"Target {target:g} ± {tolerance:g}")
+        else:
+            ax.axhline(target, color="#558b2f", ls=":", lw=1., label=f"Target χ² = {target:g}")
+        ax.set_yscale("log")
+        ax.set_xlabel("Iteration (all recorded solves)" if plotted else "Run")
+        ax.set_ylabel("χ²")
+        ax.set_title("Weighted convergence")
+        ax.grid(True, which="both", ls=":", alpha=.4)
+        ax.legend(fontsize=7, loc="best")
+
+    def _draw_median_track(self, ax, track, weighted=False) -> bool:
+        """Equal-sounding medians; do not reconstruct them from global chi2."""
+        import numpy as np
+
+        if not track or not all(len(s.get("chi2_median") or []) == len(s.get("chi2") or [])
+                                and len(s.get("chi2_median") or []) for s in track):
+            return False  # Old saved results have only global histories.
+        cursor, raw_x, raw_y = 0, [], []
+        for i, stage in enumerate(track):
+            median = np.asarray(stage["chi2_median"], float)
+            xs = np.arange(cursor, cursor + len(median))
+            ax.plot(xs, median, "o-", color="#1565ff", lw=1.6, ms=3,
+                    label=("Weighted median χ²" if weighted else "Median χ²") if i == 0 else None)
+            ax.plot(xs, stage["chi2"], ":", color="#777777", lw=1.1,
+                    label=("Weighted global χ²" if weighted else "Global χ²") if i == 0 else None)
+            if i:
+                ax.axvline(cursor-.5, color="#bbbbbb", ls=":", lw=.8)
+            raw = stage.get("chi2_original_median")
+            if weighted and raw is not None and np.isfinite(raw):
+                raw_x.append(xs[-1]); raw_y.append(raw)
+            cursor += len(median)
+        if raw_x:
+            ax.plot(raw_x, raw_y, "--", color="#999999", lw=1.2,
+                    label="Original-error median χ² (solve endpoints)")
+        ax.axhline(1., color="#558b2f", ls=":", lw=.8, label="χ² = 1 reference")
+        ax.set(xlabel="Accepted iterate (stages in order)", ylabel="χ²",
+               title="Median sounding convergence", yscale="log")
+        ax.grid(True, which="both", ls=":", alpha=.35)
+        ax.legend(fontsize=7, loc="best")
+        return True
 
     def _draw_track(self, ax, track) -> bool:
         """Plot every iteration the pipeline ran, segmented by lambda.
@@ -160,8 +251,13 @@ class InversionQualityView(QWidget):
         x = (np.asarray(x, dtype=float).ravel()
              if x is not None and np.size(x) == values.size
              else np.arange(values.size, dtype=float))
-        ax.plot(x, values, "o-", color="#1565ff", lw=1.3, ms=3.5, zorder=3)
-        ax.axhline(float(target), color="#c62828", ls="--", lw=1.0,
+        ax.plot(x, values, "o-", color="#1565ff", lw=1.3, ms=3.5, zorder=3,
+                label=per_item.get("value_label"))
+        reference = np.asarray(per_item.get("reference_values", []), dtype=float).ravel()
+        if reference.size == values.size:
+            ax.plot(x, reference, "--", color="#888888", lw=1.1, zorder=2,
+                    label="Original-error χ²")
+        ax.axhline(float(target), color="#558b2f", ls=":", lw=1.0,
                    label=f"target χ² = {float(target):g}")
         # An item with no data of its own reports no misfit; its model came from
         # its neighbours. Saying so is the point of showing this panel.
@@ -178,7 +274,8 @@ class InversionQualityView(QWidget):
             for index in np.flatnonzero(groups[1:] != groups[:-1]) + 1:
                 ax.axvline(0.5 * (x[index - 1] + x[index]), color="#9e9e9e",
                            ls=":", lw=1.0, zorder=1)
-        if np.nanmax(values) / max(np.nanmin(values[values > 0], initial=1.0), 1e-9) > 20:
+        plotted_values = np.r_[values, reference] if reference.size == values.size else values
+        if np.nanmax(plotted_values) / max(np.nanmin(plotted_values[plotted_values > 0], initial=1.0), 1e-9) > 20:
             ax.set_yscale("log")
         ax.set_xlabel(str(per_item.get("x_label", "Item")))
         ax.set_ylabel("χ²")
@@ -190,15 +287,24 @@ class InversionQualityView(QWidget):
     def _draw_convergence(self, convergence: Optional[Sequence[float]],
                           final_chi2: Optional[float] = None,
                           track: Optional[Sequence[dict]] = None,
-                          per_item: Optional[Dict[str, Any]] = None) -> None:
+                          per_item: Optional[Dict[str, Any]] = None,
+                          robust: Optional[Dict[str, Any]] = None) -> None:
         self._fig.clear()
+        robust = robust or {}
         if per_item:
             ax, ax_item = self._fig.subplots(1, 2)
-            if not self._draw_per_item(ax_item, per_item):
+            if not self._draw_per_item(ax_item, per_item, target=float(robust.get("target_chi2", 0) or 1.)):
                 self._fig.clear()
                 ax = self._fig.add_subplot(111)
         else:
             ax = self._fig.add_subplot(111)
+        if self._draw_median_track(ax, track, weighted=bool(robust.get("enabled"))):
+            self._canvas.draw()
+            return
+        if robust.get("enabled"):
+            self._draw_robust_convergence(ax, robust)
+            self._canvas.draw()
+            return
         if self._draw_track(ax, track):
             self._canvas.draw()
             return

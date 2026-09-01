@@ -17,29 +17,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from PyHydroGeophysX.data_processing.ert_formats import (
+    parse_das1,
+    parse_res2dinv_general,
+    parse_tx0,
+    reciprocal_errors,
+)
+
 # =============================================================================
-# ERT Data Loading with Fallback Parsers
+# ERT Data Loading
 # =============================================================================
-# Primary: RESIPY (if available and working)
-# Fallback: Embedded parsers (modified from ResIPy) + PyGIMLi
+# Three routes, tried in order:
 #
-# ACKNOWLEDGEMENT & LICENSE
-# -------------------------
-# The embedded parser functions below are MODIFIED from the ResIPy project:
-#   - Original Source: https://gitlab.com/hkex/resipy
-#   - Original Authors: Guillaume Blanchy, Jimmy Boyd, Sina Saneiyan, Pedro Concha,
-#                       and the ResIPy development team
-#   - Original License: GPL-3.0 (GNU General Public License v3.0)
+#   1. ResIPy, when it is installed. It reads the widest set of instrument
+#      formats, so it is preferred whenever it imports.
+#        pip install "PyHydroGeophysX[ert]"      (or: pip install resipy)
+#        https://gitlab.com/hkex/resipy
+#   2. The readers in this module and in ``ert_formats``. They cover the
+#      formats this package needs most and carry no compiled extension, which
+#      is what makes them usable where ResIPy cannot be installed.
+#   3. pyGIMLi, for its own unified format.
 #
-# These parsers are embedded here as a fallback when the full ResIPy package
-# cannot be installed (e.g., due to C extension compilation issues on cloud
-# platforms). All credit for the original parsing algorithms goes to the
-# ResIPy developers. Modifications made for PyHydroGeophysX integration.
-#
-# For the full ResIPy package with meshing, inversion, and visualization:
-#   pip install resipy
-#   Website: https://gitlab.com/hkex/resipy
-#   Documentation: https://hkex.gitlab.io/resipy/
+# Every reader here and in ``ert_formats`` is independent work, written from the
+# published file formats, the sample acquisitions under ``examples/data/ERT/``
+# and the standard DC-resistivity literature. Formats without a reader of their
+# own report that ResIPy is required rather than guessing at the layout.
 # =============================================================================
 
 def _notify(message: str) -> None:
@@ -54,19 +56,74 @@ def _notify(message: str) -> None:
 
 
 _RESIPY_ERROR = None
+_RESIPY_MISSING = False        # True when it is absent rather than broken
 _HAS_RESIPY = False
 _HAS_EMBEDDED_PARSERS = True  # Always available since embedded
 _HAS_PYGIMLI = False
+
+
+def resipy_install_hint(*, verbose: bool = True) -> str:
+    """What to tell a user who does not have a working ResIPy.
+
+    ResIPy is the recommended reader because it covers more instrument formats
+    than this package does on its own. The advice differs by why it is missing,
+    so the recorded import error decides which paragraph applies: a package that
+    was never installed needs a different command from one that installed but
+    cannot import.
+
+    Kept in one function so the loader, the format dispatcher and the desktop
+    app all say the same thing.
+    """
+    lines = [
+        "ResIPy is the recommended ERT reader: it covers more instrument "
+        "formats than this package reads on its own.",
+        '    pip install "PyHydroGeophysX[ert]"        (or: pip install resipy)',
+    ]
+    if _RESIPY_ERROR and not _RESIPY_MISSING:
+        lines += [
+            "",
+            f"It is installed here but did not import: {_RESIPY_ERROR}",
+        ]
+    if verbose:
+        lines += [
+            "",
+            "If the install or the import fails:",
+            "  * a compiler or build error: ResIPy carries compiled solvers, and "
+            "a cloud image or slim container often has no toolchain. Try "
+            "'pip install --only-binary :all: resipy', or build the environment "
+            "from conda-forge.",
+            "  * an import error after a successful install: usually a NumPy or "
+            "Python version mismatch. 'pip check' names the conflict.",
+            "  * no network: install it into the image ahead of time; the readers "
+            "below need nothing extra and will keep working meanwhile.",
+        ]
+    lines += [
+        "",
+        "Without ResIPy this package reads: "
+        + ", ".join(sorted(_EMBEDDED_PARSER_MAP))
+        + ". Any other format needs it.",
+    ]
+    return "\n".join(lines)
+
 
 # Try full resipy package first
 try:
     from resipy import Project
     _HAS_RESIPY = True
     _notify("[PyHydroGeophysX] RESIPY loaded successfully")
+except ModuleNotFoundError as e:
+    _HAS_RESIPY = False
+    _RESIPY_MISSING = True
+    _RESIPY_ERROR = str(e)
+    _notify("[PyHydroGeophysX] ResIPy is not installed; using this package's "
+            'own readers. Install with: pip install "PyHydroGeophysX[ert]"')
 except Exception as e:
+    # Installed but unusable: a build artifact, a binary mismatch, a broken
+    # dependency. Worth saying so, because the fix is not another install.
     _HAS_RESIPY = False
     _RESIPY_ERROR = str(e)
-    _notify(f"[PyHydroGeophysX] RESIPY import failed: {e}, using embedded parsers (modified from ResIPy)")
+    _notify(f"[PyHydroGeophysX] ResIPy is installed but failed to import: {e}. "
+            "Using this package's own readers.")
 
 # Try pygimli as additional fallback
 try:
@@ -90,149 +147,9 @@ except Exception as e:
 
 
 # =============================================================================
-# EMBEDDED PARSERS - Modified from ResIPy (GPL-3.0)
+# READERS
 # Original authors: Guillaume Blanchy, Jimmy Boyd, Sina Saneiyan, Pedro Concha
 # =============================================================================
-
-def _geom_fac(C1, C2, P1, P2):
-    """
-    Compute geometric factor for apparent resistivity calculation.
-    Modified from ResIPy project (GPL-3.0).
-    """
-    Rc1p1 = np.abs(C1 - P1)
-    Rc2p1 = np.abs(C2 - P1)
-    Rc1p2 = np.abs(C1 - P2)
-    Rc2p2 = np.abs(C2 - P2)
-    
-    # Avoid division by zero
-    Rc1p1 = np.where(Rc1p1 == 0, 1e-10, Rc1p1)
-    Rc2p1 = np.where(Rc2p1 == 0, 1e-10, Rc2p1)
-    Rc1p2 = np.where(Rc1p2 == 0, 1e-10, Rc1p2)
-    Rc2p2 = np.where(Rc2p2 == 0, 1e-10, Rc2p2)
-    
-    denom = (1/Rc1p1) - (1/Rc2p1) - (1/Rc1p2) + (1/Rc2p2)
-    denom = np.where(denom == 0, 1e-10, denom)
-    k = (2*np.pi)/denom
-    return k
-
-
-def _bertParser_legacy(fname):
-    """
-    Legacy BERT/Unified parser (CSV / positional fallback for plain files).
-    ``_bertParser`` prefers ``_unified_ert_parser`` and only falls back here when a
-    file is not the count-prefixed unified/E4D format.
-    Modified from ResIPy project (GPL-3.0).
-    Original authors: Guillaume Blanchy, Jimmy Boyd, et al.
-    """
-    try:
-        with open(fname, "r") as f:
-            dump = f.readlines()
-    except Exception as e:
-        raise ValueError(f"Could not read file {fname}: {e}")
-
-    if not dump:
-        raise ValueError(f"File {fname} is empty")
-
-    numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+'
-
-    # Skip comment lines and find data start
-    data_start_line = None
-    for i, line_content in enumerate(dump):
-        clean_line = line_content.strip()
-        if clean_line and not clean_line.startswith('#') and not clean_line.startswith('*') and not clean_line.startswith('!'):
-            try:
-                # Try to parse as numbers
-                vals = re.findall(numStr, clean_line)
-                if len(vals) >= 4:  # A B M N minimum
-                    data_start_line = i
-                    break
-            except Exception:
-                continue
-
-    if data_start_line is None:
-        raise ValueError("Could not find data section in file")
-
-    # Try to read as CSV first (more common format)
-    try:
-        df = pd.read_csv(fname, comment='#', sep=r'\s+', engine='python')
-        if len(df.columns) >= 4:
-            # Assume first 4 columns are A B M N
-            col_names = ['a', 'b', 'm', 'n'] + [f'col_{i}' for i in range(4, len(df.columns))]
-            df.columns = col_names[:len(df.columns)]
-
-            # Convert ABMN to int
-            for col in ['a', 'b', 'm', 'n']:
-                if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors='coerce').astype(int)
-
-            # Build electrode positions from unique values
-            array = df[['a', 'b', 'm', 'n']].values
-            unique_elec = np.sort(np.unique(array.flatten()))
-            n_elec = len(unique_elec)
-
-            # Assume regular spacing starting from 0
-            spacing = 1.0 if n_elec <= 1 else np.min(np.diff(unique_elec))
-            elec = np.c_[np.arange(n_elec) * spacing, np.zeros(n_elec), np.zeros(n_elec)]
-
-            # Add IP column if missing
-            if 'ip' not in df.columns:
-                df['ip'] = np.nan
-
-            return elec, df
-
-    except Exception as csv_error:
-        # Fall back to line-by-line parsing
-        pass
-
-    # Manual parsing for more complex formats
-    df_list = []
-    for line_content in dump[data_start_line:]:
-        clean_line = line_content.strip().split('#')[0]  # Remove comments
-        if not clean_line:
-            continue
-
-        vals = re.findall(numStr, clean_line)
-        if len(vals) >= 4:  # Need at least A B M N
-            df_list.append([float(v) for v in vals])
-
-    if not df_list:
-        raise ValueError("Could not parse any measurement data")
-
-    # Create DataFrame
-    df = pd.DataFrame(df_list)
-
-    # Assign default column names
-    default_headers = ['a', 'b', 'm', 'n', 'resist', 'dev', 'ip']
-    col_count = df.shape[1]
-    if col_count <= len(default_headers):
-        df.columns = default_headers[:col_count]
-    else:
-        extras = [f'extra_{i}' for i in range(col_count - len(default_headers))]
-        df.columns = default_headers + extras
-
-    # Convert ABMN to int
-    for col in ['a', 'b', 'm', 'n']:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').astype(int)
-
-    # Build electrode positions
-    array = df[['a', 'b', 'm', 'n']].values
-    unique_elec = np.sort(np.unique(array.flatten()))
-    n_elec = len(unique_elec)
-
-    # Assume regular spacing
-    if n_elec > 1:
-        spacing = np.min(np.diff(unique_elec))
-        elec = np.c_[unique_elec, np.zeros(n_elec), np.zeros(n_elec)]
-    else:
-        elec = np.array([[0, 0, 0]])
-
-    # Add IP column if missing
-    if 'ip' not in df.columns:
-        df['ip'] = np.nan
-
-    return elec, df
-
 
 def _is_index_column(col0) -> bool:
     """True if ``col0`` is a 1..n or 0..n-1 integer sequence (a row-index column)."""
@@ -405,207 +322,10 @@ def _unified_ert_parser(fname):
 def _bertParser(fname):
     """BERT / E4D / unified ERT parser.
 
-    Tries the robust :func:`_unified_ert_parser` first (count-prefixed blocks with
-    topography and header-aware columns) and falls back to the legacy CSV /
-    positional reader for plain files.
+    A thin alias for :func:`_unified_ert_parser`, kept because the instrument
+    table addresses several formats that share this layout.
     """
-    try:
-        return _unified_ert_parser(fname)
-    except Exception:
-        return _bertParser_legacy(fname)
-
-
-def _syscalParser(fname):
-    """
-    Parse Syscal format (CSV from IRIS Instruments).
-    Modified from ResIPy project (GPL-3.0).
-    Original authors: Guillaume Blanchy, Jimmy Boyd, et al.
-    """
-    try:
-        # Try reading as CSV first
-        df = pd.read_csv(fname, skipinitialspace=True, engine='python', encoding_errors='ignore')
-    except Exception:
-        raise ValueError(f"Could not read {fname} as CSV")
-
-    if df.empty:
-        raise ValueError(f"No data found in {fname}")
-
-    headers = df.columns
-
-    # Standardize column names based on format version
-    rename_map = {}
-
-    if 'Spa.1' in headers:
-        rename_map.update({
-            'Spa.1': 'a', 'Spa.2': 'b', 'Spa.3': 'm', 'Spa.4': 'n',
-            'In': 'i', 'Vp': 'vp', 'Dev.': 'dev', 'M': 'ip', 'Sp': 'sp'
-        })
-    elif any('xA' in h for h in headers):
-        rename_map.update({
-            'xA(m)': 'a', 'xB(m)': 'b', 'xM(m)': 'm', 'xN(m)': 'n',
-            'xA (m)': 'a', 'xB (m)': 'b', 'xM (m)': 'm', 'xN (m)': 'n',
-            'Dev.': 'dev', 'Dev. Rho (%)': 'dev',
-            'M (mV/V)': 'ip', 'SP (mV)': 'sp',
-            'VMN (mV)': 'vp', 'IAB (mA)': 'i',
-            'yA (m)': 'ya', 'yB (m)': 'yb', 'yM (m)': 'ym', 'yN (m)': 'yn',
-            'zA (m)': 'za', 'zB (m)': 'zb', 'zM (m)': 'zm', 'zN (m)': 'zn'
-        })
-
-    # Apply renaming
-    df = df.rename(columns={k: v for k, v in rename_map.items() if k in headers})
-
-    # Calculate resistance if needed
-    if 'vp' in df.columns and 'i' in df.columns and 'resist' not in df.columns:
-        df['resist'] = df['vp'] / df['i']
-
-    # Ensure we have the basic columns
-    required_cols = ['a', 'b', 'm', 'n']
-    missing_cols = [col for col in required_cols if col not in df.columns]
-    if missing_cols:
-        # Assume first 4 columns are A B M N
-        if len(df.columns) >= 4:
-            df.columns = ['a', 'b', 'm', 'n'] + list(df.columns[4:])
-        else:
-            raise ValueError(f"Missing required columns: {missing_cols}")
-
-    # Convert ABMN to int
-    for col in ['a', 'b', 'm', 'n']:
-        if col in df.columns:
-            try:
-                df[col] = df[col].astype(int)
-            except Exception:
-                # If conversion fails, keep as is
-                pass
-
-    # Process electrode positions
-    try:
-        if 'ya' in df.columns:  # 3D format
-            xarray = df[['a', 'b', 'm', 'n']].values.flatten() if 'xa' not in df.columns else df[['xa', 'xb', 'xm', 'xn']].values.flatten()
-            yarray = df[['ya', 'yb', 'ym', 'yn']].values.flatten()
-            zarray = df[['za', 'zb', 'zm', 'zn']].values.flatten() if 'za' in df.columns else np.zeros_like(xarray)
-            arrayFull = np.c_[xarray, yarray, zarray]
-            elec = np.unique(arrayFull, axis=0)
-        else:  # 2D format
-            array = df[['a', 'b', 'm', 'n']].values
-            val = np.sort(np.unique(array.flatten()))
-            elecLabel = 1 + np.arange(len(val))
-            searchsortedArr = np.searchsorted(val, array)
-            newval = elecLabel[searchsortedArr]
-            df[['a', 'b', 'm', 'n']] = newval
-
-            zval = np.zeros_like(val)
-            if 'za' in df.columns:
-                zarray = df[['za', 'zb', 'zm', 'zn']].values
-                zvalflat = np.c_[searchsortedArr.flatten(), zarray.flatten()]
-                zval = np.unique(zvalflat[zvalflat[:, 0].argsort()], axis=0)[:, 1]
-
-            elec = np.c_[val, np.zeros_like(val), zval]
-    except Exception as e:
-        # Fallback: simple electrode array
-        array = df[['a', 'b', 'm', 'n']].values
-        val = np.sort(np.unique(array.flatten()))
-        n_elec = len(val)
-        if n_elec > 0:
-            spacing = 1.0
-            elec = np.c_[np.arange(n_elec) * spacing, np.zeros(n_elec), np.zeros(n_elec)]
-        else:
-            elec = np.array([[0, 0, 0]])
-
-    if 'ip' not in df.columns:
-        df['ip'] = np.nan
-
-    return elec, df
-
-
-def _protocolParser(fname, ip=False):
-    """
-    Parse Protocol format (from Lund Imaging System).
-    Modified from ResIPy project (GPL-3.0).
-    Original authors: Guillaume Blanchy, Jimmy Boyd, et al.
-    """
-    try:
-        with open(fname, 'r') as f:
-            lines = f.readlines()
-    except Exception as e:
-        raise ValueError(f"Could not read file {fname}: {e}")
-
-    # Find data start
-    data_start = 0
-    for i, line in enumerate(lines):
-        clean_line = line.strip()
-        if clean_line and not clean_line.startswith('#') and not clean_line.startswith('*'):
-            try:
-                vals = clean_line.split()
-                if len(vals) >= 4:
-                    # Try to convert to numbers
-                    float_vals = [float(x) for x in vals[:4]]  # Check first 4 values
-                    data_start = i
-                    break
-            except ValueError:
-                continue
-
-    if data_start == 0:
-        raise ValueError("Could not find data section")
-
-    # Parse data
-    data_list = []
-    for line in lines[data_start:]:
-        clean_line = line.strip()
-        if clean_line and not clean_line.startswith('#') and not clean_line.startswith('*'):
-            try:
-                vals = clean_line.split()
-                if len(vals) >= 4:
-                    num_vals = [float(x) for x in vals]
-                    data_list.append(num_vals)
-            except ValueError:
-                continue
-
-    if not data_list:
-        raise ValueError("Could not parse any measurement data")
-
-    # Create DataFrame
-    df = pd.DataFrame(data_list)
-
-    # Assign columns based on number of values
-    ncols = df.shape[1]
-    if ncols >= 6:
-        df.columns = ['a', 'b', 'm', 'n', 'resist', 'dev'][:ncols]
-    elif ncols >= 5:
-        df.columns = ['a', 'b', 'm', 'n', 'resist'][:ncols]
-    else:
-        df.columns = ['a', 'b', 'm', 'n'][:ncols]
-
-    # Convert ABMN to int
-    for col in ['a', 'b', 'm', 'n']:
-        if col in df.columns:
-            try:
-                df[col] = df[col].astype(int)
-            except Exception:
-                pass  # Keep as float if conversion fails
-
-    # Build electrode array
-    try:
-        array = df[['a', 'b', 'm', 'n']].values
-        unique_elec = np.sort(np.unique(array.flatten()))
-        n_elec = len(unique_elec)
-
-        # Assume regular spacing
-        if n_elec > 1:
-            spacing = np.min(np.diff(unique_elec))
-            elec = np.c_[unique_elec, np.zeros(n_elec), np.zeros(n_elec)]
-        else:
-            elec = np.array([[0, 0, 0]])
-    except Exception:
-        # Fallback electrode array
-        n_measurements = len(df)
-        n_elec = int(np.max(df[['a', 'b', 'm', 'n']].values.flatten()) if 'a' in df.columns else 4)
-        spacing = 1.0
-        elec = np.c_[np.arange(1, n_elec + 1) * spacing, np.zeros(n_elec), np.zeros(n_elec)]
-
-    if 'ip' not in df.columns:
-        df['ip'] = np.nan
-
-    return elec, df
+    return _unified_ert_parser(fname)
 
 
 def _abem_lund_parser(fname):
@@ -671,175 +391,6 @@ def _abem_lund_parser(fname):
         df["ip"] = np.nan
 
     return elec, df
-
-
-def _dasParser(fname):
-    """
-    Parse DAS-1 format (ERTLab DACQ).
-    Modified from ResIPy project (GPL-3.0).
-    Handles electrode blocks and mixed separators from DAS-1 exports.
-    """
-    try:
-        with open(fname, "r", encoding="utf-8", errors="ignore") as f:
-            dump_raw = f.readlines()
-    except Exception as e:
-        raise ValueError(f"Could not read file {fname}: {e}")
-
-    numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+'
-
-    # Remove known bad rows (e.g., out-of-range records)
-    dump = [val for val in dump_raw if 'out of range' not in val]
-    cleanData = ''.join(dump)
-
-    # Electrode section
-    try:
-        elec_lineNum_s = next(i + 2 for i in range(len(dump)) if '#elec_start' in dump[i])
-        elec_lineNum_e = next(i for i in range(len(dump)) if '#elec_end' in dump[i])
-    except StopIteration:
-        raise ValueError("Could not locate electrode section in DAS-1 file")
-
-    nrows = elec_lineNum_e - elec_lineNum_s
-    try:
-        dfElec_raw = pd.read_csv(
-            io.StringIO(cleanData),
-            sep=r'\s+',
-            skiprows=elec_lineNum_s,
-            nrows=nrows,
-            index_col=False,
-            header=None,
-            dtype=str,
-            engine='python'
-        )
-    except Exception:
-        # Fallback to detected encoding (slow path)
-        enc = None
-        try:
-            import chardet
-            with open(fname, 'rb') as f:
-                enc = chardet.detect(f.read()).get('encoding', None)
-        except Exception:
-            enc = None
-
-        dfElec_raw = pd.read_csv(
-            io.StringIO(cleanData),
-            sep=r'\s+',
-            skiprows=elec_lineNum_s,
-            nrows=nrows,
-            index_col=False,
-            header=None,
-            dtype=str,
-            engine='python',
-            encoding=enc
-        )
-
-    elecNum = dfElec_raw.iloc[:, 0].str.split(',', expand=True)
-    elecNum = elecNum.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int).astype(str)
-    elecLabel = elecNum[0].str.strip().str.cat(elecNum[1].str.strip(), sep=' ')
-
-    dfelec = pd.DataFrame()
-    dfelec['label'] = elecLabel.copy()
-    dfelec[['x', 'y', 'z']] = dfElec_raw.iloc[:, 1:4].apply(pd.to_numeric, errors='coerce')
-    dfelec['buried'] = False
-    dfelec['remote'] = False
-
-    # Remote electrodes flags (copied from ResIPy logic)
-    remote_flags = [-9999999, -999999, -99999, -9999, -999,
-                    9999999, 999999, 99999]
-    iremote = np.isin(dfelec['x'].values, remote_flags)
-    iremote = np.isinf(dfelec[['x', 'y', 'z']].values).any(1) | iremote
-    dfelec['remote'] = iremote
-
-    # Data section
-    try:
-        df_lineNum_s = next(i + 3 for i in range(len(dump)) if '#data_start' in dump[i])
-        df_lineNum_e = next(i for i in range(len(dump)) if '#data_end' in dump[i])
-    except StopIteration:
-        raise ValueError("Could not locate data section in DAS-1 file")
-
-    df_list = []
-    for val in dump[df_lineNum_s:df_lineNum_e]:
-        vals = re.findall(numStr, val)
-        if vals:
-            df_list.append(vals)
-
-    if not df_list:
-        raise ValueError("No measurement rows found in DAS-1 file")
-
-    max_len = max(len(row) for row in df_list)
-    normalized = [row + [np.nan] * (max_len - len(row)) for row in df_list]
-    df_raw = pd.DataFrame(np.array(normalized, dtype=float))
-
-    # Determine 2D vs 3D (line numbers vary for 3D)
-    flagD = '3D' if np.mean(df_raw.iloc[:, 1]) != df_raw.iloc[0, 1] else '2D'
-
-    def _header_col(keyword: str, default: int | None = None) -> int | None:
-        for line in dump:
-            if keyword in line:
-                try:
-                    return int(line.split()[-1]) - 1
-                except Exception:
-                    try:
-                        # Fallback: last numeric token
-                        tokens = re.findall(numStr, line)
-                        if tokens:
-                            return int(tokens[-1]) - 1
-                    except Exception:
-                        return default
-        return default
-
-    resCol = _header_col('data_res_col', default=df_raw.shape[1] - 1)
-    devCol = _header_col('data_std_res_col', default=-1)
-    ipCol = _header_col('data_ip_wind_col', default=-1)
-
-    df = pd.DataFrame()
-    arrHeader = ['a', 'b', 'm', 'n']
-
-    # 2D array
-    if flagD == '2D':
-        lineNumber = int(df_raw.iloc[0, 1])
-        elecLNum = elecNum[0].astype(int)
-        selectElecs = elecLNum[elecLNum == lineNumber].index.values
-        dfelec_sel = dfelec.iloc[selectElecs, :].reset_index(drop=True)
-
-        # Convert 3D XY to 2D profile if needed
-        if np.isfinite(dfelec_sel['x']).all() and np.mean(dfelec_sel['x']) == dfelec_sel['x'][0]:
-            dfelec_sel['x'] = dfelec_sel['y'].values.copy()
-            dfelec_sel['y'] = 0
-
-        dfelec_sel = dfelec_sel.sort_values('x').reset_index(drop=True)
-
-        for idx, name in enumerate(arrHeader):
-            df[name] = pd.to_numeric(df_raw.iloc[:, (idx + 1) * 2], errors='coerce').astype(int)
-
-        elec_out = dfelec_sel
-
-    # 3D array
-    else:
-        lines = np.unique(df_raw.iloc[:, 1].values)
-        elecLNum = elecNum[0].astype(int)
-        dfelec_selected = []
-        for lineNumber in lines:
-            selectElecs = elecLNum[elecLNum == lineNumber].index.values
-            dfelec_selected.append(dfelec.iloc[selectElecs, :])
-
-        elec_out = pd.concat(dfelec_selected).reset_index(drop=True)
-
-        for idx, name in enumerate(arrHeader):
-            left = pd.to_numeric(df_raw.iloc[:, (idx * 2) + 1], errors='coerce').fillna(0).astype(int).astype(str)
-            right = pd.to_numeric(df_raw.iloc[:, (idx + 1) * 2], errors='coerce').fillna(0).astype(int).astype(str)
-            df[name] = left.str.cat(right, sep=' ')
-
-    # Data columns
-    if resCol is not None and 0 <= resCol < df_raw.shape[1]:
-        df['resist'] = df_raw.iloc[:, resCol].values
-    if devCol is not None and 0 <= devCol < df_raw.shape[1]:
-        df['dev'] = df_raw.iloc[:, devCol].values
-    if ipCol is not None and ipCol > 1 and ipCol < df_raw.shape[1]:
-        df['ip'] = df_raw.iloc[:, ipCol].values
-    else:
-        df['ip'] = df.get('ip', 0)
-
-    return elec_out, df
 
 
 # ---------------------------
@@ -1093,148 +644,66 @@ def _to_ftype(instrument: Instrument) -> str:
     return _FTYPE_MAP[normalized]
 
 
-# Parser mapping for embedded parsers (modified from ResIPy)
+_RESIPY_WARNED = False
+
+
+def _warn_resipy_once() -> None:
+    """Say once per process that the run is on the fallback readers.
+
+    Once, not once per file: a time-lapse survey loads hundreds of files through
+    this path, and a hint repeated hundreds of times is one nobody reads.
+    """
+    global _RESIPY_WARNED
+    if _RESIPY_WARNED:
+        return
+    _RESIPY_WARNED = True
+    _notify("[PyHydroGeophysX] Reading ERT data without ResIPy.\n"
+            + resipy_install_hint())
+
+
+def _needs_resipy(instrument: str):
+    """A reader for a format this package does not parse on its own.
+
+    Returning a raiser rather than guessing is deliberate. The unified reader
+    would accept a Syscal or Res2DInv protocol file and silently produce
+    nonsense from it, and a quadrupole table that parsed but is wrong is worse
+    than one that refused.
+    """
+    def _raise(fname):
+        raise NotImplementedError(
+            f"Reading a {instrument} file needs ResIPy.\n\n"
+            + resipy_install_hint())
+    return _raise
+
+
+def _lippmann_parser(fname):
+    """Lippmann 4-Point Light: its own ``.tx0`` export, or a converted table.
+
+    The instrument writes ``.tx0``, so that is tried first. Falling back to the
+    unified reader keeps working for a survey that was already converted, which
+    is what this entry used to point at.
+    """
+    try:
+        return parse_tx0(fname)
+    except (ValueError, OSError):
+        return _unified_ert_parser(fname)
+
+
+#: Formats with a reader in this package. Anything absent needs ResIPy.
 _EMBEDDED_PARSER_MAP = {
-    "Syscal": _syscalParser,
-    "Protocol DC": _protocolParser,
-    "Protocol IP": _protocolParser,
     "BERT": _bertParser,
     "E4D": _bertParser,
-    "DAS-1": _dasParser,
+    "DAS-1": parse_das1,
+    "ResInv": parse_res2dinv_general,
     "ABEM-Lund": _abem_lund_parser,
-    "Lippmann": _bertParser,   # Use BERT parser as fallback
-    "ARES": _bertParser,       # Use BERT parser as fallback
+    "Lippmann": _lippmann_parser,
+    "ARES": _bertParser,       # same unified layout
 }
 
 
 # ---------------------------
-# Local Parser Fallback Loader (adapted from ResIPy)
+# Fallback loader: this package's own readers
 # ---------------------------
-def _compute_reciprocal_errors(df: pd.DataFrame, max_reciprocal_error: float = 0.05) -> pd.DataFrame:
-    """
-    Compute reciprocal errors and filter measurements based on reciprocal error threshold.
-
-    ACKNOWLEDGEMENT & LICENSE
-    -------------------------
-    This function is MODIFIED from ResIPy's computeReciprocalP() method:
-    - Original Source: https://gitlab.com/hkex/resipy (Survey.py, lines 787-900)
-    - Original License: GPL-3.0 (GNU General Public License v3.0)
-    - Original Authors: Guillaume Blanchy, Jimmy Boyd, Sina Saneiyan, Pedro Concha
-    - Original Function: Survey.computeReciprocalP()
-
-    Algorithm:
-    1. Sort quadrupoles (A,B) and (M,N) to create standardized array
-    2. Use pandas merge to match normal and reciprocal measurements
-    3. Compute reciprocal error on resistance values: err = (R_recip - R_normal) / R_mean
-    4. Filter measurements with reciprocal error > threshold
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Dataframe with columns: a, b, m, n, resist (resistance values)
-    max_reciprocal_error : float
-        Maximum allowed reciprocal error (default: 0.05 = 5%)
-
-    Returns
-    -------
-    pd.DataFrame
-        Filtered dataframe with added columns: reciprocalErrRel, recipMean
-    """
-    if 'resist' not in df.columns:
-        print("   Warning: No 'resist' column found, skipping reciprocal error computation")
-        return df
-
-    resist = df['resist'].values
-    n_data = len(df)
-
-    # Get quadrupole array (0-indexed for Python)
-    array = df[['a', 'b', 'm', 'n']].values.astype(int)
-
-    # Initialize output arrays
-    reciprocalErr = np.zeros(n_data) * np.nan
-    reciprocalErrRel = np.zeros(n_data) * np.nan
-    reciprocalMean = np.zeros(n_data) * np.nan
-
-    # Sort quadrupoles: (min(A,B), max(A,B), min(M,N), max(M,N))
-    # This creates a canonical form so normal and reciprocal match
-    sortedArray = np.c_[np.sort(array[:, :2], axis=1), np.sort(array[:, 2:], axis=1)]
-
-    # Build dataframe of normal and reciprocal and merge them
-    # Normal: (A, B, M, N)
-    df1 = pd.DataFrame(sortedArray, columns=['a', 'b', 'm', 'n'])
-    df1['index1'] = np.arange(df1.shape[0])
-
-    # Reciprocal: (M, N, A, B) - swap current and potential
-    df2 = pd.DataFrame(sortedArray, columns=['m', 'n', 'a', 'b'])
-    df2['index2'] = np.arange(df2.shape[0])
-
-    # Merge on (a,b,m,n) to find matches
-    dfm = pd.merge(df1, df2, on=['a', 'b', 'm', 'n'], how='outer')
-    dfm = dfm.dropna()  # Keep only measurements that have both normal and reciprocal
-
-    if len(dfm) == 0:
-        print("   Warning: No reciprocal pairs found in data")
-        df['reciprocalErrRel'] = np.nan
-        df['recipMean'] = df['resist']  # Use resist for measurements without reciprocals
-        return df
-
-    # Sort and keep only half (avoid counting each pair twice)
-    indexArray = np.sort(dfm[['index1', 'index2']].values.astype(int), axis=1)
-    indexArrayUnique = np.unique(indexArray, axis=0)
-    inormal = indexArrayUnique[:, 0]
-    irecip = indexArrayUnique[:, 1]
-
-    print(f"   Found {len(inormal)} reciprocal pairs ({100*len(inormal)/n_data:.1f}% of measurements)")
-
-    # Compute reciprocal error on resistance values
-    # err = R_recip - R_normal
-    reciprocalErr[inormal] = resist[irecip] - resist[inormal]
-    reciprocalErr[irecip] = resist[irecip] - resist[inormal]
-
-    # Compute reciprocal mean with valid values only
-    ok1 = ~(np.isnan(resist[inormal]) | np.isinf(resist[inormal]))
-    ok2 = ~(np.isnan(resist[irecip]) | np.isinf(resist[irecip]))
-
-    ie = ok1 & ok2  # Both normal and recip are valid
-    reciprocalMean[inormal[ie]] = np.mean(np.c_[np.abs(resist[inormal[ie]]), np.abs(resist[irecip[ie]])], axis=1)
-    reciprocalMean[irecip[ie]] = np.mean(np.c_[np.abs(resist[inormal[ie]]), np.abs(resist[irecip[ie]])], axis=1)
-
-    ie = ok1 & ~ok2  # Only use normal
-    reciprocalMean[inormal[ie]] = np.abs(resist[inormal[ie]])
-
-    ie = ~ok1 & ok2  # Only use reciprocal
-    reciprocalMean[inormal[ie]] = np.abs(resist[irecip[ie]])
-
-    # Compute relative reciprocal error
-    # Avoid division by zero: if reciprocalMean is too small, set error to NaN (will be filtered/replaced later)
-    reciprocalErrRel = np.where(
-        np.abs(reciprocalMean) > 1e-10,  # Only compute if mean is not near zero
-        reciprocalErr / reciprocalMean,
-        np.nan  # Mark as NaN if division would be invalid
-    )
-
-    # Preserve sign in reciprocalMean
-    reciprocalMean = np.sign(resist) * reciprocalMean
-
-    # For measurements without reciprocals, use original resistance
-    inotRecip = np.isnan(reciprocalErrRel)
-    reciprocalMean[inotRecip] = resist[inotRecip]
-
-    # Add columns to dataframe
-    df['reciprocalErrRel'] = reciprocalErrRel
-    df['recipMean'] = reciprocalMean
-
-    # Filter measurements with high reciprocal error
-    before_filter = len(df)
-    df = df[np.abs(df['reciprocalErrRel']) < max_reciprocal_error].copy()
-    n_filtered = before_filter - len(df)
-
-    if n_filtered > 0:
-        print(f"   Filtered {n_filtered} measurements with reciprocal error > {max_reciprocal_error*100:.0f}%")
-
-    return df
-
-
 def _load_ert_embedded_parsers(
     data_file: str,
     electrode_file: Optional[str] = None,
@@ -1245,17 +714,14 @@ def _load_ert_embedded_parsers(
     local_ref: Optional[LocalRef] = None
 ) -> "StandardERT":
     """
-    ERT data loader using embedded parsers (modified from ResIPy).
-    Used when the full ResIPy package cannot be installed.
+    ERT data loader using this package's own readers.
+    Used when ResIPy is not installed.
 
     ACKNOWLEDGEMENT & LICENSE
     -------------------------
-    Parser functions are MODIFIED from the ResIPy project:
-    - Original Source: https://gitlab.com/hkex/resipy
-    - Original License: GPL-3.0 (GNU General Public License v3.0)
-    - Original Authors: Guillaume Blanchy, Jimmy Boyd, Sina Saneiyan, Pedro Concha
-
-    All credit for original parsing algorithms goes to the ResIPy developers.
+    The readers are independent work, written from the published file formats
+    and the sample acquisitions under ``examples/data/ERT/``. A format without a
+    reader here reports that ResIPy is required rather than guessing.
     """
     requested_instrument = str(instrument)
     instrument = _normalize_instrument_name(requested_instrument)
@@ -1279,18 +745,24 @@ def _load_ert_embedded_parsers(
         instrument = "ABEM-Lund"
     
     # Select appropriate parser based on instrument
-    parser_func = _EMBEDDED_PARSER_MAP.get(instrument, _bertParser)
+    parser_func = _EMBEDDED_PARSER_MAP.get(instrument)
     parser_name = instrument  # Use instrument name for error message
 
     if parser_func is None:
-        parser_func = _bertParser  # Default fallback
-        parser_name = "BERT (fallback)"
+        parser_func = _needs_resipy(instrument)
 
     # Parse the data file
     try:
         _notify(f"[PyHydroGeophysX] Attempting to parse ERT data with {parser_name} parser...")
         elec_array, df = parser_func(str(data_file_path))
         _notify(f"[PyHydroGeophysX] Successfully parsed {len(df)} measurements and {len(elec_array)} electrodes")
+    except NotImplementedError:
+        # "This format has no reader here" is a statement about the format, not a
+        # parse failure, so the generic fallback below must not answer it. The
+        # unified reader will happily consume a Syscal or protocol file and
+        # return a quadrupole table built from the wrong columns, and a wrong
+        # table that parsed is worse than an honest refusal.
+        raise
     except Exception as e:
         _notify(f"[PyHydroGeophysX] Parser {parser_name} failed: {e}")
         # Try fallback parsers if this one fails
@@ -1429,10 +901,10 @@ def _load_ert_embedded_parsers(
         observations['resist'] = pd.to_numeric(df[resist_col], errors='coerce')
 
     # Compute reciprocal errors BEFORE any K computation or rhoa calculation
-    # This matches ResIPy behavior: reciprocal processing on resistance values
     if 'resist' in observations.columns:
-        print("   Computing reciprocal errors on resistance values (ResIPy algorithm)...")
-        observations = _compute_reciprocal_errors(observations, max_reciprocal_error=0.05)
+        # Before any geometric factor is applied: the factor is identical for a
+        # measurement and its reciprocal, so it cancels out of the error.
+        observations = reciprocal_errors(observations, max_reciprocal_error=0.05)
 
     # Get apparent resistivity / resistance
     app_res_source = "unknown"
@@ -1550,7 +1022,6 @@ def _load_ert_embedded_parsers(
         'app_res_source': app_res_source,
         'n_electrodes': len(electrodes_list),
         'n_measurements': len(obs_list),
-        'acknowledgement': 'Parsing logic adapted from ResIPy (https://gitlab.com/hkex/resipy) under GPL-3.0',
     }
     if label_map is not None:
         metadata['electrode_label_map'] = label_map
@@ -1822,9 +1293,9 @@ def load_ert_resipy(
 
     # Try resipy first, then local parsers, then pygimli
     if not _HAS_RESIPY:
-        # Fallback 1: Embedded parsers (modified from ResIPy, GPL-3.0)
+        # Fallback 1: this package's own readers
         if _HAS_EMBEDDED_PARSERS:
-            _notify(f"[PyHydroGeophysX] Using embedded parsers (modified from ResIPy) - RESIPY unavailable: {_RESIPY_ERROR}")
+            _warn_resipy_once()
             return _load_ert_embedded_parsers(
                 data_file=data_file,
                 electrode_file=electrode_file,
@@ -1847,8 +1318,10 @@ def load_ert_resipy(
                 local_ref=local_ref
             )
         else:
-            error_msg = f"RESIPY import failed: {_RESIPY_ERROR}" if _RESIPY_ERROR else "RESIPY not installed. Please `pip install resipy`."
-            raise ImportError(error_msg + " Local parsers and PyGIMLi fallbacks also unavailable.")
+            raise ImportError(
+                "No ERT reader is available: this package's own readers and the "
+                "PyGIMLi fallback are both missing as well.\n\n"
+                + resipy_install_hint())
     ftype = _to_ftype(instrument)
 
     # Resolve relative paths to absolute paths based on current working directory
@@ -1980,7 +1453,7 @@ def load_ert_resipy(
             raise
 
         # Default fallback order for non-BERT instruments:
-        # 1) Embedded parsers (ResIPy-derived) -> 2) PyGIMLi
+        # 1) this package's own readers -> 2) PyGIMLi
         if _HAS_EMBEDDED_PARSERS:
             try:
                 return _load_ert_embedded_parsers(

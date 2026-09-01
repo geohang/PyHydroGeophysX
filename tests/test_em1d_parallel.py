@@ -21,7 +21,7 @@ def _synthetic_block(seed: int, n_layers: int = 6, n_data: int = 12):
     """A differentiable stand-in for one sounding, with an exact Jacobian.
 
     ``pred_i = sum_k A_ik sqrt(sigma_k)`` is nonlinear in the model, so the
-    solver takes real Gauss-Newton steps, and its derivative is one line.
+    solver takes real nonlinear optimisation steps, and its derivative is one line.
     """
     rng = np.random.default_rng(seed)
     A = rng.uniform(0.5, 1.5, size=(n_data, n_layers))

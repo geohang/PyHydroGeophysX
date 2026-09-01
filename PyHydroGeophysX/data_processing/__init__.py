@@ -183,6 +183,14 @@ _EXPORTS: Dict[str, Tuple[str, str]] = {
         "load_ttem_sounding",
     ),
     "load_sounding": ("PyHydroGeophysX.data_processing.em1d", "load_sounding"),
+    "has_reference_models": (
+        "PyHydroGeophysX.data_processing.temcompany_reference",
+        "has_reference_models",
+    ),
+    "load_reference_models": (
+        "PyHydroGeophysX.data_processing.temcompany_reference",
+        "load_reference_models",
+    ),
     "load_line_geometry": (
         "PyHydroGeophysX.data_processing.em1d",
         "load_line_geometry",

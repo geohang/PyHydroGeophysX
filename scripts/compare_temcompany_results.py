@@ -24,7 +24,7 @@ from typing import Any, Dict, Iterable, List
 
 import numpy as np
 
-from PyHydroGeophysX.forward.em1d import _tdem_config
+from PyHydroGeophysX.forward.em1d import _tdem_config, _tdem_geometry
 from PyHydroGeophysX.workflows import em1d
 from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling
 
@@ -83,7 +83,8 @@ def compare(
     output.mkdir(parents=True, exist_ok=True)
 
     sounding = em1d.load_sounding(str(project), "TDEM", moment=moment)
-    geom = {**sounding["system"], "tem_moment": moment}
+    geom = _tdem_geometry(
+        sounding, {**sounding["system"], "tem_moment": moment})
     native_scale = float(sounding["system"].get("data_scale", 1.0))
     independent_scale = em1d.estimate_data_scale(
         str(project), "TDEM", geom, max_soundings=8)

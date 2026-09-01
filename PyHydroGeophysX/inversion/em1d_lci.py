@@ -34,7 +34,7 @@ import math
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -65,13 +65,17 @@ SMOOTHNESS_SCALE_BOUNDS: Tuple[float, float] = (1e-4, 1e4)
 #: honest response to noisier data. Raise it for a more conservative picture,
 #: lower it to see what the deeper part of the model looks like.
 #:
-#: Vendors do not agree on how conservative to be. On a 71-station ground TDEM
-#: survey the TEMcompany software reported depths of investigation about 2.6
-#: times shallower than this threshold gives (median 12 m against 37 m); its
-#: numbers are reproduced at roughly 8. Christiansen and Auken's value is the
-#: default because it is the published one and it travels across systems, but a
-#: project that has to line up with an acquisition package's own sections will
-#: want to raise it.
+#: On sparse ground TDEM the published value can saturate. With a handful of
+#: gates per station and a model of twenty layers, the deepest layer often clears
+#: 0.8 on its own: the measure cumulates from the bottom up, and that layer is
+#: thick. The reported depth then collapses onto the bottom of the
+#: parameterisation for much of the survey, which is the measure meeting a coarse
+#: deep grid rather than a claim about resolution. Two symptoms identify it: a
+#: large share of stations reporting exactly the model bottom, and stations
+#: holding three gates reporting the same depth as stations holding ten. Values
+#: in the 6 to 8 range keep the reported depth inside the model on such data.
+#: Christiansen and Auken's value is the default because it is the published one
+#: and it travels across systems.
 DOI_SENSITIVITY_THRESHOLD: float = 0.8
 
 #: Relative chi-squared gain a rougher model has to earn to be preferred.
@@ -114,6 +118,8 @@ class SoundingBlock:
     position: float = 0.0
     line: int = 0
     label: str = ""
+    prior_lower: Optional[np.ndarray] = None
+    prior_weights: Optional[np.ndarray] = None
 
     def __post_init__(self) -> None:
         self.dobs = np.asarray(self.dobs, dtype=float).ravel()
@@ -141,6 +147,8 @@ class LCIResult:
     n_data: int = 0
     seconds: float = 0.0
     lambda_search: Optional[Dict[str, Any]] = None
+    diagnostics: Dict[str, Any] = field(default_factory=dict)
+    chi2_median_history: List[float] = field(default_factory=list)
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -156,6 +164,8 @@ class LCIResult:
             "n_data": self.n_data,
             "seconds": self.seconds,
             "lambda_search": self.lambda_search,
+            "diagnostics": dict(self.diagnostics),
+            "chi2_median_history": list(self.chi2_median_history),
         }
 
 
@@ -164,15 +174,22 @@ def lateral_edges(
     lines: Optional[Sequence[int]] = None,
     *,
     reference_distance: float = 10.0,
+    distance_power: float = 1.0,
 ) -> List[Tuple[int, int, float]]:
     """Return ``(i, j, weight)`` for each pair of neighbouring soundings.
 
     Soundings are neighbours when they are adjacent in along-line order on the
-    same survey line. The weight falls off as ``sqrt(reference_distance / d)``,
-    so the penalty it produces scales as ``reference_distance / d``: two
-    stations 10 m apart are tied ten times as tightly as two 100 m apart. The
-    weight is capped at 1 so that a pair closer than ``reference_distance`` is
-    not tied arbitrarily hard.
+    same survey line. The penalty a pair produces scales as
+    ``(reference_distance / d) ** distance_power``, so at the default power of
+    one, two stations 10 m apart are tied ten times as tightly as two 100 m
+    apart. The weight is the square root of that, because the penalty is the
+    square of the weighted difference. It is capped at 1 so that a pair closer
+    than ``reference_distance`` is not tied arbitrarily hard.
+
+    ``distance_power`` of 0 removes the distance dependence and ties every
+    neighbouring pair alike. Values between 0 and 1 loosen the fall-off, which
+    suits a line whose station spacing varies enough that the linear rule leaves
+    the widely spaced pairs effectively unconstrained.
     """
     pos = np.asarray(positions, dtype=float).ravel()
     n = pos.size
@@ -181,6 +198,7 @@ def lateral_edges(
     if grp.size != n:
         grp = np.zeros(n, dtype=int)
     ref = max(float(reference_distance), 1e-6)
+    half_power = 0.5 * max(float(distance_power), 0.0)
     edges: List[Tuple[int, int, float]] = []
     for value in np.unique(grp):
         members = np.flatnonzero(grp == value)
@@ -189,7 +207,7 @@ def lateral_edges(
         members = members[np.argsort(pos[members], kind="stable")]
         for a, b in zip(members[:-1], members[1:]):
             distance = max(abs(float(pos[b] - pos[a])), ref)
-            edges.append((int(a), int(b), math.sqrt(ref / distance)))
+            edges.append((int(a), int(b), (ref / distance) ** half_power))
     return edges
 
 
@@ -355,6 +373,110 @@ def _solve_normal_equations(gram, rhs: np.ndarray) -> np.ndarray:
         return np.asarray(out, dtype=float)
 
 
+def _sounding_median(values) -> float:
+    """Equal-sounding median of per-sounding mean squared gate residuals.
+
+    Stations with no data report NaN and contribute no artificial zero. This is
+    a display statistic only; optimization still uses the full weighted sum.
+    """
+    finite = np.asarray(values, float)
+    finite = finite[np.isfinite(finite)]
+    return float(np.median(finite)) if finite.size else float("nan")
+
+
+def _solve_lci_trf(blocks, n_layers, x, Dz, Dx, prior_lower, prior_weights,
+                   lo, hi, lam_v, lam_l, scale, executor, *, max_nfev,
+                   ftol, xtol, gtol, target_chi2, chi2_tolerance, speak, started):
+    """Bound-aware sparse least squares with fixed data errors and penalties.
+
+    Unlike a clipped unconstrained step, TRF accounts for the feasible directions
+    while constructing the step. It minimizes the *whole* objective; the data
+    target is used by the outer lambda search, not as an inner convergence test.
+    Only accepted iterates (Jacobian evaluations) enter the progress history.
+    Works with SciPy >= 1.8, without requiring the newer callback API.
+    """
+    from scipy import sparse
+    from scipy.optimize import least_squares
+
+    if int(max_nfev) != max_nfev or int(max_nfev) < 1:
+        raise ValueError("lci_max_nfev must be a positive integer.")
+    n_data = sum(b.dobs.size for b in blocks)
+    R = sparse.vstack([math.sqrt(lam_v) * Dz, math.sqrt(lam_l) * Dx], format="csr")
+    prior_index = np.flatnonzero(prior_weights)
+    history, objectives, medians = [], [], []
+    cache_x, cache_residual, cache_per = None, None, None
+
+    def residual(vec):
+        nonlocal cache_x, cache_residual, cache_per
+        if cache_x is None or not np.array_equal(vec, cache_x):
+            data_res, cache_per = _misfit(blocks, _forward_line(blocks, vec, n_layers, executor))
+            prior = prior_weights[prior_index] * np.maximum(prior_lower[prior_index] - vec[prior_index], 0.)
+            cache_x = vec.copy()
+            cache_residual = np.r_[data_res, R @ vec, prior]
+        return cache_residual
+
+    def record(vec):
+        r = residual(vec)
+        chi2 = float(r[:n_data] @ r[:n_data]) / max(n_data, 1)
+        history.append(chi2)
+        medians.append(_sounding_median(cache_per))
+        objectives.append(float(r @ r))
+        speak(f"  LCI TRF accepted {len(history)-1}: median chi2={medians[-1]:.3f}, "
+              f"global chi2={chi2:.3f}, objective={objectives[-1]:.6g}")
+
+    last_jac_x = None
+
+    def jacobian(vec):
+        nonlocal last_jac_x
+        # Reuse the forward at this model (including SimPEG's cached fields).
+        record(vec)
+        last_jac_x = vec.copy()
+        J = _sensitivity_line(blocks, vec, n_layers, executor)
+        rows = np.arange(prior_index.size)
+        values = -prior_weights[prior_index] * (vec[prior_index] < prior_lower[prior_index])
+        P = sparse.csr_matrix((values, (rows, prior_index)), shape=(prior_index.size, vec.size))
+        return sparse.vstack([J, R, P], format="csr")
+
+    fitted = least_squares(
+        residual, x, jac=jacobian, bounds=(lo, hi), method="trf", loss="linear",
+        x_scale="jac", tr_solver="lsmr", tr_options={"atol": 1e-5, "btol": 1e-5},
+        max_nfev=int(max_nfev), ftol=float(ftol), xtol=float(xtol), gtol=float(gtol))
+    if last_jac_x is None or not np.array_equal(last_jac_x, fitted.x):
+        record(fitted.x)
+    final_r = residual(fitted.x)
+    # A projected gradient is zero at a bound-constrained stationary point.
+    # Report this separately: small objective changes do not establish KKT or
+    # global optimality, and reaching the evaluation budget is not convergence.
+    projected = fitted.x - np.clip(fitted.x - fitted.grad, lo, hi)
+    projected_inf = float(np.linalg.norm(projected, ord=np.inf))
+    reason = {0: "max_nfev", 1: "gradient", 2: "objective_tolerance",
+              3: "step_tolerance", 4: "objective_and_step_tolerance"}.get(fitted.status, "solver_failure")
+    chi2 = float(final_r[:n_data] @ final_r[:n_data]) / max(n_data, 1)
+    diagnostics = {
+        "solver": "trf", "solver_converged": bool(fitted.success),
+        "status": int(fitted.status), "message": str(fitted.message),
+        "nfev": int(fitted.nfev), "njev": int(fitted.njev or 0),
+        "max_nfev": int(max_nfev), "optimality": float(fitted.optimality),
+        "projected_gradient_inf": projected_inf, "stationary": projected_inf <= float(gtol),
+        "objective": float(final_r @ final_r), "objective_history": objectives,
+        "data_objective": float(final_r[:n_data] @ final_r[:n_data]),
+        "regularization_objective": float(final_r[n_data:] @ final_r[n_data:]),
+        "lower_bound_fraction": float(np.mean(fitted.x <= lo + 1e-6)),
+        "upper_bound_fraction": float(np.mean(fitted.x >= hi - 1e-6)),
+        "target_band_reached": bool(target_chi2 > 0 and abs(chi2-target_chi2) <= abs(chi2_tolerance)),
+        "ftol": float(ftol), "xtol": float(xtol), "gtol": float(gtol),
+    }
+    speak(f"  LCI TRF stop: {reason}, chi2={chi2:.3f}, {fitted.nfev} evaluations; "
+          f"projected gradient={projected_inf:.3g} (not a global-optimum certificate)")
+    return LCIResult(
+        models=10.**fitted.x.reshape(len(blocks), n_layers), chi2=chi2,
+        chi2_per_sounding=cache_per.copy(), chi2_history=history,
+        iterations=max(len(history)-1, 0), stop_reason=reason,
+        smoothness_scale=scale, lambda_vertical=lam_v, lambda_lateral=lam_l,
+        n_data=n_data, seconds=time.time()-started, diagnostics=diagnostics,
+        chi2_median_history=medians)
+
+
 def solve_lci(
     blocks: Sequence[SoundingBlock],
     n_layers: int,
@@ -363,10 +485,17 @@ def solve_lci(
     lateral_smoothness: float = 0.3,
     smoothness_scale: float = 1.0,
     reference_distance: float = 10.0,
+    lateral_distance_power: float = 1.0,
     initial_model: Optional[np.ndarray] = None,
     starting_resistivity: float = 100.0,
     max_iterations: int = 20,
     convergence_tolerance: float = 0.02,
+    convergence_metric: str = "data",
+    solver: str = "trf",
+    trf_max_nfev: int = 90,
+    trf_ftol: float = 1e-4,
+    trf_xtol: float = 1e-6,
+    trf_gtol: float = 1e-5,
     min_iterations: int = 2,
     target_chi2: float = 1.0,
     chi2_tolerance: float = 0.2,
@@ -379,6 +508,13 @@ def solve_lci(
 ) -> LCIResult:
     """Solve one coupled line inversion at a fixed smoothness.
 
+    Bound-aware sparse trust-region least squares (``solver='trf'``) is the
+    formal default. ``solver='gauss_newton'`` selects the fast legacy path.
+    Its budget is ``trf_max_nfev`` (forward evaluations, including rejected
+    trials), not ``max_iterations``. Its three tolerances apply to the full
+    objective, step and gradient, respectively. The legacy ``gauss_newton``
+    path retains its iteration/target controls for backwards compatibility.
+
     The objective is
 
     ``||W (F(x) - d)||^2 + lam_v ||Dz x||^2 + lam_l ||Dx x||^2``
@@ -389,10 +525,12 @@ def solve_lci(
     Occam routine, so an existing ``smoothness=0.3`` setting means the same
     amount of vertical damping here.
 
-    Iteration stops at ``target_chi2``, when the relative chi-squared
-    improvement falls below ``convergence_tolerance`` (the plateau rule used
-    throughout this package), when the line search cannot find a descent step,
-    or at ``max_iterations``. The reason is reported in ``stop_reason``.
+    On the legacy Gauss-Newton path, iteration stops at ``target_chi2``, when
+    the relative chi-squared improvement falls below ``convergence_tolerance``
+    (the plateau rule used throughout this package), when the line search cannot
+    find a descent step, or at ``max_iterations``. TRF instead uses its full-
+    objective tolerances and forward-evaluation budget. Either path reports the
+    reason in ``stop_reason``.
 
     A Gauss-Newton step near the target routinely shoots past it, so a run that
     stopped at the first iterate below ``target_chi2`` would report whatever
@@ -408,6 +546,10 @@ def solve_lci(
     arithmetic is the same either way; measured against the serial path, the
     models come back bit for bit identical.
     """
+    if convergence_metric not in {"data", "objective"}:
+        raise ValueError("convergence_metric must be data or objective.")
+    if solver not in {"gauss_newton", "trf"}:
+        raise ValueError("solver must be gauss_newton or trf.")
     started = time.time()
     blocks = list(blocks)
     if not blocks:
@@ -435,22 +577,41 @@ def solve_lci(
     edges = lateral_edges(
         [block.position for block in blocks],
         [block.line for block in blocks],
-        reference_distance=reference_distance)
+        reference_distance=reference_distance,
+        distance_power=lateral_distance_power)
     Dz = _vertical_operator(n_soundings, n_layers)
     Dx = _lateral_operator(edges, n_soundings, n_layers)
     reg = (lam_v * (Dz.T @ Dz)) + (lam_l * (Dx.T @ Dx))
+    prior_lower = np.concatenate([np.zeros(n_layers) if b.prior_lower is None
+                                   else np.asarray(b.prior_lower, float) for b in blocks])
+    prior_weights = np.concatenate([np.zeros(n_layers) if b.prior_weights is None
+                                     else np.asarray(b.prior_weights, float) for b in blocks])
+    if (prior_lower.shape != x.shape or prior_weights.shape != x.shape
+            or not np.isfinite(prior_lower).all() or not np.isfinite(prior_weights).all()
+            or np.any(prior_weights < 0)):
+        raise ValueError(
+            "resistive-prior arrays must match the model and have finite nonnegative weights.")
 
     def objective(vec: np.ndarray, residual: np.ndarray) -> float:
-        return float(residual @ residual) + float(vec @ (reg @ vec))
+        prior = prior_weights * np.maximum(prior_lower - vec, 0.)
+        return float(residual @ residual) + float(vec @ (reg @ vec)) + float(prior @ prior)
 
     workers = resolve_worker_count(n_soundings, parallel_workers)
     if workers > 1:
         speak(f"  LCI running {n_soundings} soundings on {workers} threads")
     with _worker_pool(workers) as executor:
+        if solver == "trf":
+            return _solve_lci_trf(
+                blocks, n_layers, x, Dz, Dx, prior_lower, prior_weights,
+                lo, hi, lam_v, lam_l, scale, executor,
+                max_nfev=trf_max_nfev, ftol=trf_ftol, xtol=trf_xtol, gtol=trf_gtol,
+                target_chi2=target_chi2, chi2_tolerance=chi2_tolerance,
+                speak=speak, started=started)
         predicted = _forward_line(blocks, x, n_layers, executor)
         residual, per_sounding = _misfit(blocks, predicted)
         chi2 = float(residual @ residual) / max(n_data, 1)
         history = [chi2]
+        median_history = [_sounding_median(per_sounding)]
         phi = objective(x, residual)
         speak(f"  LCI start: chi2={chi2:.3f}, {n_soundings} soundings, "
               f"{len(edges)} lateral ties, {n_data} data")
@@ -472,6 +633,11 @@ def solve_lci(
             G = _sensitivity_line(blocks, x, n_layers, executor)
             gram = (G.T @ G) + reg
             gradient = np.asarray(G.T @ residual, dtype=float) + (reg @ x)
+            if np.any(prior_weights):
+                from scipy import sparse
+                active_weight = prior_weights ** 2 * (x < prior_lower)
+                gram = gram + sparse.diags(active_weight)
+                gradient = gradient + active_weight * (x - prior_lower)
             step = _solve_normal_equations(gram, -gradient)
             if not np.all(np.isfinite(step)):
                 stop_reason = "singular_system"
@@ -530,16 +696,23 @@ def solve_lci(
             iterations = iteration + 1
             chi2 = float(residual @ residual) / max(n_data, 1)
             history.append(chi2)
-            speak(f"  LCI iter {iterations}: chi2={chi2:.3f} (step {alpha:.3g})")
+            median_history.append(_sounding_median(per_sounding))
+            speak(f"  LCI iter {iterations}: median chi2={median_history[-1]:.3f}, "
+                  f"global chi2={chi2:.3f} (step {alpha:.3g})")
             if at_target(chi2):
                 stop_reason = "target"
                 break
             # One thin gain is not a plateau. A backtracked step (alpha well under
             # one) often gains little while the model is still moving, so require
             # the improvement to stay small twice running before giving up.
-            gained = previous - chi2
+            # Reweighting changes the optimum balance: data chi2 can increase
+            # while the full objective still improves. Do not mistake that for
+            # convergence of the objective actually used by the line search.
+            previous_metric = base_phi if convergence_metric == "objective" else previous
+            current_metric = phi if convergence_metric == "objective" else chi2
+            gained = previous_metric - current_metric
             stalls = (stalls + 1
-                      if gained <= abs(previous) * float(convergence_tolerance)
+                      if gained <= abs(previous_metric) * float(convergence_tolerance)
                       else 0)
             if iterations >= int(min_iterations) and stalls >= 2:
                 stop_reason = "plateau"
@@ -560,6 +733,7 @@ def solve_lci(
             lambda_lateral=lam_l,
             n_data=n_data,
             seconds=time.time() - started,
+            chi2_median_history=median_history,
         )
 
 
@@ -594,11 +768,13 @@ def invert_lci(
     solved: Dict[float, LCIResult] = {}
 
     def nearest(scale: float) -> Optional[np.ndarray]:
-        if not solved:
+        usable = {k: v for k, v in solved.items()
+                  if not v.diagnostics or v.diagnostics.get("solver_converged", False)}
+        if not usable:
             return None
-        key = min(solved, key=lambda k: abs(math.log(max(k, 1e-30))
+        key = min(usable, key=lambda k: abs(math.log(max(k, 1e-30))
                                             - math.log(max(scale, 1e-30))))
-        return solved[key].models
+        return usable[key].models
 
     def run(scale: float, warm: Optional[np.ndarray]) -> LCIResult:
         out = solve_lci(blocks, n_layers, smoothness_scale=scale,
@@ -610,6 +786,14 @@ def invert_lci(
 
     base = run(float(smoothness_scale), kwargs.pop("initial_model", None))
     best = base
+    if base.diagnostics and not base.diagnostics.get("solver_converged", False):
+        base.lambda_search = {
+            "status": "solver_incomplete", "reason": base.stop_reason,
+            "trials": [{"lambda": base.smoothness_scale, "chi2": base.chi2}],
+            "fixed_chi2": base.chi2, "fixed_scale": base.smoothness_scale,
+        }
+        log("  Inner solver incomplete; keeping errors and smoothness fixed.")
+        return base
     if not auto_lambda or abs(base.chi2 - target_chi2) <= abs(chi2_tolerance):
         best.lambda_search = {
             "status": "skipped" if not auto_lambda else "converged",
@@ -624,6 +808,10 @@ def invert_lci(
 
     def evaluate(scale: float) -> float:
         out = run(scale, nearest(scale))
+        if out.diagnostics and not out.diagnostics.get("solver_converged", False):
+            # The search treats NaN as an unusable trial and stops. Do not rank
+            # a budget-limited trial as a regularization optimum.
+            return float("nan")
         nonlocal best
         if abs(out.chi2 - target_chi2) < abs(best.chi2 - target_chi2):
             best = out
@@ -642,7 +830,9 @@ def invert_lci(
     search["fixed_chi2"] = float(base.chi2)
     search["fixed_scale"] = float(base.smoothness_scale)
     if search.get("status") == "best_effort" and best.chi2 > float(target_chi2):
-        smoothest = _smoothest_equivalent(solved, best)
+        usable = {k: v for k, v in solved.items()
+                  if not v.diagnostics or v.diagnostics.get("solver_converged", False)}
+        smoothest = _smoothest_equivalent(usable, best)
         if smoothest is not best:
             log(f"  No trial reached the chi2 target, and scale "
                 f"{smoothest.smoothness_scale:.3g} (chi2={smoothest.chi2:.3f}) "
@@ -684,6 +874,7 @@ def mask_sounding_block(block: SoundingBlock, keep: Sequence[bool]) -> SoundingB
         position=block.position,
         line=block.line,
         label=block.label,
+        prior_lower=block.prior_lower, prior_weights=block.prior_weights,
     )
 
 
@@ -775,6 +966,76 @@ def weighted_residuals(blocks: Sequence[SoundingBlock],
     return np.concatenate(parts) if parts else np.zeros(0, dtype=float)
 
 
+def invert_lci_with_robust_errors(
+    blocks: Sequence[SoundingBlock], n_layers: int, *, threshold: float = 3.0,
+    passes: int = 3, max_error_factor: float = 10.0,
+    min_unchanged_fraction: float = 0.0, error_target_chi2: float = 0.0,
+    target_tolerance: float = 0.25, log: LogFn = _noop, **kwargs: Any,
+) -> Tuple[LCIResult, List[SoundingBlock], Dict[str, Any]]:
+    """Warm-started error reweighting, preserving all LM/HM data and operators.
+
+    The returned blocks carry effective errors (also used for DOI). Input blocks
+    are untouched. The solver outcome uses effective chi2; the report additionally
+    supplies original-error scores for honest comparisons between runs.
+    """
+    from .robust_errors import reweight_errors
+
+    original = list(blocks)
+    offsets = np.r_[0, np.cumsum([b.dobs.size for b in original])]
+    fitted_blocks = original
+    initial_search = {}
+    total_seconds = 0.0
+    total_iterations = 0
+
+    def solve(effective, previous):
+        nonlocal fitted_blocks, initial_search, total_seconds, total_iterations
+        fitted_blocks = [replace(b, uncertainty=effective[offsets[i]:offsets[i + 1]].copy())
+                         for i, b in enumerate(original)]
+        settings = dict(kwargs)
+        if previous is not None:
+            settings.update(initial_model=previous.models, auto_lambda=False,
+                            smoothness_scale=previous.smoothness_scale,
+                            convergence_metric="objective")
+        fitted = invert_lci(fitted_blocks, n_layers, log=log, **settings)
+        if previous is None:
+            initial_search = fitted.lambda_search
+        total_seconds += fitted.seconds
+        total_iterations += fitted.iterations
+        return fitted
+
+    def predicted(outcome):
+        # Use the existing parallel forward path and reuse cached operators.
+        workers = resolve_worker_count(len(original), int(kwargs.get("parallel_workers", 0)))
+        with _worker_pool(workers) as pool:
+            return np.concatenate(_forward_line(
+                original, np.log10(outcome.models).ravel(), n_layers, pool))
+
+    def stage_statistics(fit, original_residual):
+        per = [np.mean(original_residual[offsets[i]:offsets[i+1]] ** 2)
+               for i in range(len(original)) if offsets[i+1] > offsets[i]]
+        return {"convergence_median": list(getattr(fit, "chi2_median_history", [])),
+                "chi2_original_median": _sounding_median(per)}
+
+    outcome, _, info = reweight_errors(
+        np.concatenate([b.dobs for b in original]),
+        np.concatenate([b.uncertainty for b in original]), solve, predicted,
+        threshold=threshold, passes=passes, max_error_factor=max_error_factor,
+        min_unchanged_fraction=min_unchanged_fraction, target_chi2=error_target_chi2,
+        target_tolerance=target_tolerance,
+        solver_ready=lambda fit: not getattr(fit, "diagnostics", {}) or bool(
+            fit.diagnostics.get("solver_converged", False)),
+        history=lambda fit: fit.chi2_history, stage_statistics=stage_statistics, log=log)
+    residual = np.asarray(info["residual_original"])
+    info["block_offsets"] = offsets.tolist()
+    info["initial_lambda_search"] = initial_search
+    info["total_iterations"] = total_iterations
+    info["solve_seconds"] = total_seconds
+    info["chi2_per_sounding_original"] = [
+        float(np.mean(residual[offsets[i]:offsets[i + 1]] ** 2))
+        if offsets[i + 1] > offsets[i] else float("nan") for i in range(len(original))]
+    return outcome, fitted_blocks, info
+
+
 def invert_lci_rejecting_outliers(
     blocks: Sequence[SoundingBlock],
     n_layers: int,
@@ -821,6 +1082,7 @@ def invert_lci_rejecting_outliers(
         "chi2": float(outcome.chi2),
         "smoothness_scale": float(outcome.smoothness_scale),
         "convergence": [float(value) for value in outcome.chi2_history],
+        "convergence_median": list(outcome.chi2_median_history),
         "n_data": n_start,
     }
     # Re-solves stay at the smoothness the first solve settled on, so the change
@@ -889,6 +1151,7 @@ def invert_lci_rejecting_outliers(
             "pass": index, "dropped": n_drop, "kept": kept,
             "chi2": float(outcome.chi2),
             "convergence": [float(value) for value in outcome.chi2_history],
+            "convergence_median": list(outcome.chi2_median_history),
         })
         log(f"  rejected {n_drop} gate(s) over {threshold:g} sigma, "
             f"{kept} left -> chi2 {outcome.chi2:.3f}")
@@ -933,6 +1196,7 @@ __all__ = [
     "sensitivity_doi",
     "invert_lci",
     "invert_lci_rejecting_outliers",
+    "invert_lci_with_robust_errors",
     "lateral_edges",
     "mask_sounding_block",
     "solve_lci",

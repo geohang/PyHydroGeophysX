@@ -221,6 +221,354 @@ def plot_em_data_fit(
 
 
 # ---------------------------------------------------------------------------
+# signal against noise along a line
+# ---------------------------------------------------------------------------
+def plot_signal_and_noise(
+    summary: Any,
+    line: Optional[int] = None,
+    moments: Any = ("LM", "HM"),
+    smooth: int = 21,
+    axes: Any = None,
+) -> Any:
+    """Draw the measured signal and the absolute noise along a survey line.
+
+    Takes what :func:`PyHydroGeophysX.data_processing.em1d.survey_summary`
+    returns. One panel per moment, both on a log axis, plotted against distance
+    along the line.
+
+    The pair is the point. A station returns fewer usable gates for two reasons
+    that call for opposite readings, and the relative error the file records is
+    the one divided by the other, so it rises either way and cannot separate
+    them. Drawn apart they can be read directly: a signal that falls while the
+    noise holds is evidence about the ground, because a resistive half-space
+    returns dB/dt going as rho**(-3/2) and is genuinely quieter. A noise floor
+    that rises under a steady signal is an instrument or an environment and says
+    nothing about the ground.
+
+    ``smooth`` is the width of a running mean over stations, which is cosmetic:
+    station-to-station scatter obscures the trend the figure is drawn to show.
+    Set it to 1 to plot the values themselves.
+
+    ``line`` selects one survey line, and defaults to the first the summary
+    holds. Distance runs from that line's own first station.
+    """
+    rows = list((summary or {}).get("rows", []))
+    if not rows:
+        raise ValueError("the summary holds no stations to plot.")
+    numbers = sorted({int(r["line"]) for r in rows})
+    chosen = numbers[0] if line is None else int(line)
+    if chosen not in numbers:
+        raise ValueError(
+            f"the summary holds no line {chosen}; it has {numbers}.")
+    on_line = [r for r in rows if int(r["line"]) == chosen]
+    names = [str(m) for m in moments
+             if any(f"{m}_signal" in r for r in on_line)]
+    if not names:
+        raise ValueError(
+            f"no moment among {list(moments)} carries a signal column. "
+            "survey_summary records them only for the moments it was asked for.")
+
+    x, y = _line_distance(on_line)
+    del y
+    if axes is None:
+        fig, axes = plt.subplots(len(names), 1, figsize=(12, 3.5 * len(names)),
+                                 sharex=True, squeeze=False)
+        axes = axes.ravel()
+    else:
+        axes = np.atleast_1d(axes)
+        fig = axes[0].figure
+    for ax, name in zip(axes, names):
+        signal = np.asarray([r.get(f"{name}_signal", np.nan) for r in on_line],
+                            dtype=float)
+        noise = np.asarray([r.get(f"{name}_noise", np.nan) for r in on_line],
+                           dtype=float)
+        ref = np.asarray([r.get(f"{name}_reference_time", np.nan)
+                          for r in on_line], dtype=float)
+        ax.semilogy(x, _running_mean(signal, smooth), color="#1f77b4",
+                    lw=1.8, label="|signal|")
+        ax.semilogy(x, _running_mean(noise, smooth), color="#c62828",
+                    lw=1.8, label="absolute noise")
+        at = np.nanmedian(ref)
+        ax.set_ylabel("%s%s  (V)" % (
+            name, "" if not np.isfinite(at) else " at %.1f us" % (at * 1e6)))
+        ax.grid(alpha=0.3, which="both")
+        ax.legend(fontsize=9)
+    axes[-1].set_xlabel("Distance along line %d (m)" % chosen)
+    fig.tight_layout()
+    return fig, axes
+
+
+def _line_distance(rows: Any) -> Any:
+    """Cumulative distance along a line, from its own first station.
+
+    Falls back to the station's order in the file where the map coordinates are
+    missing, so a survey without them still plots against something monotonic.
+    """
+    x = np.asarray([r.get("x", np.nan) for r in rows], dtype=float)
+    y = np.asarray([r.get("y", np.nan) for r in rows], dtype=float)
+    if not (np.isfinite(x).all() and np.isfinite(y).all()) or x.size < 2:
+        return np.arange(len(rows), dtype=float), None
+    steps = np.hypot(np.diff(x), np.diff(y))
+    steps[~np.isfinite(steps)] = 0.0
+    return np.concatenate([[0.0], np.cumsum(steps)]), None
+
+
+def _running_mean(values: Any, width: int) -> Any:
+    """A centred running mean that ignores the gaps rather than spreading them.
+
+    A NaN inside a plain convolution takes its whole window with it, which on a
+    survey with a few dummy stations erases a stretch of the trend around each.
+    """
+    values = np.asarray(values, dtype=float).ravel()
+    width = max(1, int(width))
+    if width == 1 or values.size < 2:
+        return values
+    good = np.isfinite(values)
+    filled = np.where(good, values, 0.0)
+    window = np.ones(min(width, values.size))
+    total = np.convolve(filled, window, mode="same")
+    count = np.convolve(good.astype(float), window, mode="same")
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(count > 0, total / count, np.nan)
+
+
+# ---------------------------------------------------------------------------
+# plan-view slices at fixed depth
+# ---------------------------------------------------------------------------
+def plot_depth_slices(
+    cells: Any,
+    depths: Any = (5.0, 15.0, 30.0, 50.0),
+    basemap: Any = None,
+    extent: Any = None,
+    max_distance: Optional[float] = None,
+    drop_below_doi: bool = True,
+    grid: int = 400,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
+    ncols: int = 2,
+    cmap: str = "turbo",
+    show_stations: bool = False,
+) -> Any:
+    """Map the recovered resistivity at fixed depths, over a basemap.
+
+    ``cells`` is the per-cell table a line inversion writes, needing ``x``,
+    ``y``, ``depth_center_m`` and ``resistivity_ohm_m``, and using ``below_doi``
+    when it carries one. A pandas frame or any mapping of columns will do.
+
+    Each requested depth is snapped to the nearest layer the model actually has,
+    and the panel is titled with the depth used rather than the depth asked for.
+    Interpolating between layer centres would invent a resolution the layering
+    does not have.
+
+    ``max_distance`` is what keeps the picture honest. A survey of a few lines
+    leaves most of the map with no station anywhere near it, and a triangulated
+    interpolation will happily fill that space from stations hundreds of metres
+    away. Anything further than this from a station is left blank, so the ground
+    that was measured is the ground that is coloured.
+
+    One width serves every panel, so that a ribbon growing or shrinking between
+    them means the coverage changed rather than the rule did. The mask is about
+    where a station is, and a survey traces the same track at every depth; how
+    far a sounding sees sideways is a question about resolution, which belongs
+    in how the answer is read rather than in which ground gets coloured.
+
+    Left unset it is half the deepest slice requested, floored at three times
+    the station spacing, and the figure states the number it used.
+
+    ``drop_below_doi`` removes cells the run marked as unresolved before
+    interpolating, so a depth below the investigation depth over part of the
+    survey shows a gap there instead of a colour.
+
+    Colour is log10 resistivity, with the range taken from the slices drawn so
+    that the panels are comparable to each other.
+
+    ``show_stations`` marks each sounding. It is off because a shallow slice is
+    a ribbon a few metres wide and a marker per station hides the colour it is
+    there to mark; the ribbon already traces the survey.
+    """
+    from scipy.interpolate import griddata
+    from scipy.spatial import cKDTree
+
+    x, y, depth, rho, below = _cell_columns(cells)
+    usable = np.isfinite(x) & np.isfinite(y) & np.isfinite(rho) & (rho > 0)
+    if not usable.any():
+        raise ValueError(
+            "no cells to draw; every one was non-finite or non-positive.")
+    # The layers a depth snaps to are the ones the model has, before the
+    # investigation-depth cut. Snapping against what survives the cut instead
+    # would answer a request for fifty metres with an eight-metre slice and say
+    # so only in the panel title.
+    available = np.unique(depth[usable & np.isfinite(depth)])
+    resolved = usable.copy()
+    if drop_below_doi and below is not None:
+        resolved &= ~below
+    x, y, depth, rho = x[usable], y[usable], depth[usable], rho[usable]
+    resolved = resolved[usable]
+    if not available.size:
+        raise ValueError("the cells carry no finite depth to slice at.")
+    wanted = np.atleast_1d(np.asarray(depths, dtype=float)).ravel()
+    chosen = [float(available[int(np.argmin(np.abs(available - d)))])
+              for d in wanted]
+
+    spacing = _median_station_spacing(x, y)
+
+    if extent is None:
+        pad_x = 0.05 * (np.ptp(x) or 1.0)
+        pad_y = 0.05 * (np.ptp(y) or 1.0)
+        extent = (x.min() - pad_x, x.max() + pad_x,
+                  y.min() - pad_y, y.max() + pad_y)
+    west, east, south, north = (float(v) for v in extent)
+    gx = np.linspace(west, east, int(grid))
+    gy = np.linspace(south, north, int(grid))
+    mesh_x, mesh_y = np.meshgrid(gx, gy)
+
+    reach = (float(max_distance) if max_distance is not None
+             else max(3.0 * spacing, 0.5 * max(chosen)))
+    panels = []
+    for at in chosen:
+        on_layer = (depth == at) & resolved
+        if not on_layer.any():
+            # Nothing survives the cut at this depth. An empty panel that says
+            # so beats quietly drawing a shallower layer in its place.
+            panels.append((at, np.full(mesh_x.shape, np.nan), 0))
+            continue
+        points = np.column_stack([x[on_layer], y[on_layer]])
+        values = _interpolate_layer(points, np.log10(rho[on_layer]),
+                                    mesh_x, mesh_y)
+        far = cKDTree(points).query(
+            np.column_stack([mesh_x.ravel(), mesh_y.ravel()]))[0]
+        values[far.reshape(mesh_x.shape) > reach] = np.nan
+        panels.append((at, values, int(on_layer.sum())))
+
+    finite = np.concatenate([p[1][np.isfinite(p[1])] for p in panels]
+                           + [np.log10(rho[resolved])])
+    low = np.log10(vmin) if vmin else float(np.nanpercentile(finite, 2))
+    high = np.log10(vmax) if vmax else float(np.nanpercentile(finite, 98))
+
+    ncols = max(1, int(ncols))
+    nrows = int(np.ceil(len(panels) / ncols))
+    # Sized from the ground rather than from a fixed shape: the axes lock to an
+    # equal aspect, so a wide survey in a square panel is mostly white paper.
+    span_x, span_y = east - west, north - south
+    width = 6.4
+    height = max(2.4, width * (span_y / span_x if span_x else 1.0)) + 0.9
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(width * ncols, height * nrows),
+                             squeeze=False)
+    flat = axes.ravel()
+    mesh = None
+    for ax, (at, values, count) in zip(flat, panels):
+        if basemap is not None:
+            ax.imshow(basemap, extent=(west, east, south, north),
+                      origin="upper", zorder=0)
+        mesh = ax.pcolormesh(gx, gy, values, vmin=low, vmax=high, cmap=cmap,
+                             shading="auto", alpha=0.82, zorder=2)
+        if show_stations:
+            # Off by default: at a shallow slice the ribbon is only a few
+            # metres wide, and a marker per station covers the colour it is
+            # supposed to be marking.
+            ax.plot(x[depth == at], y[depth == at], ".", ms=1.2,
+                    color="white", alpha=0.55, zorder=3)
+        ax.set_xlim(west, east)
+        ax.set_ylim(south, north)
+        ax.set_aspect("equal", "box")
+        ax.set_title(
+            "%.1f m depth   (%d stations)" % (at, count) if count else
+            "%.1f m depth   (nothing resolved at this depth)" % at,
+            fontsize=10)
+        ax.set_xlabel("Easting (m)")
+        ax.set_ylabel("Northing (m)")
+        ax.ticklabel_format(style="plain", useOffset=False)
+    for ax in flat[len(panels):]:
+        ax.axis("off")
+    if mesh is not None:
+        bar = fig.colorbar(mesh, ax=list(flat), shrink=0.85, pad=0.02)
+        bar.set_label("Resistivity (ohm-m)")
+        ticks = np.linspace(low, high, 5)
+        bar.set_ticks(ticks)
+        bar.set_ticklabels(["%.0f" % (10.0 ** t) for t in ticks])
+    # Stated once, since it is one number for every panel: a ribbon that
+    # changes width between them is the coverage changing, not the rule. Placed
+    # under the lowest axes rather than at the foot of the figure, which on a
+    # wide survey sits a long way below the last panel.
+    drawn = [ax for ax in flat if ax.get_title()]
+    floor = 0.05
+    if drawn:
+        # The tight bounding box, so the note clears the tick labels and the
+        # axis label rather than landing on top of them.
+        fig.canvas.draw()
+        boxes = [ax.get_tightbbox(fig.canvas.get_renderer()) for ax in drawn]
+        floor = min(fig.transFigure.inverted().transform(b.p0)[1]
+                    for b in boxes)
+    fig.text(0.5, max(0.004, floor - 0.02),
+             "Coloured within %.0f m of a sounding; further ground was not "
+             "measured." % reach,
+             ha="center", va="top", fontsize=8, color="0.35")
+    return fig, axes
+
+
+def _interpolate_layer(points: Any, values: Any, mesh_x: Any,
+                       mesh_y: Any) -> Any:
+    """Interpolate one layer, falling back where a triangulation cannot exist.
+
+    A survey walked in a straight line gives collinear stations, and a Delaunay
+    triangulation of collinear points is not defined; the linear interpolant
+    raises rather than returning anything. That is an ordinary survey geometry
+    and not an error, so it falls back to nearest-neighbour, which is the more
+    honest answer there in any case: a line has no width to interpolate across,
+    so every point beside it can only carry the value of the station nearest to
+    it. The distance mask then decides how far that value is allowed to reach.
+    """
+    from scipy.interpolate import griddata
+
+    try:
+        from scipy.spatial import QhullError
+    except ImportError:  # scipy < 1.8 kept it in a private module
+        from scipy.spatial.qhull import QhullError
+
+    try:
+        return griddata(points, values, (mesh_x, mesh_y), method="linear")
+    except (QhullError, ValueError):
+        return griddata(points, values, (mesh_x, mesh_y), method="nearest")
+
+
+def _cell_columns(cells: Any) -> Any:
+    """The four columns a slice needs, from a frame or any column mapping."""
+    def column(name, required=True):
+        try:
+            values = cells[name]
+        except (KeyError, TypeError, IndexError):
+            if required:
+                raise ValueError(
+                    f"the cell table has no '{name}' column; a depth slice "
+                    "needs x, y, depth_center_m and resistivity_ohm_m.")
+            return None
+        return np.asarray(getattr(values, "to_numpy", lambda: values)(),
+                          dtype=float).ravel()
+
+    below = column("below_doi", required=False)
+    return (column("x"), column("y"), column("depth_center_m"),
+            column("resistivity_ohm_m"),
+            None if below is None else below.astype(bool))
+
+
+def _median_station_spacing(x: Any, y: Any) -> float:
+    """Distance from a station to its nearest neighbour, at the median.
+
+    Taken over the unique positions rather than the cells, since every station
+    contributes one row per layer and the duplicates would all read as zero.
+    """
+    from scipy.spatial import cKDTree
+
+    points = np.unique(np.column_stack([x, y]), axis=0)
+    if points.shape[0] < 2:
+        return 1.0
+    nearest = cKDTree(points).query(points, k=2)[0][:, 1]
+    nearest = nearest[np.isfinite(nearest) & (nearest > 0)]
+    return float(np.median(nearest)) if nearest.size else 1.0
+
+
+# ---------------------------------------------------------------------------
 # plot em residuals
 # ---------------------------------------------------------------------------
 def plot_em_residuals(

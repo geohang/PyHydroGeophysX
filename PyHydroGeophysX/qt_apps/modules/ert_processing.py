@@ -904,14 +904,18 @@ class ERTProcessingModule(BaseModule):
         version = self._resipy_version()
         if not reader:
             named = "ResIPy" if version == "yes" else f"ResIPy {version}"
+            if version:
+                self._reader_status.setText(f"{named} available for loading data.")
+                self._reader_status.setToolTip("")
+                return
+            from PyHydroGeophysX.data_processing.ert_data_agent import (
+                _EMBEDDED_PARSER_MAP, resipy_install_hint,
+            )
             self._reader_status.setText(
-                f"{named} available for loading data." if version
-                else "ResIPy not installed. PyGIMLi loads the data instead.")
-            self._reader_status.setToolTip(
-                "ResIPy handles the instrument-specific formats and the "
-                "reciprocal/stacking columns that come with them. Without it, "
-                "PyGIMLi's native reader is used, which reads the unified and "
-                "BERT formats." if not version else "")
+                "ResIPy not installed. Reading "
+                + ", ".join(sorted(_EMBEDDED_PARSER_MAP))
+                + " only.")
+            self._reader_status.setToolTip(resipy_install_hint())
             return
         note = f", {detail}" if detail else ""
         self._reader_status.setText(f"Data loaded by {reader}{note}.")
@@ -927,6 +931,12 @@ class ERTProcessingModule(BaseModule):
         else:
             try:
                 elec, pseudo, nmeas, data = self._load_resipy(path, instrument, out_dir, elec_file, spacing)
+            except NotImplementedError:
+                # No reader for this format. PyGIMLi's reader would accept the
+                # file and return a quadrupole table built from the wrong
+                # columns, so this has to stop here and say what is missing
+                # rather than hand back a section nobody can trust.
+                raise
             except Exception as exc:  # noqa: BLE001
                 warning = f"{instrument} loader failed ({exc}); fell back to pygimli's native reader."
                 elec, pseudo, nmeas, data = self._load_pygimli(path)

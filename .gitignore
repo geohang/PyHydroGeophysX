@@ -125,3 +125,6 @@ cache/
 
 # Notebook checkpoints
 .ipynb_checkpoints/
+
+# Local engineering notes: kept on disk, not published.
+local_plans/

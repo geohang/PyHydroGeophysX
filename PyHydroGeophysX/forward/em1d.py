@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 import numpy as np
 
@@ -27,6 +27,32 @@ DEFAULT_TDEM = {
     "source_radius": 10.0, "height": 30.0, "orientation": "z",
     "waveform": "step_off", "noise_level": 0.03,
 }
+
+
+def _tdem_geometry(
+    data: Dict[str, Any],
+    geom: Dict[str, Any],
+    transmitter: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Complete TDEM geometry, with explicit caller settings taking precedence.
+
+    Instrument readers keep station geometry under ``data["system"]`` and the
+    moment-specific waveform, filters and gate windows under ``transmitter``.
+    Public forward/inversion entry points historically accepted only ``geom``;
+    merging here prevents a caller that passes a loaded sounding plus its system
+    dictionary from silently falling back to the bare SimPEG receiver path.
+
+    ``geom`` is applied last so notebook/GUI overrides remain effective.
+    """
+    merged: Dict[str, Any] = {}
+    system = data.get("system")
+    if isinstance(system, dict):
+        merged.update(system)
+    source = transmitter if transmitter is not None else data.get("transmitter")
+    if isinstance(source, dict):
+        merged.update(source)
+    merged.update(geom)
+    return merged
 
 
 def model_arrays(model: Dict[str, Any]) -> "tuple[np.ndarray, np.ndarray, np.ndarray]":
@@ -92,6 +118,38 @@ def fdem_forward(model: Dict[str, Any], geom: Dict[str, Any], log: LogFn = _noop
             "resistivity": res, "thickness": thick}
 
 
+def _gate_window_name(geom: Dict[str, Any]) -> str:
+    """The gate window to integrate with, named or read off the instrument.
+
+    A TEMcompany project records the gate window as ``GateShape``. An explicit
+    ``gate_window`` wins, so a caller with data that describes its gating some
+    other way can say so.
+
+    A shape the mapping does not cover raises rather than falling back. Falling
+    back would put a window in the forward that the instrument did not use and
+    leave nothing to notice it; a dataset with no recorded shape at all is a
+    different case and gets the gate-centre reading.
+    """
+    from PyHydroGeophysX.forward.tdem_forward import GATE_SHAPE_NAMES
+
+    named = geom.get("gate_window")
+    if named:
+        return str(named)
+    shape = geom.get("gate_window_shape")
+    if shape is None:
+        return "centre"
+    try:
+        index = int(round(float(shape)))
+    except (TypeError, ValueError):
+        return "centre"
+    if index not in GATE_SHAPE_NAMES:
+        raise ValueError(
+            f"GateShape = {index} is not a window this forward implements "
+            f"(known: {sorted(GATE_SHAPE_NAMES)}). Set gate_window explicitly "
+            "to model this survey.")
+    return GATE_SHAPE_NAMES[index]
+
+
 def _tdem_config(geom: Dict[str, Any], times: np.ndarray):
     from PyHydroGeophysX.forward.tdem_forward import TDEMSurveyConfig
 
@@ -107,25 +165,63 @@ def _tdem_config(geom: Dict[str, Any], times: np.ndarray):
     times = np.asarray(times, dtype=float)
     if centres.size == opens.size == closes.size and centres.size:
         picked = [int(np.argmin(np.abs(centres - value))) for value in times]
-        if np.allclose(centres[picked], times, rtol=1e-6):
+        if np.allclose(centres[picked], times, rtol=1e-6, atol=0.0):
             opens, closes = opens[picked], closes[picked]
         else:
             opens = closes = np.array([], dtype=float)
+    shift = float(geom.get("gate_time_shift", 0.0) or 0.0)
+    if shift:
+        times = times + shift
+        if opens.size:
+            opens, closes = opens + shift, closes + shift
+    # The loop and the coil can sit at different heights. They are equal on
+    # every TEMcompany project seen so far, so ``height`` remains the single
+    # number a caller that does not care has to supply. A reader that has the
+    # key but no value writes NaN rather than omitting it, which ``.get`` cannot
+    # catch, and a NaN source location fails much later and less legibly.
+    def _height(key: str) -> float:
+        try:
+            value = float(geom.get(key, h))
+        except (TypeError, ValueError):
+            return h
+        return value if np.isfinite(value) else h
+
+    tx_h = _height("tx_height")
+    rx_h = _height("rx_height")
     return TDEMSurveyConfig(
-        source_location=np.array([0.0, 0.0, h]),
+        source_location=np.array([0.0, 0.0, tx_h]),
         source_radius=float(geom.get("source_radius", 10.0)),
         source_turns=int(geom.get("loop_turns", 1)),
         source_moment=None if moment is None else float(moment),
         waveform_times=geom.get("waveform_times"),
         waveform_currents=geom.get("waveform_currents"),
+        waveform_period=(float(geom["waveform_period"])
+                         if geom.get("waveform_period") else None),
+        # Whether the transmitter train is superposed is not recorded in the
+        # project file, so it cannot be read from one. A bipolar transmitter is
+        # running either way, so modelling it is the default; set
+        # ``waveform_repeat`` false, or ``waveform_repetitions`` to zero, for a
+        # survey processed without it.
+        waveform_repetitions=(
+            int(geom.get("waveform_repetitions", 3))
+            if bool(geom.get("waveform_repeat", True)) else 0),
         gate_open=opens if opens.size == times.size else None,
         gate_close=closes if closes.size == times.size else None,
-        # Three nodes per window costs about 5 % and removes the last
-        # per-moment discrepancy against the vendor forward.
-        gate_samples=int(geom.get("gate_samples", 3)),
+        # The instrument's own gate window; see GATE_WINDOWS in
+        # forward.tdem_forward for the measurement that identified it.
+        gate_window=_gate_window_name(geom),
+        gate_window_par=float(geom.get("gate_window_par", 0.667) or 0.667),
         analog_lowpass=geom.get("analog_lowpass"),
-        analog_filter_samples=int(geom.get("analog_filter_samples", 48)),
-        receiver_location=np.array([sep, 0.0, h]),
+        analog_points_per_decade=int(
+            geom.get("analog_points_per_decade", 150)),
+        analog_model_points_per_decade=int(
+            geom.get("analog_model_points_per_decade", 40)),
+        instrument_points_per_decade=int(
+            geom.get("instrument_points_per_decade", 10)),
+        instrument_model_points_per_decade=int(
+            geom.get("instrument_model_points_per_decade", 10)),
+        gate_quadrature_order=int(geom.get("gate_quadrature_order", 8)),
+        receiver_location=np.array([sep, 0.0, rx_h]),
         receiver_orientation=str(geom.get("orientation", "z")),
         receiver_type=str(geom.get("receiver_type", "b")),
         times=times,

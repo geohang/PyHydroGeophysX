@@ -251,41 +251,126 @@ with it, so the depth does not move when the grid is refined (measured at 0.2 to
 2.5 % across a 2x refinement).
 
 The threshold is a judgement, so it sits on the plot next to "Below DOI" rather
-than inside the inversion, and it can be moved without inverting again. Vendors
-do not agree on how conservative to be: on a 71-station ground TDEM survey the
-TEMcompany software reported depths about 2.6 times shallower than 0.8 gives
-(median 12 m against 37 m), and its numbers come back at roughly 8. Raise it to
-line up with an acquisition package's own sections.
+than inside the inversion, and it can be moved without inverting again. On sparse
+ground TDEM it can saturate: with a handful of gates per station and a model of
+twenty layers, the deepest layer often clears 0.8 on its own, because the measure
+cumulates from the bottom up and that layer is thick. The reported depth then
+collapses onto the bottom of the parameterisation for much of the survey, which
+says more about a coarse deep grid than about resolution. Two symptoms identify
+it: a large share of stations reporting exactly the model bottom, and stations
+holding three gates reporting the same depth as stations holding ten. Values in
+the 6 to 8 range keep the reported depth inside the model on such data.
 
 Earlier releases cut instead at a diffusion depth taken from the latest gate
 time, which is the first approach the paper lists and criticizes. That rule also
 read the gate time once, from the first sounding on the line, and gave every
-other sounding the same reach; on a ground TDEM survey where the late gates
-survive at some stations and not others it ran about five times deeper than the
-acquisition software's own depths of investigation.
+other sounding the same reach. On a ground TDEM survey where the late gates
+survive at some stations and not others, that single borrowed gate time made
+every station claim the reach of the best one, several times deeper than the
+stations holding only early gates can support.
 
 ## Answering a high χ²
 
-Two settings, the same pair the ERT module offers, and they address different
-causes:
+Fit assistance offers distinct choices; a large residual alone does not establish
+that a measurement is bad (geometry or a 1D earth assumption can also be wrong):
 
 - **Auto-λ** re-solves the line at other smoothness weights to reach the target
   χ². Use it when the model is too stiff for the data. When no weight reaches the
   target, the smoothest of the weights that fit equally well is kept rather than
   the roughest, so a fraction of a percent of misfit does not buy a railed model.
-- **Reject outliers** drops the gates the converged model cannot explain (beyond
+- **Robust errors (keep all gates)** is the Ground TEM default. It enlarges
+  effective fitting errors for large residuals without removing any imported gate.
+  The original recorded errors are unchanged; see the formula and audit below.
+- **Hard rejection (legacy)** drops the gates the converged model cannot explain (beyond
   the σ cut, over the given passes) and solves again at the same smoothness. Use
   it when a minority of gates are simply wrong. Cutting is per gate rather than
   per sounding, because a TDEM station may carry only a handful of gates. "Keep
   at least" stops it before it would gut the survey; if it stops there, gates
   beyond the cut remain and the Inversion quality page says so.
 
-Before either, check **Relative error**. For TEMcompany data it is a floor on the
-per-gate stack error the instrument recorded. A stack error measures repeatability
-only, so on ground TDEM it is usually far smaller than the error in representing
-the ground as 1D layers; leaving it at the recorded few percent reports a χ² in
-the tens or hundreds that no model can reach, and both settings above will then
-work hard for nothing.
+Before these, check **Relative error**. It is the uniform part of the error
+budget, the part that applies to every gate alike: system calibration and the
+error in representing the ground as 1D layers. It joins each gate's recorded
+stack error in quadrature, so a noisy gate stays relatively noisy. A stack error
+measures repeatability only, so on ground TDEM it is usually far smaller than the
+1D representation error; leaving the budget at the recorded few percent reports a
+χ² in the tens or hundreds that no model can reach, and both settings above will
+then work hard for nothing.
+
+It is the size of that uniform term, not an amount added on top of whatever is
+already there. TEMcompany station stacks store an error that is the stack scatter
+already combined with a uniform term, recorded as `UniStd` in the acquisition
+protocol and 3% on the systems seen so far. The reader reports that, and only the
+shortfall is added: **Relative error** at 0.03 reproduces the stored error
+exactly, and at 0.05 gives the same answer as 5% on a bare stack error. Setting
+it below what is already folded in cannot shrink the stored value.
+
+Three controls decide which gates arrive at all.
+
+- **Tail cut (σ)** condemns a gate whose relative stack error exceeds it. The
+  new panel default is 0 (off), retaining noisy project-enabled gates for weighting.
+- **Cut removes** decides whether a failed stack-error test ends the sounding
+  (truncate) or costs only its own gate (individual). Truncation argues that the
+  decay has reached the noise floor and a later clean-looking gate is a
+  fluctuation above it.
+- **Keep sign reversals** decides whether a negative gate is judged on its stack
+  error alone. On by default, which is what the TEMcompany inversion does:
+  measured over 1,503 station-moment datasets of one project, its gate selection
+  is exactly the stored in-use flags, and it keeps a non-positive gate in 87
+  low-moment and 251 high-moment datasets. Either way a sign reversal costs its
+  own gate and no other, because truncation is the noise-floor argument and an
+  early-time reversal makes no claim about the gates after it.
+
+An offset-loop system does genuinely reverse sign at early time, and whether the
+reversal reaches the gates being inverted has a number attached: the crossing
+sits near an induction number of one, so a gate at time `t` sees it only once the
+ground is more conductive than `mu0*r^2/(4t)`. On a 15 m offset that is about
+6 Ω·m at 12 µs and 1 Ω·m at 61 µs. Put the site's resistivity into that
+expression before keeping reversals: where it says the crossing falls far earlier
+than the first gate, a negative gate is something no layered earth the site could
+have will produce, and keeping it lets the fit trade the rest of the sounding
+against a value it can never reach.
+
+**Min HM gates** drops the deep moment from a station that survives selection
+with fewer gates than that; LM is never dropped. Off by default, because the deep
+moment is the only thing that sees deep.
+
+### Robust error settings and audit
+
+The editable inversion parameters are `robust_errors=True`, `robust_threshold=3.0`,
+`robust_passes=3`, `robust_max_error_factor=10.0`, and `reject_outliers=False` in
+the Ground TEM preset. Generic settings retain the previous least-squares default.
+When both switches are supplied programmatically, robust weighting takes precedence.
+
+For each gate let `r = (prediction - observation) / original_error`. Each reweighting
+pass sets `factor = min(max_error_factor, sqrt(max(1, abs(r)/threshold)))` and
+`effective_error = original_error * factor`. The inverse-variance multiplier is
+`1/factor²`: at the default cap it cannot fall below 0.01, and never reaches zero.
+For example, at a cut of 3, a 12-sigma residual gets twice the original error and
+one quarter of the original weight. This is bounded Huber-style IRLS on the data
+term only, not on vertical or lateral regularisation. It is not an independent
+measurement of noise or a reason to force the ground to become more resistive.
+
+Every update uses the ORIGINAL error budget (recorded errors plus the configured
+error model), never the previous inflated errors. Gates may regain weight. The
+initial fit can use the configured lambda search; later passes freeze the chosen
+regularisation and warm-start from the previous model. At most three reweighting
+passes run by default, with early stopping when factors change by at most 1%.
+This bounded iteration is not a guarantee of convergence to an exact Huber optimum.
+
+The main χ² always uses original errors and every imported gate. `chi2_effective`
+and the per-pass convergence curves use the errors actually used for fitting;
+they are not directly comparable to unweighted or rejection-only χ². Sensitivity
+and DOI for line inversion use the effective errors. `robust_gate_errors.csv` and
+`robust_errors.json` retain per-gate original/effective errors, weights, predictions,
+and residuals for auditing. The 80% retention setting is only for legacy rejection;
+robust fitting retains 100% of the gates that reached the solver.
+
+Import selection is separate: project in-use flags and nonfinite/dummy-value
+checks still apply. If a caller explicitly enables tail cuts or minimum-moment
+gate cuts, those gates are still removed BEFORE fitting. Robust weighting does
+not restore them or turn flagged-out gates into below-detection constraints.
+
 - A geometry file next to the data file is loaded automatically when its name is
   `<data>_geometry.csv` or it is the only `*geom*.csv` in that folder; otherwise
   use "Load geometry...". With easting/northing in it, the **Resistivity model**

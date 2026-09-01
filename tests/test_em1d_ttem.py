@@ -172,13 +172,124 @@ def test_gex_analog_filter_is_causal_and_has_unity_dc_gain() -> None:
     # builders and ``tdem_forward`` imports SimPEG at module scope.
     pytest.importorskip("simpeg")
 
-    from PyHydroGeophysX.forward.tdem_forward import _analog_filter_matrix_cached
+    from PyHydroGeophysX.forward.tdem_forward import _filter_operator
 
-    times = tuple(np.linspace(0.0, 10e-6, 101))
-    response = _analog_filter_matrix_cached(
-        times, 0.86, 420e3, 1, 679e3
-    ) @ np.ones(len(times))
+    times = np.linspace(0.0, 10e-6, 101)
+    response = _filter_operator(
+        times, np.ones((times.size, 1)), (0.86, 420e3, 1, 679e3, ())
+    ).ravel()
 
     assert response[0] == 0.0
     assert abs(response[-1] - 1.0) < 1e-8
     assert np.max(response) < 1.01
+
+
+def test_cascaded_first_order_stages_keep_unity_dc_gain() -> None:
+    """Some systems list first-order corner frequencies instead of a damped pair."""
+    pytest.importorskip("simpeg")
+
+    from PyHydroGeophysX.forward.tdem_forward import _filter_operator
+
+    times = np.linspace(0.0, 10e-6, 201)
+    response = _filter_operator(
+        times, np.ones((times.size, 1)), (0.0, 0.0, 0, 0.0, (450e3, 800e3))
+    ).ravel()
+
+    assert response[0] == 0.0                      # causal
+    assert abs(response[-1] - 1.0) < 1e-6          # unity DC gain
+    assert np.all(np.diff(response) >= -1e-12)     # real poles, so no ringing
+
+
+def test_the_receiver_filter_lifts_a_steeply_decaying_early_time() -> None:
+    """Why the filter matters for a transient, and in which direction.
+
+    A causal low-pass output is a weighted average of the input over the
+    preceding time constant. On a steeply decaying signal that window sits where
+    the signal was larger, so filtering *raises* the modelled early-time value,
+    and the lift dies away once the signal changes little across a time constant.
+    Leaving the filter out therefore tilts the predicted decay, and an inversion
+    absorbs a tilt by inventing a vertical resistivity gradient near the surface.
+    """
+    pytest.importorskip("simpeg")
+
+    from PyHydroGeophysX.forward.tdem_forward import _filter_operator
+
+    times = np.linspace(1e-7, 4e-5, 4000)
+    decay = times ** -2.5                          # a typical early-time slope
+    filtered = _filter_operator(
+        times, decay[:, None], (0.0, 0.0, 0, 0.0, (450e3, 800e3))).ravel()
+
+    at_early = int(np.searchsorted(times, 5.7e-6))
+    at_late = int(np.searchsorted(times, 3.5e-5))
+    early = filtered[at_early] / decay[at_early]
+    late = filtered[at_late] / decay[at_late]
+
+    # The lift is what decays, so compare the excess over unity rather than the
+    # ratios themselves: both stay above 1, and it is the gap that shrinks.
+    assert early > 1.10                            # a real lift at the first gate
+    assert (late - 1.0) < (early - 1.0) / 3.0      # and largely gone by the late ones
+
+
+def test_first_order_corners_are_read_and_validated() -> None:
+    from PyHydroGeophysX.forward.tdem_forward import _analog_parameters
+
+    assert _analog_parameters(None)[4] == ()
+    assert _analog_parameters({"first_order_cutoffs_hz": (450e3, 800e3)})[4] == (450e3, 800e3)
+    # Zero and negative corners describe no filter and must not create a stage.
+    assert _analog_parameters({"first_order_cutoffs_hz": (0.0, -1.0)})[4] == ()
+
+
+def test_the_filter_grid_is_uniform_in_log_across_the_whole_span() -> None:
+    """The reconstruction error is what sets the density, and it is relative.
+
+    An earlier grid was dense in linear time only until the filter had settled,
+    then fell back to the receiver times themselves. That reads as if the filter
+    sets the requirement, and it does not: the first-order-hold step is exact
+    for an input that is linear over it, so the error comes from how far the
+    decay departs from a straight line between nodes. That departure is
+    relative and roughly constant per log step, so the density belongs in log
+    time and the same density serves every decade. The old grid left steps
+    twenty times the filter's time constant past the settling point, and the
+    lag that leaves does not die away with time the way the operator does.
+    """
+    pytest.importorskip("simpeg")
+
+    from PyHydroGeophysX.forward.em1d import _tdem_config
+    from PyHydroGeophysX.forward.tdem_forward import _analog_sampling
+
+    gates = np.geomspace(5.7e-6, 3.5e-5, 9)
+    geom = {
+        "source_radius": 0.355, "tx_rx_sep": 15.0, "height": 0.9,
+        "orientation": "z", "receiver_type": "dbdt", "waveform": "step_off",
+        "analog_lowpass": {"first_order_cutoffs_hz": (450e3, 800e3)},
+        "analog_model_points_per_decade": 40,
+    }
+    times, _ = _analog_sampling(_tdem_config(geom, gates))
+
+    steps = np.diff(np.log10(times))
+    assert times.size > 100
+    # Forty per decade, so no step wider than a fortieth of a decade. The gate
+    # times are unioned in, which can only make a step smaller.
+    assert np.max(steps) <= 1.0 / 40.0 + 1e-9
+    # And the density holds out to the last gate rather than stopping early.
+    assert times[-1] >= gates[-1] * (1.0 - 1e-9)
+
+
+def test_a_slow_filter_does_not_pay_for_a_fast_one() -> None:
+    """The rule scales with the corner, so a gentle filter stays cheap."""
+    pytest.importorskip("simpeg")
+
+    from PyHydroGeophysX.forward.em1d import _tdem_config
+    from PyHydroGeophysX.forward.tdem_forward import _analog_sampling
+
+    gates = np.geomspace(5.7e-6, 3.5e-5, 9)
+    base = {"source_radius": 0.355, "tx_rx_sep": 15.0, "height": 0.9,
+            "orientation": "z", "receiver_type": "dbdt", "waveform": "step_off"}
+    fast, _ = _analog_sampling(_tdem_config(
+        {**base, "analog_lowpass": {"first_order_cutoffs_hz": (450e3, 800e3)}}, gates))
+    slow, _ = _analog_sampling(_tdem_config(
+        {**base, "analog_lowpass": {"first_order_cutoffs_hz": (45e3, 80e3)}}, gates))
+
+    # A ten-fold slower filter settles ten times later but needs the same number
+    # of nodes per time constant, so the counts stay the same order.
+    assert slow.size < fast.size * 3

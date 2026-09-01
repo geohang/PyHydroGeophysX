@@ -381,6 +381,9 @@ def run_em_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResu
             str(path), method, sounding=sounding, moment=moment,
             use_flags=bool(geometry.get("use_project_flags", True)),
             max_relative_std=geometry.get("tail_max_relative_std"),
+            gate_rejection=str(geometry.get("gate_rejection", "truncate")),
+            reject_negative=bool(geometry.get("reject_negative", False)),
+            min_gates_per_moment=geometry.get("min_gates_per_moment"),
             ttem_loop_area=geometry.get("loop_area"),
             ttem_gex_path=geometry.get("ttem_gex_path"),
             ttem_tfi_path=geometry.get("ttem_tfi_path"),
@@ -394,6 +397,11 @@ def run_em_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResu
         )
     else:
         result = em1d.tdem_invert(data, geometry, parameters, log=context.progress)
+    if (result.get("robust") or {}).get("enabled"):
+        # The persisted single-sounding path needs the same weight audit as lines.
+        result["data_paths"] = em1d.save_inversion(result, context.output_dir)
+        result["metrics"] = {"chi2_effective": result["chi2_effective"],
+                             "downweighted_gates": result["robust"]["downweighted"]}
     return _legacy_result(spec, context, result)
 
 

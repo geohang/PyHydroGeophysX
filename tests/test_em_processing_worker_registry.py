@@ -123,3 +123,65 @@ def test_an_unreadable_survey_leaves_the_run_pointing_at_the_original(tmp_path) 
     persisted = EMProcessingModule._persist_source(_page_stub(survey), inputs, "TDEM")
 
     assert persisted == survey
+
+
+def test_the_gate_qc_controls_reach_the_geometry_dict() -> None:
+    """The panel is the only place these two settings can be typed, so it has to
+    carry them to the loader. Wiring a widget and forgetting the collect step
+    fails silently: the run uses the default and looks like it obeyed."""
+    app = QApplication.instance() or QApplication([])
+    module = EMProcessingModule(None, lambda *_args: None)
+
+    geom = module._collect_geom()
+    # The sign cut is off by default, which is what the TEMcompany inversion
+    # does: measured over 1,503 station-moment datasets its gate selection is
+    # exactly the stored in-use flags, and it keeps a non-positive gate in 87
+    # low-moment and 251 high-moment datasets.
+    assert geom["reject_negative"] is False
+    assert geom["min_gates_per_moment"] is None     # the per-moment floor is off
+
+    module._keep_negative.setChecked(False)
+    module._min_hm_gates.setValue(3)
+    geom = module._collect_geom()
+    assert geom["reject_negative"] is True
+    assert geom["min_gates_per_moment"] == {"LM": 1, "HM": 3}
+
+    module.close()
+    app.processEvents()
+
+
+def test_the_gate_qc_controls_come_back_from_saved_settings() -> None:
+    app = QApplication.instance() or QApplication([])
+    module = EMProcessingModule(None, lambda *_args: None)
+
+    module._agent_set_params({"reject_negative": False,
+                              "min_gates_per_moment": {"LM": 1, "HM": 4}})
+    assert module._keep_negative.isChecked() is True
+    assert module._min_hm_gates.value() == 4
+
+    module._agent_set_params({"reject_negative": True,
+                              "min_gates_per_moment": None})
+    assert module._keep_negative.isChecked() is False
+    assert module._min_hm_gates.value() == 0
+
+    module.close()
+    app.processEvents()
+
+
+def test_turning_the_tail_cut_off_greys_out_both_of_its_options() -> None:
+    """Neither the rejection mode nor the sign test means anything with no cut."""
+    app = QApplication.instance() or QApplication([])
+    module = EMProcessingModule(None, lambda *_args: None)
+
+    module._tail_cut.setValue(0.0)
+    module._sync_gate_rejection()
+    assert not module._gate_rejection.isEnabled()
+    assert not module._keep_negative.isEnabled()
+
+    module._tail_cut.setValue(0.25)
+    module._sync_gate_rejection()
+    assert module._gate_rejection.isEnabled()
+    assert module._keep_negative.isEnabled()
+
+    module.close()
+    app.processEvents()

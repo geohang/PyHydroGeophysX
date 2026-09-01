@@ -5,10 +5,11 @@ earth under the selected survey line looks like. It deliberately shows no
 observed curves — those live in the Sounding tab — so the result reads as an
 interpretation product rather than a QC plot.
 
-The layout mirrors what field acquisition software (TEMcompany/TEM2Go) puts on
-screen: a plan map with every sounding and the current line picked out, and
-below it the position x depth resistivity section for that line with the
-per-sounding data misfit drawn over it. A survey with several survey lines is
+The layout answers the two questions a reader has, in order: where the data were
+collected, and what they imply about the ground. A plan map carries every
+sounding with the current line picked out, and below it sits the position x depth
+resistivity section for that line, with the per-sounding data misfit drawn over
+it so a feature can be checked against the fit that produced it. A survey with several survey lines is
 plotted one line at a time, because chaining the lines end to end puts an
 artificial jump in the middle of the section.
 """

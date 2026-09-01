@@ -54,6 +54,20 @@ geophysics = [
     "pymatsolver>=0.2",
     "flopy>=3.5,<4.0",
     "pftools>=1.3",
+    # The coupled line inversion runs its soundings on a thread pool and needs
+    # this to hold BLAS to one thread inside each worker. Without it every
+    # worker opens its own BLAS pool and the machine ends up with roughly
+    # cores-squared threads competing for cores. The code degrades quietly
+    # rather than failing, so the cost shows up only as a slow line inversion;
+    # see inversion.em1d_lci._single_threaded_blas.
+    "threadpoolctl>=3.0",
+]
+# ResIPy reads a wider set of ERT instrument formats than this package does on
+# its own, so it is preferred whenever it imports. It is GPL-3.0 and is kept as
+# a separate optional install rather than a hard dependency: installing it is
+# the user's choice, and nothing here is derived from it.
+ert = [
+    "resipy>=3.4",
 ]
 adtlert = [
     "adtlert[cuda12]>=0.1,<0.2; python_version >= '3.11'",
