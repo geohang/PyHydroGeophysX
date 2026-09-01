@@ -1,0 +1,37 @@
+# Dependencies for the hosted Streamlit app (pyhydrogeophysx.streamlit.app).
+#
+# This file sits next to the entrypoint on purpose. Streamlit Community Cloud
+# searches the entrypoint's directory first and the repository root second, so
+# a file here settles which dependency set the deployed app gets. Left to the
+# repository root, Cloud finds both environment.yml and requirements.txt, and
+# it uses only the first one it encounters. environment.yml ranks above
+# requirements.txt in its order, and the conda solve there does not put
+# pygimli into the running app. Hence the banner the app shows.
+#
+# The package itself is absent below by design. The entrypoint inserts the
+# repository root into sys.path, so PyHydroGeophysX resolves to the checked-out
+# source rather than to a release from PyPI.
+
+# Package core, matching the base dependencies in pyproject.toml. palettable
+# is needed by agents/seismic_agent.py and visualization/, which the app
+# reaches through PyHydroGeophysX.agents.
+numpy>=1.21,<3.0
+scipy>=1.8,<3.0
+matplotlib>=3.5,<4.0
+palettable>=3.3,<4.0
+pandas>=1.3
+joblib>=1.2
+tqdm>=4.62
+
+# Web app
+streamlit>=1.35,<2.0
+plotly>=5.18,<7.0
+streamlit-plotly-events>=0.0.6
+pyarrow>=14.0
+
+# ERT inversion. This is the line that clears the "PyGIMLi Not Available"
+# banner. pygimli 1.6.0 on PyPI is a pure-Python wheel over pgcore, and
+# pgcore 1.6.0 ships manylinux x86_64 wheels for cp310 through cp314, which
+# covers every Python version Community Cloud offers. Installing it by pip
+# needs no conda channel and no apt package.
+pygimli>=1.5.5,<2.0

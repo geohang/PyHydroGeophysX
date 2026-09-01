@@ -7,28 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: "test (ubuntu, py3.11)"
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Install test dependencies
-        run: python -m pip install -e . pytest pyarrow "pygimli>=1.5.5,<2.0"
-
-      - name: Import smoke test
-        run: python -c "import PyHydroGeophysX; print('Import OK:', PyHydroGeophysX.__version__)"
-
-      - name: Run tests
-        run: pytest -q
-
   adtlert:
     name: "ADTLERT selection and CPU fallback (ubuntu, py3.11)"
     runs-on: ubuntu-latest

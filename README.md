@@ -268,9 +268,11 @@ cuDSS is missing. Run this check on `e4d.ohm` rather than `line2.dat`:
 ADTLERT 0.1 cannot represent, so it falls back on that file even when the GPU
 stack is healthy.
 
-On an RTX A1000 laptop GPU, `e4d.ohm` at 4 iterations took about 42 s on the CUDA
-engine against about 61 s on the CPU engine. That survey is small; the CUDA
-engine is aimed at larger lines and time-lapse windows.
+[Yang et al. (2026)](https://arxiv.org/abs/2608.14661) measured the CUDA engine
+against pyGIMLi and report an approximately 51-fold speedup under their tested
+configuration. Forward responses, gradients, and recovered resistivity models
+agreed closely in that comparison. The engine is aimed at larger lines and
+time-lapse windows.
 
 ---
 
@@ -403,6 +405,19 @@ If you use PyHydroGeophysX, please cite:
 ```
 
 Please also cite the underlying libraries you use:
+
+**Differentiable time-lapse ERT (ADTLERT):**
+```bibtex
+@article{yang2026adtlert,
+  author  = {Yang, Pu and Fang, Zhengyang and Liu, Yuxin and Su, Xuan and
+             Feng, Deshan and Chen, Hang},
+  title   = {An automatic-differentiation framework for time-lapse electrical
+             resistivity tomography inversion of hydrologic dynamics},
+  journal = {arXiv preprint arXiv:2608.14661},
+  year    = {2026},
+  url     = {https://arxiv.org/abs/2608.14661}
+}
+```
 
 **ERT data processing (ResIPy):**
 ```bibtex
