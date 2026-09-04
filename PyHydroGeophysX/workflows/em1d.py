@@ -1172,6 +1172,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                 lateral_smoothness=lateral * lateral_weight_scale,
                 reference_distance=reference_distance,
                 lateral_distance_power=lateral_distance_power,
+                model_damping=float(inv.get("model_damping", 0.0)),
                 starting_resistivity=start_resistivity,
                 max_iterations=int(inv.get("max_iterations", 20)),
                 convergence_tolerance=float(inv.get("convergence_tolerance", 0.02)),

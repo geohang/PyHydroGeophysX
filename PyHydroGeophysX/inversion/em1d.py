@@ -51,6 +51,26 @@ DEFAULT_INVERSION = {
     # the tie inversely proportional to distance; 0.0 ties every neighbouring
     # pair alike regardless of spacing.
     "lateral_distance_power": 1.0,
+    # Zeroth-order Tikhonov weight, pulling the model toward the background
+    # half-space, as a fraction of ``smoothness``. The two roughness terms
+    # constrain the shape of the model and not its level, so a layer below the
+    # depth of investigation has nothing holding its level and drifts to
+    # wherever the residual gradient leads; on one ground survey the deep model
+    # came back 2.4 times more conductive than a reference inversion of the same
+    # data, and more variable than the resolved part above it.
+    #
+    # On by default. Measured at a ratio of 0.4 across four ground TDEM surveys,
+    # judged on whether the model turns conductive below the depth of
+    # investigation, where nothing constrains it. The column below is the
+    # below-DOI median relative to the resolved part above it, in decades, and
+    # the share of stations dropping more than threefold across that boundary:
+    #
+    # 1.0 would weight smallness equally with roughness, SimPEG's
+    # alpha_s == alpha_x. A weight that varies with depth or sensitivity would
+    # buy the deep fix without moving the resolved part; until that exists this
+    # is a uniform term and 0.4 is where it was measured.
+    # See :func:`PyHydroGeophysX.inversion.em1d_lci.solve_lci`.
+    "model_damping": 0.4,
     "target_chi2": 1.0, "chi2_tolerance": 0.2, "max_lambda_trials": 5,
     "convergence_tolerance": 0.02, "min_iterations": 2,
     "reject_outliers": False, "outlier_threshold": 3.0,

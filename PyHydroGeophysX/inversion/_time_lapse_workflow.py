@@ -28,7 +28,13 @@ INVERSION_TYPES = ("L2", "L1", "L1L2")
 DEFAULT_TL = {
     "lambda_val": 50.0, "alpha": 10.0, "inversion_type": "L2",
     "max_iterations": 15, "relativeError": 0.05, "absoluteUError": 0.0,
-    "method": "cgls", "mesh_quality": 34.0, "rho_min": 1.0, "rho_max": 1.0e4,
+    # This dict is passed straight through to TimeLapseERTInversion, so it
+    # overrides that class's own default. It has to move with it: the matrix the
+    # solver receives is the Gauss-Newton normal matrix, and 'cgls' is a
+    # least-squares method, which works on its square. The adtlert branch below
+    # forces 'cgls' back, because there the string selects that backend's own
+    # GPU CGLS rather than anything in solvers/linear_solvers.py.
+    "method": "spd_cholesky", "mesh_quality": 34.0, "rho_min": 1.0, "rho_max": 1.0e4,
     "windowed": False, "window_size": 3, "save_memory": False, "instrument": None,
     "engine": "pyhydro",
     "para_depth": 0.0,

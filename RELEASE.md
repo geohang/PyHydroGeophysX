@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+- Added `spd_cholesky` and `spd_cg` to `generalized_solver` for a square
+  symmetric positive definite matrix, and changed the default `method` of
+  `TimeLapseERTInversion`, `SRTInversion` and `TimeLapseSRTInversion` from
+  `cgls` to `spd_cholesky`. Those three assemble the Gauss-Newton normal matrix
+  `H = J^T W_d^T W_d J + lambda W_m^T W_m + ...` and pass it to the solver,
+  but every method available until now was a least-squares method, so on such a
+  matrix the solver worked on `H^T H d = H^T (-g)`: the condition number was
+  squared, and each iteration cost two matrix-vector products where one would
+  do. A fixed iteration budget then bought only the leading Krylov directions,
+  which belong to the data term, so the result looked insensitive to the
+  regularization weight. On a synthetic step with the data term outweighing the
+  regularization, a hundred-fold change in lambda moved the CGLS update by 2.9%
+  at 50 iterations and 33% at 300, against 94% for the exact solve;
+  `scripts/lambda_sweep_solver_check.py` reproduces the table. **Pass
+  `method='cgls'` to reproduce results from a run before this change.** The two
+  inversions that pass a stacked least-squares system, `ERTInversion` and
+  `JointERTSRTInversion`, keep their least-squares defaults, which were already
+  correct. `generalized_solver` itself still defaults to `cgls`. The desktop
+  studio's time-lapse pipeline (`DEFAULT_TL` in `inversion/_time_lapse_workflow`)
+  passes `method` straight through, so its default moved too; the ADTLERT branch
+  still forces `cgls`, where that string selects that backend's own GPU solver
+  rather than anything in `solvers/linear_solvers`. Above 15000 model unknowns
+  that pipeline auto-enables sparse mode, and the sparse `spd_cholesky` path is
+  SuperLU, since SciPy has no sparse Cholesky.
+- `generalized_solver` now warns once per process when a least-squares method is
+  handed a square symmetric matrix. Detection is a shape check followed, only
+  for a square matrix, by a two-pair random bilinear probe, so a stacked system
+  pays one integer comparison.
+- Added a keyword-only `overwrite_a` to `generalized_solver`, used by
+  `spd_cholesky` to factor in the caller's own buffer instead of allocating a
+  copy. The three normal-matrix inversions pass it, since nothing reads `H`
+  after the solve. The tradeoff is that a partial factorization has already
+  destroyed the matrix by the time a failure is detected, so that case raises
+  rather than falling back; retry with `overwrite_a=False` or `spd_cg`.
+- `TimeLapseSRTInversion` gained `target_chi_squared`, `convergence_tolerance`
+  and `min_iterations` parameters. Its convergence test used to hard-code 1.5
+  and 0.01 with no minimum-iteration guard, so a flat second iteration could end
+  the inversion at iteration three. The first two defaults reproduce the old
+  thresholds; `min_iterations` defaults to 5, matching `TimeLapseERTInversion`.
+- Repaired the `cholesky` branch of `direct_solver` for sparse input. It called
+  `scipy.sparse.linalg.cholesky`, which does not exist, so it raised
+  `AttributeError` on every call, a bare `except` swallowed it, and it printed
+  "Matrix not SPD" whether or not the matrix was. It now uses SuperLU. The dense
+  branch's bare `except` was narrowed to `LinAlgError`.
 - Added ADTLERT as an optional differentiable 2.5D ERT backend for the unified
   single-time and windowed time-lapse inversion pipelines, including shared GPU
   state, unified CuPy CUDA 12 installation and cuDSS acceleration on Windows

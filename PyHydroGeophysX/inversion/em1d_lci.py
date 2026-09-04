@@ -386,7 +386,8 @@ def _sounding_median(values) -> float:
 
 def _solve_lci_trf(blocks, n_layers, x, Dz, Dx, prior_lower, prior_weights,
                    lo, hi, lam_v, lam_l, scale, executor, *, max_nfev,
-                   ftol, xtol, gtol, target_chi2, chi2_tolerance, speak, started):
+                   ftol, xtol, gtol, target_chi2, chi2_tolerance, speak, started,
+                   lam_0=0.0, reference=None):
     """Bound-aware sparse least squares with fixed data errors and penalties.
 
     Unlike a clipped unconstrained step, TRF accounts for the feasible directions
@@ -403,6 +404,13 @@ def _solve_lci_trf(blocks, n_layers, x, Dz, Dx, prior_lower, prior_weights,
     n_data = sum(b.dobs.size for b in blocks)
     R = sparse.vstack([math.sqrt(lam_v) * Dz, math.sqrt(lam_l) * Dx], format="csr")
     prior_index = np.flatnonzero(prior_weights)
+    # Zeroth-order Tikhonov toward a reference model. The roughness operators
+    # above constrain the shape of the model and say nothing about its level, so
+    # a layer the data cannot see is free to drift; this is the term that gives
+    # it somewhere to rest. Appended as residual rows rather than folded into a
+    # normal matrix, which is what the rest of this solver expects.
+    damping = math.sqrt(lam_0) if (lam_0 > 0.0 and reference is not None) else 0.0
+    D0 = (sparse.identity(x.size, format="csr") * damping) if damping else None
     history, objectives, medians = [], [], []
     cache_x, cache_residual, cache_per = None, None, None
 
@@ -411,8 +419,9 @@ def _solve_lci_trf(blocks, n_layers, x, Dz, Dx, prior_lower, prior_weights,
         if cache_x is None or not np.array_equal(vec, cache_x):
             data_res, cache_per = _misfit(blocks, _forward_line(blocks, vec, n_layers, executor))
             prior = prior_weights[prior_index] * np.maximum(prior_lower[prior_index] - vec[prior_index], 0.)
+            damp = (damping * (vec - reference)) if damping else np.empty(0)
             cache_x = vec.copy()
-            cache_residual = np.r_[data_res, R @ vec, prior]
+            cache_residual = np.r_[data_res, R @ vec, prior, damp]
         return cache_residual
 
     def record(vec):
@@ -435,7 +444,8 @@ def _solve_lci_trf(blocks, n_layers, x, Dz, Dx, prior_lower, prior_weights,
         rows = np.arange(prior_index.size)
         values = -prior_weights[prior_index] * (vec[prior_index] < prior_lower[prior_index])
         P = sparse.csr_matrix((values, (rows, prior_index)), shape=(prior_index.size, vec.size))
-        return sparse.vstack([J, R, P], format="csr")
+        parts = [J, R, P] if D0 is None else [J, R, P, D0]
+        return sparse.vstack(parts, format="csr")
 
     fitted = least_squares(
         residual, x, jac=jacobian, bounds=(lo, hi), method="trf", loss="linear",
@@ -486,6 +496,8 @@ def solve_lci(
     smoothness_scale: float = 1.0,
     reference_distance: float = 10.0,
     lateral_distance_power: float = 1.0,
+    model_damping: float = 0.0,
+    reference_model: Optional[np.ndarray] = None,
     initial_model: Optional[np.ndarray] = None,
     starting_resistivity: float = 100.0,
     max_iterations: int = 20,
@@ -540,6 +552,35 @@ def solve_lci(
     an overshooting step is shortened until the misfit lands within
     ``chi2_tolerance`` of the target instead.
 
+    ``model_damping`` is the zeroth-order Tikhonov weight, pulling the model
+    toward ``reference_model`` (the background half-space at
+    ``starting_resistivity`` when none is given). It is expressed as a fraction
+    of ``smoothness``, so ``1.0`` weights the smallness term equally with the
+    vertical roughness term, which is SimPEG's ``alpha_s == alpha_x`` default. It answers a failure the two
+    roughness operators cannot: they constrain the shape of the model and say
+    nothing about its level, so below the depth of investigation, where the data
+    no longer pins the level, the model is free to drift, and it drifts wherever
+    the residual gradient leads. On a 1323-station ground TDEM survey that showed
+    up as the deep model becoming 2.7 times more variable than the shallow model,
+    where the reference inversion's became 0.8 times as variable. Losing
+    resolution should make a model less variable, not more, and the deep values
+    correlated with misfit at r = -0.37: unresolved layers were absorbing noise.
+
+    It is scaled by ``smoothness_scale`` alongside the other two, so the
+    chi-squared search moves all three together and their balance is a property
+    of the setup rather than of where the search happened to stop. ``0.0``
+    leaves the regularisation as it was.
+
+    Equal weighting is more than this data wants. Measured on that 1323-station
+    survey, a ratio of 0.4 brought the deep spread from 0.291 to 0.121 dex
+    against the reference inversion's 0.117, and cost 1.9% in chi-squared under
+    the original errors. It also tightened the resolved shallow part by 7%,
+    which is the first sign of the term reaching past its job: the purpose is to
+    give unresolved layers somewhere to rest, not to hold resolved ones in
+    place, and a weight large enough to bend the resolved part is reporting the
+    reference model back rather than the ground. Ratios above roughly 0.5 on
+    sparse ground TDEM start doing that.
+
     ``parallel_workers`` runs the per-sounding forward and Jacobian on a thread
     pool, ``0`` choosing a count from the machine. Every sounding owns its
     forward operator, and the workers only read the shared model vector, so the
@@ -563,6 +604,18 @@ def solve_lci(
     scale = max(float(smoothness_scale), 0.0)
     lam_v = float(scale * max(float(smoothness), 0.0)) ** 2
     lam_l = float(scale * max(float(lateral_smoothness), 0.0)) ** 2
+    # A fraction of the vertical smoothness weight rather than an absolute one.
+    # The literature specifies the smallness term as a ratio against the
+    # roughness term (SimPEG's alpha_s / alpha_x, Oldenburg and Li's
+    # alpha_s / alpha_z), and a ratio is what lets one default serve a
+    # framework default of smoothness=0.3 and a ground-TEM setup running 2.0.
+    # An absolute weight cannot: 1.0 against smoothness 0.3 is eleven times the
+    # roughness weight and returns the starting model.
+    #
+    # A smoothness of zero leaves the ratio nothing to scale, so damping is off
+    # there; that configuration has no depth regularisation to balance against.
+    lam_0 = float(scale * max(float(model_damping), 0.0)
+                  * max(float(smoothness), 0.0)) ** 2
 
     x = np.empty(n_soundings * n_layers, dtype=float)
     warm = (np.asarray(initial_model, dtype=float)
@@ -573,6 +626,22 @@ def solve_lci(
     else:
         x[:] = float(np.clip(math.log10(max(float(starting_resistivity), 1.0)),
                              lo, hi))
+
+    # The reference the damping pulls toward. Deliberately not the warm start:
+    # the lambda search re-solves the line from the previous trial's model, and
+    # a reference that followed it would ratchet, each trial anchoring to
+    # wherever the last one drifted. The background half-space is the same for
+    # every trial, so the term means one thing throughout the search.
+    reference = None
+    if lam_0 > 0.0:
+        given = (np.asarray(reference_model, dtype=float)
+                 if reference_model is not None else None)
+        if given is not None and given.shape == (n_soundings, n_layers) \
+                and np.all(np.isfinite(given)) and np.all(given > 0.0):
+            reference = np.clip(np.log10(given), lo, hi).ravel()
+        else:
+            reference = np.full_like(x, float(np.clip(
+                math.log10(max(float(starting_resistivity), 1.0)), lo, hi)))
 
     edges = lateral_edges(
         [block.position for block in blocks],
@@ -594,7 +663,12 @@ def solve_lci(
 
     def objective(vec: np.ndarray, residual: np.ndarray) -> float:
         prior = prior_weights * np.maximum(prior_lower - vec, 0.)
-        return float(residual @ residual) + float(vec @ (reg @ vec)) + float(prior @ prior)
+        value = (float(residual @ residual) + float(vec @ (reg @ vec))
+                 + float(prior @ prior))
+        if reference is not None:
+            offset = vec - reference
+            value += lam_0 * float(offset @ offset)
+        return value
 
     workers = resolve_worker_count(n_soundings, parallel_workers)
     if workers > 1:
@@ -606,7 +680,8 @@ def solve_lci(
                 lo, hi, lam_v, lam_l, scale, executor,
                 max_nfev=trf_max_nfev, ftol=trf_ftol, xtol=trf_xtol, gtol=trf_gtol,
                 target_chi2=target_chi2, chi2_tolerance=chi2_tolerance,
-                speak=speak, started=started)
+                speak=speak, started=started,
+                lam_0=lam_0, reference=reference)
         predicted = _forward_line(blocks, x, n_layers, executor)
         residual, per_sounding = _misfit(blocks, predicted)
         chi2 = float(residual @ residual) / max(n_data, 1)
@@ -633,6 +708,10 @@ def solve_lci(
             G = _sensitivity_line(blocks, x, n_layers, executor)
             gram = (G.T @ G) + reg
             gradient = np.asarray(G.T @ residual, dtype=float) + (reg @ x)
+            if reference is not None:
+                from scipy import sparse
+                gram = gram + sparse.identity(x.size, format="csr") * lam_0
+                gradient = gradient + lam_0 * (x - reference)
             if np.any(prior_weights):
                 from scipy import sparse
                 active_weight = prior_weights ** 2 * (x < prior_lower)

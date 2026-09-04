@@ -49,7 +49,12 @@ class TimeLapseSRTInversion(InversionBase):
         defaults = {
             "lambda_val": 50.0,
             "alpha": 10.0,
-            "method": "cgls",
+            # 'H' below is the Gauss-Newton normal matrix, which needs a
+            # symmetric solver; the old 'cgls' default is a least-squares method
+            # and works with the square of its condition number. Pass
+            # method='cgls' to reproduce a run from before this became the
+            # default.
+            "method": "spd_cholesky",
             "zWeight": 0.2,
             "vTop": 500.0,
             "vBottom": 5000.0,
@@ -66,6 +71,15 @@ class TimeLapseSRTInversion(InversionBase):
             "solver_tol": 1e-8,
             "lambda_rate": 1.0,
             "lambda_min": 1.0,
+            # The convergence test used to hard-code these two numbers and had
+            # no minimum-iteration guard, so a flat second iteration ended the
+            # inversion at iteration three. The values below reproduce the old
+            # thresholds; 'min_iterations' is the new part, and matches the
+            # guard TimeLapseERTInversion already uses. The names are the ones
+            # time_lapse.py and srt_inversion.py use.
+            "target_chi_squared": 1.5,
+            "convergence_tolerance": 0.01,
+            "min_iterations": 5,
         }
         for key, value in defaults.items():
             if key not in self.parameters:
@@ -330,8 +344,11 @@ class TimeLapseSRTInversion(InversionBase):
         lam_min = float(self.parameters.get("lambda_min", lam))
 
         chi2_history: List[float] = []
+        target_chi2 = float(self.parameters.get("target_chi_squared", 1.5))
+        dphi_tol = float(self.parameters.get("convergence_tolerance", 0.01))
+        min_iterations = int(self.parameters.get("min_iterations", 5))
 
-        for _ in range(int(self.parameters["max_iterations"])):
+        for iteration in range(int(self.parameters["max_iterations"])):
             pred, J = self._forward_and_jacobian(m)
             residual = self.t_obs - pred
 
@@ -353,7 +370,14 @@ class TimeLapseSRTInversion(InversionBase):
             else:
                 d_phi = 1.0
 
-            if chi2 < 1.5 or d_phi < 0.01:
+            # Reaching the target ends the inversion at once. A flat misfit
+            # only counts as convergence after 'min_iterations', because the
+            # first couple of Gauss-Newton steps are routinely flat while the
+            # line search finds its scale, and stopping there hides whatever
+            # the regularization would have done.
+            if chi2 < target_chi2:
+                break
+            if d_phi < dphi_tol and iteration > min_iterations:
                 break
 
             H_data = J.T.dot(self.Wd_sq.dot(J))
@@ -364,14 +388,25 @@ class TimeLapseSRTInversion(InversionBase):
             g_reg = lam * self.Wm.T.dot(reg_spatial) + alpha * self.Wt.T.dot(reg_temporal)
             g = g_data + g_reg
 
-            H_solve = H.toarray() if issparse(H) else np.asarray(H, dtype=float)
+            # np.asarray returns a view, so H_solve and H would share one
+            # buffer and overwrite_a below would destroy both. Copy instead, so
+            # the ownership question has one answer rather than two.
+            H_solve = H.toarray() if issparse(H) else np.array(H, dtype=float)
+            del H
+            # 'H_solve' is the Gauss-Newton normal matrix, so it needs a
+            # symmetric solver. A least-squares method such as 'cgls' would work
+            # on 'H^T H dm = H^T (-g)' instead, squaring the condition number.
+            # overwrite_a=True lets the factorization run in H_solve's own
+            # buffer; nothing reads it after this call.
             dm = generalized_solver(
                 H_solve,
                 -g,
                 method=str(self.parameters["method"]),
                 maxiter=int(self.parameters.get("solver_maxiter", 300)),
                 tol=float(self.parameters.get("solver_tol", 1e-8)),
+                overwrite_a=True,
             )
+            del H_solve
             dm = self._to_col(dm)
 
             current_obj = phi_d + lam * phi_m + alpha * phi_t

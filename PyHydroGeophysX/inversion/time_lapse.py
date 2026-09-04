@@ -173,7 +173,15 @@ class TimeLapseERTInversion(InversionBase):
             'lambda_val': 100.0,
             'alpha': 10.0,
             'decay_rate': 0.0,
-            'method': 'cgls',
+            # 'H' below is the Gauss-Newton normal matrix, which is square and
+            # symmetric positive definite, so it wants a symmetric solver. The
+            # old 'cgls' default is a least-squares method: on this matrix it
+            # solves 'H^T H d = H^T (-g)' and so works with the square of the
+            # condition number, which at a realistic 4D size leaves the update
+            # far short of the Newton step and makes the result look insensitive
+            # to lambda. Pass method='cgls' to reproduce a run from before this
+            # became the default.
+            'method': 'spd_cholesky',
             'absoluteError': 0.0001,
             'relativeError': 0.05,
             # Cooling is off by default. It used to be 0.8, which moved lambda on
@@ -630,15 +638,20 @@ class TimeLapseERTInversion(InversionBase):
                 # After using Jr for gradient computation
                 del Jr  # No longer needed
 
-                # Solve for model update
+                # Solve for model update. overwrite_a lets 'spd_cholesky'
+                # factor in H's own buffer, which for a dense 4D normal matrix
+                # is the difference between one working copy and none; nothing
+                # reads H after this call. It is ignored by the other methods.
                 d_mr = generalized_solver(
-                    H, -gc_r, 
+                    H, -gc_r,
                     method=self.parameters['method'],
                     use_gpu=self.parameters.get('use_gpu', False),
                     parallel=self.parameters.get('parallel', False),
-                    n_jobs=self.parameters.get('n_jobs', -1)
+                    n_jobs=self.parameters.get('n_jobs', -1),
+                    overwrite_a=True,
                 )
                 d_mr = d_mr.reshape(-1, 1)
+                del H  # consumed by the solve, and rebuilt next iteration
                 
                 # Line search
                 mu_LS = 1.0

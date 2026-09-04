@@ -412,7 +412,12 @@ class SRTInversion(InversionBase):
 
         defaults = {
             "lambda_val": 50.0,
-            "method": "cgls",
+            # 'H' below is the Gauss-Newton normal matrix, which needs a
+            # symmetric solver; the old 'cgls' default is a least-squares method
+            # and works with the square of its condition number. Pass
+            # method='cgls' to reproduce a run from before this became the
+            # default.
+            "method": "spd_cholesky",
             "zWeight": 0.2,
             "vTop": 500.0,
             "vBottom": 5000.0,
@@ -664,14 +669,21 @@ class SRTInversion(InversionBase):
             g_reg = lam * self.Wm.T.dot(reg_vec)
             g = g_data + g_reg
 
+            # 'H' is the Gauss-Newton normal matrix, so it needs a symmetric
+            # solver. A least-squares method such as 'cgls' would work on
+            # 'H^T H dm = H^T (-g)' instead, squaring the condition number.
+            # overwrite_a=True lets the factorization run in H's own buffer;
+            # nothing reads H after this call.
             dm = generalized_solver(
                 H,
                 -g,
                 method=str(self.parameters["method"]),
                 maxiter=int(self.parameters.get("solver_maxiter", 200)),
                 tol=float(self.parameters.get("solver_tol", 1e-8)),
+                overwrite_a=True,
             )
             dm = self._to_col(dm)
+            del H
 
             current_obj = obj
             directional = float(dm.T.dot(g).item())
